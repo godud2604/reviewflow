@@ -14,6 +14,7 @@ export default function HomePage({
 }) {
   const activeSchedules = schedules.filter((s) => s.status !== "완료" && s.status !== "취소")
   const activeCount = activeSchedules.length
+  const reconfirmCount = schedules.filter((s) => s.status === "재확인").length
   const totalBenefit = schedules.reduce((acc, cur) => acc + cur.benefit + cur.income - cur.cost, 0)
 
   const displayedSchedules = activeSchedules.slice(0, 3)
@@ -21,12 +22,22 @@ export default function HomePage({
   return (
     <div className="flex-1 overflow-y-auto px-5 pb-24 scrollbar-hide">
       {/* Summary Bar */}
-      <div className="flex gap-2 mb-4 mt-2">
-        <div className="flex-1 bg-white p-2.5 px-3 rounded-xl flex justify-between items-center shadow-sm">
-          <span className="text-[11px] text-neutral-500 font-semibold">진행 중</span>
-          <span className="text-sm font-extrabold text-[#FF5722]">{activeCount}건</span>
+      <div className="space-y-2 mb-4 mt-2">
+        <div className="flex gap-2">
+          <div className="flex-1 bg-white p-2.5 px-3 rounded-xl flex justify-between items-center shadow-sm">
+            <span className="text-[11px] text-neutral-500 font-semibold">진행 중</span>
+            <span className="text-sm font-extrabold text-[#FF5722]">{activeCount}건</span>
+          </div>
+          {reconfirmCount > 0 && (
+            <div className="flex-1 bg-gradient-to-br from-yellow-50 to-orange-50 p-2.5 px-3 rounded-xl flex justify-between items-center shadow-sm border border-yellow-200">
+              <span className="text-[11px] text-yellow-700 font-semibold flex items-center gap-1">
+                ⚠️ 재확인 필요
+              </span>
+              <span className="text-sm font-extrabold text-yellow-700">{reconfirmCount}건</span>
+            </div>
+          )}
         </div>
-        <div className="flex-1 bg-white p-2.5 px-3 rounded-xl flex justify-between items-center shadow-sm">
+        <div className="bg-white p-2.5 px-3 rounded-xl flex justify-between items-center shadow-sm">
           <span className="text-[11px] text-neutral-500 font-semibold">이번 달 혜택</span>
           <span className="text-sm font-extrabold text-[#333]">{totalBenefit.toLocaleString()}원</span>
         </div>
