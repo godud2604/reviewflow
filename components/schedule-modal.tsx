@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import type { Schedule } from "@/types"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 
@@ -127,25 +128,28 @@ export default function ScheduleModal({
             type="text"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="w-full p-4 bg-[#F7F7F8] border-none rounded-xl text-base"
+            className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-base"
             placeholder="예: 강남역 파스타"
           />
 
           {/* 플랫폼 */}
           <div className="mt-6">
             <label className="block text-[13px] font-bold text-neutral-500 mb-2">플랫폼</label>
-            <select
+            <Select
               value={formData.platform}
-              onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-              className="w-full p-4 bg-[#F7F7F8] border-none rounded-xl text-base"
+              onValueChange={(value) => setFormData({ ...formData, platform: value })}
             >
-              <option value="">선택하세요</option>
-              {allPlatforms.map((platform) => (
-                <option key={platform} value={platform}>
-                  {platform}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-11 bg-[#F7F7F8] border-none rounded-xl text-base">
+                <SelectValue placeholder="선택하세요" />
+              </SelectTrigger>
+              <SelectContent>
+                {allPlatforms.map((platform) => (
+                  <SelectItem key={platform} value={platform}>
+                    {platform}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {!showPlatformInput ? (
               <button
                 onClick={() => setShowPlatformInput(true)}
@@ -159,13 +163,13 @@ export default function ScheduleModal({
                   type="text"
                   value={newPlatform}
                   onChange={(e) => setNewPlatform(e.target.value)}
-                  className="flex-1 p-2 bg-[#F7F7F8] border-none rounded-lg text-sm"
+                  className="flex-1 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-lg text-sm"
                   placeholder="새 플랫폼 이름"
                   onKeyPress={(e) => e.key === "Enter" && addCustomPlatform()}
                 />
                 <button
                   onClick={addCustomPlatform}
-                  className="px-3 py-2 bg-[#FF5722] text-white rounded-lg text-xs font-semibold"
+                  className="h-11 px-3 py-2 bg-[#FF5722] text-white rounded-lg text-xs font-semibold"
                 >
                   추가
                 </button>
@@ -174,7 +178,7 @@ export default function ScheduleModal({
                     setShowPlatformInput(false)
                     setNewPlatform("")
                   }}
-                  className="px-3 py-2 bg-neutral-200 text-neutral-600 rounded-lg text-xs font-semibold"
+                  className="h-11 px-3 py-2 bg-neutral-200 text-neutral-600 rounded-lg text-xs font-semibold"
                 >
                   취소
                 </button>
@@ -195,7 +199,7 @@ export default function ScheduleModal({
                       reviewType: type as Schedule["reviewType"],
                     })
                   }
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer ${
+                  className={`h-11 px-3 rounded-xl text-xs font-semibold cursor-pointer flex items-center justify-center ${
                     formData.reviewType === type
                       ? "bg-orange-50 text-[#FF5722] border border-[#FF5722]"
                       : "bg-[#F7F7F8] text-neutral-500"
@@ -228,7 +232,7 @@ export default function ScheduleModal({
                     channel: channel as Schedule["channel"],
                   })
                 }
-                className={`px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer ${
+                className={`h-11 px-3 rounded-xl text-xs font-semibold cursor-pointer flex items-center justify-center ${
                   formData.channel === channel
                     ? "bg-blue-50 text-blue-600 border border-blue-600"
                     : "bg-[#F7F7F8] text-neutral-500"
@@ -251,7 +255,7 @@ export default function ScheduleModal({
                     category: category as Schedule["category"],
                   })
                 }
-                className={`px-4 py-2.5 rounded-2xl text-sm font-semibold cursor-pointer ${
+                className={`h-11 px-4 rounded-2xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
                   formData.category === category
                     ? "bg-purple-50 text-purple-600 border border-purple-600"
                     : "bg-[#F7F7F8] text-neutral-500"
@@ -265,53 +269,60 @@ export default function ScheduleModal({
           {/* 지역 */}
           <div className="mt-6">
             <label className="block text-[13px] font-bold text-neutral-500 mb-2">지역</label>
-            <select
+            <Select
               value={formData.region}
-              onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-              className="w-full p-4 bg-[#F7F7F8] border-none rounded-xl text-base"
+              onValueChange={(value) => setFormData({ ...formData, region: value })}
             >
-              <option value="">선택하세요</option>
-              {[
-                "서울",
-                "경기",
-                "인천",
-                "강원",
-                "대전",
-                "세종",
-                "충남",
-                "충북",
-                "부산",
-                "울산",
-                "경남",
-                "경북",
-                "대구",
-                "광주",
-                "전남",
-                "전북",
-                "제주",
-              ].map((region) => (
-                <option key={region} value={region}>
-                  {region}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-11 bg-[#F7F7F8] border-none rounded-xl text-base">
+                <SelectValue placeholder="선택하세요" />
+              </SelectTrigger>
+              <SelectContent>
+                {[
+                  "서울",
+                  "경기",
+                  "인천",
+                  "강원",
+                  "대전",
+                  "세종",
+                  "충남",
+                  "충북",
+                  "부산",
+                  "울산",
+                  "경남",
+                  "경북",
+                  "대구",
+                  "광주",
+                  "전남",
+                  "전북",
+                  "제주",
+                ].map((region) => (
+                  <SelectItem key={region} value={region}>
+                    {region}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 진행 상태 */}
           <div className="mt-6">
             <label className="block text-[13px] font-bold text-neutral-500 mb-2">진행 상태</label>
-            <select
+            <Select
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as Schedule["status"] })}
-              className="w-full p-4 bg-[#F7F7F8] border-none rounded-xl text-base"
+              onValueChange={(value) => setFormData({ ...formData, status: value as Schedule["status"] })}
             >
-              <option value="선정됨">선정됨</option>
-              <option value="예약">예약</option>
-              <option value="방문">방문</option>
-              <option value="완료">완료</option>
-              <option value="취소">취소</option>
-              <option value="재확인">재확인</option>
-            </select>
+              <SelectTrigger className="w-full h-11 bg-[#F7F7F8] border-none rounded-xl text-base">
+                <SelectValue placeholder="선택하세요" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="선정됨">선정됨</SelectItem>
+                <SelectItem value="예약">예약</SelectItem>
+                <SelectItem value="방문">방문</SelectItem>
+                <SelectItem value="완료">완료</SelectItem>
+                <SelectItem value="취소">취소</SelectItem>
+                <SelectItem value="재확인">재확인</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 날짜 */}
@@ -320,7 +331,7 @@ export default function ScheduleModal({
               <label className="block text-[13px] font-bold text-neutral-500 mb-2">방문일</label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className="w-full p-4 bg-[#F7F7F8] border-none rounded-xl text-base text-left">
+                  <button className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-base text-left">
                     {formData.visit ? format(new Date(formData.visit), "PPP", { locale: ko }) : "날짜 선택"}
                   </button>
                 </PopoverTrigger>
@@ -343,7 +354,7 @@ export default function ScheduleModal({
               <label className="block text-[13px] font-bold text-[#FF5722] mb-2">마감일</label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className="w-full p-4 bg-[#F7F7F8] border-none rounded-xl text-base text-left">
+                  <button className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-base text-left">
                     {formData.dead ? format(new Date(formData.dead), "PPP", { locale: ko }) : "날짜 선택"}
                   </button>
                 </PopoverTrigger>
@@ -366,14 +377,14 @@ export default function ScheduleModal({
 
           {/* 자산 관리 */}
           <label className="block text-[13px] font-bold text-neutral-500 mb-2 mt-6">자산 관리 (단위: 원)</label>
-          <div className="bg-neutral-50 border border-neutral-200 rounded-2xl p-5 flex gap-2.5">
+          <div className="bg-neutral-50 border border-neutral-200 rounded-2xl px-2 py-3 flex gap-2.5">
             <div className="flex-1 text-center">
               <span className="block text-[11px] text-neutral-400 font-semibold mb-2">제공(물품)</span>
               <input
                 type="text"
                 value={formatNumber(formData.benefit || 0)}
                 onChange={(e) => handleNumberChange("benefit", e.target.value)}
-                className="w-full p-3 bg-white border-none rounded-xl text-center font-bold"
+                className="w-full h-11 px-3 py-2 bg-white border-none rounded-xl text-center font-bold"
                 placeholder="0"
               />
             </div>
@@ -383,7 +394,7 @@ export default function ScheduleModal({
                 type="text"
                 value={formatNumber(formData.income || 0)}
                 onChange={(e) => handleNumberChange("income", e.target.value)}
-                className="w-full p-3 bg-white border-none rounded-xl text-center font-bold"
+                className="w-full h-11 px-3 py-2 bg-white border-none rounded-xl text-center font-bold"
                 placeholder="0"
               />
             </div>
@@ -393,7 +404,7 @@ export default function ScheduleModal({
                 type="text"
                 value={formatNumber(formData.cost || 0)}
                 onChange={(e) => handleNumberChange("cost", e.target.value)}
-                className="w-full p-3 bg-white border-none rounded-xl text-center font-bold text-red-600"
+                className="w-full h-11 px-3 py-2 bg-white border-none rounded-xl text-center font-bold text-red-600"
                 placeholder="0"
               />
             </div>
@@ -405,7 +416,7 @@ export default function ScheduleModal({
             type="url"
             value={formData.postingLink}
             onChange={(e) => setFormData({ ...formData, postingLink: e.target.value })}
-            className="w-full p-4 bg-[#F7F7F8] border-none rounded-xl text-base"
+            className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-base"
             placeholder="https://..."
           />
 
@@ -416,7 +427,7 @@ export default function ScheduleModal({
                 type="url"
                 value={formData.purchaseLink}
                 onChange={(e) => setFormData({ ...formData, purchaseLink: e.target.value })}
-                className="w-full p-4 bg-[#F7F7F8] border-none rounded-xl text-base"
+                className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-base"
                 placeholder="https://..."
               />
             </>
@@ -427,7 +438,7 @@ export default function ScheduleModal({
             type="url"
             value={formData.guideLink}
             onChange={(e) => setFormData({ ...formData, guideLink: e.target.value })}
-            className="w-full p-4 bg-[#F7F7F8] border-none rounded-xl text-base"
+            className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-base"
             placeholder="https://..."
           />
 
@@ -436,7 +447,7 @@ export default function ScheduleModal({
           <textarea
             value={formData.memo}
             onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
-            className="w-full p-4 bg-[#F7F7F8] border-none rounded-xl text-base resize-none"
+            className="w-full px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-base resize-none"
             rows={3}
             placeholder="가이드라인 복사 붙여넣기..."
           />

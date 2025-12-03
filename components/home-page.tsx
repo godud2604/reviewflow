@@ -63,7 +63,7 @@ export default function HomePage({
     <div className="flex-1 overflow-y-auto px-5 pb-24 scrollbar-hide">
       {/* Summary Bar */}
       <div className="space-y-2 mb-4 mt-2">
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
           <button
             onClick={() => handleFilterClick("active")}
             className={`flex-1 pt-2.5 pb-[7px] px-3 rounded-xl flex justify-between items-center shadow-sm transition-all cursor-pointer ${
@@ -126,8 +126,8 @@ export default function HomePage({
             </button>
           )}
         </div>
-        <div className="bg-white p-2.5 px-3 rounded-xl flex justify-between items-center shadow-sm">
-          <span className="text-[11px] text-neutral-500 font-semibold">이번 달 혜택</span>
+        <div className="mt-3 bg-white p-2.5 px-3 rounded-xl flex justify-between items-center shadow-sm">
+          <span className="text-[11px] text-neutral-500 font-semibold">이번 달 경제적 가치 ✨</span>
           <span className="text-sm font-extrabold translate-y-[-1px] text-[#333]">{totalBenefit.toLocaleString()}원</span>
         </div>
       </div>
