@@ -35,7 +35,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
       <div className="absolute top-2 right-5 z-10">
         <span
           onClick={handleShare}
-          className="bg-white px-3 py-1.5 rounded-2xl text-xs font-bold shadow-md cursor-pointer inline-block"
+          className="bg-white px-3 py-1.5 rounded-2xl text-sm font-bold shadow-md cursor-pointer inline-block"
         >
           🔗 공유
         </span>
@@ -46,23 +46,23 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
         className="rounded-[30px] p-7 mb-6 relative overflow-hidden text-white shadow-xl"
         style={{ background: "linear-gradient(135deg, #FF6F00 0%, #FF3D00 100%)" }}
       >
-        <div className="absolute top-6 right-6 bg-white/25 backdrop-blur-sm px-2.5 py-1.5 rounded-xl text-[11px] font-bold">
+        <div className="absolute top-6 right-6 bg-white/25 backdrop-blur-sm px-2.5 py-1.5 rounded-xl text-xs font-bold">
           상위 5%
         </div>
-        <div className="text-sm font-semibold opacity-90 mb-2.5">이번 달 경제적 가치 ✨</div>
+        <div className="text-[15px] font-semibold opacity-90 mb-2.5">이번 달 경제적 가치 ✨</div>
         <div className="text-[38px] font-extrabold mb-6 tracking-tight">₩ {econValue.toLocaleString()}</div>
         <div className="flex gap-5 border-t border-white/20 pt-5">
           <div className="flex-1">
-            <div className="text-[11px] opacity-80 mb-1">방어한 생활비</div>
-            <div className="text-base font-bold">{totalBen.toLocaleString()}</div>
+            <div className="text-xs opacity-80 mb-1">방어한 생활비</div>
+            <div className="text-[15px] font-bold">{totalBen.toLocaleString()}</div>
           </div>
           <div className="flex-1">
-            <div className="text-[11px] opacity-80 mb-1">부수입(현금)</div>
-            <div className="text-base font-bold">{totalInc.toLocaleString()}</div>
+            <div className="text-xs opacity-80 mb-1">부수입(현금)</div>
+            <div className="text-[15px] font-bold">{totalInc.toLocaleString()}</div>
           </div>
           <div className="flex-1">
-            <div className="text-[11px] opacity-80 mb-1">순이익률</div>
-            <div className="text-base font-bold">{rate}%</div>
+            <div className="text-xs opacity-80 mb-1">순이익률</div>
+            <div className="text-[15px] font-bold">{rate}%</div>
           </div>
         </div>
       </div>
@@ -110,7 +110,7 @@ function ExpertiseChart({ typeCounts }: { typeCounts: Record<Schedule["type"], n
                   style={{ width: `${width}%`, background: colors[type] }}
                 />
               </div>
-              <div className="w-[30px] text-right text-[13px] font-bold text-neutral-600">{count}건</div>
+              <div className="w-[30px] text-right text-sm font-bold text-neutral-600">{count}건</div>
             </div>
           )
         })}
@@ -140,10 +140,10 @@ function TrendChart({ currentMonthValue }: { currentMonthValue: number }) {
             }`}
             style={{ height: `${month.height}%` }}
           >
-            <span className="absolute -top-6 text-[11px] font-bold text-[#333]">
+            <span className="absolute -top-6 text-xs font-bold text-[#333]">
               {Math.round(month.value / 10000)}만
             </span>
-            <span className="absolute -bottom-6 text-[11px] text-neutral-400">{month.label}</span>
+            <span className="absolute -bottom-6 text-xs text-neutral-400">{month.label}</span>
           </div>
         ))}
       </div>

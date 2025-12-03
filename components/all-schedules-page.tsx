@@ -17,7 +17,7 @@ export default function AllSchedulesPage({
       <div className="flex items-center gap-2 mb-5 mt-2">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-900 transition-colors font-medium"
+          className="flex items-center gap-1.5 text-[15px] text-neutral-600 hover:text-neutral-900 transition-colors font-medium"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M15 18l-6-6 6-6" />
@@ -102,8 +102,8 @@ function ScheduleItem({ schedule, onClick }: { schedule: Schedule; onClick: () =
             </span>
           )}
         </div>
-        <div className="text-[11px] text-neutral-500 flex items-center gap-1.5">
-          <span className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${status.class}`}>{status.text}</span>
+        <div className="text-xs text-neutral-500 flex items-center gap-1.5">
+          <span className={`px-1.5 py-0.5 rounded font-semibold text-[11px] ${status.class}`}>{status.text}</span>
           <span>| {schedule.platform}</span>
           <span>| {dDate}</span>
         </div>

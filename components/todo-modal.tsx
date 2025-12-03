@@ -44,7 +44,7 @@ export default function TodoModal({
               value={newTodo}
               onChange={(e) => setNewTodo(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              className="flex-1 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-base"
+              className="flex-1 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
               placeholder="할 일 입력..."
             />
             <button onClick={handleAdd} className="w-[60px] h-11 bg-[#FF5722] text-white border-none rounded-xl font-bold">
@@ -55,7 +55,7 @@ export default function TodoModal({
           <div className={todos.length === 0 ? "flex items-center justify-center h-[calc(100%-80px)]" : ""}>
             {todos.length === 0 ? (
               <div className="text-center">
-                <p className="text-[16px] text-neutral-500 font-medium">확인해야 할 일이 없어요</p>
+                <p className="text-[15px] text-neutral-500 font-medium">확인해야 할 일이 없어요</p>
               </div>
             ) : (
               <div>

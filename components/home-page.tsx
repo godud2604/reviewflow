@@ -72,12 +72,12 @@ export default function HomePage({
                 : "bg-white border-2 border-transparent hover:bg-neutral-50"
             }`}
           >
-            <span className={`text-[11px] font-semibold translate-y-[-2px] ${
+            <span className={`text-xs font-semibold translate-y-[-2px] ${
               selectedFilter === "active" ? "text-slate-800" : "text-neutral-500"
             }`}>
               진행중
             </span>
-            <span className={`text-sm font-extrabold translate-y-[-2px] ${
+            <span className={`text-[15px] font-extrabold translate-y-[-2px] ${
               selectedFilter === "active" ? "text-slate-700" : "text-slate-600"
             }`}>
               {activeCount}건
@@ -92,12 +92,12 @@ export default function HomePage({
                   : "bg-red-50 border-2 border-red-100 hover:bg-red-100"
               }`}
             >
-              <span className={`text-[11px] font-semibold flex items-center gap-0.5 translate-y-[-2px] ${
+              <span className={`text-xs font-semibold flex items-center gap-0.5 translate-y-[-2px] ${
                 selectedFilter === "overdue" ? "text-red-800" : "text-red-700"
               }`}>
                 ⏰ 마감초과
               </span>
-              <span className={`text-sm font-extrabold translate-y-[-2px] ${
+              <span className={`text-[15px] font-extrabold translate-y-[-2px] ${
                 selectedFilter === "overdue" ? "text-red-700" : "text-red-700"
               }`}>
                 {overdueCount}건
@@ -113,12 +113,12 @@ export default function HomePage({
                   : "bg-amber-50 border-2 border-amber-100 hover:bg-amber-100"
               }`}
             >
-              <span className={`text-[11px] font-semibold flex items-center gap-0.5 translate-y-[-2px] ${
+              <span className={`text-xs font-semibold flex items-center gap-0.5 translate-y-[-2px] ${
                 selectedFilter === "reconfirm" ? "text-amber-800" : "text-amber-700"
               }`}>
                 ⚠️ 재확인
               </span>
-              <span className={`text-sm font-extrabold translate-y-[-2px] ${
+              <span className={`text-[15px] font-extrabold translate-y-[-2px] ${
                 selectedFilter === "reconfirm" ? "text-amber-700" : "text-amber-700"
               }`}>
                 {reconfirmCount}건
@@ -127,8 +127,8 @@ export default function HomePage({
           )}
         </div>
         <div className="mt-3 bg-white p-2.5 px-3 rounded-xl flex justify-between items-center shadow-sm">
-          <span className="text-[11px] text-neutral-500 font-semibold">이번 달 경제적 가치 ✨</span>
-          <span className="text-sm font-extrabold translate-y-[-1px] text-[#333]">{totalBenefit.toLocaleString()}원</span>
+          <span className="text-xs text-neutral-500 font-semibold">이번 달 경제적 가치 ✨</span>
+          <span className="text-[15px] font-extrabold translate-y-[-1px] text-[#333]">{totalBenefit.toLocaleString()}원</span>
         </div>
       </div>
 
@@ -152,7 +152,7 @@ export default function HomePage({
           {(selectedDate || selectedFilter !== "all") && (
             <button
               onClick={handleClearFilter}
-              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-semibold text-slate-700 transition-colors"
+              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold text-slate-700 transition-colors"
             >
               초기화
             </button>
@@ -160,7 +160,7 @@ export default function HomePage({
           {!selectedDate && selectedFilter === "all" && activeSchedules.length > 0 && (
             <button
               onClick={onShowAllClick}
-              className="text-xs font-semibold text-orange-600 hover:text-orange-700 transition-colors"
+              className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors"
             >
               전체보기 ({schedules.length})
             </button>
@@ -257,7 +257,7 @@ function CalendarSection({
         </button>
       </div>
 
-      <div className="grid grid-cols-7 text-center text-[11px] text-neutral-400 mb-2.5">
+      <div className="grid grid-cols-7 text-center text-xs text-neutral-400 mb-2.5">
         {weekDays.map((day, idx) => (
           <div key={day} className={idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : ""}>
             {day}
@@ -278,7 +278,7 @@ function CalendarSection({
               key={day}
               onClick={() => hasDotValue && onDateClick(dateStr)}
               disabled={!hasDotValue}
-              className={`h-[34px] w-[34px] flex flex-col items-center justify-center text-[13px] font-semibold rounded-lg relative transition-all mx-auto ${
+              className={`h-[34px] w-[34px] flex flex-col items-center justify-center text-sm font-semibold rounded-lg relative transition-all mx-auto ${
                 hasDotValue ? "cursor-pointer" : "cursor-default"
               }
                 ${isSelected ? "bg-orange-500 text-white shadow-md" : ""}
@@ -353,8 +353,8 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
             </span>
           )}
         </div>
-        <div className="text-[11px] text-neutral-500 flex items-center gap-1.5">
-          <span className={`px-1.5 py-0.5 rounded font-semibold text-[10px] translate-y-[-2px] ${status.class}`}>{status.text}</span>
+        <div className="text-xs text-neutral-500 flex items-center gap-1.5">
+          <span className={`px-1.5 py-0.5 rounded font-semibold text-[11px] translate-y-[-2px] ${status.class}`}>{status.text}</span>
           <span>|</span>
           <span>{schedule.platform}</span>
           <span>|</span>
