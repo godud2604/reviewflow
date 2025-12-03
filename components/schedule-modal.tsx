@@ -483,7 +483,7 @@ export default function ScheduleModal({
           <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">포스팅 링크</label>
           <input
             type="url"
-            value={formData.postingLink}
+            value={formData.postingLink || ""}
             onChange={(e) => setFormData({ ...formData, postingLink: e.target.value })}
             className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
             placeholder="https://..."
@@ -494,7 +494,7 @@ export default function ScheduleModal({
               <label className="block text-sm font-bold text-neutral-500 mb-2 mt-4">구매할 링크</label>
               <input
                 type="url"
-                value={formData.purchaseLink}
+                value={formData.purchaseLink || ""}
                 onChange={(e) => setFormData({ ...formData, purchaseLink: e.target.value })}
                 className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
                 placeholder="https://..."
@@ -543,7 +543,7 @@ export default function ScheduleModal({
           {/* 메모장 */}
           <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">메모장</label>
           <textarea
-            value={formData.memo}
+            value={formData.memo || ""}
             onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
             className="w-full px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] resize-none"
             rows={3}
