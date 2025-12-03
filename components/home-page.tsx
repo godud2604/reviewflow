@@ -13,10 +13,12 @@ export default function HomePage({
   onShowAllClick: () => void
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [selectedFilter, setSelectedFilter] = useState<"all" | "active" | "reconfirm">("all")
+  const [selectedFilter, setSelectedFilter] = useState<"all" | "active" | "reconfirm" | "overdue">("all")
+  const today = new Date().toISOString().slice(0, 10)
   const activeSchedules = schedules.filter((s) => s.status !== "완료" && s.status !== "취소")
   const activeCount = activeSchedules.length
   const reconfirmCount = schedules.filter((s) => s.status === "재확인").length
+  const overdueCount = schedules.filter((s) => s.dead && s.dead < today && s.status !== "완료" && s.status !== "취소").length
   const totalBenefit = schedules.reduce((acc, cur) => acc + cur.benefit + cur.income - cur.cost, 0)
 
   // Filter schedules based on selected date and filter
@@ -28,6 +30,8 @@ export default function HomePage({
     filteredSchedules = activeSchedules
   } else if (selectedFilter === "reconfirm") {
     filteredSchedules = schedules.filter((s) => s.status === "재확인")
+  } else if (selectedFilter === "overdue") {
+    filteredSchedules = schedules.filter((s) => s.dead && s.dead < today && s.status !== "완료" && s.status !== "취소")
   }
 
   const displayedSchedules = selectedDate || selectedFilter !== "all" ? filteredSchedules : activeSchedules.slice(0, 3)
@@ -46,7 +50,7 @@ export default function HomePage({
     }
   }
 
-  const handleFilterClick = (filter: "active" | "reconfirm") => {
+  const handleFilterClick = (filter: "active" | "reconfirm" | "overdue") => {
     if (selectedFilter === filter) {
       setSelectedFilter("all")
     } else {
@@ -62,38 +66,59 @@ export default function HomePage({
         <div className="flex gap-2">
           <button
             onClick={() => handleFilterClick("active")}
-            className={`flex-1 p-2.5 px-3 rounded-xl flex justify-between items-center shadow-sm transition-all cursor-pointer ${
+            className={`flex-1 pt-2.5 pb-[7px] px-3 rounded-xl flex justify-between items-center shadow-sm transition-all cursor-pointer ${
               selectedFilter === "active"
-                ? "bg-orange-100 border-2 border-orange-400"
+                ? "bg-slate-100 border-2 border-slate-300"
                 : "bg-white border-2 border-transparent hover:bg-neutral-50"
             }`}
           >
             <span className={`text-[11px] font-semibold ${
-              selectedFilter === "active" ? "text-orange-800" : "text-neutral-500"
+              selectedFilter === "active" ? "text-slate-800" : "text-neutral-500"
             }`}>
-              진행 중
+              진행중
             </span>
-            <span className={`text-sm font-extrabold ${
-              selectedFilter === "active" ? "text-orange-700" : "text-orange-600"
+            <span className={`text-sm font-extrabold translate-y-[-2px] ${
+              selectedFilter === "active" ? "text-slate-700" : "text-slate-600"
             }`}>
               {activeCount}건
             </span>
           </button>
+          {overdueCount > 0 && (
+            <button
+              onClick={() => handleFilterClick("overdue")}
+              className={`flex-1 pt-2.5 pb-[7px] px-3 rounded-xl flex justify-between items-center shadow-sm transition-all cursor-pointer ${
+                selectedFilter === "overdue"
+                  ? "bg-red-100 border-2 border-red-300"
+                  : "bg-red-50 border-2 border-red-100 hover:bg-red-100"
+              }`}
+            >
+              <span className={`text-[11px] font-semibold flex items-center gap-0.5 ${
+                selectedFilter === "overdue" ? "text-red-800" : "text-red-700"
+              }`}>
+                ⏰ 마감초과
+              </span>
+              <span className={`text-sm font-extrabold translate-y-[-2px] ${
+                selectedFilter === "overdue" ? "text-red-700" : "text-red-700"
+              }`}>
+                {overdueCount}건
+              </span>
+            </button>
+          )}
           {reconfirmCount > 0 && (
             <button
               onClick={() => handleFilterClick("reconfirm")}
-              className={`flex-1 p-2.5 px-3 rounded-xl flex justify-between items-center shadow-sm transition-all cursor-pointer ${
+              className={`flex-1 pt-2.5 pb-[7px] px-3 rounded-xl flex justify-between items-center shadow-sm transition-all cursor-pointer ${
                 selectedFilter === "reconfirm"
-                  ? "bg-amber-100 border-2 border-amber-400"
-                  : "bg-amber-50 border-2 border-amber-200 hover:bg-amber-100"
+                  ? "bg-amber-100 border-2 border-amber-300"
+                  : "bg-amber-50 border-2 border-amber-100 hover:bg-amber-100"
               }`}
             >
-              <span className={`text-[11px] font-semibold flex items-center gap-1 ${
+              <span className={`text-[11px] font-semibold flex items-center gap-0.5 ${
                 selectedFilter === "reconfirm" ? "text-amber-800" : "text-amber-700"
               }`}>
-                ⚠️ 재확인 필요
+                ⚠️ 재확인
               </span>
-              <span className={`text-sm font-extrabold ${
+              <span className={`text-sm font-extrabold translate-y-[-2px] ${
                 selectedFilter === "reconfirm" ? "text-amber-700" : "text-amber-700"
               }`}>
                 {reconfirmCount}건
@@ -103,12 +128,12 @@ export default function HomePage({
         </div>
         <div className="bg-white p-2.5 px-3 rounded-xl flex justify-between items-center shadow-sm">
           <span className="text-[11px] text-neutral-500 font-semibold">이번 달 혜택</span>
-          <span className="text-sm font-extrabold text-[#333]">{totalBenefit.toLocaleString()}원</span>
+          <span className="text-sm font-extrabold translate-y-[-1px] text-[#333]">{totalBenefit.toLocaleString()}원</span>
         </div>
       </div>
 
       {/* Calendar */}
-      <CalendarSection schedules={schedules} onDateClick={handleDateClick} selectedDate={selectedDate} />
+      <CalendarSection schedules={schedules} onDateClick={handleDateClick} selectedDate={selectedDate} today={today} />
 
       {/* Schedule List */}
       <div className="flex items-center justify-between mb-4">
@@ -119,7 +144,9 @@ export default function HomePage({
               ? "🔄 진행 중인 일정"
               : selectedFilter === "reconfirm"
                 ? "⚠️ 재확인 필요 일정"
-                : "내 체험단 리스트"}
+                : selectedFilter === "overdue"
+                  ? "⏰ 마감 초과 일정"
+                  : "내 체험단 리스트"}
           {(selectedDate || selectedFilter !== "all") && (
             <span className="text-sm font-normal text-slate-600 ml-2">({filteredSchedules.length}건)</span>
           )}
@@ -146,7 +173,7 @@ export default function HomePage({
       <div className="space-y-2.5">
         {displayedSchedules.length > 0 ? (
           displayedSchedules.map((schedule) => (
-            <ScheduleItem key={schedule.id} schedule={schedule} onClick={() => onScheduleClick(schedule.id)} />
+            <ScheduleItem key={schedule.id} schedule={schedule} onClick={() => onScheduleClick(schedule.id)} today={today} />
           ))
         ) : (
           <div className="bg-white rounded-2xl p-8 text-center">
@@ -167,15 +194,17 @@ function CalendarSection({
   schedules,
   onDateClick,
   selectedDate,
+  today,
 }: {
   schedules: Schedule[]
   onDateClick: (dateStr: string) => void
   selectedDate: string | null
+  today: string
 }) {
   const weekDays = ["일", "월", "화", "수", "목", "금", "토"]
 
   const [currentDate, setCurrentDate] = useState(new Date())
-  const today = new Date()
+  const todayDate = new Date()
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -198,8 +227,13 @@ function CalendarSection({
     return schedules.some((s) => s.dead === dateStr)
   }
 
+  const isOverdue = (day: number) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    return schedules.some((s) => s.dead === dateStr && dateStr < today && s.status !== "완료" && s.status !== "취소")
+  }
+
   const isToday = (day: number) => {
-    return today.getDate() === day && today.getMonth() === month && today.getFullYear() === year
+    return todayDate.getDate() === day && todayDate.getMonth() === month && todayDate.getFullYear() === year
   }
 
   return (
@@ -259,7 +293,13 @@ function CalendarSection({
             >
               {day}
               {hasDotValue && !isSelected && (
-                <div className="w-1 h-1 bg-orange-500 rounded-full absolute bottom-1.5 translate-y-1/2" />
+                <>
+                  {isOverdue(day) ? (
+                    <span className="text-[10px] absolute bottom-0.5 translate-y-1/2">🔥</span>
+                  ) : (
+                    <div className="w-1 h-1 bg-orange-500 rounded-full absolute bottom-1.5 translate-y-1/2" />
+                  )}
+                </>
               )}
             </button>
           )
@@ -269,7 +309,7 @@ function CalendarSection({
   )
 }
 
-function ScheduleItem({ schedule, onClick }: { schedule: Schedule; onClick: () => void }) {
+function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClick: () => void; today: string }) {
   const icons: Record<Schedule["category"], string> = {
     맛집: "🍝",
     식품: "🥗",
@@ -297,15 +337,19 @@ function ScheduleItem({ schedule, onClick }: { schedule: Schedule; onClick: () =
 
   const total = schedule.benefit + schedule.income - schedule.cost
   const status = statusConfig[schedule.status] || { class: "bg-neutral-100 text-neutral-600", text: "미정" }
+  const isOverdue = schedule.dead && schedule.dead < today && schedule.status !== "완료" && schedule.status !== "취소"
 
   return (
     <div
-      className="bg-white p-4 rounded-2xl flex items-center shadow-sm cursor-pointer transition-transform active:scale-[0.98]"
+      className={`p-4 rounded-2xl flex items-center shadow-sm cursor-pointer transition-transform active:scale-[0.98] ${
+        isOverdue ? "bg-red-50/50" : "bg-white"
+      }`}
       onClick={onClick}
     >
       <div className="text-2xl mr-3.5 w-[30px] text-center">{icons[schedule.category] || "📦"}</div>
       <div className="flex-1">
         <div className="text-[15px] font-bold mb-1.5 text-[#1A1A1A] flex items-center gap-1.5">
+          {isOverdue && <span className="text-sm">⏰</span>}
           {schedule.title}
           {schedule.memo && (
             <span className="text-sm" title="메모 있음">
@@ -314,9 +358,11 @@ function ScheduleItem({ schedule, onClick }: { schedule: Schedule; onClick: () =
           )}
         </div>
         <div className="text-[11px] text-neutral-500 flex items-center gap-1.5">
-          <span className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${status.class}`}>{status.text}</span>
-          <span>| {schedule.platform}</span>
-          <span>| {dDate}</span>
+          <span className={`px-1.5 py-0.5 rounded font-semibold text-[10px] translate-y-[-2px] ${status.class}`}>{status.text}</span>
+          <span>|</span>
+          <span>{schedule.platform}</span>
+          <span>|</span>
+          <span>{dDate}</span>
         </div>
       </div>
       <div className="font-bold text-[#333]">₩{total.toLocaleString()}</div>
