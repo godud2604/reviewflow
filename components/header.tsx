@@ -1,24 +1,54 @@
 "use client"
 
-export default function Header({ title, onProfileClick }: { title: string; onProfileClick: () => void }) {
-  const now = new Date()
-  const days = ["일", "월", "화", "수", "목", "금", "토"]
-  const dateStr = `${now.getMonth() + 1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`
+import { FileText } from "lucide-react"
+import type { Todo } from "@/types"
+
+export default function Header({ 
+  title, 
+  onProfileClick, 
+  onTodoClick,
+  todos,
+  showTodoButton = true
+}: { 
+  title: string
+  onProfileClick: () => void
+  onTodoClick: () => void
+  todos: Todo[]
+  showTodoButton?: boolean
+}) {
+  const incompleteTodoCount = todos.filter(t => !t.done).length
 
   return (
-    <header className="px-6 pt-12 pb-2 flex justify-between items-start">
+    <header className="px-6 pt-12 pb-2">
+      <div className="flex items-center justify-between mb-3">
+        {showTodoButton ? (
+          <button
+            onClick={onTodoClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white shadow-sm hover:shadow-md transition-all active:scale-95 border border-neutral-200 relative"
+          >
+            <FileText className="w-4 h-4 text-neutral-700" />
+            <span className="text-[13px] font-semibold text-neutral-700 cursor-pointer">할 일</span>
+            {incompleteTodoCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-full min-w-[18px] text-center">
+                {incompleteTodoCount}
+              </span>
+            )}
+          </button>
+        ) : (
+          <div />
+        )}
+        <div
+          className="w-10 h-10 rounded-full bg-neutral-200 shadow-md border-2 border-white cursor-pointer transition-transform active:scale-95"
+          style={{
+            backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix')",
+            backgroundSize: "cover",
+          }}
+          onClick={onProfileClick}
+        />
+      </div>
       <div>
-        <div className="text-[13px] text-neutral-500 font-semibold mb-1">{dateStr}</div>
         <h1 className="text-[26px] font-extrabold text-[#1A1A1A] tracking-tight">{title}</h1>
       </div>
-      <div
-        className="w-10 h-10 rounded-full bg-neutral-200 shadow-md border-2 border-white cursor-pointer transition-transform active:scale-95"
-        style={{
-          backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix')",
-          backgroundSize: "cover",
-        }}
-        onClick={onProfileClick}
-      />
     </header>
   )
 }

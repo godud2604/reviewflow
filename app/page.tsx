@@ -170,7 +170,13 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-neutral-200 flex items-center justify-center p-4">
       <div className="w-full max-w-[390px] h-[844px] bg-[#F7F7F8] relative overflow-hidden rounded-[40px] shadow-2xl flex flex-col">
-        <Header title={getPageTitle()} onProfileClick={() => setCurrentPage("profile")} />
+        <Header 
+          title={getPageTitle()} 
+          onProfileClick={() => setCurrentPage("profile")} 
+          onTodoClick={() => setIsTodoModalOpen(true)}
+          todos={todos}
+          showTodoButton={currentPage === "home" && !showAllSchedules}
+        />
 
         {showAllSchedules ? (
           <AllSchedulesPage
@@ -198,7 +204,6 @@ export default function Page() {
           currentPage={currentPage}
           onPageChange={setCurrentPage}
           onAddClick={() => handleOpenScheduleModal()}
-          onTodoClick={() => setIsTodoModalOpen(true)}
         />
 
         {isScheduleModalOpen && (
