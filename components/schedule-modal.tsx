@@ -90,6 +90,10 @@ export default function ScheduleModal({
       return
     }
     onSave(formData as Schedule)
+    toast({
+      title: "체험단이 등록되었습니다.",
+      duration: 2000,
+    })
   }
 
   const formatNumber = (value: number) => {

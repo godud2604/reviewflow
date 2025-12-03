@@ -144,7 +144,10 @@ export default function Page() {
   }
 
   const handleAddTodo = (text: string) => {
-    setTodos([...todos, { id: Date.now(), text, done: false }])
+    setTodos(prevTodos => {
+      const newId = prevTodos.length > 0 ? Math.max(...prevTodos.map(t => t.id)) + 1 : 1
+      return [...prevTodos, { id: newId, text, done: false }]
+    })
   }
 
   const handleToggleTodo = (id: number) => {
