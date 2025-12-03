@@ -94,7 +94,14 @@ function ScheduleItem({ schedule, onClick }: { schedule: Schedule; onClick: () =
     >
       <div className="text-2xl mr-3.5 w-[30px] text-center">{icons[schedule.category] || "📦"}</div>
       <div className="flex-1">
-        <div className="text-[15px] font-bold mb-1.5 text-[#1A1A1A]">{schedule.title}</div>
+        <div className="text-[15px] font-bold mb-1.5 text-[#1A1A1A] flex items-center gap-1.5">
+          {schedule.title}
+          {schedule.memo && (
+            <span className="text-sm" title="메모 있음">
+              📝
+            </span>
+          )}
+        </div>
         <div className="text-[11px] text-neutral-500 flex items-center gap-1.5">
           <span className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${status.class}`}>{status.text}</span>
           <span>| {schedule.platform}</span>
