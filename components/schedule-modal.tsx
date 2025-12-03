@@ -91,7 +91,7 @@ export default function ScheduleModal({
     }
     onSave(formData as Schedule)
     toast({
-      title: "체험단이 등록되었습니다.",
+      title: schedule ? "체험단 정보가 수정되었습니다." : "체험단이 등록되었습니다.",
       duration: 2000,
     })
   }
