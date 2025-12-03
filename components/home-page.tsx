@@ -72,7 +72,7 @@ export default function HomePage({
                 : "bg-white border-2 border-transparent hover:bg-neutral-50"
             }`}
           >
-            <span className={`text-[11px] font-semibold ${
+            <span className={`text-[11px] font-semibold translate-y-[-2px] ${
               selectedFilter === "active" ? "text-slate-800" : "text-neutral-500"
             }`}>
               진행중
@@ -92,7 +92,7 @@ export default function HomePage({
                   : "bg-red-50 border-2 border-red-100 hover:bg-red-100"
               }`}
             >
-              <span className={`text-[11px] font-semibold flex items-center gap-0.5 ${
+              <span className={`text-[11px] font-semibold flex items-center gap-0.5 translate-y-[-2px] ${
                 selectedFilter === "overdue" ? "text-red-800" : "text-red-700"
               }`}>
                 ⏰ 마감초과
@@ -113,7 +113,7 @@ export default function HomePage({
                   : "bg-amber-50 border-2 border-amber-100 hover:bg-amber-100"
               }`}
             >
-              <span className={`text-[11px] font-semibold flex items-center gap-0.5 ${
+              <span className={`text-[11px] font-semibold flex items-center gap-0.5 translate-y-[-2px] ${
                 selectedFilter === "reconfirm" ? "text-amber-800" : "text-amber-700"
               }`}>
                 ⚠️ 재확인
@@ -139,17 +139,14 @@ export default function HomePage({
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold">
           {selectedDate
-            ? `📅 ${selectedDate} 일정`
+            ? `${selectedDate.slice(5).replace('-', '/')} 일정 (${filteredSchedules.length}건)`
             : selectedFilter === "active"
-              ? "🔄 진행 중인 일정"
+              ? `진행 중인 일정 (${filteredSchedules.length}건)`
               : selectedFilter === "reconfirm"
-                ? "⚠️ 재확인 필요 일정"
+                ? `재확인 필요 일정 (${filteredSchedules.length}건)`
                 : selectedFilter === "overdue"
-                  ? "⏰ 마감 초과 일정"
+                  ? `마감 초과 일정 (${filteredSchedules.length}건)`
                   : "내 체험단 리스트"}
-          {(selectedDate || selectedFilter !== "all") && (
-            <span className="text-sm font-normal text-slate-600 ml-2">({filteredSchedules.length}건)</span>
-          )}
         </h3>
         <div className="flex items-center gap-2">
           {(selectedDate || selectedFilter !== "all") && (
