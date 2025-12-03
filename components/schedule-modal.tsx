@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
-import { X } from "lucide-react"
+import { X, Copy } from "lucide-react"
 
 const PLATFORMS = ["레뷰", "리뷰노트", "스타일씨", "리뷰플레이스"]
 
@@ -171,15 +171,39 @@ export default function ScheduleModal({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-hide">
+          {/* 초과 경고 */}
+          {formData.dead && formData.dead < new Date().toISOString().split("T")[0] && formData.status !== "완료" && formData.status !== "취소" && (
+            <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+              <span className="text-xl">⚠️</span>
+              <span className="text-sm font-bold text-red-700">마감 기한 초과된 체험단입니다</span>
+            </div>
+          )}
+          
           {/* 체험단명 */}
           <label className="block text-sm font-bold text-neutral-500 mb-2">체험단명 (필수)</label>
-          <input
-            type="text"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
-            placeholder="예: 강남역 파스타"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full h-11 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
+              placeholder="예: 강남역 파스타"
+            />
+            {formData.title && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(formData.title || "")
+                  toast({
+                    title: "체험단명이 복사되었습니다.",
+                    duration: 2000,
+                  })
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
           {/* 플랫폼 */}
           <div className="mt-6">
@@ -213,7 +237,7 @@ export default function ScheduleModal({
                 + 플랫폼 추가
               </button>
             ) : (
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2.5 flex gap-2">
                 <input
                   type="text"
                   value={newPlatform}
@@ -481,24 +505,56 @@ export default function ScheduleModal({
 
           {/* 링크 */}
           <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">포스팅 링크</label>
-          <input
-            type="url"
-            value={formData.postingLink || ""}
-            onChange={(e) => setFormData({ ...formData, postingLink: e.target.value })}
-            className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
-            placeholder="https://..."
-          />
+          <div className="relative">
+            <input
+              type="url"
+              value={formData.postingLink || ""}
+              onChange={(e) => setFormData({ ...formData, postingLink: e.target.value })}
+              className="w-full h-11 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
+              placeholder="https://..."
+            />
+            {formData.postingLink && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(formData.postingLink || "")
+                  toast({
+                    title: "포스팅 링크가 복사되었습니다.",
+                    duration: 2000,
+                  })
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
           {["페이백형", "페이백+구매평", "구매평", "미션/인증", "배달형"].includes(formData.reviewType || "") && (
             <>
               <label className="block text-sm font-bold text-neutral-500 mb-2 mt-4">구매할 링크</label>
-              <input
-                type="url"
-                value={formData.purchaseLink || ""}
-                onChange={(e) => setFormData({ ...formData, purchaseLink: e.target.value })}
-                className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
-                placeholder="https://..."
-              />
+              <div className="relative">
+                <input
+                  type="url"
+                  value={formData.purchaseLink || ""}
+                  onChange={(e) => setFormData({ ...formData, purchaseLink: e.target.value })}
+                  className="w-full h-11 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
+                  placeholder="https://..."
+                />
+                {formData.purchaseLink && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(formData.purchaseLink || "")
+                      toast({
+                        title: "구매 링크가 복사되었습니다.",
+                        duration: 2000,
+                      })
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </>
           )}
 
@@ -542,13 +598,29 @@ export default function ScheduleModal({
 
           {/* 메모장 */}
           <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">메모장</label>
-          <textarea
-            value={formData.memo || ""}
-            onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
-            className="w-full px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] resize-none"
-            rows={3}
-            placeholder="가이드라인 복사 붙여넣기..."
-          />
+          <div className="relative">
+            <textarea
+              value={formData.memo || ""}
+              onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
+              className="w-full px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px] resize-none"
+              rows={3}
+              placeholder="가이드라인 복사 붙여넣기..."
+            />
+            {formData.memo && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(formData.memo || "")
+                  toast({
+                    title: "메모 내용이 복사되었습니다.",
+                    duration: 2000,
+                  })
+                }}
+                className="absolute right-2 top-2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
           {schedule && (
             <button

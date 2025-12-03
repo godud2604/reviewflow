@@ -11,6 +11,8 @@ export default function AllSchedulesPage({
   onScheduleClick: (id: number) => void
   onBack: () => void
 }) {
+  const today = new Date().toISOString().split("T")[0]
+  
   return (
     <div className="flex-1 overflow-y-auto px-5 pb-24 scrollbar-hide">
       {/* Header */}
@@ -51,14 +53,14 @@ export default function AllSchedulesPage({
       {/* Schedule List */}
       <div className="space-y-2.5">
         {schedules.map((schedule) => (
-          <ScheduleItem key={schedule.id} schedule={schedule} onClick={() => onScheduleClick(schedule.id)} />
+          <ScheduleItem key={schedule.id} schedule={schedule} onClick={() => onScheduleClick(schedule.id)} today={today} />
         ))}
       </div>
     </div>
   )
 }
 
-function ScheduleItem({ schedule, onClick }: { schedule: Schedule; onClick: () => void }) {
+function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClick: () => void; today: string }) {
   const icons: Record<Schedule["category"], string> = {
     맛집: "🍝",
     식품: "🥗",
@@ -71,8 +73,10 @@ function ScheduleItem({ schedule, onClick }: { schedule: Schedule; onClick: () =
 
   const statusConfig: Record<Schedule["status"], { class: string; text: string }> = {
     선정됨: { class: "bg-blue-50 text-blue-700", text: "선정됨" },
-    예약: { class: "bg-orange-50 text-orange-700", text: "예약" },
+    "방문일 예약 완료": { class: "bg-orange-50 text-orange-700", text: "방문일 예약 완료" },
     방문: { class: "bg-orange-50 text-orange-700", text: "방문" },
+    "구매 완료": { class: "bg-purple-50 text-purple-700", text: "구매 완료" },
+    "제품 배송 완료": { class: "bg-green-50 text-green-700", text: "배송 완료" },
     완료: { class: "bg-neutral-100 text-neutral-600", text: "완료" },
     취소: { class: "bg-red-50 text-red-600", text: "취소" },
     재확인: { class: "bg-yellow-50 text-yellow-700", text: "재확인" },
@@ -86,10 +90,13 @@ function ScheduleItem({ schedule, onClick }: { schedule: Schedule; onClick: () =
 
   const total = schedule.benefit + schedule.income - schedule.cost
   const status = statusConfig[schedule.status] || { class: "bg-neutral-100 text-neutral-600", text: "미정" }
+  const isOverdue = schedule.dead && schedule.dead < today && schedule.status !== "완료" && schedule.status !== "취소"
 
   return (
     <div
-      className="bg-white p-4 rounded-2xl flex items-center shadow-sm cursor-pointer transition-transform active:scale-[0.98]"
+      className={`p-4 rounded-2xl flex items-center shadow-sm cursor-pointer transition-transform active:scale-[0.98] ${
+        isOverdue ? "bg-red-50/50" : "bg-white"
+      }`}
       onClick={onClick}
     >
       <div className="text-2xl mr-3.5 w-[30px] text-center">{icons[schedule.category] || "📦"}</div>
