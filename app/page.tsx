@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Header from "@/components/header"
 import HomePage from "@/components/home-page"
+import AllSchedulesPage from "@/components/all-schedules-page"
 import StatsPage from "@/components/stats-page"
 import ProfilePage from "@/components/profile-page"
 import NavigationBar from "@/components/navigation-bar"
@@ -12,6 +13,7 @@ import type { Schedule, Todo } from "@/types"
 
 export default function Page() {
   const [currentPage, setCurrentPage] = useState<"home" | "stats" | "profile">("home")
+  const [showAllSchedules, setShowAllSchedules] = useState(false)
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [todos, setTodos] = useState<Todo[]>([])
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
@@ -30,71 +32,61 @@ export default function Page() {
         {
           id: 1,
           title: "강남 오스테리아",
-          status: "visit",
+          status: "방문",
           platform: "레뷰",
-          type: "맛집",
+          reviewType: "방문형",
+          channel: "네이버블로그",
+          category: "맛집",
+          region: "서울",
           visit: "2025-12-05",
           dead: "2025-12-07",
           benefit: 50000,
           income: 0,
           cost: 5000,
-          link: "",
+          postingLink: "",
+          purchaseLink: "",
+          guideLink: "",
+          guideFiles: [],
           memo: "",
         },
         {
           id: 2,
           title: "아이오페 세럼",
-          status: "ready",
-          platform: "강남맛집",
-          type: "뷰티",
+          status: "선정됨",
+          platform: "리뷰노트",
+          reviewType: "제공형",
+          channel: "인스타그램",
+          category: "뷰티",
+          region: "서울",
           visit: "",
           dead: "2025-12-10",
           benefit: 35000,
           income: 0,
           cost: 0,
-          link: "",
+          postingLink: "",
+          purchaseLink: "",
+          guideLink: "",
+          guideFiles: [],
           memo: "",
         },
         {
           id: 3,
           title: "제주 호텔",
-          status: "done",
-          platform: "디너의여왕",
-          type: "숙박",
+          status: "완료",
+          platform: "리뷰플레이스",
+          reviewType: "제공형",
+          channel: "네이버블로그",
+          category: "여행",
+          region: "제주",
           visit: "2025-12-01",
           dead: "2025-12-03",
           benefit: 200000,
           income: 0,
           cost: 20000,
-          link: "",
-          memo: "",
-        },
-         {
-          id: 4,
-          title: "제주 호텔",
-          status: "done",
-          platform: "디너의여왕",
-          type: "숙박",
-          visit: "2025-12-01",
-          dead: "2025-12-03",
-          benefit: 200000,
-          income: 0,
-          cost: 20000,
-          link: "",
-          memo: "",
-        },
-         {
-          id: 5,
-          title: "제주 호텔",
-          status: "done",
-          platform: "디너의여왕",
-          type: "숙박",
-          visit: "2025-12-01",
-          dead: "2025-12-03",
-          benefit: 200000,
-          income: 0,
-          cost: 20000,
-          link: "",
+          postingLink: "",
+          purchaseLink: "",
+          guideLink: "",
+          guideFiles: [],
           memo: "",
         },
       ]
@@ -164,6 +156,7 @@ export default function Page() {
   }
 
   const getPageTitle = () => {
+    if (showAllSchedules) return "전체 체험단 리스트"
     switch (currentPage) {
       case "home":
         return "나의 일정"
@@ -179,11 +172,27 @@ export default function Page() {
       <div className="w-full max-w-[390px] h-[844px] bg-[#F7F7F8] relative overflow-hidden rounded-[40px] shadow-2xl flex flex-col">
         <Header title={getPageTitle()} onProfileClick={() => setCurrentPage("profile")} />
 
-        {currentPage === "home" && <HomePage schedules={schedules} onScheduleClick={handleOpenScheduleModal} />}
+        {showAllSchedules ? (
+          <AllSchedulesPage
+            schedules={schedules}
+            onScheduleClick={handleOpenScheduleModal}
+            onBack={() => setShowAllSchedules(false)}
+          />
+        ) : (
+          <>
+            {currentPage === "home" && (
+              <HomePage
+                schedules={schedules}
+                onScheduleClick={handleOpenScheduleModal}
+                onShowAllClick={() => setShowAllSchedules(true)}
+              />
+            )}
 
-        {currentPage === "stats" && <StatsPage schedules={schedules} />}
+            {currentPage === "stats" && <StatsPage schedules={schedules} />}
 
-        {currentPage === "profile" && <ProfilePage />}
+            {currentPage === "profile" && <ProfilePage />}
+          </>
+        )}
 
         <NavigationBar
           currentPage={currentPage}

@@ -6,15 +6,17 @@ import type { Schedule } from "@/types"
 export default function HomePage({
   schedules,
   onScheduleClick,
+  onShowAllClick,
 }: {
   schedules: Schedule[]
   onScheduleClick: (id: number) => void
+  onShowAllClick: () => void
 }) {
-  const activeCount = schedules.filter((s) => s.status !== "done").length
+  const activeSchedules = schedules.filter((s) => s.status !== "완료" && s.status !== "취소")
+  const activeCount = activeSchedules.length
   const totalBenefit = schedules.reduce((acc, cur) => acc + cur.benefit + cur.income - cur.cost, 0)
 
-  const [showAll, setShowAll] = useState(false)
-  const displayedSchedules = showAll ? schedules : schedules.slice(0, 3)
+  const displayedSchedules = activeSchedules.slice(0, 3)
 
   return (
     <div className="flex-1 overflow-y-auto px-5 pb-24 scrollbar-hide">
@@ -36,12 +38,12 @@ export default function HomePage({
       {/* Schedule List */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold">내 체험단 리스트</h3>
-        {schedules.length > 2 && (
+        {activeSchedules.length > 0 && (
           <button
-            onClick={() => setShowAll(!showAll)}
+            onClick={onShowAllClick}
             className="text-xs font-semibold text-[#FF5722] hover:text-[#E64A19] transition-colors"
           >
-            {showAll ? "접기" : `전체보기 (${schedules.length})`}
+            전체보기 ({schedules.length})
           </button>
         )}
       </div>
@@ -143,18 +145,23 @@ function CalendarSection({ schedules }: { schedules: Schedule[] }) {
 }
 
 function ScheduleItem({ schedule, onClick }: { schedule: Schedule; onClick: () => void }) {
-  const icons: Record<Schedule["type"], string> = {
+  const icons: Record<Schedule["category"], string> = {
     맛집: "🍝",
+    식품: "🥗",
     뷰티: "💄",
-    제품: "📦",
-    숙박: "🏨",
-    기자단: "💰",
+    여행: "✈️",
+    디지털: "📱",
+    반려동물: "🐕",
+    기타: "📦",
   }
 
-  const statusConfig = {
-    ready: { class: "bg-blue-50 text-blue-700", text: "선정됨" },
-    visit: { class: "bg-orange-50 text-orange-700", text: "예약/방문" },
-    done: { class: "bg-neutral-100 text-neutral-600", text: "완료" },
+  const statusConfig: Record<Schedule["status"], { class: string; text: string }> = {
+    선정됨: { class: "bg-blue-50 text-blue-700", text: "선정됨" },
+    예약: { class: "bg-orange-50 text-orange-700", text: "예약" },
+    방문: { class: "bg-orange-50 text-orange-700", text: "방문" },
+    완료: { class: "bg-neutral-100 text-neutral-600", text: "완료" },
+    취소: { class: "bg-red-50 text-red-600", text: "취소" },
+    재확인: { class: "bg-yellow-50 text-yellow-700", text: "재확인" },
   }
 
   const dDate = schedule.dead
@@ -164,14 +171,14 @@ function ScheduleItem({ schedule, onClick }: { schedule: Schedule; onClick: () =
       : "미정"
 
   const total = schedule.benefit + schedule.income - schedule.cost
-  const status = statusConfig[schedule.status]
+  const status = statusConfig[schedule.status] || { class: "bg-neutral-100 text-neutral-600", text: "미정" }
 
   return (
     <div
       className="bg-white p-4 rounded-2xl flex items-center shadow-sm cursor-pointer transition-transform active:scale-[0.98]"
       onClick={onClick}
     >
-      <div className="text-2xl mr-3.5 w-[30px] text-center">{icons[schedule.type]}</div>
+      <div className="text-2xl mr-3.5 w-[30px] text-center">{icons[schedule.category] || "📦"}</div>
       <div className="flex-1">
         <div className="text-[15px] font-bold mb-1.5 text-[#1A1A1A]">{schedule.title}</div>
         <div className="text-[11px] text-neutral-500 flex items-center gap-1.5">
