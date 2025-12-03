@@ -136,11 +136,9 @@ export default function Page() {
   }
 
   const handleDeleteSchedule = (id: number) => {
-    if (confirm("정말 삭제하시겠습니까?")) {
-      setSchedules(schedules.filter((s) => s.id !== id))
-      setIsScheduleModalOpen(false)
-      setEditingScheduleId(null)
-    }
+    setSchedules(schedules.filter((s) => s.id !== id))
+    setIsScheduleModalOpen(false)
+    setEditingScheduleId(null)
   }
 
   const handleAddTodo = (text: string) => {

@@ -157,14 +157,12 @@ export default function HomePage({
               초기화
             </button>
           )}
-          {!selectedDate && selectedFilter === "all" && activeSchedules.length > 0 && (
-            <button
-              onClick={onShowAllClick}
-              className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors"
-            >
-              전체보기 ({schedules.length})
-            </button>
-          )}
+          <button
+            onClick={onShowAllClick}
+            className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors"
+          >
+            전체보기 ({schedules.length})
+          </button>
         </div>
       </div>
       <div className="space-y-2.5">

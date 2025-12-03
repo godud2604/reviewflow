@@ -53,6 +53,7 @@ export default function ScheduleModal({
   const [platformToDelete, setPlatformToDelete] = useState<string | null>(null)
   const [duplicatePlatformAlert, setDuplicatePlatformAlert] = useState(false)
   const [emptyPlatformAlert, setEmptyPlatformAlert] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -473,7 +474,7 @@ export default function ScheduleModal({
           </div>
 
           {/* 자산 관리 */}
-          <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">자산 관리 (단위: 원)</label>
+          <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">자산 관리</label>
           <div className="bg-neutral-50 border border-neutral-200 rounded-2xl px-2 py-3 flex gap-2.5">
             <div className="flex-1 text-center">
               <span className="block text-xs text-neutral-400 font-semibold mb-2">제공(물품)</span>
@@ -628,7 +629,7 @@ export default function ScheduleModal({
 
           {schedule && (
             <button
-              onClick={() => onDelete(schedule.id)}
+              onClick={() => setShowDeleteConfirm(true)}
               className="w-full p-4 bg-red-50 text-red-600 border-none rounded-2xl font-bold mt-5 cursor-pointer"
             >
               이 체험단 삭제
@@ -690,6 +691,37 @@ export default function ScheduleModal({
               className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
             >
               확인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="w-[280px] rounded-2xl p-6 gap-4">
+          <AlertDialogHeader className="space-y-2 text-center">
+            <AlertDialogTitle className="text-base font-bold text-neutral-900">체험단 삭제</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
+              이 체험단을 삭제하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-center gap-2">
+            <AlertDialogCancel className="h-10 px-6 text-sm font-bold rounded-xl shadow-sm">
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (schedule) {
+                  onDelete(schedule.id)
+                  setShowDeleteConfirm(false)
+                  toast({
+                    title: "체험단이 삭제되었습니다.",
+                    duration: 2000,
+                  })
+                }
+              }}
+              className="h-10 px-6 text-sm font-bold bg-red-600 hover:bg-red-700 rounded-xl shadow-sm"
+            >
+              삭제
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
