@@ -102,21 +102,21 @@ export default function IncomeHistoryModal({
         </div>
 
         {/* Summary */}
-        <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-5 mx-5 mt-5 rounded-2xl">
+        <div className="bg-gradient-to-r from-orange-50 to-orange-100 px-8 py-5 mx-5 mt-5 rounded-2xl">
           <div className="text-sm text-orange-800 mb-2 font-semibold">총 수입</div>
           <div className="text-[32px] font-extrabold text-orange-900 mb-3">₩ {grandTotal.toLocaleString()}</div>
-          <div className="flex gap-5 text-xs">
-            <div>
+          <div className="flex justify-between text-xs">
+            <div className="flex flex-col gap-1">
               <span className="text-orange-600 font-medium">방어한 생활비</span>
-              <span className="ml-2 font-bold text-orange-900">{totalBenefit.toLocaleString()}원</span>
+              <span className="font-bold text-orange-900">{totalBenefit.toLocaleString()}원</span>
             </div>
-            <div>
+            <div className="flex flex-col gap-1">
               <span className="text-orange-600 font-medium">리뷰 수입</span>
-              <span className="ml-2 font-bold text-orange-900">{totalIncome.toLocaleString()}원</span>
+              <span className="font-bold text-orange-900">{totalIncome.toLocaleString()}원</span>
             </div>
-            <div>
+            <div className="flex flex-col gap-1">
               <span className="text-orange-600 font-medium">기타 부수입</span>
-              <span className="ml-2 font-bold text-orange-900">{totalExtra.toLocaleString()}원</span>
+              <span className="font-bold text-orange-900">{totalExtra.toLocaleString()}원</span>
             </div>
           </div>
         </div>

@@ -18,10 +18,6 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
     setExtraIncomes([...extraIncomes, newIncome])
   }
 
-  const handleDeleteIncome = (id: number) => {
-    setExtraIncomes(extraIncomes.filter((income) => income.id !== id))
-  }
-
   // Calculate stats
   let totalBen = 0,
     totalInc = 0,
@@ -59,24 +55,9 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
   const totalIncomeWithExtra = totalInc + totalExtraIncome
 
   const econValue = totalBen + totalIncomeWithExtra - totalCost
-  const revenue = totalBen + totalIncomeWithExtra
-  const rate = revenue > 0 ? Math.round(((revenue - totalCost) / revenue) * 100) : 0
-
-  const handleShare = () => {
-    alert("🔗 통계 링크가 복사되었습니다!")
-  }
 
   return (
     <div className="flex-1 overflow-y-auto px-5 pb-24 scrollbar-hide relative">
-      <div className="absolute top-2 right-5 z-10">
-        <button
-          onClick={handleShare}
-          className="bg-white px-3 py-1.5 rounded-2xl text-sm font-semibold shadow-md cursor-pointer hover:bg-neutral-50 transition-colors"
-        >
-          🔗 공유
-        </button>
-      </div>
-
       {/* Hero Card */}
       <div
         className="rounded-[30px] p-7 mb-6 relative overflow-hidden text-white shadow-xl"
@@ -86,7 +67,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
         <div className="text-[38px] font-extrabold mb-6 tracking-tight">₩ {econValue.toLocaleString()}</div>
         <div className="flex gap-5 border-t border-white/20 pt-5">
           <div className="flex-1">
-            <div className="text-xs opacity-80 mb-1 font-medium">총 수입</div>
+            <div className="text-xs opacity-80 mb-1 font-medium">방어한 생활비</div>
             <div className="text-[15px] font-bold">{(totalBen + totalIncomeWithExtra).toLocaleString()}</div>
           </div>
           <div className="flex-1">
@@ -157,9 +138,6 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
-                      <div className="w-20 text-right text-sm font-bold text-neutral-800">
-                        {amount.toLocaleString()}원
-                      </div>
                       <div className="w-12 text-right text-xs text-neutral-400 font-medium">{percentage}%</div>
                     </div>
                   )
@@ -185,9 +163,6 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
                       className="h-full bg-green-400 rounded-full transition-all duration-500"
                       style={{ width: `${Math.round((totalInc / totalIncomeWithExtra) * 100)}%` }}
                     />
-                  </div>
-                  <div className="w-20 text-right text-sm font-bold text-neutral-800">
-                    {totalInc.toLocaleString()}원
                   </div>
                   <div className="w-12 text-right text-xs text-neutral-400 font-medium">
                     {Math.round((totalInc / totalIncomeWithExtra) * 100)}%
