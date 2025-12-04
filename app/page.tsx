@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Header from "@/components/header"
 import HomePage from "@/components/home-page"
 import AllSchedulesPage from "@/components/all-schedules-page"
@@ -13,17 +14,27 @@ import TodoModal from "@/components/todo-modal"
 import type { Schedule, Todo, Channel, FeaturedPost, ExtraIncome } from "@/types"
 
 export default function Page() {
-  const [currentPage, setCurrentPage] = useState<"home" | "stats" | "profile">("home")
-  const [showAllSchedules, setShowAllSchedules] = useState(false)
-  const [showPortfolio, setShowPortfolio] = useState(false)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [todos, setTodos] = useState<Todo[]>([])
   const [channels, setChannels] = useState<Channel[]>([])
   const [featuredPosts, setFeaturedPosts] = useState<FeaturedPost[]>([])
   const [extraIncomes, setExtraIncomes] = useState<ExtraIncome[]>([])
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
-  const [isTodoModalOpen, setIsTodoModalOpen] = useState(false)
-  const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null)
+
+  // URL 기반 상태 관리
+  const page = searchParams.get("page") || "home"
+  const view = searchParams.get("view")
+  const scheduleId = searchParams.get("schedule")
+  const isNewSchedule = searchParams.get("new") === "true"
+  const isTodoModalOpen = searchParams.get("todo") === "true"
+
+  const currentPage = (page === "home" || page === "stats" || page === "profile") ? page : "home"
+  const showAllSchedules = view === "all"
+  const showPortfolio = view === "portfolio"
+  const isScheduleModalOpen = scheduleId !== null || isNewSchedule
+  const editingScheduleId = scheduleId ? parseInt(scheduleId) : null
 
   // Initialize with demo data
   useEffect(() => {
@@ -206,8 +217,20 @@ export default function Page() {
   }, [extraIncomes])
 
   const handleOpenScheduleModal = (scheduleId?: number) => {
-    setEditingScheduleId(scheduleId || null)
-    setIsScheduleModalOpen(true)
+    const params = new URLSearchParams(searchParams.toString())
+    if (scheduleId) {
+      params.set("schedule", scheduleId.toString())
+    } else {
+      params.set("new", "true")
+    }
+    router.push(`?${params.toString()}`)
+  }
+
+  const handleCloseScheduleModal = () => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("schedule")
+    params.delete("new")
+    router.push(`?${params.toString()}`)
   }
 
   const handleSaveSchedule = (schedule: Schedule) => {
@@ -216,14 +239,12 @@ export default function Page() {
     } else {
       setSchedules([...schedules, { ...schedule, id: Date.now() }])
     }
-    setIsScheduleModalOpen(false)
-    setEditingScheduleId(null)
+    handleCloseScheduleModal()
   }
 
   const handleDeleteSchedule = (id: number) => {
     setSchedules(schedules.filter((s) => s.id !== id))
-    setIsScheduleModalOpen(false)
-    setEditingScheduleId(null)
+    handleCloseScheduleModal()
   }
 
   const handleAddTodo = (text: string) => {
@@ -239,6 +260,46 @@ export default function Page() {
 
   const handleDeleteTodo = (id: number) => {
     setTodos(todos.filter((t) => t.id !== id))
+  }
+
+  const handlePageChange = (newPage: "home" | "stats" | "profile") => {
+    router.push(`?page=${newPage}`)
+  }
+
+  const handleShowAllSchedules = () => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("view", "all")
+    router.push(`?${params.toString()}`)
+  }
+
+  const handleBackFromAll = () => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("view")
+    router.push(`?${params.toString()}`)
+  }
+
+  const handleShowPortfolio = () => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("view", "portfolio")
+    router.push(`?${params.toString()}`)
+  }
+
+  const handleBackFromPortfolio = () => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("view")
+    router.push(`?${params.toString()}`)
+  }
+
+  const handleOpenTodoModal = () => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("todo", "true")
+    router.push(`?${params.toString()}`)
+  }
+
+  const handleCloseTodoModal = () => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("todo")
+    router.push(`?${params.toString()}`)
   }
 
   const getPageTitle = () => {
@@ -259,8 +320,8 @@ export default function Page() {
       <div className="w-full max-w-[390px] h-[844px] bg-[#F7F7F8] relative overflow-hidden rounded-[40px] shadow-2xl flex flex-col">
         <Header 
           title={getPageTitle()} 
-          onProfileClick={() => setCurrentPage("profile")} 
-          onTodoClick={() => setIsTodoModalOpen(true)}
+          onProfileClick={() => handlePageChange("profile")} 
+          onTodoClick={handleOpenTodoModal}
           todos={todos}
           showTodoButton={currentPage === "home" && !showAllSchedules && !showPortfolio}
         />
@@ -270,13 +331,13 @@ export default function Page() {
             schedules={schedules}
             channels={channels}
             featuredPosts={featuredPosts}
-            onBack={() => setShowPortfolio(false)}
+            onBack={handleBackFromPortfolio}
           />
         ) : showAllSchedules ? (
           <AllSchedulesPage
             schedules={schedules}
             onScheduleClick={handleOpenScheduleModal}
-            onBack={() => setShowAllSchedules(false)}
+            onBack={handleBackFromAll}
           />
         ) : (
           <>
@@ -284,7 +345,7 @@ export default function Page() {
               <HomePage
                 schedules={schedules}
                 onScheduleClick={handleOpenScheduleModal}
-                onShowAllClick={() => setShowAllSchedules(true)}
+                onShowAllClick={handleShowAllSchedules}
               />
             )}
 
@@ -292,7 +353,7 @@ export default function Page() {
 
             {currentPage === "profile" && (
               <ProfilePage 
-                onShowPortfolio={() => setShowPortfolio(true)} 
+                onShowPortfolio={handleShowPortfolio} 
                 schedules={schedules}
                 extraIncomes={extraIncomes}
               />
@@ -302,17 +363,14 @@ export default function Page() {
 
         <NavigationBar
           currentPage={currentPage}
-          onPageChange={setCurrentPage}
+          onPageChange={handlePageChange}
           onAddClick={() => handleOpenScheduleModal()}
         />
 
         {isScheduleModalOpen && (
           <ScheduleModal
             isOpen={isScheduleModalOpen}
-            onClose={() => {
-              setIsScheduleModalOpen(false)
-              setEditingScheduleId(null)
-            }}
+            onClose={handleCloseScheduleModal}
             onSave={handleSaveSchedule}
             onDelete={handleDeleteSchedule}
             schedule={editingScheduleId ? schedules.find((s) => s.id === editingScheduleId) : undefined}
@@ -322,7 +380,7 @@ export default function Page() {
         {isTodoModalOpen && (
           <TodoModal
             isOpen={isTodoModalOpen}
-            onClose={() => setIsTodoModalOpen(false)}
+            onClose={handleCloseTodoModal}
             todos={todos}
             onAddTodo={handleAddTodo}
             onToggleTodo={handleToggleTodo}
