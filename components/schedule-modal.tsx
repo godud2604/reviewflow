@@ -54,11 +54,26 @@ export default function ScheduleModal({
   const [duplicatePlatformAlert, setDuplicatePlatformAlert] = useState(false)
   const [emptyPlatformAlert, setEmptyPlatformAlert] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [reconfirmReason, setReconfirmReason] = useState("")
+  const [customReconfirmReason, setCustomReconfirmReason] = useState("")
   const { toast } = useToast()
 
   useEffect(() => {
     if (schedule) {
       setFormData(schedule)
+      // 재확인 사유가 메모에 저장되어 있다면 추출
+      if (schedule.status === "재확인" && schedule.memo) {
+        const reasonMatch = schedule.memo.match(/\[재확인 사유: (.+?)\]/)
+        if (reasonMatch) {
+          const reason = reasonMatch[1]
+          if (["입금 확인 필요", "리워드 미지급", "가이드 내용 불분명", "플랫폼 답변 대기중"].includes(reason)) {
+            setReconfirmReason(reason)
+          } else {
+            setReconfirmReason("기타")
+            setCustomReconfirmReason(reason)
+          }
+        }
+      }
     } else {
       setFormData({
         title: "",
@@ -79,6 +94,8 @@ export default function ScheduleModal({
         guideFiles: [],
         memo: "",
       })
+      setReconfirmReason("")
+      setCustomReconfirmReason("")
     }
   }, [schedule, isOpen])
 
@@ -90,6 +107,17 @@ export default function ScheduleModal({
       })
       return
     }
+    
+    // 재확인 상태일 때 사유를 메모에 추가
+    if (formData.status === "재확인" && reconfirmReason) {
+      const reason = reconfirmReason === "기타" ? customReconfirmReason : reconfirmReason
+      const reasonText = `[재확인 사유: ${reason}]`
+      const currentMemo = formData.memo || ""
+      // 기존 재확인 사유 제거 후 새로운 사유 추가
+      const memoWithoutReason = currentMemo.replace(/\[재확인 사유: .+?\]\s*/g, "")
+      formData.memo = reasonText + (memoWithoutReason ? "\n" + memoWithoutReason : "")
+    }
+    
     onSave(formData as Schedule)
     toast({
       title: schedule ? "체험단 정보가 수정되었습니다." : "체험단이 등록되었습니다.",
@@ -176,7 +204,15 @@ export default function ScheduleModal({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-hide">
-          {/* 초과 경고 */}
+          {/* 재확인 경고 */}
+          {formData.status === "재확인" && (
+            <div className="mb-4 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl flex items-center gap-2">
+              <span className="text-xl">⚠️</span>
+              <span className="text-sm font-bold text-yellow-700">재확인이 필요한 체험단입니다</span>
+            </div>
+          )}
+          
+          {/* 마감 초과 경고 */}
           {formData.dead && formData.dead < new Date().toISOString().split("T")[0] && formData.status !== "완료" && formData.status !== "취소" && (
             <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
               <span className="text-xl">⚠️</span>
@@ -205,7 +241,7 @@ export default function ScheduleModal({
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
               >
-                <Copy className="w-4 h-4" />
+                <Copy className="w-4 h-4 cursor-pointer" />
               </button>
             )}
           </div>
@@ -300,7 +336,14 @@ export default function ScheduleModal({
             <label className="block text-sm font-bold text-neutral-500 mb-2">진행 상태</label>
             <Select
               value={formData.status}
-              onValueChange={(value) => setFormData({ ...formData, status: value as Schedule["status"] })}
+              onValueChange={(value) => {
+                setFormData({ ...formData, status: value as Schedule["status"] })
+                // 재확인이 아닌 상태로 변경하면 재확인 사유 초기화
+                if (value !== "재확인") {
+                  setReconfirmReason("")
+                  setCustomReconfirmReason("")
+                }
+              }}
             >
               <SelectTrigger className="w-full h-11 bg-[#F7F7F8] border-none rounded-xl text-[15px]">
                 <SelectValue placeholder="선택하세요" />
@@ -325,6 +368,45 @@ export default function ScheduleModal({
               </SelectContent>
             </Select>
           </div>
+
+          {/* 재확인 사유 */}
+          {formData.status === "재확인" && (
+            <div className="mt-4">
+              <label className="block text-sm font-bold text-neutral-500 mb-2">재확인 사유</label>
+              <Select
+                value={reconfirmReason}
+                onValueChange={(value) => {
+                  setReconfirmReason(value)
+                  if (value !== "기타") {
+                    setCustomReconfirmReason("")
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full h-11 bg-[#F7F7F8] border-none rounded-xl text-[15px]">
+                  <SelectValue placeholder="사유를 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="입금 확인 필요" className="text-[15px]">입금 확인 필요</SelectItem>
+                  <SelectItem value="리워드 미지급" className="text-[15px]">리워드 미지급</SelectItem>
+                  <SelectItem value="가이드 내용 불분명" className="text-[15px]">가이드 내용 불분명</SelectItem>
+                  <SelectItem value="플랫폼 답변 대기중" className="text-[15px]">플랫폼 답변 대기중</SelectItem>
+                  <SelectItem value="기타" className="text-[15px]">기타</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {reconfirmReason === "기타" && (
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    value={customReconfirmReason}
+                    onChange={(e) => setCustomReconfirmReason(e.target.value)}
+                    className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
+                    placeholder="기타 사유를 입력하세요"
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 작성 채널 */}
           <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">작성 채널</label>
@@ -529,7 +611,7 @@ export default function ScheduleModal({
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
               >
-                <Copy className="w-4 h-4" />
+                <Copy className="w-4 h-4 cursor-pointer" />
               </button>
             )}
           </div>
@@ -556,7 +638,7 @@ export default function ScheduleModal({
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
                   >
-                    <Copy className="w-4 h-4" />
+                    <Copy className="w-4 h-4 cursor-pointer" />
                   </button>
                 )}
               </div>
@@ -622,7 +704,7 @@ export default function ScheduleModal({
                 }}
                 className="absolute right-2 top-2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
               >
-                <Copy className="w-4 h-4" />
+                <Copy className="w-4 h-4 cursor-pointer" />
               </button>
             )}
           </div>

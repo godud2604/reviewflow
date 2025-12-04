@@ -103,7 +103,7 @@ export default function IncomeHistoryModal({
 
         {/* Summary */}
         <div className="bg-gradient-to-r from-orange-50 to-orange-100 px-8 py-5 mx-5 mt-5 rounded-2xl">
-          <div className="text-sm text-orange-800 mb-2 font-semibold">총 수입</div>
+          <div className="text-sm text-orange-800 font-semibold">총 수입</div>
           <div className="text-[32px] font-extrabold text-orange-900 mb-3">₩ {grandTotal.toLocaleString()}</div>
           <div className="flex justify-between text-xs">
             <div className="flex flex-col gap-1">

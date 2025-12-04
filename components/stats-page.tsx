@@ -63,8 +63,8 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
         className="rounded-[30px] p-7 mb-6 relative overflow-hidden text-white shadow-xl"
         style={{ background: "linear-gradient(135deg, #FF6F00 0%, #FF3D00 100%)" }}
       >
-        <div className="text-[15px] font-semibold opacity-90 mb-2.5">이번 달 경제적 가치 💰</div>
-        <div className="text-[38px] font-extrabold mb-6 tracking-tight">₩ {econValue.toLocaleString()}</div>
+        <div className="text-[15px] font-semibold opacity-90">이번 달 경제적 가치 💰</div>
+        <div className="text-[38px] font-extrabold mb-3 tracking-tight">₩ {econValue.toLocaleString()}</div>
         <div className="flex gap-5 border-t border-white/20 pt-5">
           <div className="flex-1">
             <div className="text-xs opacity-80 mb-1 font-medium">방어한 생활비</div>

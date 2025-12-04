@@ -34,7 +34,32 @@ export default function HomePage({
     filteredSchedules = schedules.filter((s) => s.dead && s.dead < today && s.status !== "완료" && s.status !== "취소")
   }
 
-  const displayedSchedules = selectedDate || selectedFilter !== "all" ? filteredSchedules : activeSchedules.slice(0, 3)
+  // Sort schedules: overdue/reconfirm first, then by deadline (closest first)
+  const sortSchedules = (schedules: Schedule[]) => {
+    return [...schedules].sort((a, b) => {
+      const aIsOverdue = a.dead && a.dead < today && a.status !== "완료" && a.status !== "취소"
+      const bIsOverdue = b.dead && b.dead < today && b.status !== "완료" && b.status !== "취소"
+      const aIsReconfirm = a.status === "재확인"
+      const bIsReconfirm = b.status === "재확인"
+      
+      // Priority 1: Overdue first
+      if (aIsOverdue && !bIsOverdue) return -1
+      if (!aIsOverdue && bIsOverdue) return 1
+      
+      // Priority 2: Reconfirm second
+      if (aIsReconfirm && !bIsReconfirm) return -1
+      if (!aIsReconfirm && bIsReconfirm) return 1
+      
+      // Priority 3: Sort by deadline (closest first)
+      if (a.dead && b.dead) return a.dead.localeCompare(b.dead)
+      if (a.dead && !b.dead) return -1
+      if (!a.dead && b.dead) return 1
+      
+      return 0
+    })
+  }
+
+  const displayedSchedules = sortSchedules(selectedDate || selectedFilter !== "all" ? filteredSchedules : activeSchedules)
 
   const handleClearFilter = () => {
     setSelectedDate(null)
@@ -64,25 +89,6 @@ export default function HomePage({
       {/* Summary Bar */}
       <div className="space-y-2 mb-4 mt-2">
         <div className="flex gap-2.5">
-          <button
-            onClick={() => handleFilterClick("active")}
-            className={`flex-1 pt-2.5 pb-[7px] px-3 rounded-xl flex justify-between items-center shadow-sm transition-all cursor-pointer ${
-              selectedFilter === "active"
-                ? "bg-slate-100 border-2 border-slate-300"
-                : "bg-white border-2 border-transparent hover:bg-neutral-50"
-            }`}
-          >
-            <span className={`text-xs font-semibold translate-y-[-2px] ${
-              selectedFilter === "active" ? "text-slate-800" : "text-neutral-500"
-            }`}>
-              진행중
-            </span>
-            <span className={`text-[15px] font-extrabold translate-y-[-2px] ${
-              selectedFilter === "active" ? "text-slate-700" : "text-slate-600"
-            }`}>
-              {activeCount}건
-            </span>
-          </button>
           {overdueCount > 0 && (
             <button
               onClick={() => handleFilterClick("overdue")}
@@ -140,13 +146,11 @@ export default function HomePage({
         <h3 className="text-lg font-bold">
           {selectedDate
             ? `${selectedDate.slice(5).replace('-', '/')} 일정 (${filteredSchedules.length}건)`
-            : selectedFilter === "active"
-              ? `진행 중인 일정 (${filteredSchedules.length}건)`
-              : selectedFilter === "reconfirm"
-                ? `재확인 필요 일정 (${filteredSchedules.length}건)`
-                : selectedFilter === "overdue"
-                  ? `마감 초과 일정 (${filteredSchedules.length}건)`
-                  : "내 체험단 리스트"}
+            : selectedFilter === "reconfirm"
+              ? `재확인 필요 일정 (${filteredSchedules.length}건)`
+              : selectedFilter === "overdue"
+                ? `마감 초과 일정 (${filteredSchedules.length}건)`
+                : `내 체험단 리스트 (${activeCount}건)`}
         </h3>
         <div className="flex items-center gap-2">
           {(selectedDate || selectedFilter !== "all") && (
@@ -159,7 +163,7 @@ export default function HomePage({
           )}
           <button
             onClick={onShowAllClick}
-            className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors"
+            className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors cursor-pointer"
           >
             전체보기 ({schedules.length})
           </button>
@@ -335,11 +339,12 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
   const total = schedule.benefit + schedule.income - schedule.cost
   const status = statusConfig[schedule.status] || { class: "bg-neutral-100 text-neutral-600", text: "미정" }
   const isOverdue = schedule.dead && schedule.dead < today && schedule.status !== "완료" && schedule.status !== "취소"
+  const isReconfirm = schedule.status === "재확인"
 
   return (
     <div
       className={`p-4 rounded-2xl flex items-center shadow-sm cursor-pointer transition-transform active:scale-[0.98] ${
-        isOverdue ? "bg-red-50/50" : "bg-white"
+        isOverdue ? "bg-red-50/50" : isReconfirm ? "bg-yellow-50/50" : "bg-white"
       }`}
       onClick={onClick}
     >
