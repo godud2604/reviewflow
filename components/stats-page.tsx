@@ -70,18 +70,20 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
             <div className="text-xs opacity-80 mb-1 font-medium">방어한 생활비</div>
             <div className="text-[15px] font-bold">{(totalBen + totalIncomeWithExtra).toLocaleString()}</div>
           </div>
-          <div className="flex-1">
-            <div className="text-xs opacity-80 mb-1 flex items-start justify-start font-medium">
-              <span className="mr-2">부수입 관리</span>
-              <button
-                onClick={() => setShowIncomeModal(true)}
-                className="cursor-pointer px-2 py-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 rounded-lg text-[11px] text-white font-semibold transition-all flex items-center gap-1"
-              >
-                <span>+</span>
-                추가
-              </button>
+          <div className="flex-1 flex">
+            <div>
+              <div className="text-xs opacity-80 mb-1 flex items-start justify-start font-medium">
+                <span className="mr-2">부수입 관리</span>
+              </div>
+              <div className="text-[15px] font-bold">{totalIncomeWithExtra.toLocaleString()}</div>
             </div>
-            <div className="text-[15px] font-bold">{totalIncomeWithExtra.toLocaleString()}</div>
+            <button
+              onClick={() => setShowIncomeModal(true)}
+              className="cursor-pointer h-6 px-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 rounded-lg text-[10px] text-white font-semibold transition-all translate-y-[-4px]"
+            >
+              <span className="mr-1">+</span>
+              추가
+            </button>
           </div>
         </div>
       </div>
