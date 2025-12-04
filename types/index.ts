@@ -45,3 +45,11 @@ export interface FeaturedPost {
   views: number
   channel: string
 }
+
+export interface ExtraIncome {
+  id: number
+  title: string
+  amount: number
+  date: string
+  memo?: string
+}
