@@ -44,6 +44,7 @@ export default function ScheduleModal({
     guideLink: "",
     guideFiles: [],
     memo: "",
+    reconfirmReason: "",
   })
 
   const [customPlatforms, setCustomPlatforms] = useState<string[]>([])
@@ -61,17 +62,14 @@ export default function ScheduleModal({
   useEffect(() => {
     if (schedule) {
       setFormData(schedule)
-      // 재확인 사유가 메모에 저장되어 있다면 추출
-      if (schedule.status === "재확인" && schedule.memo) {
-        const reasonMatch = schedule.memo.match(/\[재확인 사유: (.+?)\]/)
-        if (reasonMatch) {
-          const reason = reasonMatch[1]
-          if (["입금 확인 필요", "리워드 미지급", "가이드 내용 불분명", "플랫폼 답변 대기중"].includes(reason)) {
-            setReconfirmReason(reason)
-          } else {
-            setReconfirmReason("기타")
-            setCustomReconfirmReason(reason)
-          }
+      // 재확인 사유 로드
+      if (schedule.status === "재확인" && schedule.reconfirmReason) {
+        const reason = schedule.reconfirmReason
+        if (["입금 확인 필요", "리워드 미지급", "가이드 내용 불분명", "플랫폼 답변 대기중"].includes(reason)) {
+          setReconfirmReason(reason)
+        } else {
+          setReconfirmReason("기타")
+          setCustomReconfirmReason(reason)
         }
       }
     } else {
@@ -93,6 +91,7 @@ export default function ScheduleModal({
         guideLink: "",
         guideFiles: [],
         memo: "",
+        reconfirmReason: "",
       })
       setReconfirmReason("")
       setCustomReconfirmReason("")
@@ -109,14 +108,12 @@ export default function ScheduleModal({
       return
     }
     
-    // 재확인 상태일 때 사유를 메모에 추가
+    // 재확인 상태일 때 사유를 별도 필드에 저장
     if (formData.status === "재확인" && reconfirmReason) {
       const reason = reconfirmReason === "기타" ? customReconfirmReason : reconfirmReason
-      const reasonText = `[재확인 사유: ${reason}]`
-      const currentMemo = formData.memo || ""
-      // 기존 재확인 사유 제거 후 새로운 사유 추가
-      const memoWithoutReason = currentMemo.replace(/\[재확인 사유: .+?\]\s*/g, "")
-      formData.memo = reasonText + (memoWithoutReason ? "\n" + memoWithoutReason : "")
+      formData.reconfirmReason = reason
+    } else {
+      formData.reconfirmReason = ""
     }
     
     onSave(formData as Schedule)

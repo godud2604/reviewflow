@@ -17,6 +17,7 @@ export interface Schedule {
   guideLink: string
   guideFiles: string[]
   memo: string
+  reconfirmReason?: string
 }
 
 export interface Todo {
