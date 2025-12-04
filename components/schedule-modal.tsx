@@ -202,19 +202,17 @@ export default function ScheduleModal({
 
   return (
     <>
-      <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} />
-      <div className="absolute bottom-0 left-0 w-full h-[92%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
-        <div className="px-6 py-5 border-b border-neutral-100 flex justify-between items-center">
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 h-[92vh] max-h-[92vh] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
+        <div className="px-6 py-5 border-b border-neutral-100 flex justify-between items-center flex-shrink-0">
           <span onClick={onClose} className="text-neutral-400 font-semibold cursor-pointer">
             취소
           </span>
           <span className="font-bold text-base">체험단 등록</span>
-          <span onClick={handleSave} className="text-[#FF5722] font-bold cursor-pointer">
-            저장
-          </span>
+          <div className="w-[40px]"></div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-hide min-h-0">
           {/* 재확인 경고 */}
           {formData.status === "재확인" && (
             <div className="mb-4 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl gap-2">
@@ -810,11 +808,21 @@ export default function ScheduleModal({
           {schedule && (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="w-full p-4 bg-red-50 text-red-600 border-none rounded-2xl font-bold mt-5 cursor-pointer"
+              className="w-full p-4 bg-red-50 text-red-600 border-none rounded-2xl font-bold mt-5 mb-20 cursor-pointer"
             >
               이 체험단 삭제
             </button>
           )}
+        </div>
+
+        {/* 플로팅 저장 버튼 */}
+        <div className="flex-shrink-0 p-4 bg-white border-t border-neutral-100">
+          <button
+            onClick={handleSave}
+            className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer"
+          >
+            저장
+          </button>
         </div>
       </div>
 
