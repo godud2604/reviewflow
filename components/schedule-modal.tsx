@@ -206,9 +206,17 @@ export default function ScheduleModal({
         <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-hide">
           {/* 재확인 경고 */}
           {formData.status === "재확인" && (
-            <div className="mb-4 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl flex items-center gap-2">
+            <div className="mb-4 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl gap-2">
+              <div className="flex items-center gap-2">
               <span className="text-xl">⚠️</span>
               <span className="text-sm font-bold text-yellow-700">재확인이 필요한 체험단입니다</span>
+              </div>
+              {/* 재확인 사유 */}
+              {reconfirmReason && (
+                <span className="text-sm text-yellow-700">
+                  사유: {reconfirmReason === "기타" ? customReconfirmReason : reconfirmReason}
+                </span>
+              )}
             </div>
           )}
           
