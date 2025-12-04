@@ -10,7 +10,7 @@ import PortfolioPage from "@/components/portfolio-page"
 import NavigationBar from "@/components/navigation-bar"
 import ScheduleModal from "@/components/schedule-modal"
 import TodoModal from "@/components/todo-modal"
-import type { Schedule, Todo, Channel, FeaturedPost } from "@/types"
+import type { Schedule, Todo, Channel, FeaturedPost, ExtraIncome } from "@/types"
 
 export default function Page() {
   const [currentPage, setCurrentPage] = useState<"home" | "stats" | "profile">("home")
@@ -20,6 +20,7 @@ export default function Page() {
   const [todos, setTodos] = useState<Todo[]>([])
   const [channels, setChannels] = useState<Channel[]>([])
   const [featuredPosts, setFeaturedPosts] = useState<FeaturedPost[]>([])
+  const [extraIncomes, setExtraIncomes] = useState<ExtraIncome[]>([])
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false)
   const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null)
@@ -30,6 +31,7 @@ export default function Page() {
     const storedTodos = localStorage.getItem("todos")
     const storedChannels = localStorage.getItem("channels")
     const storedFeaturedPosts = localStorage.getItem("featuredPosts")
+    const storedExtraIncomes = localStorage.getItem("extraIncomes")
 
     if (storedSchedules) {
       setSchedules(JSON.parse(storedSchedules))
@@ -169,6 +171,17 @@ export default function Page() {
       setTodos(demoTodos)
       localStorage.setItem("todos", JSON.stringify(demoTodos))
     }
+
+    if (storedExtraIncomes) {
+      setExtraIncomes(JSON.parse(storedExtraIncomes))
+    } else {
+      const demoExtraIncomes: ExtraIncome[] = [
+        { id: 1, title: "블로그 광고 수익", amount: 50000, date: "2025-11-15", memo: "11월 애드센스" },
+        { id: 2, title: "제휴 마케팅", amount: 30000, date: "2025-11-20", memo: "쿠팡 파트너스" },
+      ]
+      setExtraIncomes(demoExtraIncomes)
+      localStorage.setItem("extraIncomes", JSON.stringify(demoExtraIncomes))
+    }
   }, [])
 
   // Persist schedules to localStorage
@@ -184,6 +197,13 @@ export default function Page() {
       localStorage.setItem("todos", JSON.stringify(todos))
     }
   }, [todos])
+
+  // Persist extraIncomes to localStorage
+  useEffect(() => {
+    if (extraIncomes.length > 0) {
+      localStorage.setItem("extraIncomes", JSON.stringify(extraIncomes))
+    }
+  }, [extraIncomes])
 
   const handleOpenScheduleModal = (scheduleId?: number) => {
     setEditingScheduleId(scheduleId || null)
@@ -270,7 +290,13 @@ export default function Page() {
 
             {currentPage === "stats" && <StatsPage schedules={schedules} />}
 
-            {currentPage === "profile" && <ProfilePage onShowPortfolio={() => setShowPortfolio(true)} />}
+            {currentPage === "profile" && (
+              <ProfilePage 
+                onShowPortfolio={() => setShowPortfolio(true)} 
+                schedules={schedules}
+                extraIncomes={extraIncomes}
+              />
+            )}
           </>
         )}
 

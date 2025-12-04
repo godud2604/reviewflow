@@ -1,19 +1,52 @@
 "use client"
 
 import { useState } from "react"
+import type { Schedule, ExtraIncome } from "@/types"
+import { exportAllDataToExcel } from "@/lib/export-utils"
+import { useToast } from "@/hooks/use-toast"
+import FeedbackModal from "./feedback-modal"
 
-export default function ProfilePage({ onShowPortfolio }: { onShowPortfolio: () => void }) {
+export default function ProfilePage({ 
+  onShowPortfolio,
+  schedules,
+  extraIncomes
+}: { 
+  onShowPortfolio: () => void
+  schedules: Schedule[]
+  extraIncomes: ExtraIncome[]
+}) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
+  const { toast } = useToast()
 
   const handleLogout = () => {
-    alert("로그아웃 되었습니다.")
+    toast({
+      title: "로그아웃",
+      description: "로그아웃 되었습니다.",
+    })
+  }
+
+  const handleBackup = () => {
+    try {
+      exportAllDataToExcel(schedules, extraIncomes)
+      toast({
+        title: "활동 내역 다운로드를 완료하였습니다.",
+      })
+    } catch (error) {
+      console.error("Export error:", error)
+      toast({
+        title: "활동 내역 다운로드를 실패하였습니다",
+        variant: "destructive",
+      })
+    }
   }
 
   const menuItems = [
-    { id: "portfolio", icon: "📋", label: "포트폴리오 보기", onClick: onShowPortfolio },
-    { id: "notification", icon: "🔔", label: "알림 설정" },
-    { id: "backup", icon: "📂", label: "데이터 백업" },
-    { id: "support", icon: "📞", label: "고객센터" },
+    // { id: "portfolio", icon: "📋", label: "포트폴리오 보기", onClick: onShowPortfolio },
+    // { id: "notification", icon: "🔔", label: "알림 설정" },
+    { id: "backup", icon: "📂", label: "활동 내역 다운로드", onClick: handleBackup },
+    { id: "feedback", icon: "💬", label: "개발자에게 피드백 주기", onClick: () => setIsFeedbackModalOpen(true) },
+    // { id: "support", icon: "📞", label: "고객센터" },
   ]
 
   return (
@@ -72,6 +105,11 @@ export default function ProfilePage({ onShowPortfolio }: { onShowPortfolio: () =
       >
         로그아웃
       </button>
+
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => setIsFeedbackModalOpen(false)}
+      />
     </div>
   )
 }
