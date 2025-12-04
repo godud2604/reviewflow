@@ -18,6 +18,12 @@ export interface Schedule {
   guideFiles: string[]
   memo: string
   reconfirmReason?: string
+  visitReviewChecklist?: {
+    naverReservation: boolean
+    platformAppReview: boolean
+    cafeReview: boolean
+    googleReview: boolean
+  }
 }
 
 export interface Todo {

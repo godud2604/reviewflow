@@ -6,6 +6,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
@@ -45,6 +46,12 @@ export default function ScheduleModal({
     guideFiles: [],
     memo: "",
     reconfirmReason: "",
+    visitReviewChecklist: {
+      naverReservation: false,
+      platformAppReview: false,
+      cafeReview: false,
+      googleReview: false,
+    },
   })
 
   const [customPlatforms, setCustomPlatforms] = useState<string[]>([])
@@ -92,6 +99,12 @@ export default function ScheduleModal({
         guideFiles: [],
         memo: "",
         reconfirmReason: "",
+        visitReviewChecklist: {
+          naverReservation: false,
+          platformAppReview: false,
+          cafeReview: false,
+          googleReview: false,
+        },
       })
       setReconfirmReason("")
       setCustomReconfirmReason("")
@@ -319,12 +332,22 @@ export default function ScheduleModal({
               (type) => (
                 <div
                   key={type}
-                  onClick={() =>
-                    setFormData({
+                  onClick={() => {
+                    const newFormData: Partial<Schedule> = {
                       ...formData,
                       reviewType: type as Schedule["reviewType"],
-                    })
-                  }
+                    }
+                    // 방문형으로 변경 시 체크리스트 초기화
+                    if (type === "방문형" && !formData.visitReviewChecklist) {
+                      newFormData.visitReviewChecklist = {
+                        naverReservation: false,
+                        platformAppReview: false,
+                        cafeReview: false,
+                        googleReview: false,
+                      }
+                    }
+                    setFormData(newFormData)
+                  }}
                   className={`h-11 px-3 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
                     formData.reviewType === type
                       ? "bg-orange-50 text-[#FF5722] border border-[#FF5722]"
@@ -336,6 +359,75 @@ export default function ScheduleModal({
               ),
             )}
           </div>
+
+          {/* 방문형 리뷰 체크리스트 */}
+          {formData.reviewType === "방문형" && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+              <label className="block text-sm font-bold text-blue-900 mb-3">작성해야 할 리뷰</label>
+              <div className="space-y-2.5">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={formData.visitReviewChecklist?.naverReservation || false}
+                    onCheckedChange={(checked) =>
+                      setFormData({
+                        ...formData,
+                        visitReviewChecklist: {
+                          ...formData.visitReviewChecklist!,
+                          naverReservation: checked as boolean,
+                        },
+                      })
+                    }
+                  />
+                  <span className="text-sm font-semibold text-blue-900">네이버 예약 리뷰</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={formData.visitReviewChecklist?.platformAppReview || false}
+                    onCheckedChange={(checked) =>
+                      setFormData({
+                        ...formData,
+                        visitReviewChecklist: {
+                          ...formData.visitReviewChecklist!,
+                          platformAppReview: checked as boolean,
+                        },
+                      })
+                    }
+                  />
+                  <span className="text-sm font-semibold text-blue-900">타플랫폼 어플 리뷰</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={formData.visitReviewChecklist?.cafeReview || false}
+                    onCheckedChange={(checked) =>
+                      setFormData({
+                        ...formData,
+                        visitReviewChecklist: {
+                          ...formData.visitReviewChecklist!,
+                          cafeReview: checked as boolean,
+                        },
+                      })
+                    }
+                  />
+                  <span className="text-sm font-semibold text-blue-900">카페 리뷰</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={formData.visitReviewChecklist?.googleReview || false}
+                    onCheckedChange={(checked) =>
+                      setFormData({
+                        ...formData,
+                        visitReviewChecklist: {
+                          ...formData.visitReviewChecklist!,
+                          googleReview: checked as boolean,
+                        },
+                      })
+                    }
+                  />
+                  <span className="text-sm font-semibold text-blue-900">구글 리뷰</span>
+                </label>
+              </div>
+            </div>
+          )}
 
           {/* 진행 상태 */}
           <div className="mt-6">
