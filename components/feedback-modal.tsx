@@ -30,8 +30,7 @@ export default function FeedbackModal({
     // 예: API 호출, 이메일 전송, Google Forms 등
     
     toast({
-      title: "피드백이 전송되었습니다",
-      description: "소중한 의견 감사합니다!",
+      title: "피드백이 전송되었습니다. 소중한 의견 감사합니다!",
     })
 
     setContent("")
@@ -45,13 +44,19 @@ export default function FeedbackModal({
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-      <div className="w-full max-w-[390px] bg-white rounded-t-3xl p-6 animate-in slide-in-from-bottom duration-300">
+    <div 
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
+      onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-[390px] bg-white rounded-t-3xl p-6 animate-in slide-in-from-bottom duration-300"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold">개발자에게 피드백 보내기</h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-neutral-100 rounded-full transition-colors"
+            className="p-1 hover:bg-neutral-100 rounded-full transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -70,7 +75,7 @@ export default function FeedbackModal({
                   onClick={() => setFeedbackType(type.value as any)}
                   className={`
                     py-3 px-2 rounded-xl border-2 transition-all
-                    flex flex-col items-center gap-1
+                    flex flex-col items-center gap-1 cursor-pointer
                     ${
                       feedbackType === type.value
                         ? "border-blue-500 bg-blue-50"
@@ -113,14 +118,14 @@ export default function FeedbackModal({
             <button
               onClick={onClose}
               className="flex-1 py-3 bg-neutral-100 text-neutral-700 rounded-xl font-semibold
-                hover:bg-neutral-200 transition-colors"
+                hover:bg-neutral-200 transition-colors cursor-pointer active:scale-[0.98]"
             >
               취소
             </button>
             <button
               onClick={handleSubmit}
               className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-semibold
-                hover:bg-blue-600 transition-colors active:scale-[0.98]"
+                hover:bg-blue-600 transition-colors cursor-pointer active:scale-[0.98]"
             >
               전송
             </button>
