@@ -31,6 +31,7 @@ export default function TodoModal({
     setNewTodo("")
     toast({
       title: "할 일이 추가되었습니다",
+      duration: 2000,
     })
     setTimeout(() => setIsAdding(false), 300)
   }
@@ -48,6 +49,7 @@ export default function TodoModal({
     if (todo) {
       toast({
         title: todo.done ? "할 일을 미완료로 변경했습니다" : "할 일을 완료했습니다 🎉",
+        duration: 2000,
       })
     }
   }
@@ -56,6 +58,7 @@ export default function TodoModal({
     onDeleteTodo(id)
     toast({
       title: "할 일이 삭제되었습니다",
+      duration: 2000,
     })
   }
 

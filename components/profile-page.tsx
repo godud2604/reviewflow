@@ -23,6 +23,7 @@ export default function ProfilePage({
     toast({
       title: "로그아웃",
       description: "로그아웃 되었습니다.",
+      duration: 2000,
     })
   }
 
@@ -31,12 +32,14 @@ export default function ProfilePage({
       exportAllDataToExcel(schedules, extraIncomes)
       toast({
         title: "활동 내역 다운로드를 완료하였습니다.",
+        duration: 2000,
       })
     } catch (error) {
       console.error("Export error:", error)
       toast({
         title: "활동 내역 다운로드를 실패하였습니다",
         variant: "destructive",
+        duration: 2000,
       })
     }
   }

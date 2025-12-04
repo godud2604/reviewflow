@@ -104,6 +104,7 @@ export default function ScheduleModal({
       toast({
         title: "제목을 입력해주세요.",
         variant: "destructive",
+        duration: 2000,
       })
       return
     }
