@@ -6,16 +6,20 @@ import HomePage from "@/components/home-page"
 import AllSchedulesPage from "@/components/all-schedules-page"
 import StatsPage from "@/components/stats-page"
 import ProfilePage from "@/components/profile-page"
+import PortfolioPage from "@/components/portfolio-page"
 import NavigationBar from "@/components/navigation-bar"
 import ScheduleModal from "@/components/schedule-modal"
 import TodoModal from "@/components/todo-modal"
-import type { Schedule, Todo } from "@/types"
+import type { Schedule, Todo, Channel, FeaturedPost } from "@/types"
 
 export default function Page() {
   const [currentPage, setCurrentPage] = useState<"home" | "stats" | "profile">("home")
   const [showAllSchedules, setShowAllSchedules] = useState(false)
+  const [showPortfolio, setShowPortfolio] = useState(false)
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [todos, setTodos] = useState<Todo[]>([])
+  const [channels, setChannels] = useState<Channel[]>([])
+  const [featuredPosts, setFeaturedPosts] = useState<FeaturedPost[]>([])
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false)
   const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null)
@@ -24,6 +28,8 @@ export default function Page() {
   useEffect(() => {
     const storedSchedules = localStorage.getItem("schedules")
     const storedTodos = localStorage.getItem("todos")
+    const storedChannels = localStorage.getItem("channels")
+    const storedFeaturedPosts = localStorage.getItem("featuredPosts")
 
     if (storedSchedules) {
       setSchedules(JSON.parse(storedSchedules))
@@ -94,6 +100,65 @@ export default function Page() {
       localStorage.setItem("schedules", JSON.stringify(demoData))
     }
 
+    if (storedChannels) {
+      setChannels(JSON.parse(storedChannels))
+    } else {
+      const demoChannels: Channel[] = [
+        {
+          id: 1,
+          type: "네이버블로그",
+          name: "김제미의 맛집일기",
+          followers: 1234,
+          monthlyVisitors: 52000,
+          url: "https://blog.naver.com/example"
+        },
+        {
+          id: 2,
+          type: "인스타그램",
+          name: "@jemi_review",
+          followers: 8500,
+          avgReach: 21000,
+          avgEngagement: 8.5,
+          url: "https://instagram.com/example"
+        }
+      ]
+      setChannels(demoChannels)
+      localStorage.setItem("channels", JSON.stringify(demoChannels))
+    }
+
+    if (storedFeaturedPosts) {
+      setFeaturedPosts(JSON.parse(storedFeaturedPosts))
+    } else {
+      const demoPosts: FeaturedPost[] = [
+        {
+          id: 1,
+          title: "강남 맛집 리뷰",
+          thumbnail: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400",
+          url: "https://example.com/post1",
+          views: 12000,
+          channel: "네이버블로그"
+        },
+        {
+          id: 2,
+          title: "뷰티 제품 후기",
+          thumbnail: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400",
+          url: "https://example.com/post2",
+          views: 8500,
+          channel: "인스타그램"
+        },
+        {
+          id: 3,
+          title: "제주 여행 브이로그",
+          thumbnail: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400",
+          url: "https://example.com/post3",
+          views: 15000,
+          channel: "네이버블로그"
+        }
+      ]
+      setFeaturedPosts(demoPosts)
+      localStorage.setItem("featuredPosts", JSON.stringify(demoPosts))
+    }
+
     if (storedTodos) {
       setTodos(JSON.parse(storedTodos))
     } else {
@@ -157,6 +222,7 @@ export default function Page() {
   }
 
   const getPageTitle = () => {
+    if (showPortfolio) return "내 포트폴리오"
     if (showAllSchedules) return "전체 체험단 리스트"
     switch (currentPage) {
       case "home":
@@ -176,10 +242,17 @@ export default function Page() {
           onProfileClick={() => setCurrentPage("profile")} 
           onTodoClick={() => setIsTodoModalOpen(true)}
           todos={todos}
-          showTodoButton={currentPage === "home" && !showAllSchedules}
+          showTodoButton={currentPage === "home" && !showAllSchedules && !showPortfolio}
         />
 
-        {showAllSchedules ? (
+        {showPortfolio ? (
+          <PortfolioPage
+            schedules={schedules}
+            channels={channels}
+            featuredPosts={featuredPosts}
+            onBack={() => setShowPortfolio(false)}
+          />
+        ) : showAllSchedules ? (
           <AllSchedulesPage
             schedules={schedules}
             onScheduleClick={handleOpenScheduleModal}
@@ -197,7 +270,7 @@ export default function Page() {
 
             {currentPage === "stats" && <StatsPage schedules={schedules} />}
 
-            {currentPage === "profile" && <ProfilePage />}
+            {currentPage === "profile" && <ProfilePage onShowPortfolio={() => setShowPortfolio(true)} />}
           </>
         )}
 

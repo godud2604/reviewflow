@@ -24,3 +24,24 @@ export interface Todo {
   text: string
   done: boolean
 }
+
+export interface Channel {
+  id: number
+  type: "네이버블로그" | "인스타그램" | "유튜브" | "틱톡" | "쓰레드"
+  name: string // 채널명 (예: "김제미의 맛집일기")
+  followers?: number // 팔로워/이웃 수
+  monthlyVisitors?: number // 월 방문자 (블로그용)
+  avgViews?: number // 평균 조회수
+  avgReach?: number // 평균 도달 (인스타용)
+  avgEngagement?: number // 평균 참여율 (%)
+  url?: string // 채널 URL
+}
+
+export interface FeaturedPost {
+  id: number
+  title: string
+  thumbnail: string
+  url: string
+  views: number
+  channel: string
+}

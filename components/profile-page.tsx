@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-export default function ProfilePage() {
+export default function ProfilePage({ onShowPortfolio }: { onShowPortfolio: () => void }) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
 
   const handleLogout = () => {
@@ -10,6 +10,7 @@ export default function ProfilePage() {
   }
 
   const menuItems = [
+    { id: "portfolio", icon: "📋", label: "포트폴리오 보기", onClick: onShowPortfolio },
     { id: "notification", icon: "🔔", label: "알림 설정" },
     { id: "backup", icon: "📂", label: "데이터 백업" },
     { id: "support", icon: "📞", label: "고객센터" },
@@ -33,7 +34,10 @@ export default function ProfilePage() {
         {menuItems.map((item, idx) => (
           <div
             key={item.id}
-            onClick={() => setActiveMenu(item.id)}
+            onClick={() => {
+              setActiveMenu(item.id)
+              if (item.onClick) item.onClick()
+            }}
             className={`
               py-3.5 px-3 font-semibold cursor-pointer rounded-xl
               flex items-center gap-3

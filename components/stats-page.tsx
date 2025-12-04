@@ -49,9 +49,9 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
         style={{ background: "linear-gradient(135deg, #FF6F00 0%, #FF3D00 100%)" }}
       >
         <div className="absolute top-6 right-6 bg-white/25 backdrop-blur-sm px-2.5 py-1.5 rounded-xl text-xs font-bold">
-          상위 5%
+          나만의 통계
         </div>
-        <div className="text-[15px] font-semibold opacity-90 mb-2.5">이번 달 경제적 가치 ✨</div>
+        <div className="text-[15px] font-semibold opacity-90 mb-2.5">이번 달 경제적 가치 💰</div>
         <div className="text-[38px] font-extrabold mb-6 tracking-tight">₩ {econValue.toLocaleString()}</div>
         <div className="flex gap-5 border-t border-white/20 pt-5">
           <div className="flex-1">
@@ -79,7 +79,6 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
 }
 
 function ExpertiseChart({ typeCounts }: { typeCounts: Record<Schedule["category"], number> }) {
-  const maxVal = Math.max(...Object.values(typeCounts), 1)
   const icons: Record<Schedule["category"], string> = {
     맛집: "🍝",
     식품: "🍱",
@@ -89,36 +88,25 @@ function ExpertiseChart({ typeCounts }: { typeCounts: Record<Schedule["category"
     반려동물: "🐾",
     기타: "📦",
   }
-  const colors: Record<Schedule["category"], string> = {
-    맛집: "#FF5722",
-    식품: "#FF9800",
-    뷰티: "#E040FB",
-    여행: "#00BFA5",
-    디지털: "#2979FF",
-    반려동물: "#795548",
-    기타: "#9E9E9E",
-  }
+
+  // Filter non-zero counts and sort by count
+  const data = (Object.entries(typeCounts) as [Schedule["category"], number][])
+    .filter(([_, count]) => count > 0)
+    .sort(([, a], [, b]) => b - a)
+    .map(([category, count]) => ({ category, count, icon: icons[category] }))
+
+  if (data.length === 0) return null
 
   return (
-    <div className="bg-white rounded-3xl p-6 mb-5">
-      <div className="text-lg font-bold mb-1">전문 분야</div>
-      <div className="space-y-4">
-        {(Object.entries(typeCounts) as [Schedule["category"], number][]).map(([category, count]) => {
-          if (count === 0) return null
-          const width = (count / maxVal) * 100
-          return (
-            <div key={category} className="flex items-center">
-              <div className="w-[30px] text-xl">{icons[category]}</div>
-              <div className="flex-1 h-2 bg-neutral-100 rounded mx-4 relative overflow-hidden">
-                <div
-                  className="h-full rounded transition-all duration-1000"
-                  style={{ width: `${width}%`, background: colors[category] }}
-                />
-              </div>
-              <div className="w-[30px] text-right text-sm font-bold text-neutral-600">{count}건</div>
-            </div>
-          )
-        })}
+    <div className="bg-white rounded-3xl p-5 mb-5">
+      <div className="text-lg font-bold mb-3">전문 분야</div>
+      <div className="flex flex-wrap gap-2 text-[15px]">
+        {data.map((item, i) => (
+          <span key={i} className="text-neutral-600">
+            {item.icon} {item.category} <span className="font-bold text-neutral-800">{item.count}</span>
+            {i < data.length - 1 && <span className="text-neutral-300 mx-1">•</span>}
+          </span>
+        ))}
       </div>
     </div>
   )

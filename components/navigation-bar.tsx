@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Plus, BarChart3 } from "lucide-react"
+import { Home, Plus, Wallet } from "lucide-react"
 
 export default function NavigationBar({
   currentPage,
@@ -25,7 +25,7 @@ export default function NavigationBar({
       >
         <Plus className="w-7 h-7" />
       </div>
-      <BarChart3
+      <Wallet
         className={`w-6 h-6 cursor-pointer transition-all ${
           currentPage === "stats" ? "text-[#1A1A1A] scale-110" : "text-neutral-300"
         }`}
