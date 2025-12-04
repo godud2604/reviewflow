@@ -273,7 +273,7 @@ export default function ScheduleModal({
           {/* 체험단 유형 */}
           <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">체험단 유형</label>
           <div className="flex gap-2 flex-wrap">
-            {["제공형", "페이백형", "페이백+구매평", "구매평", "기자단", "미션/인증", "방문형", "배달형"].map(
+            {["제공형", "페이백형", "페이백+구매평", "구매평", "기자단", "미션/인증", "방문형"].map(
               (type) => (
                 <div
                   key={type}
@@ -313,7 +313,7 @@ export default function ScheduleModal({
                     <SelectItem value="방문" className="text-[15px]">방문</SelectItem>
                   </>
                 )}
-                {["페이백형", "페이백+구매평", "구매평", "배달형"].includes(formData.reviewType || "") && (
+                {["페이백형", "페이백+구매평", "구매평"].includes(formData.reviewType || "") && (
                   <SelectItem value="구매 완료" className="text-[15px]">구매 완료</SelectItem>
                 )}
                 {formData.reviewType === "제공형" && (
@@ -534,7 +534,7 @@ export default function ScheduleModal({
             )}
           </div>
 
-          {["페이백형", "페이백+구매평", "구매평", "미션/인증", "배달형"].includes(formData.reviewType || "") && (
+          {["페이백형", "페이백+구매평", "구매평", "미션/인증"].includes(formData.reviewType || "") && (
             <>
               <label className="block text-sm font-bold text-neutral-500 mb-2 mt-4">구매할 링크</label>
               <div className="relative">
