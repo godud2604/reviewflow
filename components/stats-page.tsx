@@ -7,19 +7,21 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
   let totalBen = 0,
     totalInc = 0,
     totalCost = 0
-  const typeCounts: Record<Schedule["type"], number> = {
+  const typeCounts: Record<Schedule["category"], number> = {
     맛집: 0,
+    식품: 0,
     뷰티: 0,
-    제품: 0,
-    숙박: 0,
-    기자단: 0,
+    여행: 0,
+    디지털: 0,
+    반려동물: 0,
+    기타: 0,
   }
 
   schedules.forEach((s) => {
     totalBen += s.benefit
     totalInc += s.income
     totalCost += s.cost
-    if (typeCounts[s.type] !== undefined) typeCounts[s.type]++
+    if (typeCounts[s.category] !== undefined) typeCounts[s.category]++
   })
 
   const econValue = totalBen + totalInc - totalCost
@@ -76,38 +78,41 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
   )
 }
 
-function ExpertiseChart({ typeCounts }: { typeCounts: Record<Schedule["type"], number> }) {
+function ExpertiseChart({ typeCounts }: { typeCounts: Record<Schedule["category"], number> }) {
   const maxVal = Math.max(...Object.values(typeCounts), 1)
-  const icons: Record<Schedule["type"], string> = {
+  const icons: Record<Schedule["category"], string> = {
     맛집: "🍝",
+    식품: "🍱",
     뷰티: "💄",
-    제품: "📦",
-    숙박: "🏨",
-    기자단: "💰",
+    여행: "✈️",
+    디지털: "💻",
+    반려동물: "🐾",
+    기타: "📦",
   }
-  const colors: Record<Schedule["type"], string> = {
+  const colors: Record<Schedule["category"], string> = {
     맛집: "#FF5722",
+    식품: "#FF9800",
     뷰티: "#E040FB",
-    제품: "#2979FF",
-    숙박: "#00BFA5",
-    기자단: "#FFD600",
+    여행: "#00BFA5",
+    디지털: "#2979FF",
+    반려동물: "#795548",
+    기타: "#9E9E9E",
   }
 
   return (
     <div className="bg-white rounded-3xl p-6 mb-5">
       <div className="text-lg font-bold mb-1">전문 분야</div>
-      <div className="text-xs text-neutral-400 mb-5">광고주에게 어필할 포인트입니다</div>
       <div className="space-y-4">
-        {(Object.entries(typeCounts) as [Schedule["type"], number][]).map(([type, count]) => {
+        {(Object.entries(typeCounts) as [Schedule["category"], number][]).map(([category, count]) => {
           if (count === 0) return null
           const width = (count / maxVal) * 100
           return (
-            <div key={type} className="flex items-center">
-              <div className="w-[30px] text-xl">{icons[type]}</div>
+            <div key={category} className="flex items-center">
+              <div className="w-[30px] text-xl">{icons[category]}</div>
               <div className="flex-1 h-2 bg-neutral-100 rounded mx-4 relative overflow-hidden">
                 <div
                   className="h-full rounded transition-all duration-1000"
-                  style={{ width: `${width}%`, background: colors[type] }}
+                  style={{ width: `${width}%`, background: colors[category] }}
                 />
               </div>
               <div className="w-[30px] text-right text-sm font-bold text-neutral-600">{count}건</div>

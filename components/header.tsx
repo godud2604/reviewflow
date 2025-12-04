@@ -20,7 +20,7 @@ export default function Header({
 
   return (
     <header className="px-6 pt-12 pb-2">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2">
         {showTodoButton ? (
           <button
             onClick={onTodoClick}
@@ -45,9 +45,6 @@ export default function Header({
           }}
           onClick={onProfileClick}
         />
-      </div>
-      <div>
-        <h1 className="text-[26px] font-extrabold text-[#1A1A1A] tracking-tight">{title}</h1>
       </div>
     </header>
   )
