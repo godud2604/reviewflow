@@ -37,7 +37,7 @@ export default function TodoModal({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
       e.preventDefault()
       handleAdd()
     }
@@ -67,7 +67,7 @@ export default function TodoModal({
   return (
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
-      <div className="absolute bottom-0 left-0 w-full h-[60%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
+      <div className="absolute bottom-0 left-0 w-full min-h-[30%] max-h-[60%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
         <div className="p-5 border-b border-neutral-100 text-center font-bold">할 일 목록</div>
 
         {/* Sticky Input Section */}
@@ -88,38 +88,36 @@ export default function TodoModal({
         </div>
 
         {/* Scrollable Todo List */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-4 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent hover:scrollbar-thumb-neutral-400 touch-pan-y">
-          <div className={todos.length === 0 ? "flex items-center justify-center h-full" : ""}>
-            {todos.length === 0 ? (
-              <div className="text-center">
-                <p className="text-[15px] text-neutral-500 font-medium">확인해야 할 일이 없어요</p>
-              </div>
-            ) : (
-              <div className="space-y-0">
-                {todos.map((todo) => (
-                  <div key={todo.id} className="flex items-center py-3 border-b border-neutral-100 last:border-none">
-                    <div
-                      onClick={() => handleToggle(todo.id)}
-                      className={`w-[22px] h-[22px] border-2 rounded-full mr-3 cursor-pointer flex items-center justify-center transition-all ${
-                        todo.done ? "bg-orange-50 border-[#FF5722] scale-110" : "border-neutral-300 hover:border-[#FF5722]/50"
-                      }`}
-                    >
-                      {todo.done && <Check className="w-3 h-3 text-[#FF5722]" />}
-                    </div>
-                    <div className={`flex-1 text-[15px] transition-all ${todo.done ? "line-through text-neutral-400" : "text-[#333]"}`}>
-                      {todo.text}
-                    </div>
-                    <div 
-                      onClick={() => handleDelete(todo.id)} 
-                      className="text-neutral-300 cursor-pointer p-1.5 hover:text-red-500 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </div>
+        <div className={`flex-1 overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent hover:scrollbar-thumb-neutral-400 touch-pan-y min-h-[150px] ${todos.length === 0 ? 'flex items-center justify-center' : ''}`}>
+          {todos.length === 0 ? (
+            <div className="text-center px-6">
+              <p className="text-[15px] text-neutral-500 font-medium">확인해야 할 일이 없어요</p>
+            </div>
+          ) : (
+            <div className="space-y-0 w-full px-6 py-4">
+              {todos.map((todo) => (
+                <div key={todo.id} className="flex items-center py-3 border-b border-neutral-100 last:border-none">
+                  <div
+                    onClick={() => handleToggle(todo.id)}
+                    className={`w-[22px] h-[22px] border-2 rounded-full mr-3 cursor-pointer flex items-center justify-center transition-all ${
+                      todo.done ? "bg-orange-50 border-[#FF5722] scale-110" : "border-neutral-300 hover:border-[#FF5722]/50"
+                    }`}
+                  >
+                    {todo.done && <Check className="w-3 h-3 text-[#FF5722]" />}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  <div className={`flex-1 text-[15px] transition-all ${todo.done ? "line-through text-neutral-400" : "text-[#333]"}`}>
+                    {todo.text}
+                  </div>
+                  <div 
+                    onClick={() => handleDelete(todo.id)} 
+                    className="text-neutral-300 cursor-pointer p-1.5 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>

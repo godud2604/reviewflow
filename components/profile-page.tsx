@@ -21,8 +21,7 @@ export default function ProfilePage({
 
   const handleLogout = () => {
     toast({
-      title: "로그아웃",
-      description: "로그아웃 되었습니다.",
+      title: "로그아웃 되었습니다",
       duration: 2000,
     })
   }

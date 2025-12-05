@@ -48,7 +48,7 @@ export default function FeedbackModal({
   return (
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
-        <div className="absolute bottom-0 left-0 w-full h-[60%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
+        <div className="absolute bottom-0 left-0 w-full h-[500px] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
         <div 
           className="w-full bg-white rounded-t-3xl p-6 slide-in-from-bottom duration-300"
           onClick={(e) => e.stopPropagation()}
@@ -115,7 +115,7 @@ export default function FeedbackModal({
             </div>
 
             {/* 버튼 */}
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2">
               <button
                 onClick={onClose}
                 className="flex-1 py-3 bg-neutral-100 text-neutral-700 rounded-xl font-semibold
