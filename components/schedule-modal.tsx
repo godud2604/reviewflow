@@ -62,6 +62,7 @@ export default function ScheduleModal({
   const [duplicatePlatformAlert, setDuplicatePlatformAlert] = useState(false)
   const [emptyPlatformAlert, setEmptyPlatformAlert] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showPlatformManagement, setShowPlatformManagement] = useState(false)
   const [reconfirmReason, setReconfirmReason] = useState("")
   const [customReconfirmReason, setCustomReconfirmReason] = useState("")
   const { toast } = useToast()
@@ -287,40 +288,12 @@ export default function ScheduleModal({
                 ))}
               </SelectContent>
             </Select>
-            {!showPlatformInput ? (
-              <button
-                onClick={() => setShowPlatformInput(true)}
-                className="mt-2 text-sm text-[#FF5722] font-semibold cursor-pointer"
-              >
-                + 플랫폼 추가
-              </button>
-            ) : (
-              <div className="mt-2.5 flex gap-2">
-                <input
-                  type="text"
-                  value={newPlatform}
-                  onChange={(e) => setNewPlatform(e.target.value)}
-                  className="flex-1 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-lg text-[15px]"
-                  placeholder="새 플랫폼 이름"
-                  onKeyPress={(e) => e.key === "Enter" && addCustomPlatform()}
-                />
-                <button
-                  onClick={addCustomPlatform}
-                  className="h-11 px-3 py-2 bg-[#FF5722] text-white rounded-lg text-sm font-semibold cursor-pointer"
-                >
-                  추가
-                </button>
-                <button
-                  onClick={() => {
-                    setShowPlatformInput(false)
-                    setNewPlatform("")
-                  }}
-                  className="h-11 px-3 py-2 bg-neutral-200 text-neutral-600 rounded-lg text-sm font-semibold cursor-pointer"
-                >
-                  취소
-                </button>
-              </div>
-            )}
+            <button
+              onClick={() => setShowPlatformManagement(true)}
+              className="mt-2 text-sm text-[#FF5722] font-semibold cursor-pointer"
+            >
+              + 플랫폼 관리
+            </button>
           </div>
 
           {/* 체험단 유형 */}
@@ -826,7 +799,81 @@ export default function ScheduleModal({
         </div>
       </div>
 
-      <AlertDialog open={platformToDelete !== null} onOpenChange={(open) => !open && setPlatformToDelete(null)}>
+      {/* 플랫폼 관리 모달 */}
+      {showPlatformManagement && (
+        <>
+          <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-50" onClick={() => setShowPlatformManagement(false)} style={{ touchAction: 'none' }} />
+          <div className="absolute bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
+            <div className="px-6 py-5 border-b border-neutral-100 flex justify-between items-center flex-shrink-0">
+              <span onClick={() => setShowPlatformManagement(false)} className="text-neutral-400 font-semibold cursor-pointer">
+                닫기
+              </span>
+              <span className="font-bold text-base">플랫폼 관리</span>
+              <div className="w-[40px]"></div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              {/* 플랫폼 추가 영역 */}
+              <div className="mb-6">
+                <label className="block text-sm font-bold text-neutral-500 mb-2">새 플랫폼 추가</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newPlatform}
+                    onChange={(e) => setNewPlatform(e.target.value)}
+                    className="flex-1 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-lg text-[15px]"
+                    placeholder="새 플랫폼 이름"
+                    onKeyPress={(e) => e.key === "Enter" && addCustomPlatform()}
+                  />
+                  <button
+                    onClick={addCustomPlatform}
+                    className="h-11 px-4 bg-[#FF5722] text-white rounded-lg text-sm font-semibold cursor-pointer"
+                  >
+                    추가
+                  </button>
+                </div>
+              </div>
+
+              {/* 플랫폼 목록 */}
+              <div>
+                <label className="block text-sm font-bold text-neutral-500 mb-2">등록된 플랫폼</label>
+                {allPlatforms.length === 0 ? (
+                  <div className="text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
+                    등록된 플랫폼이 없습니다
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {allPlatforms.map((platform) => (
+                      <div
+                        key={platform}
+                        onClick={() => {
+                          setPlatformToDelete(platform)
+                          setShowPlatformManagement(false)
+                        }}
+                        className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl cursor-pointer"
+                      >
+                        <span className="text-[15px] font-medium">{platform}</span>
+                        <button
+                          className="text-red-600 hover:text-red-700 font-semibold text-sm"
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      <AlertDialog open={platformToDelete !== null} onOpenChange={(open) => {
+        if (!open) {
+          setPlatformToDelete(null)
+          setShowPlatformManagement(true)
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>플랫폼 삭제</AlertDialogTitle>
