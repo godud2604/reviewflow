@@ -119,7 +119,6 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
         </div>
         <div className="text-xs text-neutral-500 flex items-center gap-1.5">
           <span className={`px-1.5 py-0.5 rounded font-semibold text-[11px] ${status.class}`}>{status.text}</span>
-          <span>| {schedule.platform}</span>
           <span>| {dDate}</span>
         </div>
       </div>

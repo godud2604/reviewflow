@@ -156,7 +156,7 @@ export default function HomePage({
           {(selectedDate || selectedFilter !== "all") && (
             <button
               onClick={handleClearFilter}
-              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold text-slate-700 transition-colors"
+              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold text-slate-700 transition-colors cursor-pointer"
             >
               초기화
             </button>
