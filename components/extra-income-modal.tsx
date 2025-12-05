@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { ExtraIncome } from "@/types"
@@ -84,17 +84,13 @@ export default function ExtraIncomeModal({
 
   return (
     <>
-      <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={handleClose} />
-      <div className="absolute bottom-0 left-0 w-full bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
-        <div className="p-5 border-b border-neutral-100 text-center font-bold relative">
-          부수입 추가
-          <button onClick={handleClose} className="absolute right-5 top-1/2 -translate-y-1/2">
-            <X className="w-5 h-5 text-neutral-400" />
-          </button>
-        </div>
+      <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={handleClose} style={{ touchAction: 'none' }} />
+      <div className="absolute bottom-0 left-0 w-full h-[390px] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
+        <div className="p-5 border-b border-neutral-100 text-center font-bold">부수입 추가</div>
 
         {/* Add Form */}
-        <div className="p-5 space-y-3">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent hover:scrollbar-thumb-neutral-400 touch-pan-y">
+          <div className="space-y-3">
           <input
             type="text"
             value={newIncome.title}
@@ -149,6 +145,7 @@ export default function ExtraIncomeModal({
             >
               취소
             </button>
+          </div>
           </div>
         </div>
       </div>

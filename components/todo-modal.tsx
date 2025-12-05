@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Check, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { Todo } from "@/types"
@@ -66,7 +66,7 @@ export default function TodoModal({
 
   return (
     <>
-      <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} />
+      <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
       <div className="absolute bottom-0 left-0 w-full h-[60%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
         <div className="p-5 border-b border-neutral-100 text-center font-bold">할 일 목록</div>
 
@@ -88,7 +88,7 @@ export default function TodoModal({
         </div>
 
         {/* Scrollable Todo List */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent hover:scrollbar-thumb-neutral-400">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-4 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent hover:scrollbar-thumb-neutral-400 touch-pan-y">
           <div className={todos.length === 0 ? "flex items-center justify-center h-full" : ""}>
             {todos.length === 0 ? (
               <div className="text-center">

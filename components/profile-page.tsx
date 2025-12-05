@@ -53,7 +53,7 @@ export default function ProfilePage({
   ]
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pb-24 scrollbar-hide">
+    <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y">
       <div className="text-center mt-5 mb-10">
         <div
           className="w-[100px] h-[100px] rounded-full mx-auto mb-5 bg-neutral-200"

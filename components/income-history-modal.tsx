@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { X } from "lucide-react"
 import type { Schedule, ExtraIncome } from "@/types"
 
@@ -92,17 +93,12 @@ export default function IncomeHistoryModal({
 
   return (
     <>
-      <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} />
-      <div className="absolute bottom-0 left-0 w-full max-h-[80%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
-        <div className="p-5 border-b border-neutral-100 text-center font-bold relative">
-          전체 수입 내역
-          <button onClick={onClose} className="absolute right-5 top-1/2 -translate-y-1/2">
-            <X className="w-5 h-5 text-neutral-400" />
-          </button>
-        </div>
+      <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30 overscroll-none" onClick={onClose} style={{ touchAction: 'none' }} />
+      <div className="absolute bottom-0 left-0 w-full h-[80%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up overscroll-none">
+        <div className="p-5 border-b border-neutral-100 text-center font-bold">전체 수입 내역</div>
 
         {/* Summary */}
-        <div className="bg-gradient-to-r from-orange-50 to-orange-100 px-8 py-5 mx-5 mt-5 rounded-2xl">
+        <div className="bg-gradient-to-r from-orange-50 to-orange-100 px-8 py-5 mx-6 mt-6 rounded-2xl flex-shrink-0">
           <div className="text-sm text-orange-800 font-semibold">총 수입</div>
           <div className="text-[32px] font-extrabold text-orange-900 mb-3">₩ {grandTotal.toLocaleString()}</div>
           <div className="flex justify-between text-xs">
@@ -122,7 +118,7 @@ export default function IncomeHistoryModal({
         </div>
 
         {/* Items List */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent touch-pan-y">
           {allItems.length === 0 ? (
             <div className="text-center py-8 text-neutral-400 font-medium text-sm">
               아직 수입 내역이 없어요

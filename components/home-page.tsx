@@ -85,7 +85,7 @@ export default function HomePage({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pb-24 scrollbar-hide">
+    <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y">
       {/* Summary Bar */}
       <div className="space-y-2 mb-4 mt-2">
         <div className="flex gap-2.5">

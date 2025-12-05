@@ -121,6 +121,16 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* 모바일 스크롤 최적화 */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+  }
+  
+  /* 모바일 뷰포트 높이 최적화 */
+  @supports (-webkit-touch-callout: none) {
+    body {
+      height: -webkit-fill-available;
+    }
   }
 }
 
@@ -131,6 +141,12 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* 터치 스크롤 최적화 */
+  .touch-pan-y {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
   }
 
   .scrollbar-thin {

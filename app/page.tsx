@@ -316,8 +316,8 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-200 flex items-center justify-center p-4">
-      <div className="w-full max-w-[390px] h-[844px] bg-[#F7F7F8] relative overflow-hidden rounded-[40px] shadow-2xl flex flex-col">
+    <div className="min-h-screen bg-neutral-200 md:flex md:items-center md:justify-center md:p-4">
+      <div className="w-full md:max-w-[390px] h-screen md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
         <Header 
           title={getPageTitle()} 
           onProfileClick={() => handlePageChange("profile")} 

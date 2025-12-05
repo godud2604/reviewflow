@@ -202,8 +202,8 @@ export default function ScheduleModal({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 h-[92vh] max-h-[92vh] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
+      <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
+      <div className="absolute bottom-0 left-0 w-full h-[92%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
         <div className="px-6 py-5 border-b border-neutral-100 flex justify-between items-center flex-shrink-0">
           <span onClick={onClose} className="text-neutral-400 font-semibold cursor-pointer">
             취소
@@ -212,7 +212,7 @@ export default function ScheduleModal({
           <div className="w-[40px]"></div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-hide min-h-0">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 scrollbar-hide touch-pan-y min-h-0">
           {/* 재확인 경고 */}
           {formData.status === "재확인" && (
             <div className="mb-4 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl gap-2">
