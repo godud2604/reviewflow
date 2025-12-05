@@ -2,14 +2,19 @@
 
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { usePostHog } from 'posthog-js/react'
 
 export default function LandingPage() {
   const router = useRouter()
+  const posthog = usePostHog()
   const [email, setEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const handleFreeTrial = () => {
+    posthog?.capture('free_trial_clicked', {
+      source: 'landing_page'
+    })
     router.push("/?page=home")
   }
 
@@ -17,6 +22,10 @@ export default function LandingPage() {
     e.preventDefault()
     setIsSubmitting(true)
     setMessage(null)
+
+    posthog?.capture('waitlist_submit_attempted', {
+      email: email
+    })
 
     try {
       const response = await fetch('/api/waitlist', {
@@ -30,9 +39,16 @@ export default function LandingPage() {
       const data = await response.json()
 
       if (response.ok) {
+        posthog?.capture('waitlist_submit_success', {
+          email: email
+        })
         setMessage({ type: 'success', text: data.message })
         setEmail("")
       } else {
+        posthog?.capture('waitlist_submit_failed', {
+          email: email,
+          error: data.error
+        })
         setMessage({ type: 'error', text: data.error })
       }
     } catch (error) {
