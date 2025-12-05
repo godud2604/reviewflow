@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Header from "@/components/header"
 import HomePage from "@/components/home-page"
@@ -14,7 +14,7 @@ import TodoModal from "@/components/todo-modal"
 import LandingPage from "@/components/landing-page"
 import type { Schedule, Todo, Channel, FeaturedPost, ExtraIncome } from "@/types"
 
-export default function Page() {
+function PageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -396,5 +396,13 @@ export default function Page() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-neutral-200 flex items-center justify-center">Loading...</div>}>
+      <PageContent />
+    </Suspense>
   )
 }
