@@ -156,18 +156,18 @@ export default function LandingPage() {
           <a href="#" className="flex items-center">
             <img src="/logo.png" alt="ReviewFlow" className="h-40" />
           </a>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleFreeTrial}
-              className="bg-white text-[#FF5722] border border-[#FF5722] px-5 py-2 rounded-3xl font-medium text-sm hover:bg-orange-50 transition"
+              className="bg-white text-[#FF5722] border border-[#FF5722] px-2.5 py-1 md:px-5 md:py-2 rounded-3xl font-medium text-[11px] md:text-sm hover:bg-orange-50 transition whitespace-nowrap"
             >
-              무료체험
+              무료 체험하기
             </button>
             <button
               onClick={handlePreRegister}
-              className="bg-[#FF5722] text-white px-5 py-2 rounded-3xl font-medium text-sm hover:bg-[#E64A19] transition cursor-pointer"
+              className="bg-[#FF5722] text-white px-2.5 py-1 md:px-5 md:py-2 rounded-3xl font-medium text-[11px] md:text-sm hover:bg-[#E64A19] transition cursor-pointer whitespace-nowrap"
             >
-              사전 등록하기
+              사전등록
             </button>
           </div>
         </div>
@@ -184,28 +184,29 @@ export default function LandingPage() {
 
         <div className="max-w-4xl px-6 relative z-10">
           {/* Badge with animation */}
-          <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-semibold mb-6 animate-fade-in-down">
-            <span className="text-lg">🎉</span>
+          <div className="inline-flex items-center gap-1.5 bg-orange-100 text-orange-700 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold mb-4 md:mb-6 animate-fade-in-down">
+            <span className="text-base md:text-lg">🎉</span>
             <span>체험단 관리의 새로운 기준</span>
           </div>
 
-          <h1 className="text-4xl md:text-7xl font-extrabold leading-tight mb-4 text-[#1A1A1A] animate-fade-in-up tracking-tight">
+          <h1 className="text-2xl md:text-7xl font-extrabold leading-tight mb-3 md:mb-4 text-[#1A1A1A] animate-fade-in-up tracking-tight">
             리뷰 관리,
             <br />
             <span className="bg-gradient-to-r from-orange-600 via-orange-500 to-orange-600 bg-clip-text text-transparent">
               이제 스트레스 받지 마세요
             </span>
           </h1>
-          <p className="text-lg md:text-2xl text-[#4A5568] font-semibold leading-relaxed mb-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <p className="text-sm md:text-2xl text-[#4A5568] font-semibold leading-relaxed mb-6 md:mb-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
             일정 체크부터 수익 정산까지.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in" style={{ animationDelay: '0.4s' }}>
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center animate-fade-in" style={{ animationDelay: '0.4s' }}>
             <button
               onClick={handleFreeTrial}
-              className="group bg-gradient-to-r from-orange-600 to-orange-500 text-white px-6 md:px-8 py-3 md:py-4 rounded-full text-base md:text-lg font-bold shadow-2xl shadow-orange-500/40 hover:shadow-orange-500/60 hover:scale-105 transition-all duration-300 flex items-center gap-3 cursor-pointer"
+              className="group bg-gradient-to-r from-orange-600 to-orange-500 text-white px-5 md:px-8 py-2.5 md:py-4 rounded-full text-xs md:text-lg font-bold shadow-2xl shadow-orange-500/40 hover:shadow-orange-500/60 hover:scale-105 transition-all duration-300 flex items-center gap-2 cursor-pointer whitespace-nowrap"
             >
-              지금 무료로 체험하기
-              <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span className="md:hidden">무료 체험하기</span>
+              <span className="hidden md:inline">지금 무료로 체험하기</span>
+              <svg className="w-3.5 h-3.5 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
@@ -216,13 +217,13 @@ export default function LandingPage() {
       {/* Problem Section */}
       <section className="bg-[#F2F4F6] py-20 md:py-32 scroll-animate">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-2xl md:text-5xl font-bold leading-tight mb-6 text-[#191F28]">
-            "아 맞다, 그 체험단 오늘까지였나?"
+          <h2 className="text-lg md:text-5xl font-bold leading-tight mb-4 md:mb-6 text-[#191F28]">
+            "아 맞다, 그 체험단<br className="md:hidden" /> 오늘까지였나?"
           </h2>
-          <p className="text-lg md:text-xl text-[#8B95A1] font-medium">
-            깜빡해서 패널티 물고, 정산 놓치고...
+          <p className="text-sm md:text-xl text-[#8B95A1] font-medium">
+            깜빡해서 패널티 물고,<br className="md:hidden" /> 정산 놓치고...
             <br />
-            복잡한 엑셀과 메모장은 이제 그만두세요.
+            복잡한 엑셀과 메모장은<br className="md:hidden" /> 이제 그만두세요.
           </p>
         </div>
       </section>
@@ -232,13 +233,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-[100px]">
             <div className="w-full md:w-auto md:flex-1 md:max-w-[500px]">
-              <span className="text-[#FF5722] font-bold text-base md:text-lg mb-4 block">일정 관리</span>
-                <h2 className="text-3xl md:text-6xl font-bold leading-tight mb-6 text-[#191F28]">
+              <span className="text-[#FF5722] font-bold text-xs md:text-lg mb-2 md:mb-4 block">일정 관리</span>
+                <h2 className="text-xl md:text-6xl font-bold leading-tight mb-3 md:mb-6 text-[#191F28]">
                   겹치는 일정,
                   <br />
                   한눈에 보여드려요
                 </h2>
-                <p className="text-lg md:text-xl text-[#6B7684] leading-relaxed">
+                <p className="text-xs md:text-xl text-[#6B7684] leading-relaxed">
                   마감일이 달력 위에 색깔로 정리되니까
                   <br />더 이상 스케줄 꼬일 걱정이 없어요.
                 </p>
@@ -351,13 +352,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row-reverse items-center justify-center gap-6 md:gap-[100px]">
             <div className="w-full md:w-auto md:flex-1 md:max-w-[500px] md:ml-[100px]">
-              <span className="text-[#FF5722] font-bold text-base md:text-lg mb-4 block">수익 분석</span>
-                <h2 className="text-3xl md:text-6xl font-bold leading-tight mb-6 text-[#191F28]">
+              <span className="text-[#FF5722] font-bold text-xs md:text-lg mb-2 md:mb-4 block">수익 분석</span>
+                <h2 className="text-xl md:text-6xl font-bold leading-tight mb-3 md:mb-6 text-[#191F28]">
                   얼마 벌었는지
                   <br />
                   세어보지 않아도 돼요
                 </h2>
-                <p className="text-lg md:text-xl text-[#6B7684] leading-relaxed">
+                <p className="text-xs md:text-xl text-[#6B7684] leading-relaxed">
                   제공받은 서비스 금액부터 원고료까지.
                   <br />
                   이번 달 내가 만든 경제적 가치를
@@ -455,13 +456,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-[100px]">
             <div className="w-full md:w-auto md:flex-1 md:max-w-[500px]">
-              <span className="text-[#FF5722] font-bold text-base md:text-lg mb-4 block">할 일 관리</span>
-                <h2 className="text-3xl md:text-6xl font-bold leading-tight mb-6 text-[#191F28]">
+              <span className="text-[#FF5722] font-bold text-xs md:text-lg mb-2 md:mb-4 block">할 일 관리</span>
+                <h2 className="text-xl md:text-6xl font-bold leading-tight mb-3 md:mb-6 text-[#191F28]">
                   할 일 체크,
                   <br />
                   이걸로 끝나요
                 </h2>
-                <p className="text-lg md:text-xl text-[#6B7684] leading-relaxed">
+                <p className="text-xs md:text-xl text-[#6B7684] leading-relaxed">
                   오늘 해야 할 일부터 중요한 마감까지.
                   <br />
                   체크박스로 하나씩 완료하면서
@@ -529,13 +530,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row-reverse items-center justify-center gap-6 md:gap-[100px]">
             <div className="w-full md:w-auto md:flex-1 md:max-w-[500px] md:ml-[100px]">
-              <span className="text-[#FF5722] font-bold text-base md:text-lg mb-4 block">활동 내역 정리</span>
-                <h2 className="text-3xl md:text-6xl font-bold leading-tight mb-6 text-[#191F28]">
+              <span className="text-[#FF5722] font-bold text-xs md:text-lg mb-2 md:mb-4 block">활동 내역 정리</span>
+                <h2 className="text-xl md:text-6xl font-bold leading-tight mb-3 md:mb-6 text-[#191F28]">
                   내 활동 내역,
                   <br />
                   엑셀로 한 번에
                 </h2>
-                <p className="text-lg md:text-xl text-[#6B7684] leading-relaxed">
+                <p className="text-xs md:text-xl text-[#6B7684] leading-relaxed">
                   그동안의 체험단 활동을 한눈에.
                   <br />
                   엑셀 파일로 다운로드하면
@@ -709,11 +710,11 @@ export default function LandingPage() {
       {/* CTA Section */}
       <section id="waitlist-section" className="bg-[#F2F4F6] py-20 md:py-32 scroll-animate">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-5xl font-bold leading-tight mb-6 text-[#191F28]">
+          <h2 className="text-xl md:text-5xl font-bold leading-tight mb-3 md:mb-6 text-[#191F28]">
             출시 알림을 <br className="md:hidden" />
             가장 먼저 받고 싶다면
           </h2>
-          <p className="text-base md:text-lg text-[#6B7684] mb-10 leading-relaxed">
+          <p className="text-xs md:text-lg text-[#6B7684] mb-6 md:mb-10 leading-relaxed">
             베타 오픈 시 가장 먼저 안내해드려요.
             <br />
             사전 등록자에게는 <span className="text-[#FF5722] font-bold">PRO 버전 할인 혜택</span>도
@@ -721,13 +722,13 @@ export default function LandingPage() {
           </p>
 
           <form
-            className="w-full flex flex-col md:flex-row items-center justify-center gap-3"
+            className="w-full flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3"
             onSubmit={handleEmailSubmit}
           >
             <input
               type="email"
-              placeholder="이메일 주소를 입력하세요"
-              className="w-full md:w-2/3 px-6 py-4 rounded-2xl border-none shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF5722] transition text-lg"
+              placeholder="이메일 주소 입력"
+              className="w-full md:w-2/3 px-3 py-2.5 md:px-6 md:py-4 rounded-2xl border-none shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF5722] transition text-xs md:text-lg"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -735,7 +736,7 @@ export default function LandingPage() {
             />
             <button
               type="submit"
-              className="w-full md:w-auto bg-[#FF5722] text-white px-8 py-4 rounded-2xl text-lg font-semibold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full md:w-auto bg-[#FF5722] text-white px-5 py-2.5 md:px-8 md:py-4 rounded-2xl text-xs md:text-lg font-semibold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >
               {isSubmitting ? '등록 중...' : '알림 받기'}
