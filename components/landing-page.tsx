@@ -218,11 +218,11 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-6">
           <div className="text-center">
             <h2 className="text-2xl md:text-5xl font-bold leading-tight mb-2 md:mb-4 text-[#191F28]">
-              깜빡한 체험단 마감에 패널티 물고,
-              <br className="hidden md:block" />
-              정산 날짜 놓쳐서 손해 보고...
+              체험단 마감 한 번만 깜빡해도, 바로 패널티.
             </h2>
             <p className="text-base md:text-xl text-[#8B95A1] font-medium">
+              정산 날짜 놓쳐서 손해 보고... 
+              <br/>
               복잡한 엑셀과 메모장으로는 한계가 있더라고요.
             </p>
           </div>
