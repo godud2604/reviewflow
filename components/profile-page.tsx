@@ -54,16 +54,15 @@ export default function ProfilePage({
 
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y">
-      <div className="text-center mt-5 mb-10">
+      <div className="text-center mt-5 mb-7">
         <div
-          className="w-[100px] h-[100px] rounded-full mx-auto mb-5 bg-neutral-200"
+          className="w-[100px] h-[100px] rounded-full mx-auto mb-3 bg-neutral-200"
           style={{
             backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix')",
             backgroundSize: "cover",
           }}
         />
-        <h2 className="text-xl font-bold my-2.5">김제미 님</h2>
-        <div className="text-neutral-500 text-sm">Super Blogger · Lv. 3</div>
+        <h2 className="text-xl font-bold">김제미 님</h2>
       </div>
 
       <div className="bg-white rounded-3xl p-4 mb-5 shadow-sm">
