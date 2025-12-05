@@ -18,6 +18,16 @@ export default function LandingPage() {
     router.push("/?page=home")
   }
 
+  const handlePreRegister = () => {
+    posthog?.capture('pre_register_clicked', {
+      source: 'landing_page'
+    })
+    const ctaSection = document.getElementById('waitlist-section')
+    if (ctaSection) {
+      ctaSection.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -146,12 +156,20 @@ export default function LandingPage() {
           <a href="#" className="flex items-center">
             <img src="/logo.png" alt="ReviewFlow" className="h-40" />
           </a>
-          <button
-            onClick={handleFreeTrial}
-            className="bg-[#FF5722] text-white px-5 py-2 rounded-3xl font-medium text-sm hover:bg-[#E64A19] transition"
-          >
-            무료체험
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleFreeTrial}
+              className="bg-white text-[#FF5722] border border-[#FF5722] px-5 py-2 rounded-3xl font-medium text-sm hover:bg-orange-50 transition"
+            >
+              무료체험
+            </button>
+            <button
+              onClick={handlePreRegister}
+              className="bg-[#FF5722] text-white px-5 py-2 rounded-3xl font-medium text-sm hover:bg-[#E64A19] transition cursor-pointer"
+            >
+              사전 등록하기
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -677,10 +695,10 @@ export default function LandingPage() {
                 </div>
                 <p className="text-[#FF5722] font-bold text-sm mb-6">🔥 사전 등록 시 3개월간 40% 할인</p>
                 <button
-                  onClick={handleFreeTrial}
+                  onClick={handlePreRegister}
                   className="w-full bg-[#FF5722] text-white px-6 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition cursor-pointer"
                 >
-                  PRO 미리 신청하기
+                  사전 등록하기
                 </button>
               </div>
             </div>
@@ -689,7 +707,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-[#F2F4F6] py-20 md:py-32 scroll-animate">
+      <section id="waitlist-section" className="bg-[#F2F4F6] py-20 md:py-32 scroll-animate">
         <div className="max-w-3xl mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-5xl font-bold leading-tight mb-6 text-[#191F28]">
             출시 알림을 <br className="md:hidden" />
