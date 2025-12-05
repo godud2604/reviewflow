@@ -46,94 +46,94 @@ export default function FeedbackModal({
   ]
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div 
-        className="w-full max-w-[390px] bg-white rounded-t-3xl p-6 animate-in slide-in-from-bottom duration-300"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold">개발자에게 피드백 보내기</h2>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-neutral-100 rounded-full transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          {/* 피드백 유형 선택 */}
-          <div>
-            <label className="block text-sm font-semibold mb-2 text-neutral-700">
-              피드백 유형
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {feedbackTypes.map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => setFeedbackType(type.value as any)}
-                  className={`
-                    py-3 px-2 rounded-xl border-2 transition-all
-                    flex flex-col items-center gap-1 cursor-pointer
-                    ${
-                      feedbackType === type.value
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-neutral-200 hover:border-neutral-300"
-                    }
-                  `}
-                >
-                  <span className="text-2xl">{type.icon}</span>
-                  <span className="text-xs font-medium text-center">{type.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 내용 입력 */}
-          <div>
-            <label className="block text-sm font-semibold mb-2 text-neutral-700">
-              내용
-            </label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder={
-                feedbackType === "feature"
-                  ? "어떤 기능이 필요하신가요?"
-                  : feedbackType === "bug"
-                  ? "어떤 문제가 발생했나요?"
-                  : "자유롭게 의견을 남겨주세요"
-              }
-              className="w-full h-40 p-3 border border-neutral-200 rounded-xl resize-none
-                focus:outline-none focus:border-blue-500 transition-colors"
-            />
-            <div className="text-xs text-neutral-500 mt-1 text-right">
-              {content.length} / 500
-            </div>
-          </div>
-
-          {/* 버튼 */}
-          <div className="flex gap-2 pt-2">
+    <>
+      <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
+        <div className="absolute bottom-0 left-0 w-full h-[60%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
+        <div 
+          className="w-full bg-white rounded-t-3xl p-6 slide-in-from-bottom duration-300"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-bold">개발자에게 피드백 보내기</h2>
             <button
               onClick={onClose}
-              className="flex-1 py-3 bg-neutral-100 text-neutral-700 rounded-xl font-semibold
-                hover:bg-neutral-200 transition-colors cursor-pointer active:scale-[0.98]"
+              className="p-1 hover:bg-neutral-100 rounded-full transition-colors cursor-pointer"
             >
-              취소
+              <X className="w-5 h-5" />
             </button>
-            <button
-              onClick={handleSubmit}
-              className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-semibold
-                hover:bg-blue-600 transition-colors cursor-pointer active:scale-[0.98]"
-            >
-              전송
-            </button>
+          </div>
+
+          <div className="space-y-4">
+            {/* 피드백 유형 선택 */}
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-neutral-700">
+                피드백 유형
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {feedbackTypes.map((type) => (
+                  <button
+                    key={type.value}
+                    onClick={() => setFeedbackType(type.value as any)}
+                    className={`
+                      py-3 px-2 rounded-xl border-2 transition-all
+                      flex flex-col items-center gap-1 cursor-pointer
+                      ${
+                        feedbackType === type.value
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-neutral-200 hover:border-neutral-300"
+                      }
+                    `}
+                  >
+                    <span className="text-2xl">{type.icon}</span>
+                    <span className="text-xs font-medium text-center">{type.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 내용 입력 */}
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-neutral-700">
+                내용
+              </label>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder={
+                  feedbackType === "feature"
+                    ? "어떤 기능이 필요하신가요?"
+                    : feedbackType === "bug"
+                    ? "어떤 문제가 발생했나요?"
+                    : "자유롭게 의견을 남겨주세요"
+                }
+                className="w-full h-40 p-3 border border-neutral-200 rounded-xl resize-none
+                  focus:outline-none focus:border-blue-500 transition-colors"
+              />
+              <div className="text-xs text-neutral-500 mt-1 text-right">
+                {content.length} / 500
+              </div>
+            </div>
+
+            {/* 버튼 */}
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={onClose}
+                className="flex-1 py-3 bg-neutral-100 text-neutral-700 rounded-xl font-semibold
+                  hover:bg-neutral-200 transition-colors cursor-pointer active:scale-[0.98]"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-semibold
+                  hover:bg-blue-600 transition-colors cursor-pointer active:scale-[0.98]"
+              >
+                전송
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
