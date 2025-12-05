@@ -188,7 +188,7 @@ export default function LandingPage() {
             <span className="text-base md:text-lg">🎉</span>
             <span>체험단 관리의 새로운 기준</span>
           </div>
-          <h1 className="text-4xl md:text-7xl font-extrabold leading-tight mb-4 md:mb-4 text-[#1A1A1A] animate-fade-in-up tracking-tight">
+          <h1 className="text-3xl md:text-7xl font-extrabold leading-tight mb-4 md:mb-4 text-[#1A1A1A] animate-fade-in-up tracking-tight">
             리뷰 관리,
             <br />
             <span className="bg-gradient-to-r from-orange-600 via-orange-500 to-orange-600 bg-clip-text text-transparent">
@@ -215,7 +215,7 @@ export default function LandingPage() {
 
       {/* Problem Section - 1단계: 공감하기 */}
       <section className="bg-[#F2F4F6] py-20 md:py-32 scroll-animate">
-        <div className="max-w-4xl mx-auto px-20 md:px-6">
+        <div className="max-w-4xl mx-auto px-6">
           <div className="text-center">
             <h2 className="text-2xl md:text-5xl font-bold leading-tight mb-2 md:mb-4 text-[#191F28]">
               깜빡한 체험단 마감에 패널티 물고,
