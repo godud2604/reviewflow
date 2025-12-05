@@ -10,7 +10,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "BlogCal Ultimate",
+  title: "리뷰플로우 | 블로거 체험단 관리 앱",
   description: "블로거 체험단 관리 앱",
   generator: "v0.app",
   icons: {
