@@ -55,6 +55,12 @@ export default function AllSchedulesPage({
               {schedules.filter((s) => s.status === "완료").length}건
             </div>
           </div>
+          <div className="flex-1">
+            <div className="text-xs text-neutral-500 mb-1">취소</div>
+            <div className="text-2xl font-extrabold text-[#999]">
+              {schedules.filter((s) => s.status === "취소").length}건
+            </div>
+          </div>
         </div>
       </div>
 
@@ -80,14 +86,14 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
   }
 
   const statusConfig: Record<Schedule["status"], { class: string; text: string }> = {
-    선정됨: { class: "bg-blue-50 text-blue-700", text: "선정됨" },
-    "방문일 예약 완료": { class: "bg-orange-50 text-orange-700", text: "방문일 예약 완료" },
-    방문: { class: "bg-orange-50 text-orange-700", text: "방문" },
-    "구매 완료": { class: "bg-purple-50 text-purple-700", text: "구매 완료" },
-    "제품 배송 완료": { class: "bg-green-50 text-green-700", text: "배송 완료" },
+    선정됨: { class: "bg-neutral-100 text-neutral-600", text: "선정됨" },
+    "방문일 예약 완료": { class: "bg-neutral-100 text-neutral-600", text: "방문일 예약 완료" },
+    방문: { class: "bg-neutral-100 text-neutral-600", text: "방문" },
+    "구매 완료": { class: "bg-neutral-100 text-neutral-600", text: "구매 완료" },
+    "제품 배송 완료": { class: "bg-neutral-100 text-neutral-600", text: "배송 완료" },
     완료: { class: "bg-neutral-100 text-neutral-600", text: "완료" },
-    취소: { class: "bg-red-50 text-red-600", text: "취소" },
-    재확인: { class: "bg-yellow-50 text-yellow-700", text: "재확인" },
+    취소: { class: "bg-neutral-100 text-neutral-600", text: "취소" },
+    재확인: { class: "bg-neutral-100 text-neutral-600", text: "재확인" },
   }
 
   const dDate = schedule.dead

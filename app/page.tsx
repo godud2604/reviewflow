@@ -11,6 +11,7 @@ import PortfolioPage from "@/components/portfolio-page"
 import NavigationBar from "@/components/navigation-bar"
 import ScheduleModal from "@/components/schedule-modal"
 import TodoModal from "@/components/todo-modal"
+import LandingPage from "@/components/landing-page"
 import type { Schedule, Todo, Channel, FeaturedPost, ExtraIncome } from "@/types"
 
 export default function Page() {
@@ -24,12 +25,13 @@ export default function Page() {
   const [extraIncomes, setExtraIncomes] = useState<ExtraIncome[]>([])
 
   // URL 기반 상태 관리
-  const page = searchParams.get("page") || "home"
+  const page = searchParams.get("page") || "landing"
   const view = searchParams.get("view")
   const scheduleId = searchParams.get("schedule")
   const isNewSchedule = searchParams.get("new") === "true"
   const isTodoModalOpen = searchParams.get("todo") === "true"
 
+  const isLandingPage = page === "landing"
   const currentPage = (page === "home" || page === "stats" || page === "profile") ? page : "home"
   const showAllSchedules = view === "all"
   const showPortfolio = view === "portfolio"
@@ -313,6 +315,11 @@ export default function Page() {
       case "profile":
         return "내 프로필"
     }
+  }
+
+  // 랜딩 페이지 표시
+  if (isLandingPage) {
+    return <LandingPage />
   }
 
   return (
