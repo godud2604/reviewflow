@@ -79,11 +79,11 @@ export default function IncomeHistoryModal({
   const getTypeColor = (type: string) => {
     switch (type) {
       case "benefit":
-        return "bg-orange-50 text-orange-600 border-orange-100"
+        return "bg-orange-50 text-orange-700"
       case "income":
-        return "bg-green-50 text-green-600 border-green-100"
+        return "bg-green-50 text-green-700"
       case "extra":
-        return "bg-blue-50 text-blue-600 border-blue-100"
+        return "bg-blue-50 text-blue-700"
       default:
         return "bg-neutral-100 text-neutral-700"
     }
@@ -93,58 +93,78 @@ export default function IncomeHistoryModal({
 
   return (
     <>
-      <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30 overscroll-none" onClick={onClose} style={{ touchAction: 'none' }} />
-      <div className="absolute bottom-0 left-0 w-full h-[80%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up overscroll-none">
-        <div className="p-5 border-b border-neutral-100 text-center font-bold">전체 수입 내역</div>
+      <div className="absolute top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm z-30 overscroll-none" onClick={onClose} style={{ touchAction: 'none' }} />
+      <div className="absolute bottom-0 left-0 w-full h-[85%] bg-gradient-to-b from-neutral-50 to-white rounded-t-[32px] z-40 flex flex-col animate-slide-up overscroll-none shadow-2xl">
+        {/* Header */}
+        <div className="p-5 pb-3 text-center relative flex-shrink-0">
+          <h2 className="text-xl font-bold text-neutral-900">전체 수입 내역</h2>
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-neutral-300 rounded-full" />
+        </div>
 
-        {/* Summary */}
-        <div className="bg-gradient-to-r from-orange-50 to-orange-100 px-8 py-5 mx-6 mt-6 rounded-2xl flex-shrink-0">
-          <div className="text-sm text-orange-800 font-semibold">총 수입</div>
-          <div className="text-[32px] font-extrabold text-orange-900 mb-3">₩ {grandTotal.toLocaleString()}</div>
-          <div className="flex justify-between text-xs">
-            <div className="flex flex-col gap-1">
-              <span className="text-orange-600 font-medium">방어한 생활비</span>
-              <span className="font-bold text-orange-900">{totalBenefit.toLocaleString()}원</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-orange-600 font-medium">리뷰 수입</span>
-              <span className="font-bold text-orange-900">{totalIncome.toLocaleString()}원</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-orange-600 font-medium">기타 부수입</span>
-              <span className="font-bold text-orange-900">{totalExtra.toLocaleString()}원</span>
+        {/* Summary Card */}
+        <div className="relative mx-4 mt-1 mb-3 flex-shrink-0">
+          <div className="bg-gradient-to-br from-orange-500 via-orange-500 to-rose-500 rounded-2xl p-5 shadow-lg">
+            {/* 세부 항목 */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">💰</span>
+                  <span className="text-sm text-white/90 font-semibold">방어한 생활비</span>
+                </div>
+                <span className="text-base font-bold text-white">₩{totalBenefit.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">💵</span>
+                  <span className="text-sm text-white/90 font-semibold">리뷰 수입</span>
+                </div>
+                <span className="text-base font-bold text-white">₩{totalIncome.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">💳</span>
+                  <span className="text-sm text-white/90 font-semibold">기타 부수입</span>
+                </div>
+                <span className="text-base font-bold text-white">₩{totalExtra.toLocaleString()}</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Items List */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent touch-pan-y">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-6 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent touch-pan-y">
           {allItems.length === 0 ? (
-            <div className="text-center py-8 text-neutral-400 font-medium text-sm">
-              아직 수입 내역이 없어요
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mb-3">
+                <span className="text-2xl">💸</span>
+              </div>
+              <p className="text-neutral-400 font-medium text-sm">아직 수입 내역이 없어요</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {allItems.map((item) => (
-                <div key={item.id} className="bg-white border border-neutral-200 rounded-2xl p-4">
+                <div 
+                  key={item.id} 
+                  className="bg-white rounded-2xl p-4 shadow-sm transition-transform active:scale-[0.98] border border-neutral-100"
+                >
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="text-base font-semibold text-neutral-800 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-[15px] font-bold text-[#1A1A1A] mb-2 truncate">
                         {item.title}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[11px] px-2 py-0.5 rounded-md font-semibold border ${getTypeColor(item.type)}`}>
+                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[11px] px-1.5 py-0.5 rounded font-semibold ${getTypeColor(item.type)}`}>
                           {getTypeLabel(item.type)}
                         </span>
-                        <span className="text-xs text-neutral-400 font-medium">{item.category}</span>
+                        <span className="text-xs text-neutral-500 font-medium">{item.category}</span>
                       </div>
                     </div>
-                    <div className="text-right ml-3">
-                      <div className="text-xl font-bold text-neutral-900 mb-1">
-                        +{item.amount.toLocaleString()}원
+                    <div className="text-right ml-3 flex-shrink-0">
+                      <div className="text-lg font-bold text-[#333] mb-0.5">
+                        ₩{item.amount.toLocaleString()}
                       </div>
                       {item.date && (
-                        <div className="text-xs text-neutral-400 font-medium">
+                        <div className="text-[10px] text-neutral-400 font-medium">
                           {item.date}
                         </div>
                       )}

@@ -150,7 +150,7 @@ export default function HomePage({
               ? `재확인 필요 일정 (${filteredSchedules.length}건)`
               : selectedFilter === "overdue"
                 ? `마감 초과 일정 (${filteredSchedules.length}건)`
-                : `내 체험단 리스트 (${activeCount}건)`}
+                : `진행 중인 체험단 (${activeCount}건)`}
         </h3>
         <div className="flex items-center gap-2">
           {(selectedDate || selectedFilter !== "all") && (
