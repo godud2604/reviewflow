@@ -45,8 +45,9 @@ export default function ProfilePage({
 
   const menuItems = [
     // { id: "portfolio", icon: "📋", label: "포트폴리오 보기", onClick: onShowPortfolio },
-    // { id: "notification", icon: "🔔", label: "알림 설정" },
-    { id: "backup", icon: "📂", label: "활동 내역 다운로드", onClick: handleBackup },
+    { id: "backup", icon: "📂", label: "활동 내역 다운로드", isPro: true, onClick: handleBackup, disabled: true },
+    { id: "notification", icon: "🔔", label: "알림 설정", isPro: true, disabled: true },
+    { id: "report", icon: "📊", label: "월간 레포트", isPro: true, disabled: true },
     { id: "feedback", icon: "💬", label: "개발자에게 피드백 주기", onClick: () => setIsFeedbackModalOpen(true) },
     // { id: "support", icon: "📞", label: "고객센터" },
   ]
@@ -69,21 +70,31 @@ export default function ProfilePage({
           <div
             key={item.id}
             onClick={() => {
+              if (item.disabled) return
               setActiveMenu(item.id)
               if (item.onClick) item.onClick()
             }}
             className={`
-              py-3.5 px-3 font-semibold cursor-pointer rounded-xl
+              py-3.5 px-3 font-semibold rounded-xl
               flex items-center gap-3
               transition-all duration-200
-              hover:bg-neutral-50
-              active:scale-[0.98]
               ${idx !== menuItems.length - 1 ? "border-b border-neutral-100" : ""}
               ${activeMenu === item.id ? "bg-neutral-50" : ""}
+              ${item.disabled 
+                ? "opacity-50 cursor-not-allowed" 
+                : "cursor-pointer hover:bg-neutral-50 active:scale-[0.98]"
+              }
             `}
           >
             <span className="text-xl">{item.icon}</span>
-            <span className="flex-1 text-[15px]">{item.label}</span>
+            <span className="flex-1 text-[15px] flex items-center gap-2">
+              {item.label}
+              {item.isPro && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded">
+                  PRO
+                </span>
+              )}
+            </span>
             <svg
               width="20"
               height="20"
