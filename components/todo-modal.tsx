@@ -71,17 +71,17 @@ export default function TodoModal({
         <div className="p-5 border-b border-neutral-100 text-center font-bold">할 일 목록</div>
 
         {/* Sticky Input Section */}
-        <div className="sticky top-0 bg-white px-6 pt-6 pb-4 border-b border-neutral-100 z-10">
-          <div className="flex gap-2.5">
+        <div className="sticky top-0 bg-white px-4 pt-6 pb-4 border-b border-neutral-100 z-10">
+          <div className="flex gap-2">
             <input
               type="text"
               value={newTodo}
               onChange={(e) => setNewTodo(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="flex-1 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] outline-none focus:ring-2 focus:ring-[#FF5722]/30"
+              className="flex-1 min-w-0 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] outline-none focus:ring-2 focus:ring-[#FF5722]/30"
               placeholder="할 일 입력..."
             />
-            <button onClick={handleAdd} className="w-[60px] h-11 bg-[#FF5722] text-white border-none rounded-xl font-bold hover:bg-[#F4511E] transition-colors">
+            <button onClick={handleAdd} className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white border-none rounded-xl font-bold hover:bg-[#F4511E] transition-colors text-sm">
               추가
             </button>
           </div>

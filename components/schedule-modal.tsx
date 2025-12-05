@@ -204,7 +204,7 @@ export default function ScheduleModal({
   return (
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
-      <div className="absolute bottom-0 left-0 w-full h-[92%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
+      <div className="absolute bottom-0 left-0 w-full h-[80%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
         <div className="px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
           <span className="font-bold text-base">{schedule ? "체험단 수정" : "체험단 등록"}</span>
         </div>
@@ -783,13 +783,13 @@ export default function ScheduleModal({
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="h-14 px-6 bg-red-50 text-red-600 border border-red-200 font-bold text-base rounded-2xl hover:bg-red-100 transition-colors cursor-pointer"
+                className="flex-2 h-14 px-6 bg-red-50 text-red-600 border border-red-200 font-bold text-base rounded-2xl hover:bg-red-100 transition-colors cursor-pointer"
               >
                 삭제
               </button>
               <button
                 onClick={handleSave}
-                className="flex-1 h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer"
+                className="flex-8 h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer"
               >
                 저장
               </button>
@@ -810,12 +810,8 @@ export default function ScheduleModal({
         <>
           <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-50" onClick={() => setShowPlatformManagement(false)} style={{ touchAction: 'none' }} />
           <div className="absolute bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
-            <div className="px-6 py-5 border-b border-neutral-100 flex justify-between items-center flex-shrink-0">
-              <span onClick={() => setShowPlatformManagement(false)} className="text-neutral-400 font-semibold cursor-pointer">
-                닫기
-              </span>
+            <div className="px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-base">플랫폼 관리</span>
-              <div className="w-[40px]"></div>
             </div>
             
             <div className="flex-1 overflow-y-auto px-6 py-6">
@@ -827,13 +823,13 @@ export default function ScheduleModal({
                     type="text"
                     value={newPlatform}
                     onChange={(e) => setNewPlatform(e.target.value)}
-                    className="flex-1 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-lg text-[15px]"
+                    className="flex-1 min-w-0 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-lg text-[15px]"
                     placeholder="새 플랫폼 이름"
                     onKeyPress={(e) => e.key === "Enter" && addCustomPlatform()}
                   />
                   <button
                     onClick={addCustomPlatform}
-                    className="h-11 px-4 bg-[#FF5722] text-white rounded-lg text-sm font-semibold cursor-pointer"
+                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-sm font-semibold cursor-pointer"
                   >
                     추가
                   </button>
