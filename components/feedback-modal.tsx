@@ -117,13 +117,6 @@ export default function FeedbackModal({
             {/* 버튼 */}
             <div className="flex gap-2">
               <button
-                onClick={onClose}
-                className="flex-1 py-3 bg-neutral-100 text-neutral-700 rounded-xl font-semibold
-                  hover:bg-neutral-200 transition-colors cursor-pointer active:scale-[0.98]"
-              >
-                취소
-              </button>
-              <button
                 onClick={handleSubmit}
                 className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-semibold
                   hover:bg-blue-600 transition-colors cursor-pointer active:scale-[0.98]"

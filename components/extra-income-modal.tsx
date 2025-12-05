@@ -139,12 +139,6 @@ export default function ExtraIncomeModal({
             >
               추가
             </button>
-            <button
-              onClick={handleClose}
-              className="px-6 h-12 bg-neutral-200 text-neutral-700 rounded-xl font-bold hover:bg-neutral-300 transition-colors"
-            >
-              취소
-            </button>
           </div>
           </div>
         </div>

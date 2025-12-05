@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
-import { X, Copy } from "lucide-react"
+import { X, Copy, Trash2 } from "lucide-react"
 
 const PLATFORMS = ["레뷰", "리뷰노트", "스타일씨", "리뷰플레이스"]
 
@@ -205,12 +205,8 @@ export default function ScheduleModal({
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
       <div className="absolute bottom-0 left-0 w-full h-[92%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
-        <div className="px-6 py-5 border-b border-neutral-100 flex justify-between items-center flex-shrink-0">
-          <span onClick={onClose} className="text-neutral-400 font-semibold cursor-pointer">
-            취소
-          </span>
-          <span className="font-bold text-base">체험단 등록</span>
-          <div className="w-[40px]"></div>
+        <div className="px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
+          <span className="font-bold text-base">{schedule ? "체험단 수정" : "체험단 등록"}</span>
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 scrollbar-hide touch-pan-y min-h-0">
@@ -778,24 +774,34 @@ export default function ScheduleModal({
             )}
           </div>
 
-          {schedule && (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="w-full p-4 bg-red-50 text-red-600 border-none rounded-2xl font-bold mt-5 mb-20 cursor-pointer"
-            >
-              이 체험단 삭제
-            </button>
-          )}
+          <div className="h-20"></div>
         </div>
 
         {/* 플로팅 저장 버튼 */}
         <div className="flex-shrink-0 p-4 bg-white border-t border-neutral-100">
-          <button
-            onClick={handleSave}
-            className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer"
-          >
-            저장
-          </button>
+          {schedule ? (
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="h-14 px-6 bg-red-50 text-red-600 border border-red-200 font-bold text-base rounded-2xl hover:bg-red-100 transition-colors cursor-pointer"
+              >
+                삭제
+              </button>
+              <button
+                onClick={handleSave}
+                className="flex-1 h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer"
+              >
+                저장
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleSave}
+              className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer"
+            >
+              저장
+            </button>
+          )}
         </div>
       </div>
 
