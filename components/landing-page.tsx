@@ -688,7 +688,7 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
             {/* FREE Plan */}
-            <div className="bg-[#F9FAFB] rounded-[32px] p-10 border border-gray-100 flex flex-col items-start text-left hover:bg-[#F2F4F6] transition">
+            <div className="bg-white rounded-[32px] p-10 border border-gray-100 flex flex-col items-start text-left hover:bg-white transition">
               <h3 className="text-2xl font-bold mb-2 text-[#191F28]">FREE</h3>
               <p className="text-[#6B7684] mb-6">기본 기능을 모두 무료로 사용하세요.</p>
               <ul className="text-lg text-[#4E5968] space-y-3 mb-8 flex-grow">
@@ -702,7 +702,7 @@ export default function LandingPage() {
                 <div className="text-3xl font-bold mb-6 text-[#191F28]">₩0</div>
                 <button
                   onClick={handleFreeTrial}
-                  className="w-full bg-white border border-gray-300 text-[#191F28] px-6 py-4 rounded-2xl text-lg font-semibold hover:bg-gray-50 transition cursor-pointer"
+                  className="w-full bg-[#F9FAFB] border border-gray-300 text-[#191F28] px-6 py-4 rounded-2xl text-lg font-semibold hover:bg-gray-50 transition cursor-pointer"
                 >
                   무료 체험하기
                 </button>
