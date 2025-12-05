@@ -11,8 +11,33 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "리뷰플로우 | 블로거 체험단 관리 앱",
-  description: "블로거 체험단 관리 앱",
+  description: "일정 체크부터 수익 정산까지. 리뷰 관리, 이제 스트레스 받지 마세요. 체험단 관리의 새로운 기준, ReviewFlow",
   generator: "v0.app",
+  metadataBase: new URL('https://reviewflow.tech'),
+  keywords: ['리뷰플로우', '체험단', '블로거', '리뷰 관리', '일정 관리', '수익 관리', 'ReviewFlow'],
+  authors: [{ name: 'ReviewFlow' }],
+  openGraph: {
+    type: 'website',
+    locale: 'ko_KR',
+    url: 'https://reviewflow.tech',
+    siteName: '리뷰플로우',
+    title: '리뷰플로우 | 블로거 체험단 관리 앱',
+    description: '일정 체크부터 수익 정산까지. 리뷰 관리, 이제 스트레스 받지 마세요. 체험단 관리의 새로운 기준, ReviewFlow',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: '리뷰플로우 - 체험단 관리 앱',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '리뷰플로우 | 블로거 체험단 관리 앱',
+    description: '일정 체크부터 수익 정산까지. 리뷰 관리, 이제 스트레스 받지 마세요.',
+    images: ['/og-image.png'],
+  },
   icons: {
     icon: [
       {
