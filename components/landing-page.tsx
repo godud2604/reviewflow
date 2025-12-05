@@ -153,7 +153,7 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md transition-all duration-300 border-b border-transparent">
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
-          <a href="#" className="flex items-center">
+          <a href="/" className="flex items-center">
             <img src="/logo.png" alt="ReviewFlow" className="h-40" />
           </a>
           <div className="flex items-center gap-2">
@@ -188,7 +188,6 @@ export default function LandingPage() {
             <span className="text-base md:text-lg">🎉</span>
             <span>체험단 관리의 새로운 기준</span>
           </div>
-
           <h1 className="text-4xl md:text-7xl font-extrabold leading-tight mb-4 md:mb-4 text-[#1A1A1A] animate-fade-in-up tracking-tight">
             리뷰 관리,
             <br />
@@ -216,7 +215,7 @@ export default function LandingPage() {
 
       {/* Problem Section - 1단계: 공감하기 */}
       <section className="bg-[#F2F4F6] py-20 md:py-32 scroll-animate">
-        <div className="max-w-4xl mx-auto px-20">
+        <div className="max-w-4xl mx-auto px-20 md:px-6">
           <div className="text-center">
             <h2 className="text-2xl md:text-5xl font-bold leading-tight mb-2 md:mb-4 text-[#191F28]">
               깜빡한 체험단 마감에 패널티 물고,
@@ -225,8 +224,6 @@ export default function LandingPage() {
             </h2>
             <p className="text-base md:text-xl text-[#8B95A1] font-medium">
               복잡한 엑셀과 메모장으로는 한계가 있더라고요.
-              <br />
-              그래서 직접 만들었습니다.
             </p>
           </div>
         </div>
@@ -241,7 +238,13 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-[#F9FAFB] rounded-3xl p-8">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-orange-200" />
+                <div 
+                  className="w-12 h-12 rounded-full bg-orange-100" 
+                  style={{ 
+                    backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Hyeyoung&backgroundColor=ffdfbf')", 
+                    backgroundSize: 'cover' 
+                  }} 
+                />
                 <div>
                   <div className="font-bold text-[#191F28]">김혜영 님</div>
                   <div className="text-sm text-[#8B95A1]">체험단 리뷰어 2년차</div>
@@ -253,7 +256,13 @@ export default function LandingPage() {
             </div>
             <div className="bg-[#F9FAFB] rounded-3xl p-8">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-purple-200" />
+                <div 
+                  className="w-12 h-12 rounded-full bg-purple-100" 
+                  style={{ 
+                    backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Jieun&backgroundColor=e0d4f7')", 
+                    backgroundSize: 'cover' 
+                  }} 
+                />
                 <div>
                   <div className="font-bold text-[#191F28]">박지은 님</div>
                   <div className="text-sm text-[#8B95A1]">블로거, N잡러</div>
@@ -280,17 +289,23 @@ export default function LandingPage() {
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             <div className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition">
-              <div className="text-4xl mb-3">📅</div>
+              <div className="w-16 h-16 mb-3 flex items-center justify-center mx-auto">
+                <img src="/calender.png" alt="캘린더" className="w-full h-full object-contain" />
+              </div>
               <h3 className="font-bold text-xl mb-2 text-[#191F28]">체험단 일정 관리</h3>
               <p className="text-base text-[#6B7684]">마감일을 놓치지 않도록 한눈에 확인</p>
             </div>
             <div className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition">
-              <div className="text-4xl mb-3">💰</div>
+              <div className="w-16 h-16 mb-3 flex items-center justify-center mx-auto">
+                <img src="/dollar.png" alt="달러" className="w-full h-full object-contain" />
+              </div>
               <h3 className="font-bold text-xl mb-2 text-[#191F28]">수익 관리</h3>
               <p className="text-base text-[#6B7684]">이번 달 경제적 가치 자동 계산</p>
             </div>
             <div className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition">
-              <div className="text-4xl mb-3">✅</div>
+              <div className="w-16 h-16 mb-3 flex items-center justify-center mx-auto">
+                <img src="/todo.png" alt="할 일" className="w-full h-full object-contain" />
+              </div>
               <h3 className="font-bold text-xl mb-2 text-[#191F28]">할 일 체크</h3>
               <p className="text-base text-[#6B7684]">체크리스트로 간편하게 관리</p>
             </div>
@@ -702,15 +717,33 @@ export default function LandingPage() {
           <h2 className="text-2xl md:text-3xl font-bold mb-12 text-[#191F28]">이런 분들이 쓰고 있어요</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="bg-white p-8 rounded-[32px] shadow-sm hover:shadow-md transition">
-              <div className="text-4xl mb-4">📸</div>
+              <div 
+                className="w-14 h-14 mb-4 rounded-2xl mx-auto" 
+                style={{ 
+                  backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Reviewer&backgroundColor=ffdfbf')", 
+                  backgroundSize: 'cover' 
+                }} 
+              />
               <h3 className="font-bold text-lg text-[#191F28]">체험단 리뷰어</h3>
             </div>
             <div className="bg-white p-8 rounded-[32px] shadow-sm hover:shadow-md transition">
-              <div className="text-4xl mb-4">📝</div>
-              <h3 className="font-bold text-lg text-[#191F28]">블로그 운영자</h3>
+              <div 
+                className="w-14 h-14 mb-4 rounded-2xl mx-auto" 
+                style={{ 
+                  backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Influencer&backgroundColor=e0d4f7')", 
+                  backgroundSize: 'cover' 
+                }} 
+              />
+              <h3 className="font-bold text-lg text-[#191F28]">인플루언서</h3>
             </div>
             <div className="bg-white p-8 rounded-[32px] shadow-sm hover:shadow-md transition">
-              <div className="text-4xl mb-4">💰</div>
+              <div 
+                className="w-14 h-14 mb-4 rounded-2xl mx-auto" 
+                style={{ 
+                  backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=NJobber&backgroundColor=d1fae5')", 
+                  backgroundSize: 'cover' 
+                }} 
+              />
               <h3 className="font-bold text-lg text-[#191F28]">N잡러</h3>
             </div>
           </div>
