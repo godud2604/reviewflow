@@ -191,9 +191,6 @@ export default function LandingPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
-            <button className="bg-white text-orange-600 px-6 md:px-8 py-3 md:py-4 rounded-full text-base md:text-lg font-bold border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 transition-all duration-300 cursor-pointer">
-              사전 신청하기
-            </button>
           </div>
         </div>
       </section>
