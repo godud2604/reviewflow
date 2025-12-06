@@ -11,17 +11,23 @@ export default function LandingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
+  const isProd = process.env.NODE_ENV === 'production';
+
   const handleFreeTrial = () => {
-    posthog?.capture('free_trial_clicked', {
-      source: 'landing_page'
-    })
+    if (isProd) {
+      posthog?.capture('free_trial_clicked', {
+        source: 'landing_page'
+      })
+    }
     router.push("/?page=home")
   }
 
   const handlePreRegister = () => {
-    posthog?.capture('pre_register_clicked', {
-      source: 'landing_page'
-    })
+    if (isProd) {
+      posthog?.capture('pre_register_clicked', {
+        source: 'landing_page'
+      })
+    }
     const ctaSection = document.getElementById('waitlist-section')
     if (ctaSection) {
       ctaSection.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -33,9 +39,11 @@ export default function LandingPage() {
     setIsSubmitting(true)
     setMessage(null)
 
-    posthog?.capture('waitlist_submit_attempted', {
-      email: email
-    })
+    if (isProd) {
+      posthog?.capture('waitlist_submit_attempted', {
+        email: email
+      })
+    }
 
     try {
       const response = await fetch('/api/waitlist', {
@@ -49,16 +57,20 @@ export default function LandingPage() {
       const data = await response.json()
 
       if (response.ok) {
-        posthog?.capture('waitlist_submit_success', {
-          email: email
-        })
+        if (isProd) {
+          posthog?.capture('waitlist_submit_success', {
+            email: email
+          })
+        }
         setMessage({ type: 'success', text: data.message })
         setEmail("")
       } else {
-        posthog?.capture('waitlist_submit_failed', {
-          email: email,
-          error: data.error
-        })
+        if (isProd) {
+          posthog?.capture('waitlist_submit_failed', {
+            email: email,
+            error: data.error
+          })
+        }
         setMessage({ type: 'error', text: data.error })
       }
     } catch (error) {
@@ -249,8 +261,8 @@ export default function LandingPage() {
                   한눈에 보여드려요
                 </h2>
                 <p className="text-base md:text-xl text-[#6B7684] leading-relaxed">
-                  마감일이 달력 위에 색깔로 정리되니까
-                  <br />더 이상 스케줄 꼬일 걱정이 없어요.
+                  하루에 체험단이 여러 개여도,
+                  <br />체험단 전용 캘린더로 깔끔하게 관리
                 </p>
             </div>
             <div className="w-full md:w-auto md:flex-shrink-0">
