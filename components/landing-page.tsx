@@ -806,7 +806,7 @@ export default function LandingPage() {
           <p className="text-base md:text-lg text-[#6B7684] mb-8 md:mb-10 leading-relaxed">
             사전 등록하고 <span className="text-[#FF5722] font-bold">PRO 버전 3개월 40% 할인</span> 받으세요.
             <br />
-            베타 오픈 시 가장 먼저 연락드립니다.
+            12월 20일 베타 오픈 예정 시 가장 먼저 연락드립니다.
           </p>
 
           <form
