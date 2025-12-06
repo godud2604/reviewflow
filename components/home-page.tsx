@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import type { Schedule } from "@/types"
 
 export default function HomePage({
@@ -12,6 +13,7 @@ export default function HomePage({
   onScheduleClick: (id: number) => void
   onShowAllClick: () => void
 }) {
+  const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedFilter, setSelectedFilter] = useState<"all" | "active" | "reconfirm" | "overdue">("all")
   const today = new Date().toISOString().slice(0, 10)
@@ -84,8 +86,28 @@ export default function HomePage({
     }
   }
 
+  const handlePreRegisterClick = () => {
+    router.push("/#waitlist-section")
+  }
+
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y">
+      <div className="mt-3 mb-4 bg-gradient-to-r from-orange-50 to-white border border-orange-100 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-inner text-xl">🚀</div>
+          <div>
+            <div className="text-xs font-bold text-orange-700">12월 20일 베타 오픈</div>
+            <div className="text-[13px] text-neutral-600 font-semibold">지금 사전신청하고 혜택 받기</div>
+          </div>
+        </div>
+        <button
+          onClick={handlePreRegisterClick}
+          className="bg-[#FF5722] text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md shadow-orange-500/30 hover:bg-[#E64A19] transition cursor-pointer whitespace-nowrap"
+        >
+          사전신청
+        </button>
+      </div>
+
       {/* Summary Bar */}
       <div className="space-y-2 mb-4 mt-2">
         <div className="flex gap-2.5">
