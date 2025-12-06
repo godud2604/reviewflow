@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +13,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Supabase에 이메일 저장
+    const supabase = getSupabaseClient()
+
     const { data, error } = await supabase
       .from('waitlist')
       .insert([
@@ -41,7 +43,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error saving email:', error)
     return NextResponse.json(
-      { error: '등록 중 오류가 발생했습니다. 다시 시도해주세요.' },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : '등록 중 오류가 발생했습니다. 다시 시도해주세요.',
+      },
       { status: 500 }
     )
   }
