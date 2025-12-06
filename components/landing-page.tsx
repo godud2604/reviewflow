@@ -204,7 +204,7 @@ export default function LandingPage() {
             리뷰 관리,
             <br />
             <span className="bg-gradient-to-r from-orange-600 via-orange-500 to-orange-600 bg-clip-text text-transparent">
-              이제 스트레스 받지 마세요
+              이제 스트레스 받지 마세요.
             </span>
           </h1>
           <p className="text-lg md:text-2xl text-[#4A5568] font-semibold leading-relaxed mb-8 md:mb-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
