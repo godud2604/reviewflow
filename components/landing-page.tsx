@@ -100,6 +100,25 @@ export default function LandingPage() {
     return () => observer.disconnect()
   }, [])
 
+  useEffect(() => {
+    const scrollToHashTarget = () => {
+      if (!window.location.hash) return
+      const targetId = window.location.hash.slice(1)
+      const target = document.getElementById(targetId)
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
+
+    const timeoutId = window.setTimeout(scrollToHashTarget, 0)
+    window.addEventListener('hashchange', scrollToHashTarget)
+
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener('hashchange', scrollToHashTarget)
+    }
+  }, [])
+
   return (
     <div className="min-h-screen bg-[#F2F4F6] overflow-x-hidden">
       <style jsx global>{`
