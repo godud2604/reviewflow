@@ -199,7 +199,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Promo Banner - Gemini 스타일 */}
-      <div className="fixed top-16 left-0 right-0 z-40 bg-gradient-to-r from-blue-50 via-purple-50 to-orange-50 py-2.5 md:py-3 flex justify-center">
+      <div className="fixed top-16 left-0 right-0 z-50 bg-gradient-to-r from-blue-50 via-purple-50 to-orange-50 py-2.5 md:py-3 flex justify-center">
         <button
           onClick={handlePreRegister}
           className="group relative flex items-center gap-2 bg-white px-4 py-2 md:px-6 md:py-2.5 rounded-full text-[12px] md:text-sm font-medium text-[#333D4B] hover:shadow-lg transition-all duration-300 cursor-pointer"
