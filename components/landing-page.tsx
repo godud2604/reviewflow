@@ -190,22 +190,34 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleFreeTrial}
-              className="bg-white text-[#FF5722] border border-[#FF5722] px-2.5 py-1 md:px-5 md:py-2 rounded-3xl font-medium text-[11px] md:text-sm hover:bg-orange-50 transition whitespace-nowrap"
+              className="px-2.5 py-1 md:px-5 md:py-2 font-semibold text-[11px] md:text-sm text-[#4A5568] hover:text-[#FF5722] transition whitespace-nowrap cursor-pointer"
             >
-              무료 체험하기
-            </button>
-            <button
-              onClick={handlePreRegister}
-              className="bg-[#FF5722] text-white px-2.5 py-1 md:px-5 md:py-2 rounded-3xl font-medium text-[11px] md:text-sm hover:bg-[#E64A19] transition cursor-pointer whitespace-nowrap"
-            >
-              사전등록
+              무료 체험하기 →
             </button>
           </div>
         </div>
       </nav>
 
+      {/* Promo Banner - Gemini 스타일 */}
+      <div className="fixed top-16 left-0 right-0 z-40 bg-gradient-to-r from-blue-50 via-purple-50 to-orange-50 py-2.5 md:py-3 flex justify-center">
+        <button
+          onClick={handlePreRegister}
+          className="group relative flex items-center gap-2 bg-white px-4 py-2 md:px-6 md:py-2.5 rounded-full text-[12px] md:text-sm font-medium text-[#333D4B] hover:shadow-lg transition-all duration-300 cursor-pointer"
+          style={{
+            background: 'linear-gradient(white, white) padding-box, linear-gradient(90deg, #4285F4, #A855F7, #EC4899, #F97316) border-box',
+            border: '1.5px solid transparent',
+          }}
+        >
+          <span className="text-[#FF5722]">✦</span>
+          <span>지금 사전등록하면 <span className="font-bold text-[#FF5722]">PRO 3개월 무료</span></span>
+          <svg className="w-4 h-4 text-[#8B95A1] group-hover:translate-x-0.5 group-hover:text-[#FF5722] transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
       {/* Hero Section */}
-      <section className="min-h-screen flex flex-col justify-center items-center text-center pt-32 pb-10 bg-gradient-to-b from-white via-orange-50/30 to-white relative overflow-hidden">
+      <section className="min-h-screen flex flex-col justify-center items-center text-center pt-40 md:pt-44 pb-10 bg-gradient-to-b from-white via-orange-50/30 to-white relative overflow-hidden">
         {/* Background Animation Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 left-10 w-72 h-72 bg-orange-200/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
@@ -843,7 +855,7 @@ export default function LandingPage() {
             />
             <button
               type="submit"
-              className="w-full md:w-auto bg-[#FF5722] text-white px-5 py-2.5 md:px-8 md:py-4 rounded-2xl text-xs md:text-lg font-semibold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full md:w-auto bg-[#FF5722] text-white px-5 py-2.5 md:px-8 md:py-4 rounded-2xl text-xs md:text-lg font-semibold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               disabled={isSubmitting}
             >
               {isSubmitting ? '등록 중...' : '알림 받기'}
