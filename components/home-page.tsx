@@ -97,7 +97,7 @@ export default function HomePage({
           <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-inner text-xl">🚀</div>
           <div>
             <div className="text-xs font-bold text-orange-700">12월 20일 베타 오픈</div>
-            <div className="text-[13px] text-neutral-600 font-semibold">지금 사전신청하고 혜택 받기</div>
+            <div className="text-[13px] text-neutral-600 font-semibold">사전신청하고 3개월 무료 혜택 받기</div>
           </div>
         </div>
         <button

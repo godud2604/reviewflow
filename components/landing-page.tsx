@@ -760,7 +760,7 @@ export default function LandingPage() {
                   <span className="text-3xl font-bold text-[#191F28]">₩2,900</span>
                   <span className="text-lg text-[#8B95A1]">/월</span>
                 </div>
-                <p className="text-[#FF5722] font-bold text-sm mb-6">🔥 사전 등록 시 3개월간 40% 할인</p>
+                <p className="text-[#FF5722] font-bold text-sm mb-6">🔥 사전 등록 시 3개월 무료</p>
                 <button
                   onClick={handlePreRegister}
                   className="w-full bg-[#FF5722] text-white px-6 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition cursor-pointer"
@@ -801,7 +801,7 @@ export default function LandingPage() {
                 사전 등록하면 어떤 혜택이 있나요?
               </summary>
               <p className="mt-4 text-[#6B7684] text-sm md:text-base leading-relaxed">
-                사전 등록자에게는 PRO 버전 3개월 40% 할인 혜택을 드립니다. 정식 출시 전 가장 먼저 알림도 받으실 수 있어요.
+                사전 등록자에게는 PRO 버전 3개월 무료 혜택을 드립니다. 정식 출시 전 가장 먼저 알림도 받으실 수 있어요.
               </p>
             </details>
             <details className="bg-white rounded-2xl p-6 shadow-sm">
@@ -823,7 +823,7 @@ export default function LandingPage() {
             출시 알림을 가장 먼저 받고 싶다면
           </h2>
           <p className="text-base md:text-lg text-[#6B7684] mb-8 md:mb-10 leading-relaxed">
-            사전 등록하고 <span className="text-[#FF5722] font-bold">PRO 버전 3개월 40% 할인</span> 받으세요.
+            사전 등록하고 <span className="text-[#FF5722] font-bold">PRO 버전 3개월 무료</span> 혜택 받으세요.
             <br />
             12월 20일 베타 오픈 예정 시 가장 먼저 연락드립니다.
           </p>
