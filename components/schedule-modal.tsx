@@ -1,16 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import type { Schedule } from "@/types"
+import type { Schedule, GuideFile } from "@/types"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/hooks/use-auth"
+import { uploadGuideFiles, downloadGuideFile, deleteGuideFile } from "@/lib/storage"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
-import { X, Copy, Trash2 } from "lucide-react"
+import { X, Copy, Trash2, Download, Loader2 } from "lucide-react"
 
 const PLATFORMS = ["레뷰", "리뷰노트", "스타일씨", "리뷰플레이스"]
 
@@ -19,12 +21,14 @@ export default function ScheduleModal({
   onClose,
   onSave,
   onDelete,
+  onUpdateFiles,
   schedule,
 }: {
   isOpen: boolean
   onClose: () => void
   onSave: (schedule: Schedule) => void
   onDelete: (id: number) => void
+  onUpdateFiles?: (id: number, files: GuideFile[]) => Promise<void>
   schedule?: Schedule
 }) {
   const [formData, setFormData] = useState<Partial<Schedule>>({
@@ -42,7 +46,6 @@ export default function ScheduleModal({
     cost: 0,
     postingLink: "",
     purchaseLink: "",
-    guideLink: "",
     guideFiles: [],
     memo: "",
     reconfirmReason: "",
@@ -65,7 +68,11 @@ export default function ScheduleModal({
   const [showPlatformManagement, setShowPlatformManagement] = useState(false)
   const [reconfirmReason, setReconfirmReason] = useState("")
   const [customReconfirmReason, setCustomReconfirmReason] = useState("")
+  const [isUploading, setIsUploading] = useState(false)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [fileToDelete, setFileToDelete] = useState<{ file: GuideFile; index: number } | null>(null)
   const { toast } = useToast()
+  const { user } = useAuth()
 
   useEffect(() => {
     if (schedule) {
@@ -96,7 +103,6 @@ export default function ScheduleModal({
         cost: 0,
         postingLink: "",
         purchaseLink: "",
-        guideLink: "",
         guideFiles: [],
         memo: "",
         reconfirmReason: "",
@@ -109,10 +115,11 @@ export default function ScheduleModal({
       })
       setReconfirmReason("")
       setCustomReconfirmReason("")
+      setPendingFiles([])
     }
   }, [schedule, isOpen])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title) {
       toast({
         title: "제목을 입력해주세요.",
@@ -129,12 +136,95 @@ export default function ScheduleModal({
     } else {
       formData.reconfirmReason = ""
     }
+
+    // 대기 중인 파일이 있으면 업로드
+    let finalGuideFiles = formData.guideFiles || []
+    if (pendingFiles.length > 0 && user) {
+      setIsUploading(true)
+      try {
+        const scheduleId = schedule?.id || `new_${Date.now()}`
+        const uploadedFiles = await uploadGuideFiles(user.id, scheduleId, pendingFiles)
+        finalGuideFiles = [...finalGuideFiles, ...uploadedFiles]
+        setPendingFiles([])
+      } catch (error) {
+        console.error('파일 업로드 실패:', error)
+        toast({
+          title: "파일 업로드에 실패했습니다.",
+          variant: "destructive",
+          duration: 2000,
+        })
+        setIsUploading(false)
+        return
+      }
+      setIsUploading(false)
+    }
     
-    onSave(formData as Schedule)
+    onSave({ ...formData, guideFiles: finalGuideFiles } as Schedule)
     toast({
       title: schedule ? "체험단 정보가 수정되었습니다." : "체험단이 등록되었습니다.",
       duration: 2000,
     })
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length > 0) {
+      setPendingFiles(prev => [...prev, ...files])
+      toast({
+        title: `${files.length}개의 파일이 선택되었습니다.`,
+        duration: 2000,
+      })
+    }
+    // input 초기화 (같은 파일 다시 선택 가능하게)
+    e.target.value = ''
+  }
+
+  const handleDownloadFile = async (file: GuideFile) => {
+    toast({
+      title: "다운로드 준비 중...",
+      duration: 1000,
+    })
+    await downloadGuideFile(file.path, file.name)
+  }
+
+  const handleDeleteUploadedFile = async (file: GuideFile, index: number) => {
+    // 기존 스케줄이 있을 때만 Storage에서 삭제
+    if (schedule) {
+      const success = await deleteGuideFile(file.path)
+      if (!success) {
+        toast({
+          title: "파일 삭제에 실패했습니다.",
+          variant: "destructive",
+          duration: 2000,
+        })
+        return
+      }
+    }
+    
+    const newFiles = formData.guideFiles?.filter((_, i) => i !== index) || []
+    setFormData({ ...formData, guideFiles: newFiles })
+    
+    // 기존 스케줄이면 DB도 즉시 업데이트 (모달 닫지 않음)
+    if (schedule && onUpdateFiles) {
+      await onUpdateFiles(schedule.id, newFiles)
+    }
+    
+    toast({
+      title: "파일이 삭제되었습니다.",
+      duration: 2000,
+    })
+    
+    setFileToDelete(null)
+  }
+
+  const handleRemovePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   const formatNumber = (value: number) => {
@@ -715,34 +805,63 @@ export default function ScheduleModal({
             type="file"
             multiple
             accept="image/*,.pdf,.doc,.docx"
-            onChange={(e) => {
-              const files = Array.from(e.target.files || [])
-              const fileNames = files.map(f => f.name)
-              setFormData({ ...formData, guideFiles: fileNames })
-              toast({
-                title: `${files.length}개의 파일이 선택되었습니다.`,
-                duration: 2000,
-              })
-            }}
+            onChange={handleFileSelect}
             className="w-full h-13 px-2 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#FF5722] file:text-white hover:file:bg-[#FF5722]/90 file:cursor-pointer "
           />
-          {formData.guideFiles && formData.guideFiles.length > 0 && (
+          
+          {/* 업로드 대기 중인 파일 (저장 시 업로드됨) */}
+          {pendingFiles.length > 0 && (
             <div className="mt-2 space-y-2">
-              {formData.guideFiles.map((fileName, index) => (
+              <span className="text-xs text-neutral-400">저장 시 업로드될 파일:</span>
+              {pendingFiles.map((file, index) => (
                 <div
-                  key={index}
-                  className="flex items-center justify-between px-3 py-2 bg-neutral-50 rounded-lg"
+                  key={`pending-${index}`}
+                  className="flex items-center justify-between px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg"
                 >
-                  <span className="text-sm text-neutral-700 truncate flex-1">{fileName}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-neutral-700 truncate block">{file.name}</span>
+                    <span className="text-xs text-neutral-400">{formatFileSize(file.size)}</span>
+                  </div>
                   <button
-                    onClick={() => {
-                      const newFiles = formData.guideFiles?.filter((_, i) => i !== index)
-                      setFormData({ ...formData, guideFiles: newFiles })
-                    }}
+                    onClick={() => handleRemovePendingFile(index)}
                     className="ml-2 text-neutral-400 hover:text-red-600"
                   >
                     <X className="w-4 h-4" />
                   </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 이미 업로드된 파일 */}
+          {formData.guideFiles && formData.guideFiles.length > 0 && (
+            <div className="mt-2 space-y-2">
+              <span className="text-xs text-neutral-400">업로드된 파일:</span>
+              {formData.guideFiles.map((file, index) => (
+                <div
+                  key={`uploaded-${index}`}
+                  className="flex items-center justify-between px-3 py-2 bg-neutral-50 rounded-lg"
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-neutral-700 truncate block">{file.name}</span>
+                    <span className="text-xs text-neutral-400">{formatFileSize(file.size)}</span>
+                  </div>
+                  <div className="flex items-center gap-1 ml-2">
+                    <button
+                      onClick={() => handleDownloadFile(file)}
+                      className="p-1.5 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="다운로드"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setFileToDelete({ file, index })}
+                      className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="삭제"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -783,23 +902,40 @@ export default function ScheduleModal({
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="flex-2 h-14 px-6 bg-red-50 text-red-600 border border-red-200 font-bold text-base rounded-2xl hover:bg-red-100 transition-colors cursor-pointer"
+                disabled={isUploading}
+                className="flex-2 h-14 px-6 bg-red-50 text-red-600 border border-red-200 font-bold text-base rounded-2xl hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 삭제
               </button>
               <button
                 onClick={handleSave}
-                className="flex-8 h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer"
+                disabled={isUploading}
+                className="flex-8 h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                저장
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    업로드 중...
+                  </>
+                ) : (
+                  '저장'
+                )}
               </button>
             </div>
           ) : (
             <button
               onClick={handleSave}
-              className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer"
+              disabled={isUploading}
+              className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              저장
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  업로드 중...
+                </>
+              ) : (
+                '저장'
+              )}
             </button>
           )}
         </div>
@@ -954,6 +1090,32 @@ export default function ScheduleModal({
                     title: "체험단이 삭제되었습니다.",
                     duration: 2000,
                   })
+                }
+              }}
+              className="h-10 px-6 text-sm font-bold bg-red-600 hover:bg-red-700 rounded-xl shadow-sm"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={fileToDelete !== null} onOpenChange={(open) => !open && setFileToDelete(null)}>
+        <AlertDialogContent className="w-[280px] rounded-2xl p-6 gap-4">
+          <AlertDialogHeader className="space-y-2 text-center">
+            <AlertDialogTitle className="text-base font-bold text-neutral-900">파일 삭제</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
+              '{fileToDelete?.file.name}' 파일을 삭제하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-center gap-2">
+            <AlertDialogCancel className="h-10 px-6 text-sm font-bold rounded-xl shadow-sm">
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (fileToDelete) {
+                  handleDeleteUploadedFile(fileToDelete.file, fileToDelete.index)
                 }
               }}
               className="h-10 px-6 text-sm font-bold bg-red-600 hover:bg-red-700 rounded-xl shadow-sm"

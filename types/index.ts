@@ -1,3 +1,10 @@
+export interface GuideFile {
+  name: string        // 원본 파일명
+  path: string        // Storage 내 경로
+  size: number        // 파일 크기 (bytes)
+  type: string        // MIME type
+}
+
 export interface Schedule {
   id: number
   title: string
@@ -14,8 +21,7 @@ export interface Schedule {
   cost: number
   postingLink: string
   purchaseLink: string
-  guideLink: string
-  guideFiles: string[]
+  guideFiles: GuideFile[]
   memo: string
   reconfirmReason?: string
   visitReviewChecklist?: {
