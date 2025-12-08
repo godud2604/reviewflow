@@ -1,11 +1,15 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useAuth } from './use-auth'
 import { useToast } from './use-toast'
 import type { Channel } from '@/types'
 import type { DbChannel } from '@/types/database'
+
+interface UseChannelsOptions {
+  enabled?: boolean
+}
 
 interface UseChannelsReturn {
   channels: Channel[]
@@ -63,12 +67,14 @@ function mapChannelUpdatesToDb(updates: Partial<Channel>) {
   return dbUpdates
 }
 
-export function useChannels(): UseChannelsReturn {
+export function useChannels(options: UseChannelsOptions = {}): UseChannelsReturn {
+  const { enabled = true } = options
   const { user } = useAuth()
   const { toast } = useToast()
   const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const hasFetchedRef = React.useRef(false)
 
   const showError = useCallback((message: string) => {
     setError(message)
@@ -80,9 +86,17 @@ export function useChannels(): UseChannelsReturn {
     })
   }, [toast])
 
-  const fetchChannels = useCallback(async () => {
-    if (!user) {
+  const userId = user?.id
+
+  const fetchChannels = useCallback(async (force = false) => {
+    if (!userId) {
       setChannels([])
+      setLoading(false)
+      return
+    }
+
+    // Skip if already fetched and not forcing
+    if (hasFetchedRef.current && !force) {
       setLoading(false)
       return
     }
@@ -95,7 +109,7 @@ export function useChannels(): UseChannelsReturn {
       const { data, error: fetchError } = await supabase
         .from('channels')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (fetchError) {
@@ -103,17 +117,22 @@ export function useChannels(): UseChannelsReturn {
         setChannels([])
       } else {
         setChannels((data || []).map(mapDbToChannel))
+        hasFetchedRef.current = true
       }
     } catch (err) {
       showError(err instanceof Error ? err.message : '알 수 없는 오류')
     } finally {
       setLoading(false)
     }
-  }, [user, showError])
+  }, [userId, showError])
 
   useEffect(() => {
-    fetchChannels()
-  }, [fetchChannels])
+    if (enabled) {
+      fetchChannels()
+    } else {
+      setLoading(false)
+    }
+  }, [enabled, fetchChannels])
 
   const createChannel = useCallback(async (channel: Omit<Channel, 'id'>): Promise<Channel | null> => {
     if (!user) return null
@@ -195,6 +214,6 @@ export function useChannels(): UseChannelsReturn {
     createChannel,
     updateChannel,
     deleteChannel,
-    refetch: fetchChannels,
+    refetch: () => fetchChannels(true),
   }
 }

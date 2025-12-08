@@ -23,40 +23,76 @@ import type { Schedule } from "@/types"
 function PageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // URL 기반 상태 관리 (먼저 계산)
+  const page = searchParams.get("page") || "landing"
+  const view = searchParams.get("view")
+  const isLandingPage = page === "landing"
+  const currentPage = (page === "home" || page === "stats" || page === "profile") ? page : "home"
+  const showPortfolio = view === "portfolio"
   
-  // Auth & Data Hooks
+  // Auth Hook
   const { user, loading: authLoading } = useAuth()
+  
+  // 페이지별 필요한 데이터만 fetch하도록 enabled 옵션 설정
+  // - schedules: home, stats, profile, portfolio 모두 필요
+  // - todos: home에서만 필요
+  // - channels: portfolio에서만 필요
+  // - featuredPosts: portfolio에서만 필요
+  // - extraIncomes: profile에서만 필요
+  const isLoggedIn = !!user && !isLandingPage
+  
   const { 
     schedules, 
     loading: schedulesLoading, 
     createSchedule, 
     updateSchedule, 
     deleteSchedule 
-  } = useSchedules()
+  } = useSchedules({ enabled: isLoggedIn })
+  
   const { 
     todos, 
     loading: todosLoading, 
     addTodo, 
     toggleTodo, 
     deleteTodo 
-  } = useTodos()
-  const { channels, loading: channelsLoading } = useChannels()
-  const { featuredPosts, loading: featuredPostsLoading } = useFeaturedPosts()
-  const { extraIncomes, loading: extraIncomesLoading } = useExtraIncomes()
+  } = useTodos({ enabled: isLoggedIn && currentPage === "home" })
   
-  const isDataLoading = schedulesLoading || todosLoading || channelsLoading || featuredPostsLoading || extraIncomesLoading
-
-  // URL 기반 상태 관리
-  const page = searchParams.get("page") || "landing"
-  const view = searchParams.get("view")
+  const { channels, loading: channelsLoading } = useChannels({ 
+    enabled: isLoggedIn && showPortfolio 
+  })
+  
+  const { featuredPosts, loading: featuredPostsLoading } = useFeaturedPosts({ 
+    enabled: isLoggedIn && showPortfolio 
+  })
+  
+  const { extraIncomes, loading: extraIncomesLoading } = useExtraIncomes({ 
+    enabled: isLoggedIn && currentPage === "profile" 
+  })
+  
+  // 현재 페이지에 필요한 데이터만 로딩 체크
+  const getIsDataLoading = () => {
+    // 스케줄은 항상 필요
+    if (schedulesLoading) return true
+    
+    // home 페이지: todos 필요
+    if (currentPage === "home" && todosLoading) return true
+    
+    // portfolio 뷰: channels, featuredPosts 필요
+    if (showPortfolio && (channelsLoading || featuredPostsLoading)) return true
+    
+    // profile 페이지: extraIncomes 필요
+    if (currentPage === "profile" && extraIncomesLoading) return true
+    
+    return false
+  }
+  
+  const isDataLoading = getIsDataLoading()
   const scheduleId = searchParams.get("schedule")
   const isNewSchedule = searchParams.get("new") === "true"
   const isTodoModalOpen = searchParams.get("todo") === "true"
 
-  const isLandingPage = page === "landing"
-  const currentPage = (page === "home" || page === "stats" || page === "profile") ? page : "home"
   const showAllSchedules = view === "all"
-  const showPortfolio = view === "portfolio"
   const isScheduleModalOpen = scheduleId !== null || isNewSchedule
   const editingScheduleId = scheduleId ? parseInt(scheduleId) : null
 

@@ -1,11 +1,15 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useAuth } from './use-auth'
 import { useToast } from './use-toast'
 import type { ExtraIncome } from '@/types'
 import type { DbExtraIncome } from '@/types/database'
+
+interface UseExtraIncomesOptions {
+  enabled?: boolean
+}
 
 interface UseExtraIncomesReturn {
   extraIncomes: ExtraIncome[]
@@ -51,12 +55,14 @@ function mapExtraIncomeUpdatesToDb(updates: Partial<ExtraIncome>) {
   return dbUpdates
 }
 
-export function useExtraIncomes(): UseExtraIncomesReturn {
+export function useExtraIncomes(options: UseExtraIncomesOptions = {}): UseExtraIncomesReturn {
+  const { enabled = true } = options
   const { user } = useAuth()
   const { toast } = useToast()
   const [extraIncomes, setExtraIncomes] = useState<ExtraIncome[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const hasFetchedRef = React.useRef(false)
 
   const showError = useCallback((message: string) => {
     setError(message)
@@ -68,9 +74,17 @@ export function useExtraIncomes(): UseExtraIncomesReturn {
     })
   }, [toast])
 
-  const fetchExtraIncomes = useCallback(async () => {
-    if (!user) {
+  const userId = user?.id
+
+  const fetchExtraIncomes = useCallback(async (force = false) => {
+    if (!userId) {
       setExtraIncomes([])
+      setLoading(false)
+      return
+    }
+
+    // Skip if already fetched and not forcing
+    if (hasFetchedRef.current && !force) {
       setLoading(false)
       return
     }
@@ -83,7 +97,7 @@ export function useExtraIncomes(): UseExtraIncomesReturn {
       const { data, error: fetchError } = await supabase
         .from('extra_incomes')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('date', { ascending: false })
 
       if (fetchError) {
@@ -91,17 +105,22 @@ export function useExtraIncomes(): UseExtraIncomesReturn {
         setExtraIncomes([])
       } else {
         setExtraIncomes((data || []).map(mapDbToExtraIncome))
+        hasFetchedRef.current = true
       }
     } catch (err) {
       showError(err instanceof Error ? err.message : '알 수 없는 오류')
     } finally {
       setLoading(false)
     }
-  }, [user, showError])
+  }, [userId, showError])
 
   useEffect(() => {
-    fetchExtraIncomes()
-  }, [fetchExtraIncomes])
+    if (enabled) {
+      fetchExtraIncomes()
+    } else {
+      setLoading(false)
+    }
+  }, [enabled, fetchExtraIncomes])
 
   const createExtraIncome = useCallback(async (income: Omit<ExtraIncome, 'id'>): Promise<ExtraIncome | null> => {
     if (!user) return null
@@ -183,6 +202,6 @@ export function useExtraIncomes(): UseExtraIncomesReturn {
     createExtraIncome,
     updateExtraIncome,
     deleteExtraIncome,
-    refetch: fetchExtraIncomes,
+    refetch: () => fetchExtraIncomes(true),
   }
 }

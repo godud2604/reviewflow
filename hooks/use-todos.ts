@@ -1,11 +1,15 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useAuth } from './use-auth'
 import { useToast } from './use-toast'
 import type { Todo } from '@/types'
 import type { DbTodo } from '@/types/database'
+
+interface UseTodosOptions {
+  enabled?: boolean
+}
 
 interface UseTodosReturn {
   todos: Todo[]
@@ -26,12 +30,14 @@ function mapDbToTodo(db: DbTodo): Todo {
   }
 }
 
-export function useTodos(): UseTodosReturn {
+export function useTodos(options: UseTodosOptions = {}): UseTodosReturn {
+  const { enabled = true } = options
   const { user } = useAuth()
   const { toast } = useToast()
   const [todos, setTodos] = useState<Todo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const hasFetchedRef = React.useRef(false)
 
   const showError = useCallback((message: string) => {
     setError(message)
@@ -43,9 +49,17 @@ export function useTodos(): UseTodosReturn {
     })
   }, [toast])
 
-  const fetchTodos = useCallback(async () => {
-    if (!user) {
+  const userId = user?.id
+
+  const fetchTodos = useCallback(async (force = false) => {
+    if (!userId) {
       setTodos([])
+      setLoading(false)
+      return
+    }
+
+    // Skip if already fetched and not forcing
+    if (hasFetchedRef.current && !force) {
       setLoading(false)
       return
     }
@@ -58,7 +72,7 @@ export function useTodos(): UseTodosReturn {
       const { data, error: fetchError } = await supabase
         .from('todos')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: true })
 
       if (fetchError) {
@@ -66,17 +80,22 @@ export function useTodos(): UseTodosReturn {
         setTodos([])
       } else {
         setTodos((data || []).map(mapDbToTodo))
+        hasFetchedRef.current = true
       }
     } catch (err) {
       showError(err instanceof Error ? err.message : '알 수 없는 오류')
     } finally {
       setLoading(false)
     }
-  }, [user, showError])
+  }, [userId, showError])
 
   useEffect(() => {
-    fetchTodos()
-  }, [fetchTodos])
+    if (enabled) {
+      fetchTodos()
+    } else {
+      setLoading(false)
+    }
+  }, [enabled, fetchTodos])
 
   const addTodo = useCallback(async (text: string): Promise<Todo | null> => {
     if (!user) return null
@@ -165,6 +184,6 @@ export function useTodos(): UseTodosReturn {
     addTodo,
     toggleTodo,
     deleteTodo,
-    refetch: fetchTodos,
+    refetch: () => fetchTodos(true),
   }
 }

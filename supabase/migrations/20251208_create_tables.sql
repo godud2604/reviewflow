@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS channels (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Featured Posts 테이블
+-- 4. Featured Posts 테이블 - 대표 게시글 관리 (포트폴리오/어필용)
 CREATE TABLE IF NOT EXISTS featured_posts (
   id BIGSERIAL PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS featured_posts (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Extra Incomes 테이블
+-- 5. Extra Incomes 테이블 - 체험단 외 추가 수입 관리 (수익 통계용)
 CREATE TABLE IF NOT EXISTS extra_incomes (
   id BIGSERIAL PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,

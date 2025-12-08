@@ -1,11 +1,15 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useAuth } from './use-auth'
 import { useToast } from './use-toast'
 import type { Schedule } from '@/types'
 import type { DbSchedule } from '@/types/database'
+
+interface UseSchedulesOptions {
+  enabled?: boolean
+}
 
 interface UseSchedulesReturn {
   schedules: Schedule[]
@@ -93,12 +97,14 @@ function mapScheduleUpdatesToDb(updates: Partial<Schedule>) {
   return dbUpdates
 }
 
-export function useSchedules(): UseSchedulesReturn {
+export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesReturn {
+  const { enabled = true } = options
   const { user } = useAuth()
   const { toast } = useToast()
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const hasFetchedRef = React.useRef(false)
 
   const showError = useCallback((message: string) => {
     setError(message)
@@ -110,9 +116,17 @@ export function useSchedules(): UseSchedulesReturn {
     })
   }, [toast])
 
-  const fetchSchedules = useCallback(async () => {
-    if (!user) {
+  const userId = user?.id
+
+  const fetchSchedules = useCallback(async (force = false) => {
+    if (!userId) {
       setSchedules([])
+      setLoading(false)
+      return
+    }
+
+    // Skip if already fetched and not forcing
+    if (hasFetchedRef.current && !force) {
       setLoading(false)
       return
     }
@@ -125,7 +139,7 @@ export function useSchedules(): UseSchedulesReturn {
       const { data, error: fetchError } = await supabase
         .from('schedules')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (fetchError) {
@@ -133,17 +147,22 @@ export function useSchedules(): UseSchedulesReturn {
         setSchedules([])
       } else {
         setSchedules((data || []).map(mapDbToSchedule))
+        hasFetchedRef.current = true
       }
     } catch (err) {
       showError(err instanceof Error ? err.message : '알 수 없는 오류')
     } finally {
       setLoading(false)
     }
-  }, [user, showError])
+  }, [userId, showError])
 
   useEffect(() => {
-    fetchSchedules()
-  }, [fetchSchedules])
+    if (enabled) {
+      fetchSchedules()
+    } else {
+      setLoading(false)
+    }
+  }, [enabled, fetchSchedules])
 
   const createSchedule = useCallback(async (schedule: Omit<Schedule, 'id'>): Promise<Schedule | null> => {
     if (!user) return null
@@ -225,6 +244,6 @@ export function useSchedules(): UseSchedulesReturn {
     createSchedule,
     updateSchedule,
     deleteSchedule,
-    refetch: fetchSchedules,
+    refetch: () => fetchSchedules(true),
   }
 }

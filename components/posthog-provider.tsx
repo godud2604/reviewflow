@@ -5,12 +5,9 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import posthog from 'posthog-js'
 import { PostHogProvider as PHProvider } from 'posthog-js/react'
 
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
   posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY || '', {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com',
-    loaded: (posthog) => {
-      if (process.env.NODE_ENV === 'development') posthog.debug()
-    },
     capture_pageview: false, // We'll handle this manually with the PageViewTracker
   })
 }
@@ -20,7 +17,7 @@ function PageViewTrackerInner() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    if (pathname) {
+    if (pathname && process.env.NODE_ENV === 'production') {
       let url = window.origin + pathname
       if (searchParams && searchParams.toString()) {
         url = url + `?${searchParams.toString()}`

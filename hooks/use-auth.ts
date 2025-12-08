@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { getSupabaseClient } from '@/lib/supabase'
 
@@ -16,8 +16,13 @@ export function useAuth() {
     session: null,
     loading: true,
   })
+  const initializedRef = useRef(false)
 
   useEffect(() => {
+    // Prevent double initialization in StrictMode
+    if (initializedRef.current) return
+    initializedRef.current = true
+
     const supabase = getSupabaseClient()
 
     // 현재 세션 가져오기
@@ -47,10 +52,21 @@ export function useAuth() {
     // 인증 상태 변경 리스너
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setAuthState({
-          user: session?.user ?? null,
-          session: session,
-          loading: false,
+        // Only update if user actually changed
+        setAuthState(prev => {
+          const newUserId = session?.user?.id
+          const prevUserId = prev.user?.id
+          
+          // Skip if same user
+          if (newUserId === prevUserId && !prev.loading) {
+            return prev
+          }
+          
+          return {
+            user: session?.user ?? null,
+            session: session,
+            loading: false,
+          }
         })
 
         // 로그인/로그아웃 이벤트 로깅 (디버깅용)
