@@ -60,12 +60,17 @@ export async function uploadGuideFiles(
 /**
  * 파일 다운로드 URL 생성 (1시간 유효)
  */
-export async function getGuideFileUrl(filePath: string): Promise<string | null> {
+export async function getGuideFileUrl(filePath: string, forDownload = false): Promise<string | null> {
   const supabase = getSupabaseClient()
+  
+  const options: { download?: string | boolean } = {}
+  if (forDownload) {
+    options.download = true
+  }
   
   const { data, error } = await supabase.storage
     .from('guide-files')
-    .createSignedUrl(filePath, 3600) // 1시간 유효
+    .createSignedUrl(filePath, 3600, options) // 1시간 유효
   
   if (error) {
     console.error('파일 URL 생성 오류:', error)
@@ -117,18 +122,27 @@ export async function deleteGuideFiles(filePaths: string[]): Promise<boolean> {
  * 파일 다운로드
  */
 export async function downloadGuideFile(filePath: string, fileName: string): Promise<void> {
-  const url = await getGuideFileUrl(filePath)
-  if (!url) {
-    console.error('다운로드 URL 생성 실패')
+  const supabase = getSupabaseClient()
+  
+  // Supabase Storage의 download 메서드 사용
+  const { data, error } = await supabase.storage
+    .from('guide-files')
+    .download(filePath)
+  
+  if (error || !data) {
+    console.error('다운로드 실패:', error)
     return
   }
   
-  // 브라우저에서 다운로드 트리거
+  // Blob을 다운로드 링크로 변환
+  const url = URL.createObjectURL(data)
   const link = document.createElement('a')
   link.href = url
   link.download = fileName
-  link.target = '_blank'
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
+  
+  // 메모리 해제
+  URL.revokeObjectURL(url)
 }
