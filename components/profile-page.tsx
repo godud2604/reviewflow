@@ -5,6 +5,7 @@ import type { Schedule, ExtraIncome } from "@/types"
 import { exportAllDataToExcel } from "@/lib/export-utils"
 import { useToast } from "@/hooks/use-toast"
 import FeedbackModal from "./feedback-modal"
+import { useRouter } from "next/navigation"
 
 export default function ProfilePage({ 
   onShowPortfolio,
@@ -18,12 +19,10 @@ export default function ProfilePage({
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
   const { toast } = useToast()
+  const router = useRouter()
 
   const handleLogout = () => {
-    toast({
-      title: "로그아웃 되었습니다",
-      duration: 2000,
-    })
+    router.push("/?page=home")
   }
 
   const handleBackup = () => {
@@ -48,7 +47,7 @@ export default function ProfilePage({
     { id: "backup", icon: "📂", label: "활동 내역 다운로드", isPro: true, onClick: handleBackup, disabled: true },
     { id: "notification", icon: "🔔", label: "알림 설정", isPro: true, disabled: true },
     { id: "report", icon: "📊", label: "월간 레포트", isPro: true, disabled: true },
-    { id: "feedback", icon: "💬", label: "개발자에게 피드백 주기", onClick: () => setIsFeedbackModalOpen(true) },
+    // { id: "feedback", icon: "💬", label: "개발자에게 피드백 주기", onClick: () => setIsFeedbackModalOpen(true) },
     // { id: "support", icon: "📞", label: "고객센터" },
   ]
 
@@ -115,7 +114,7 @@ export default function ProfilePage({
         className="w-full p-4 bg-neutral-200 text-[#333] border-none rounded-2xl font-bold cursor-pointer
           transition-all duration-200 hover:bg-neutral-300 active:scale-[0.98]"
       >
-        로그아웃
+        홈으로 가기
       </button>
 
       <FeedbackModal
