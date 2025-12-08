@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import type { Schedule, GuideFile } from "@/types"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -9,12 +9,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
+import { useUserProfile } from "@/hooks/use-user-profile"
 import { uploadGuideFiles, downloadGuideFile, deleteGuideFile } from "@/lib/storage"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { X, Copy, Trash2, Download, Loader2 } from "lucide-react"
-
-const PLATFORMS = ["레뷰", "리뷰노트", "스타일씨", "리뷰플레이스"]
 
 export default function ScheduleModal({
   isOpen,
@@ -58,9 +57,7 @@ export default function ScheduleModal({
   })
 
   const [customPlatforms, setCustomPlatforms] = useState<string[]>([])
-  const [availablePlatforms, setAvailablePlatforms] = useState<string[]>(PLATFORMS)
   const [newPlatform, setNewPlatform] = useState("")
-  const [showPlatformInput, setShowPlatformInput] = useState(false)
   const [platformToDelete, setPlatformToDelete] = useState<string | null>(null)
   const [duplicatePlatformAlert, setDuplicatePlatformAlert] = useState(false)
   const [emptyPlatformAlert, setEmptyPlatformAlert] = useState(false)
@@ -73,6 +70,12 @@ export default function ScheduleModal({
   const [fileToDelete, setFileToDelete] = useState<{ file: GuideFile; index: number } | null>(null)
   const { toast } = useToast()
   const { user } = useAuth()
+  const { platforms: userPlatforms, addPlatform, removePlatform, loading: platformsLoading } = useUserProfile()
+
+  // 사용 가능한 플랫폼 목록 (DB에서 가져온 유저 플랫폼)
+  const allPlatforms = React.useMemo(() => {
+    return [...userPlatforms].sort((a, b) => a.localeCompare(b, 'ko'))
+  }, [userPlatforms])
 
   useEffect(() => {
     if (schedule) {
@@ -240,7 +243,7 @@ export default function ScheduleModal({
     setFormData({ ...formData, [field]: numValue })
   }
 
-  const addCustomPlatform = () => {
+  const addCustomPlatform = async () => {
     const trimmedPlatform = newPlatform.trim()
 
     if (!trimmedPlatform) {
@@ -258,36 +261,30 @@ export default function ScheduleModal({
       return
     }
     
-    setCustomPlatforms([...customPlatforms, trimmedPlatform])
-    setFormData({ ...formData, platform: trimmedPlatform })
-    setNewPlatform("")
-    setShowPlatformInput(false)
-    toast({
-      title: "플랫폼이 추가되었습니다.",
-      duration: 2000,
-    })
+    const success = await addPlatform(trimmedPlatform)
+    if (success) {
+      setFormData({ ...formData, platform: trimmedPlatform })
+      setNewPlatform("")
+      toast({
+        title: "플랫폼이 추가되었습니다.",
+        duration: 2000,
+      })
+    }
   }
 
-  const deletePlatform = (platformName: string) => {
-    // 커스텀 플랫폼이면 customPlatforms에서 제거
-    if (customPlatforms.includes(platformName)) {
-      setCustomPlatforms(customPlatforms.filter((p) => p !== platformName))
-    } else {
-      // 기본 플랫폼이면 availablePlatforms에서 제거
-      setAvailablePlatforms(availablePlatforms.filter((p) => p !== platformName))
-    }
-    
-    if (formData.platform === platformName) {
-      setFormData({ ...formData, platform: "" })
+  const deletePlatform = async (platformName: string) => {
+    const success = await removePlatform(platformName)
+    if (success) {
+      if (formData.platform === platformName) {
+        setFormData({ ...formData, platform: "" })
+      }
+      toast({
+        title: "플랫폼이 삭제되었습니다.",
+        duration: 2000,
+      })
     }
     setPlatformToDelete(null)
-    toast({
-      title: "플랫폼이 삭제되었습니다.",
-      duration: 2000,
-    })
   }
-
-  const allPlatforms = [...availablePlatforms, ...customPlatforms]
 
   if (!isOpen) return null
 
@@ -965,7 +962,8 @@ export default function ScheduleModal({
                   />
                   <button
                     onClick={addCustomPlatform}
-                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-sm font-semibold cursor-pointer"
+                    disabled={platformsLoading}
+                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-50"
                   >
                     추가
                   </button>
@@ -975,7 +973,12 @@ export default function ScheduleModal({
               {/* 플랫폼 목록 */}
               <div>
                 <label className="block text-sm font-bold text-neutral-500 mb-2">등록된 플랫폼</label>
-                {allPlatforms.length === 0 ? (
+                {platformsLoading ? (
+                  <div className="text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+                    불러오는 중...
+                  </div>
+                ) : allPlatforms.length === 0 ? (
                   <div className="text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
                     등록된 플랫폼이 없습니다
                   </div>
@@ -984,15 +987,15 @@ export default function ScheduleModal({
                     {allPlatforms.map((platform) => (
                       <div
                         key={platform}
-                        onClick={() => {
-                          setPlatformToDelete(platform)
-                          setShowPlatformManagement(false)
-                        }}
-                        className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl cursor-pointer"
+                        className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl"
                       >
                         <span className="text-[15px] font-medium">{platform}</span>
                         <button
-                          className="text-red-600 hover:text-red-700 font-semibold text-sm"
+                          onClick={() => {
+                            setPlatformToDelete(platform)
+                            setShowPlatformManagement(false)
+                          }}
+                          className="text-red-600 hover:text-red-700 font-semibold text-sm cursor-pointer"
                         >
                           삭제
                         </button>

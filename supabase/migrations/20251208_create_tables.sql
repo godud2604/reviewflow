@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS todos (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Channels 테이블
+-- 3. Channels 테이블 - 인플루언서의 SNS/블로그 채널 정보를 저장하는 테이블
 CREATE TABLE IF NOT EXISTS channels (
   id BIGSERIAL PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS featured_posts (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Extra Incomes 테이블 - 체험단 외 추가 수입 관리 (수익 통계용)
+-- 5. Extra Incomes 테이블 - 체험단 외 추가 수입 관리 
 CREATE TABLE IF NOT EXISTS extra_incomes (
   id BIGSERIAL PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
