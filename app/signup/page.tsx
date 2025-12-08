@@ -36,6 +36,24 @@ export default function SignUpPage() {
     checkAuth()
   }, [router])
 
+  const handleKakaoSignUp = async () => {
+    try {
+      const supabase = getSupabaseClient()
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'kakao',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) {
+        setError('카카오 회원가입에 실패했습니다.')
+      }
+    } catch (err) {
+      setError('카카오 회원가입 중 오류가 발생했습니다.')
+    }
+  }
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -194,6 +212,25 @@ export default function SignUpPage() {
             {loading ? "가입 중..." : "회원가입"}
           </button>
         </form>
+
+        {/* Divider */}
+        <div className="flex items-center my-6">
+          <div className="flex-1 border-t border-gray-200"></div>
+          <span className="px-4 text-sm text-[#8B95A1]">또는</span>
+          <div className="flex-1 border-t border-gray-200"></div>
+        </div>
+
+        {/* Kakao Sign Up */}
+        <button
+          type="button"
+          onClick={handleKakaoSignUp}
+          className="w-full bg-[#FEE500] text-[#000000D9] py-3 rounded-xl font-semibold hover:bg-[#FDD800] transition flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.636 1.712 4.969 4.326 6.333-.144.522-.926 3.363-.962 3.587 0 0-.019.158.084.218.103.06.224.013.224.013.296-.04 3.432-2.261 3.97-2.645.765.112 1.559.17 2.358.17 5.523 0 10-3.463 10-7.691S17.523 3 12 3z"/>
+          </svg>
+          카카오로 시작하기
+        </button>
 
         {/* Sign In Link */}
         <p className="text-center mt-6 text-[#6B7684]">
