@@ -202,14 +202,14 @@ export default function LandingPage() {
       <div className="fixed top-16 left-0 right-0 z-50 bg-gradient-to-r from-blue-50 via-purple-50 to-orange-50 py-2.5 md:py-3 flex justify-center">
         <button
           onClick={handlePreRegister}
-          className="group relative flex items-center gap-2 bg-white px-4 py-2 md:px-6 md:py-2.5 rounded-full text-[12px] md:text-sm font-medium text-[#333D4B] hover:shadow-lg transition-all duration-300 cursor-pointer"
+          className="group relative flex items-center gap-2 bg-white px-4 py-3 md:px-6 md:py-2.5 rounded-full text-[13px] md:text-sm font-medium text-[#333D4B] hover:shadow-lg transition-all duration-300 cursor-pointer"
           style={{
             background: 'linear-gradient(white, white) padding-box, linear-gradient(90deg, #4285F4, #A855F7, #EC4899, #F97316) border-box',
             border: '1.5px solid transparent',
           }}
         >
           <span className="text-[#FF5722]">✦</span>
-          <span>지금 사전등록하면 <span className="font-bold text-[#FF5722]">PRO 3개월 무료</span></span>
+          <span><span className="font-bold text-[#FF5722]">PRO 3개월 무료 혜택 받으러 가기</span></span>
           <svg className="w-4 h-4 text-[#8B95A1] group-hover:translate-x-0.5 group-hover:text-[#FF5722] transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
