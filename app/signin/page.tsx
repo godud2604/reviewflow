@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { getSupabaseClient } from "@/lib/supabase"
+import { getRedirectUrl } from "@/lib/getRedirectUrl"
 
 export default function SignInPage() {
   const router = useRouter()
@@ -40,7 +41,7 @@ export default function SignInPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'kakao',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: getRedirectUrl(),
         },
       })
 
