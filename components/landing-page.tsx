@@ -218,6 +218,13 @@ export default function LandingPage() {
                 </svg>
               </button>
             </div>
+            <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#ffd0b3] p-3">
+              <div className="w-5 h-5 rounded-lg bg-white flex items-center justify-center text-xl">⏰</div>
+              <div className="leading-tight">
+                <p className="text-[12px] font-bold text-[#c24b30]">선착순 50명 사전신청</p>
+                <p className="text-[11px] font-semibold text-[#ff5c39]">몇자리 안 남았어요!</p>
+              </div>
+            </div>
             <div className="mt-4 grid grid-cols-1 gap-3">
               <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-3">
                 <div className="flex items-center gap-2 mb-1.5">
