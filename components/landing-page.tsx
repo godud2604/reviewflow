@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { usePostHog } from 'posthog-js/react'
@@ -644,7 +645,7 @@ export default function LandingPage() {
                   오늘 할 일 끝까지 챙겨드려요
                 </h2>
                 <p className="text-base md:text-xl text-[#6B7684] leading-relaxed">
-                  마감 임박 일정, 아직 못한 리뷰, 제출 링크까지
+                  마감 임박 일정, 아직 못한 리뷰, 할 일 체크까지
                   <br />
                   하루 한 번 요약해서 알려드려요.
                   <br />
@@ -1036,12 +1037,12 @@ export default function LandingPage() {
             Copyright © 2025
           </div>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-[#333]">
+            <Link href="/terms" className="hover:text-[#333]">
               이용약관
-            </a>
-            <a href="#" className="hover:text-[#333]">
+            </Link>
+            <Link href="/privacy" className="hover:text-[#333]">
               개인정보처리방침
-            </a>
+            </Link>
             <a href="#" className="hover:text-[#333]">
               문의하기
             </a>
