@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { Schedule, ExtraIncome, MonthlyGrowth } from "@/types"
 import { useExtraIncomes } from "@/hooks/use-extra-incomes"
 import ExtraIncomeModal from "./extra-income-modal"
@@ -68,6 +68,51 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
   // 경제적 가치 = 스케줄(제공+수익-지출) + 부수입
   const econValue = scheduleValue + totalExtraIncome
   const hasIncomeData = totalBen > 0 || totalInc > 0 || totalCost > 0 || totalExtraIncome > 0
+  const [animatedEconValue, setAnimatedEconValue] = useState(0)
+  const animatedValueRef = useRef(0)
+  const animationRef = useRef<number | null>(null)
+  const lastAnimatedValueRef = useRef<number | null>(null)
+
+  // Animate the economic value once when the number becomes available
+  useEffect(() => {
+    const target = econValue
+    if (lastAnimatedValueRef.current === target) return
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current)
+    }
+
+    const start = animatedValueRef.current
+    if (target === start) {
+      lastAnimatedValueRef.current = target
+      return
+    }
+
+    const duration = 900
+    const startTime = performance.now()
+
+    const step = (now: number) => {
+      const elapsed = now - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3) // easeOutCubic
+      const nextValue = Math.round(start + (target - start) * eased)
+
+      animatedValueRef.current = nextValue
+      setAnimatedEconValue(nextValue)
+
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(step)
+      } else {
+        lastAnimatedValueRef.current = target
+      }
+    }
+
+    animationRef.current = requestAnimationFrame(step)
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
+    }
+  }, [econValue])
 
   const monthlyGrowth: MonthlyGrowth[] = useMemo(() => {
     const monthMap = new Map<string, MonthlyGrowth>()
@@ -139,7 +184,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
                 이번 달 경제적 가치 <span role="img" aria-label="money bag">💰</span>
               </div>
               <div className="text-[36px] font-black leading-[1.05] text-white drop-shadow-[0_14px_36px_rgba(255,120,64,0.28)] tracking-tight">
-                ₩ {econValue.toLocaleString()}
+                ₩ {animatedEconValue.toLocaleString()}
               </div>
             </div>
             <button
@@ -153,18 +198,18 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
           <div className="grid grid-cols-2 gap-3 text-sm relative">
             <div className="p-4 rounded-2xl bg-white/10 shadow-sm text-white">
               <div className="text-[12px] text-white font-semibold mb-1">방어한 생활비</div>
-              <div className="text-[18px] font-extrabold text-white">₩ {scheduleValue.toLocaleString()}</div>
+              <div className="text-[14px] font-extrabold text-white">₩ {scheduleValue.toLocaleString()}</div>
             </div>
             <div className="p-4 rounded-2xl bg-white/10 shadow-sm text-white">
               <div className="text-[12px] text-white font-semibold mb-1">부수입</div>
-              <div className="text-[18px] font-extrabold text-white">₩ {totalExtraIncome.toLocaleString()}</div>
+              <div className="text-[14px] font-extrabold text-white">₩ {totalExtraIncome.toLocaleString()}</div>
             </div>
           </div>
         </div>
 
         {/* Income Details - Always Visible */}
         <div className={`bg-white rounded-[26px] p-6 mb-3.5 shadow-sm ${cardShadow}`}>
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-3">
             <div className="text-[16px] font-bold text-[#0f172a]">수입 상세 내역</div>
             <button
               onClick={() => setShowHistoryModal(true)}
@@ -182,10 +227,10 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
                 <div className="">
                   <div className="flex items-center justify-between mb-3">
                     <div className="text-sm font-semibold text-[#0f172a] flex items-center gap-2">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#fef4eb] text-[#f97316] text-lg">₩</span>
-                      방어한 생활비
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#fef4eb] text-[#f97316] text-[14px]">₩</span>
+                      <span className="text-[14px]">방어한 생활비</span>
                     </div>
-                    <div className="text-sm font-bold text-[#f97316]">{scheduleValue.toLocaleString()}원</div>
+                    <div className="text-[14px] font-bold text-[#f97316]">{scheduleValue.toLocaleString()}원</div>
                   </div>
                   <div className="space-y-3 pl-2">
                     {(Object.keys(benefitByCategory) as Schedule["category"][])
@@ -217,10 +262,10 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
                 <div>
                   <div className="flex items-center justify-between mt-6 mb-3">
                     <div className="text-sm font-semibold text-[#0f172a] flex items-center gap-2">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eef5ff] text-[#2563eb] text-lg">💵</span>
-                      부수입 (현금)
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#eef5ff] text-[#2563eb] text-[14px]">💵</span>
+                      <span className="text-[14px]">부수입 (현금)</span>
                     </div>
-                    <div className="text-sm font-bold text-[#2563eb]">{totalExtraIncome.toLocaleString()}원</div>
+                    <div className="text-[14px] font-bold text-[#2563eb]">{totalExtraIncome.toLocaleString()}원</div>
                   </div>
                   <div className="space-y-3 pl-2">
                     {extraIncomes
