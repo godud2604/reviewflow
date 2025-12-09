@@ -90,6 +90,8 @@ export default function IncomeHistoryModal({
   const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0)
   const totalExtra = extraIncomeItems.reduce((sum, item) => sum + item.amount, 0)
   const grandTotal = totalBenefit + totalIncome + totalExtra
+  const hasData = allItems.length > 0
+  const containerHeightClass = hasData ? "h-[85%]" : "h-[50%]"
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -136,18 +138,17 @@ export default function IncomeHistoryModal({
   return (
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm z-30 overscroll-none" onClick={onClose} style={{ touchAction: 'none' }} />
-      <div className="absolute bottom-0 left-0 w-full h-[85%] bg-gradient-to-b from-neutral-50 to-white rounded-t-[32px] z-40 flex flex-col animate-slide-up overscroll-none shadow-2xl">
+      <div className={`absolute bottom-0 left-0 w-full ${containerHeightClass} bg-gradient-to-b from-neutral-50 to-white rounded-t-[32px] z-40 flex flex-col animate-slide-up overscroll-none shadow-2xl`}>
         {/* Header */}
         <div className="p-5 pb-3 text-center relative flex-shrink-0">
-          <h2 className="text-xl font-bold text-neutral-900">전체 수입 내역</h2>
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-neutral-300 rounded-full" />
+          <h2 className="text-[16px] font-bold text-neutral-900">전체 수입 내역</h2>
         </div>
 
         {/* Summary Card */}
         <div className="relative mx-4 mt-1 mb-3 flex-shrink-0">
-          <div className="bg-gradient-to-br from-orange-500 via-orange-500 to-rose-500 rounded-2xl p-5 shadow-lg">
-            {/* 세부 항목 */}
-            <div className="space-y-3">
+          <div className="relative overflow-hidden bg-gradient-to-br from-[#ff9a3c] via-[#ff6a1f] to-[#ff3b0c] rounded-2xl p-5 shadow-lg">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.22),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.15),transparent_28%)]" />
+            <div className="relative space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-base">💰</span>
@@ -175,12 +176,12 @@ export default function IncomeHistoryModal({
 
         {/* Items List */}
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-6 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent touch-pan-y">
-          {allItems.length === 0 ? (
+          {!hasData ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mb-3">
                 <span className="text-2xl">💸</span>
               </div>
-              <p className="text-neutral-400 font-medium text-sm">아직 수입 내역이 없어요</p>
+              <p className="text-neutral-400 font-medium text-[12px]">아직 수입 내역이 없어요</p>
             </div>
           ) : (
             <div className="space-y-2.5">

@@ -24,7 +24,7 @@ export default function AllSchedulesPage({
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-5 mt-2">
+      <div className="flex items-center gap-2 mb-5 mt-5">
         <button
           onClick={onBack}
           className="flex items-center gap-1.5 text-[15px] text-neutral-600 hover:text-neutral-900 transition-colors font-medium cursor-pointer"
@@ -96,11 +96,18 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
     재확인: { class: "bg-neutral-100 text-neutral-600", text: "재확인" },
   }
 
-  const dDate = schedule.dead
-    ? `${schedule.dead.slice(5)} 마감`
-    : schedule.visit
-      ? `${schedule.visit.slice(5)} 방문`
-      : "미정"
+  const visitLabel = schedule.visit
+    ? `${schedule.visit.slice(5)}${schedule.visitTime ? ` ${schedule.visitTime}` : ""} 방문`
+    : "방문일 미정"
+  const deadLabel = schedule.dead ? `${schedule.dead.slice(5)} 마감` : "마감 미정"
+  const dDate =
+    schedule.reviewType === "방문형"
+      ? `${visitLabel} | ${deadLabel}`
+      : schedule.dead
+        ? `${schedule.dead.slice(5)} 마감`
+        : schedule.visit
+          ? `${schedule.visit.slice(5)} 방문`
+          : "미정"
 
   const total = schedule.benefit + schedule.income - schedule.cost
   const status = statusConfig[schedule.status] || { class: "bg-neutral-100 text-neutral-600", text: "미정" }
@@ -115,20 +122,24 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
     >
       <div className="text-2xl mr-3.5 w-[30px] text-center">{icons[schedule.category] || "📦"}</div>
       <div className="flex-1">
-        <div className="text-[15px] font-bold mb-1.5 text-[#1A1A1A] flex items-center gap-1.5">
-          {schedule.title}
-          {schedule.memo && (
-            <span className="text-sm" title="메모 있음">
-              📝
-            </span>
-          )}
+        <div className="flex items-start justify-between gap-2">
+          <div className="text-[15px] font-bold text-[#1A1A1A] flex items-center gap-1.5">
+            {schedule.title}
+            {schedule.memo && (
+              <span className="text-sm" title="메모 있음">
+                📝
+              </span>
+            )}
+          </div>
+          <div className="text-right min-w-[88px]">
+            <div className="font-bold text-[15px] text-neutral-900 leading-tight">₩{total.toLocaleString()}</div>
+          </div>
         </div>
-        <div className="text-xs text-neutral-500 flex items-center gap-1.5">
+        <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1">
           <span className={`px-1.5 py-0.5 rounded font-semibold text-[11px] ${status.class}`}>{status.text}</span>
-          <span>| {dDate}</span>
+          <span className="font-medium text-neutral-600">{dDate}</span>
         </div>
       </div>
-      <div className="font-bold text-[#333]">₩{total.toLocaleString()}</div>
     </div>
   )
 }

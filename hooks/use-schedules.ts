@@ -33,6 +33,7 @@ function mapDbToSchedule(db: DbSchedule): Schedule {
     category: (db.category || '기타') as Schedule['category'],
     region: db.region || '',
     visit: db.visit_date || '',
+    visitTime: db.visit_time || '',
     dead: db.deadline || '',
     benefit: db.benefit || 0,
     income: db.income || 0,
@@ -58,6 +59,7 @@ function mapScheduleToDb(schedule: Omit<Schedule, 'id'>, userId: string) {
     category: schedule.category,
     region: schedule.region || null,
     visit_date: schedule.visit || null,
+    visit_time: schedule.visitTime || null,
     deadline: schedule.dead || null,
     benefit: schedule.benefit || 0,
     income: schedule.income || 0,
@@ -83,6 +85,7 @@ function mapScheduleUpdatesToDb(updates: Partial<Schedule>) {
   if (updates.category !== undefined) dbUpdates.category = updates.category
   if (updates.region !== undefined) dbUpdates.region = updates.region
   if (updates.visit !== undefined) dbUpdates.visit_date = updates.visit
+  if (updates.visitTime !== undefined) dbUpdates.visit_time = updates.visitTime
   if (updates.dead !== undefined) dbUpdates.deadline = updates.dead
   if (updates.benefit !== undefined) dbUpdates.benefit = updates.benefit
   if (updates.income !== undefined) dbUpdates.income = updates.income

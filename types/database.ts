@@ -13,6 +13,7 @@ export interface DbSchedule {
   category: string | null
   region: string | null
   visit_date: string | null
+  visit_time: string | null
   deadline: string | null
   benefit: number
   income: number

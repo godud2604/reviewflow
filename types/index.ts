@@ -15,6 +15,7 @@ export interface Schedule {
   category: "맛집" | "식품" | "뷰티" | "여행" | "디지털" | "반려동물" | "기타"
   region: string
   visit: string
+  visitTime: string
   dead: string
   benefit: number
   income: number

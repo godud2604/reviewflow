@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { useUserProfile } from "@/hooks/use-user-profile"
@@ -39,6 +40,7 @@ export default function ScheduleModal({
     category: "맛집",
     region: "",
     visit: "",
+    visitTime: "",
     dead: "",
     benefit: 0,
     income: 0,
@@ -100,6 +102,7 @@ export default function ScheduleModal({
         category: "맛집",
         region: "",
         visit: "",
+        visitTime: "",
         dead: "",
         benefit: 0,
         income: 0,
@@ -138,6 +141,25 @@ export default function ScheduleModal({
       formData.reconfirmReason = reason
     } else {
       formData.reconfirmReason = ""
+    }
+
+    if (formData.reviewType === "방문형") {
+      if (!formData.visit) {
+        toast({
+          title: "방문일을 선택해주세요.",
+          variant: "destructive",
+          duration: 2000,
+        })
+        return
+      }
+      if (!formData.visitTime) {
+        toast({
+          title: "방문시간을 입력해주세요.",
+          variant: "destructive",
+          duration: 2000,
+        })
+        return
+      }
     }
 
     // 대기 중인 파일이 있으면 업로드
@@ -287,6 +309,40 @@ export default function ScheduleModal({
   }
 
   if (!isOpen) return null
+
+  const parseVisitTime = (value: string) => {
+    if (!value || !/^\d{2}:\d{2}$/.test(value)) return { period: "오전", hour: "09", minute: "00" }
+    const [rawHour, minute] = value.split(":")
+    const hourNum = Number(rawHour)
+    const period = hourNum >= 12 ? "오후" : "오전"
+    const hour12 = hourNum % 12 === 0 ? 12 : hourNum % 12
+    const hour = hour12.toString().padStart(2, "0")
+    return { period, hour, minute }
+  }
+
+  const timeOptions = {
+    periods: ["오전", "오후"],
+    hours: Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, "0")),
+    minutes: Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0")),
+  }
+
+  const { period, hour, minute } = parseVisitTime(formData.visitTime || "")
+  const displayVisitTime = formData.visitTime ? `${period} ${hour}:${minute}` : "시간 선택"
+
+  const updateVisitTime = (next: { period?: string; hour?: string; minute?: string }) => {
+    const finalPeriod = next.period || period
+    const finalHour = next.hour || hour
+    const finalMinute = next.minute || minute
+    const hourNum = Number(finalHour)
+    const hour24 =
+      finalPeriod === "오전"
+        ? hourNum % 12
+        : hourNum === 12
+          ? 12
+          : hourNum + 12
+    const paddedHour = hour24.toString().padStart(2, "0")
+    setFormData({ ...formData, visitTime: `${paddedHour}:${finalMinute}` })
+  }
 
   return (
     <>
@@ -656,33 +712,103 @@ export default function ScheduleModal({
           )}
 
           {/* 날짜 */}
-          <div className="flex gap-2.5 mt-6">
+          <div className="flex gap-2.5 mt-6 flex-wrap">
             {formData.reviewType === "방문형" && (
-              <div className="flex-1">
-                <label className="block text-sm font-bold text-neutral-500 mb-2">방문일</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
-                      {formData.visit ? format(new Date(formData.visit), "PPP", { locale: ko }) : "날짜 선택"}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.visit ? new Date(formData.visit) : undefined}
-                      onSelect={(date) =>
-                        setFormData({
-                          ...formData,
-                          visit: date ? format(date, "yyyy-MM-dd") : "",
-                        })
-                      }
-                      locale={ko}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <>
+                <div className="flex-1 min-w-[180px]">
+                  <label className="block text-sm font-bold text-neutral-500 mb-2">방문일</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
+                        {formData.visit ? format(new Date(formData.visit), "PPP", { locale: ko }) : "날짜 선택"}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.visit ? new Date(formData.visit) : undefined}
+                        onSelect={(date) =>
+                          setFormData({
+                            ...formData,
+                            visit: date ? format(date, "yyyy-MM-dd") : "",
+                          })
+                        }
+                        locale={ko}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="flex-1 min-w-[180px]">
+                  <label className="block text-sm font-bold text-neutral-500 mb-2">방문시간</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
+                        {displayVisitTime}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[280px] p-3" align="start">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <span className="text-xs font-semibold text-neutral-500">오전/오후</span>
+                          <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
+                            <div className="p-1 space-y-1">
+                              {timeOptions.periods.map((p) => (
+                                <button
+                                  key={p}
+                                  className={`w-full rounded-md px-3 py-2 text-sm font-semibold text-left cursor-pointer transition-colors ${
+                                    p === period ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
+                                  }`}
+                                  onClick={() => updateVisitTime({ period: p })}
+                                >
+                                  {p}
+                                </button>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-xs font-semibold text-neutral-500">시</span>
+                          <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
+                            <div className="p-1 grid grid-cols-2 gap-1">
+                              {timeOptions.hours.map((h) => (
+                                <button
+                                  key={h}
+                                  className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
+                                    h === hour ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
+                                  }`}
+                                  onClick={() => updateVisitTime({ hour: h })}
+                                >
+                                  {h}
+                                </button>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-xs font-semibold text-neutral-500">분</span>
+                          <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
+                            <div className="p-1 grid grid-cols-2 gap-1">
+                              {timeOptions.minutes.map((m) => (
+                                <button
+                                  key={m}
+                                  className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
+                                    m === minute ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
+                                  }`}
+                                  onClick={() => updateVisitTime({ minute: m })}
+                                >
+                                  {m}
+                                </button>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </>
             )}
-            <div className={formData.reviewType === "방문형" ? "flex-1" : "w-full"}>
+            <div className={formData.reviewType === "방문형" ? "flex-1 min-w-[180px]" : "w-full"}>
               <label className="block text-sm font-bold text-[#FF5722] mb-2">마감일</label>
               <Popover>
                 <PopoverTrigger asChild>

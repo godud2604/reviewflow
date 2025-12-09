@@ -13,6 +13,7 @@ export function exportSchedulesToExcel(schedules: Schedule[]) {
     '카테고리': schedule.category,
     '지역': schedule.region,
     '방문일': schedule.visit || '-',
+    '방문시간': schedule.visitTime || '-',
     '마감일': schedule.dead || '-',
     '혜택(원)': schedule.benefit,
     '수익(원)': schedule.income,
@@ -41,6 +42,7 @@ export function exportSchedulesToExcel(schedules: Schedule[]) {
     { wch: 12 }, // 카테고리
     { wch: 10 }, // 지역
     { wch: 12 }, // 방문일
+    { wch: 12 }, // 방문시간
     { wch: 12 }, // 마감일
     { wch: 12 }, // 혜택
     { wch: 12 }, // 수익
@@ -111,6 +113,7 @@ export function exportAllDataToExcel(schedules: Schedule[], extraIncomes: ExtraI
     '카테고리': schedule.category,
     '지역': schedule.region,
     '방문일': schedule.visit || '-',
+    '방문시간': schedule.visitTime || '-',
     '마감일': schedule.dead || '-',
     '혜택(원)': schedule.benefit,
     '수익(원)': schedule.income,
@@ -139,7 +142,8 @@ export function exportAllDataToExcel(schedules: Schedule[], extraIncomes: ExtraI
   ws1['!cols'] = [
     { wch: 8 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 15 },
     { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
-    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 35 },
+    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+    { wch: 35 },
     { wch: 35 }, { wch: 35 }, { wch: 30 },
   ]
   XLSX.utils.book_append_sheet(wb, ws1, '체험단 활동 내역')

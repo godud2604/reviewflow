@@ -776,12 +776,13 @@ export default function LandingPage() {
             <div className="bg-white rounded-[32px] p-10 border border-gray-100 flex flex-col items-start text-left hover:bg-white transition">
               <h3 className="text-2xl font-bold mb-2 text-[#191F28]">FREE</h3>
               <p className="text-[#6B7684] mb-6">기본 기능을 모두 무료로 사용하세요.</p>
-              <ul className="text-lg text-[#4E5968] space-y-3 mb-8 flex-grow">
+              <ul className="text-[16px] text-[#4E5968] space-y-3 mb-8 flex-grow">
                 <li>✔ 체험단 일정 등록</li>
                 <li>✔ 캘린더 확인</li>
                 <li>✔ 할 일 관리</li>
                 <li>✔ 이번 달 수익 내용 조회</li>
-                <li>✔ 수익 자랑하기 (이미지 생성)</li>
+                <li>✔ 수익 자랑하기</li>
+                <li className="pl-6 mt-[-4px] text-xs">( 수익 자랑하기는 12월 20일에 찾아올게요. 조금만 기다려주세요 ! )</li>
               </ul>
               <div className="w-full pt-6 border-t border-gray-200">
                 <div className="text-3xl font-bold mb-6 text-[#191F28]">₩0</div>
@@ -801,7 +802,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-2xl font-bold mb-2 text-[#FF5722]">PRO</h3>
               <p className="text-[#6B7684] mb-6">더 깊고 편리한 리뷰 관리 기능</p>
-              <ul className="text-lg text-[#333D4B] space-y-3 mb-8 flex-grow font-medium">
+              <ul className="text-[16px] text-[#333D4B] space-y-3 mb-8 flex-grow font-medium">
                 <li>✨ 하루 1번 요약 알림 제공 </li>
                 <li className="pl-6 mt-[-4px] text-xs">( 당일 아침, 오늘 해야 할 방문/작성/발행 일정을 깔끔하게 알려드려요. )</li>
                 <li>✨ 활동 내역 엑셀 다운로드</li>
@@ -839,7 +840,7 @@ export default function LandingPage() {
                 정말 무료로 사용할 수 있나요?
               </summary>
               <p className="mt-4 text-[#6B7684] text-sm md:text-base leading-relaxed">
-                네! 기본 기능은 완전 무료입니다. 일정 관리, 수익 조회, 할 일 체크 등 핵심 기능을 모두 사용하실 수 있어요.
+                네! 기본 기능은 완전 무료입니다. 일정 관리, 수익 조회, 할 일 체크 등 핵심 기능을 모두 사용하실 수 있어요. 지금 바로 회원가입 후 이용해 보세요 :)
               </p>
             </details>
             <details className="bg-white rounded-2xl p-6 shadow-sm">
@@ -847,7 +848,7 @@ export default function LandingPage() {
                 PRO 버전은 언제 필요한가요?
               </summary>
               <p className="mt-4 text-[#6B7684] text-sm md:text-base leading-relaxed">
-                매일 요약된 알림을 받고 싶거나, 엑셀로 활동 내역을 정리하고 싶을 때 PRO가 유용해요.
+                매일 요약된 알림을 받고 싶거나, 엑셀로 활동 내역을 정리하고 싶을 때 PRO가 유용해요. 월별 요약 리포트도 볼 수 있어요.
               </p>
             </details>
             <details className="bg-white rounded-2xl p-6 shadow-sm">

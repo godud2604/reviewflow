@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS schedules (
   category TEXT,
   region TEXT,
   visit_date TEXT,
+  visit_time TEXT,
   deadline TEXT,
   benefit INTEGER DEFAULT 0,
   income INTEGER DEFAULT 0,

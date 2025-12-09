@@ -13,12 +13,12 @@ export default function NavigationBar({
   onAddClick: () => void
   onHomeClick: () => void
 }) {
-  const baseBtn = "flex flex-col items-center justify-center transition-all text-neutral-400"
-  const activeClasses = "text-orange-500"
+  const baseBtn = "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-2xl transition-all text-neutral-400 hover:text-neutral-600"
+  const activeClasses = "text-[#ff5c39] bg-orange-50"
 
   return (
     <nav
-      className="w-full bg-white border-t border-neutral-200 flex justify-around items-center py-2 shadow-lg"
+      className="w-full bg-white border-t border-neutral-200 flex justify-around items-center py-2"
       style={{ borderRadius: "32px 32px 0 0", maxWidth: 480, margin: "0 auto" }}
     >
       <button
