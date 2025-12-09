@@ -21,7 +21,6 @@ export default function HomePage({
   const activeCount = activeSchedules.length
   const reconfirmCount = schedules.filter((s) => s.status === "재확인").length
   const overdueCount = schedules.filter((s) => s.dead && s.dead < today && s.status !== "완료" && s.status !== "취소").length
-  const totalBenefit = schedules.reduce((acc, cur) => acc + cur.benefit + cur.income - cur.cost, 0)
 
   // Filter schedules based on selected date and filter
   let filteredSchedules = schedules
@@ -153,10 +152,6 @@ export default function HomePage({
               </span>
             </button>
           )}
-        </div>
-        <div className="mt-3 bg-white p-2.5 px-3 rounded-xl flex justify-between items-center shadow-sm">
-          <span className="text-xs text-neutral-500 font-semibold">이번 달 경제적 가치 ✨</span>
-          <span className="text-[15px] font-extrabold translate-y-[-1px] text-[#333]">{totalBenefit.toLocaleString()}원</span>
         </div>
       </div>
 

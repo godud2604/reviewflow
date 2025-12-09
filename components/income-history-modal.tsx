@@ -1,20 +1,47 @@
 "use client"
 
-import { useEffect } from "react"
+import { useState } from "react"
 import { X } from "lucide-react"
 import type { Schedule, ExtraIncome } from "@/types"
+import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
+type IncomeHistoryItem = {
+  id: string
+  title: string
+  amount: number
+  date: string
+  category: Schedule["category"] | "기타"
+  type: "benefit" | "income" | "extra"
+  extraIncomeId?: number
+}
 
 export default function IncomeHistoryModal({
   isOpen,
   onClose,
   schedules,
   extraIncomes,
+  onDeleteExtraIncome,
 }: {
   isOpen: boolean
   onClose: () => void
   schedules: Schedule[]
   extraIncomes: ExtraIncome[]
+  onDeleteExtraIncome?: (id: number) => Promise<boolean>
 }) {
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; title: string } | null>(null)
+  const { toast } = useToast()
+
   // 방어한 생활비 항목들
   const benefitItems = schedules
     .filter((s) => s.benefit > 0)
@@ -25,7 +52,7 @@ export default function IncomeHistoryModal({
       date: s.visit || s.dead,
       category: s.category,
       type: "benefit" as const,
-    }))
+    })) satisfies IncomeHistoryItem[]
 
   // 리뷰 활동 수입 항목들
   const incomeItems = schedules
@@ -37,7 +64,7 @@ export default function IncomeHistoryModal({
       date: s.visit || s.dead,
       category: s.category,
       type: "income" as const,
-    }))
+    })) satisfies IncomeHistoryItem[]
 
   // 기타 부수입 항목들
   const extraIncomeItems = extraIncomes.map((income) => ({
@@ -47,7 +74,8 @@ export default function IncomeHistoryModal({
     date: income.date,
     category: "기타" as const,
     type: "extra" as const,
-  }))
+    extraIncomeId: income.id,
+  })) satisfies IncomeHistoryItem[]
 
   // 모든 항목 합치기 및 날짜순 정렬
   const allItems = [...benefitItems, ...incomeItems, ...extraIncomeItems].sort(
@@ -87,6 +115,20 @@ export default function IncomeHistoryModal({
       default:
         return "bg-neutral-100 text-neutral-700"
     }
+  }
+
+  const handleDeleteExtraIncome = async (incomeId?: number) => {
+    if (!incomeId || !onDeleteExtraIncome) return
+    setDeletingId(incomeId)
+    const success = await onDeleteExtraIncome(incomeId)
+    setDeletingId(null)
+    setDeleteTarget(null)
+
+    toast({
+      title: success ? "부수입이 삭제되었습니다" : "부수입 삭제에 실패했습니다",
+      variant: success ? "default" : "destructive",
+      duration: 2000,
+    })
   }
 
   if (!isOpen) return null
@@ -147,7 +189,7 @@ export default function IncomeHistoryModal({
                   key={item.id} 
                   className="bg-white rounded-2xl p-4 shadow-sm transition-transform active:scale-[0.98] border border-neutral-100"
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-[15px] font-bold text-[#1A1A1A] mb-2 truncate">
                         {item.title}
@@ -159,15 +201,27 @@ export default function IncomeHistoryModal({
                         <span className="text-xs text-neutral-500 font-medium">{item.category}</span>
                       </div>
                     </div>
-                    <div className="text-right ml-3 flex-shrink-0">
-                      <div className="text-lg font-bold text-[#333] mb-0.5">
-                        ₩{item.amount.toLocaleString()}
-                      </div>
-                      {item.date && (
-                        <div className="text-[10px] text-neutral-400 font-medium">
-                          {item.date}
-                        </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      {item.type === "extra" && item.extraIncomeId && (
+                        <button
+                          onClick={() => setDeleteTarget({ id: item.extraIncomeId!, title: item.title })}
+                          disabled={deletingId === item.extraIncomeId}
+                          className="flex items-center gap-1 text-[11px] font-semibold text-red-500 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          삭제
+                        </button>
                       )}
+                      <div className="text-right ml-3">
+                        <div className="text-lg font-bold text-[#333] mb-0.5">
+                          ₩{item.amount.toLocaleString()}
+                        </div>
+                        {item.date && (
+                          <div className="text-[10px] text-neutral-400 font-medium">
+                            {item.date}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -176,6 +230,29 @@ export default function IncomeHistoryModal({
           )}
         </div>
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="w-[280px] rounded-2xl p-6 gap-4">
+          <AlertDialogHeader className="space-y-2 text-center">
+            <AlertDialogTitle className="text-base font-bold text-neutral-900">부수입 삭제</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
+              '{deleteTarget?.title ?? ""}' 항목을 삭제하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-center gap-2">
+            <AlertDialogCancel className="h-10 px-6 text-sm font-bold rounded-xl shadow-sm">
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleDeleteExtraIncome(deleteTarget?.id)}
+              disabled={deletingId === deleteTarget?.id}
+              className="h-10 px-6 text-sm font-bold bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-sm"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

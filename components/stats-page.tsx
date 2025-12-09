@@ -2,20 +2,19 @@
 
 import { useState } from "react"
 import type { Schedule, ExtraIncome } from "@/types"
+import { useExtraIncomes } from "@/hooks/use-extra-incomes"
 import ExtraIncomeModal from "./extra-income-modal"
 import IncomeHistoryModal from "./income-history-modal"
 
 export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
   const [showIncomeModal, setShowIncomeModal] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
-  const [extraIncomes, setExtraIncomes] = useState<ExtraIncome[]>([])
+  
+  // Supabase 연동 - useExtraIncomes 훅 사용
+  const { extraIncomes, createExtraIncome, deleteExtraIncome, loading: extraIncomesLoading } = useExtraIncomes()
 
-  const handleAddIncome = (income: Omit<ExtraIncome, "id">) => {
-    const newIncome: ExtraIncome = {
-      ...income,
-      id: Date.now(),
-    }
-    setExtraIncomes([...extraIncomes, newIncome])
+  const handleAddIncome = async (income: Omit<ExtraIncome, "id">) => {
+    await createExtraIncome(income)
   }
 
   // Calculate stats
@@ -69,7 +68,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
           <div className="flex gap-5 border-t border-white/20 pt-5">
             <div className="flex-1">
               <div className="text-xs opacity-80 mb-1 font-medium">방어한 생활비</div>
-              <div className="text-[15px] font-bold">{(totalBen + totalIncomeWithExtra).toLocaleString()}</div>
+              <div className="text-[15px] font-bold">{totalBen.toLocaleString()}</div>
             </div>
             <div className="flex-1 flex">
               <div>
@@ -202,6 +201,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
         onClose={() => setShowHistoryModal(false)}
         schedules={schedules}
         extraIncomes={extraIncomes}
+        onDeleteExtraIncome={deleteExtraIncome}
       />
     </>
   )
