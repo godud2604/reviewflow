@@ -72,7 +72,7 @@ export default function ProfilePage({
 
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y mt-3">
-      <div className="bg-white rounded-3xl p-4 mb-3 shadow-sm">
+      <div className="bg-white rounded-3xl p-4 mb-3.5 shadow-sm">
         <div className="flex items-center justify-between bg-neutral-50 rounded-2xl px-4 py-3">
           <span className="text-[13px] text-neutral-600">이메일</span>
           <span className="text-sm font-semibold text-neutral-800 truncate max-w-[200px] text-right">
@@ -81,7 +81,7 @@ export default function ProfilePage({
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl p-4 mb-3 shadow-sm">
+      <div className="bg-white rounded-3xl p-4 mb-3.5 shadow-sm">
         {menuItems.map((item, idx) => (
           <div
             key={item.id}

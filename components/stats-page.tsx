@@ -65,7 +65,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
     <>
       <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y relative">
         {/* Hero Card */}
-        <div className="relative overflow-hidden rounded-[30px] p-6 mt-3 mb-3 bg-gradient-to-br from-[#ff9a3c] via-[#ff6a1f] to-[#ff3b0c]">
+        <div className="relative overflow-hidden rounded-[30px] p-6 mt-3 mb-3.5 bg-gradient-to-br from-[#ff9a3c] via-[#ff6a1f] to-[#ff3b0c]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.22),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.15),transparent_28%)]" />
           <div className="relative flex items-start justify-between mb-5">
             <div>
@@ -97,7 +97,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
         </div>
 
         {/* Income Details - Always Visible */}
-        <div className={`bg-white rounded-[26px] p-6 mb-3 shadow-sm ${cardShadow}`}>
+        <div className={`bg-white rounded-[26px] p-6 mb-3.5 shadow-sm ${cardShadow}`}>
           <div className="flex items-center justify-between mb-5">
             <div className="text-[16px] font-bold text-[#0f172a]">수입 상세 내역</div>
             <button
@@ -113,7 +113,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
             <>
               {/* 방어한 생활비 섹션 */}
               {totalBen > 0 && (
-                <div className="mb-6">
+                <div className="">
                   <div className="flex items-center justify-between mb-3">
                     <div className="text-sm font-semibold text-[#0f172a] flex items-center gap-2">
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#fef4eb] text-[#f97316] text-lg">₩</span>
@@ -149,7 +149,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
               {/* 부수입 섹션 */}
               {totalIncomeWithExtra > 0 && (
                 <div>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mt-6 mb-3">
                     <div className="text-sm font-semibold text-[#0f172a] flex items-center gap-2">
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eef5ff] text-[#2563eb] text-lg">💵</span>
                       부수입 (현금)

@@ -95,7 +95,7 @@ export default function HomePage({
 
       {/* Summary / Filters */}
       {showStatusHighlights && (
-        <div className="space-y-1 mt-2">
+        <div className="space-y-1 mt-2 mb-3.5">
           <div className="flex gap-2.5 mt-1">
             {overdueCount > 0 && (
               <button
@@ -255,12 +255,12 @@ function CalendarSection({
   }
 
   return (
-    <div className="bg-white rounded-[24px] p-4 shadow-sm">
+    <div className="bg-white rounded-[24px] p-3 shadow-sm">
       <div className="relative flex items-center justify-center mb-3 gap-2">
         <div className="flex items-center gap-2">
           <button
             onClick={prevMonth}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors border border-neutral-200"
+            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors border border-neutral-200"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M15 18l-6-6 6-6" />
@@ -271,7 +271,7 @@ function CalendarSection({
           </div>
           <button
             onClick={nextMonth}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors border border-neutral-200"
+            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors border border-neutral-200"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 18l6-6-6-6" />
@@ -295,7 +295,7 @@ function CalendarSection({
       </div>
       <div className="grid grid-cols-7 gap-y-1.5 text-center">
         {Array.from({ length: startDayOfWeek }).map((_, i) => (
-          <div key={`empty-${i}`} className="h-[38px]" />
+          <div key={`empty-${i}`} className="h-8" />
         ))}
         {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
           const dayOfWeek = (startDayOfWeek + day - 1) % 7
@@ -307,7 +307,7 @@ function CalendarSection({
               key={day}
               onClick={() => hasDotValue && onDateClick(dateStr)}
               disabled={!hasDotValue}
-              className={`h-[36px] w-[36px] flex flex-col items-center justify-center text-[13px] font-semibold rounded-lg relative transition-all mx-auto ${
+              className={`h-8 w-8 flex flex-col items-center justify-center text-[13px] font-semibold rounded-lg relative transition-all mx-auto ${
                 hasDotValue ? "cursor-pointer" : "cursor-default"
               }
                 ${isSelected ? "border-2 border-orange-500 text-orange-700 bg-orange-50" : ""}

@@ -12,6 +12,7 @@ export default function LandingPage() {
   const [email, setEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [isWaitlistModalOpen, setIsWaitlistModalOpen] = useState(false)
 
   const isProd = process.env.NODE_ENV === 'production';
 
@@ -38,10 +39,12 @@ export default function LandingPage() {
         source: 'landing_page'
       })
     }
-    const ctaSection = document.getElementById('waitlist-section')
-    if (ctaSection) {
-      ctaSection.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
+    setMessage(null)
+    setIsWaitlistModalOpen(true)
+  }
+
+  const handleCloseWaitlistModal = () => {
+    setIsWaitlistModalOpen(false)
   }
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -191,6 +194,67 @@ export default function LandingPage() {
           opacity: 0;
         }
       `}</style>
+      {isWaitlistModalOpen && (
+        <div 
+          className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-[2px] flex items-center justify-center px-6"
+          onClick={handleCloseWaitlistModal}
+        >
+          <div 
+            className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 md:p-8 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={handleCloseWaitlistModal}
+              className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition cursor-pointer"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="space-y-3 md:space-y-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-50 text-orange-700 text-xs font-semibold rounded-full">
+                <span>사전 신청</span>
+                <span className="text-lg">✉️</span>
+              </div>
+              <h3 className="text-2xl md:text-3xl font-bold text-[#191F28] leading-snug">이메일을 남겨주세요</h3>
+              <p className="text-sm md:text-base text-[#6B7684] leading-relaxed">
+                출시 소식을 가장 먼저 보내드리고, PRO 3개월 무료 혜택을 드려요.
+              </p>
+              <form className="space-y-3" onSubmit={handleEmailSubmit}>
+                <input
+                  type="email"
+                  placeholder="example@email.com"
+                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#FF5722] text-sm md:text-base"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="submit"
+                  className="w-full bg-[#FF5722] text-white px-4 py-3 rounded-2xl text-sm md:text-base font-semibold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '등록 중...' : '알림 받기'}
+                </button>
+              </form>
+              {message && (
+                <div className={`p-3 rounded-xl text-sm ${
+                  message.type === 'success' 
+                    ? 'bg-green-50 text-green-700 border border-green-200' 
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  {message.text}
+                </div>
+              )}
+              <p className="text-xs text-[#B0B8C1]">
+                이메일은 출시 알림 외 다른 목적으로 사용하지 않습니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md transition-all duration-300 border-b border-transparent">
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
