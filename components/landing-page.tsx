@@ -440,7 +440,7 @@ export default function LandingPage() {
                   {/* Economic Value Card */}
                   <div className="bg-white p-3 rounded-2xl mb-3 flex justify-between items-center">
                     <span className="text-xs text-neutral-500 font-semibold">이번 달 경제적 가치 ✨</span>
-                    <span className="text-base font-extrabold text-[#333]">292,400원</span>
+                    <span className="text-base font-extrabold text-[#333]">357,600원</span>
                   </div>
 
                   {/* Calendar */}
@@ -553,7 +553,7 @@ export default function LandingPage() {
                   {/* Hero Card */}
                   <div className="rounded-[30px] p-5 mb-4 text-white" style={{ background: 'linear-gradient(135deg, #FF6F00 0%, #FF3D00 100%)' }}>
                     <div className="text-xs font-semibold opacity-90">이번 달 경제적 가치 💰</div>
-                    <div className="text-3xl font-extrabold mb-2 tracking-tight">₩ 292,400</div>
+                    <div className="text-3xl font-extrabold mb-2 tracking-tight">₩ 357,600</div>
                     <div className="flex gap-4 border-t border-white/20 pt-3">
                       <div className="flex-1">
                         <div className="text-[9px] opacity-80 mb-0.5 font-medium">방어한 생활비</div>
@@ -579,7 +579,7 @@ export default function LandingPage() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-semibold text-neutral-700">💰 방어한 생활비</div>
-                        <div className="text-xs font-bold text-orange-600">285,000원</div>
+                        <div className="text-xs font-bold text-orange-600">325,000원</div>
                       </div>
                       <div className="space-y-2 pl-1">
                         <div className="flex items-center gap-2">
@@ -616,7 +616,7 @@ export default function LandingPage() {
                         { label: '9월', height: 30, value: '18만' },
                         { label: '10월', height: 50, value: '25만' },
                         { label: '11월', height: 40, value: '21만' },
-                        { label: '이번달', height: 85, active: true, value: '29만' },
+                        { label: '이번달', height: 85, active: true, value: '36만' },
                       ].map((month, i) => (
                         <div key={i} className="w-[18%] rounded-lg relative flex justify-center" style={{ height: `${month.height}%`, background: month.active ? '#651FFF' : '#e5e5e5' }}>
                           <span className="absolute -top-5 text-[9px] font-bold text-neutral-800">{month.value}</span>
@@ -632,71 +632,90 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Feature 3: 할 일 체크리스트 */}
+      {/* Feature 3: 하루 1번 요약 알림 */}
       <section className="bg-white py-20 md:py-32 scroll-animate">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-[100px]">
-            <div className="w-full md:w-auto md:flex-1 md:max-w-[500px] text-center md:text-left">
-              <span className="text-[#FF5722] font-bold text-sm md:text-lg mb-3 md:mb-4 block">할 일 관리</span>
+            <div className="w-full md:w-auto md:flex-1 md:max-w-[520px] text-center md:text-left">
+              <span className="text-[#FF5722] font-bold text-sm md:text-lg mb-3 md:mb-4 block">하루 1번 요약 알림</span>
                 <h2 className="text-2xl md:text-6xl font-bold leading-tight mb-4 md:mb-6 text-[#191F28]">
-                  할 일 체크,
+                  아침 한 번, 
                   <br />
-                  이걸로 끝나요
+                  오늘 할 일 끝까지 챙겨드려요
                 </h2>
                 <p className="text-base md:text-xl text-[#6B7684] leading-relaxed">
-                  오늘 해야 할 일부터 중요한 마감까지.
+                  마감 임박 일정, 아직 못한 리뷰, 제출 링크까지
                   <br />
-                  체크박스로 하나씩 완료하면서
+                  하루 한 번 요약해서 알려드려요.
                   <br />
-                  깔끔하게 정리하세요.
+                  <span className="text-[13px]">지금은 이메일로, 곧 카카오 알림도 준비 중입니다.</span>
                 </p>
             </div>
             <div className="w-full md:w-auto md:flex-shrink-0">
-              <div className="border-[10px] border-white rounded-[40px] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.12)] bg-[#F7F7F8] min-w-[300px] max-w-[360px] w-full mx-auto">
-                <div className="w-full px-5 py-4 flex flex-col" style={{ height: '400px' }}>
-                  {/* Todo Modal */}
-                  <div className="relative bg-white rounded-[32px] shadow-lg p-5 flex flex-col h-full">
-                    {/* Modal Header */}
-                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral-100">
-                      <h3 className="text-lg font-bold text-[#191F28]">할 일 체크</h3>
-                      <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
+              <div className="border-[10px] border-white rounded-[40px] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.14)] bg-[#0F172A] min-w-[300px] max-w-[380px] w-full mx-auto">
+                <div className="w-full px-5 py-4 flex flex-col" style={{ height: '420px' }}>
+                  {/* Daily Summary Preview */}
+                  <div className="relative bg-gradient-to-br from-[#0B1220] via-[#111827] to-[#1C2432] text-white rounded-[32px] shadow-2xl p-6 flex flex-col h-full overflow-hidden">
+                    <div className="absolute -right-6 -top-6 w-36 h-36 bg-orange-500/10 rounded-full blur-3xl" />
+                    <div className="absolute -left-10 bottom-10 w-28 h-28 bg-orange-400/10 rounded-full blur-3xl" />
+
+                    <div className="flex items-start justify-between mb-5 relative z-10">
+                      <div>
+                        <p className="text-[11px] font-semibold text-orange-200/90">Daily Brief</p>
+                        <h3 className="text-xl font-bold text-white leading-tight">오늘의 요약 알림</h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-white/10 border border-white/10 backdrop-blur">
+                          오전 9시 발송
+                        </span>
+                        <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center">
+                          🔔
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Todo List */}
-                    <div className="flex-1 overflow-y-auto space-y-2">
+                    <div className="space-y-3 flex-1 relative z-10">
+                      <div className="p-4 rounded-2xl bg-white/10 border border-white/10 backdrop-blur">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-sm font-bold text-white">마감 임박 · D-1</span>
+                          <span className="text-[11px] px-2 py-1 rounded-full bg-orange-500/20 text-orange-200 font-semibold">우선순위</span>
+                        </div>
+                        <p className="text-[13px] text-orange-50/90 font-medium">
+                          오늘 방문 & 촬영 마치고 리뷰 초안까지 작성해두세요.
+                        </p>
+                      </div>
+
                       {[
-                        { label: '방문 예약하기', done: true },
-                        { label: '매장 방문 & 체험', done: true },
-                        { label: '사진 촬영 (최소 5장)', done: false, active: true },
-                        { label: '리뷰 작성하기', done: false },
-                        { label: '리뷰 URL 제출', done: false },
-                      ].map((todo, idx) => (
+                        { title: '방문 일정', detail: '오후 2시 · 강남 카페', status: '완료 체크 필요', tone: 'border-white/10 bg-white/5 text-white' },
+                        { title: '리뷰 작성', detail: '초안 작성 & 사진 5장 첨부', status: '미완료', tone: 'border-orange-200/20 bg-orange-500/5 text-orange-50' },
+                        { title: '제출 알림', detail: 'URL 제출 · 내일까지', status: '예정', tone: 'border-white/10 bg-white/5 text-white' },
+                      ].map((item, idx) => (
                         <div
                           key={idx}
-                          className={`flex items-center gap-3 p-3 rounded-xl transition ${
-                            todo.active ? 'bg-orange-50 border border-orange-200' : 'bg-neutral-50'
-                          }`}
+                          className={`p-3.5 rounded-2xl border ${item.tone}`}
                         >
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                            todo.done ? 'bg-orange-500 border-orange-500' : 'border-neutral-300'
-                          }`}>
-                            {todo.done && (
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-                                <path d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-sm">✔</span>
+                              <div>
+                                <p className="text-sm font-bold">{item.title}</p>
+                                <p className="text-[12px] text-white/70">{item.detail}</p>
+                              </div>
+                            </div>
+                            <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-black/20 border border-white/10 text-white/80">
+                              {item.status}
+                            </span>
                           </div>
-                          <span className={`text-sm font-medium ${
-                            todo.done ? 'text-neutral-400 line-through' : todo.active ? 'text-orange-700 font-semibold' : 'text-neutral-700'
-                          }`}>
-                            {todo.label}
-                          </span>
                         </div>
                       ))}
+                    </div>
+
+                    <div className="mt-5 flex items-center justify-between text-[12px] text-white/80 relative z-10">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 font-semibold">이메일 발송 중</span>
+                        <span className="px-2.5 py-1 rounded-full bg-orange-500/15 border border-orange-300/30 text-orange-50 font-semibold">카카오톡 예정</span>
+                      </div>
+                      <span className="text-[11px] text-orange-100 font-semibold">채널 확장 준비 중</span>
                     </div>
                   </div>
                 </div>
