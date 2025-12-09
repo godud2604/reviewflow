@@ -151,6 +151,10 @@ function PageContent() {
     router.push(`?page=${newPage}`)
   }
 
+  const handleGoRoot = () => {
+    router.push("/")
+  }
+
   const handleShowAllSchedules = () => {
     const params = new URLSearchParams(searchParams.toString())
     params.set("view", "all")
@@ -279,6 +283,7 @@ function PageContent() {
           currentPage={currentPage}
           onPageChange={handlePageChange}
           onAddClick={() => handleOpenScheduleModal()}
+          onHomeClick={handleGoRoot}
         />
 
         {isScheduleModalOpen && (
