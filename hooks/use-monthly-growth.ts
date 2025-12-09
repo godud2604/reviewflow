@@ -18,15 +18,20 @@ interface UseMonthlyGrowthReturn {
   refetch: () => Promise<void>
 }
 
+const toNumber = (value: unknown) => {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : 0
+}
+
 // DB -> Frontend 매핑
 function mapDbToMonthlyGrowth(db: DbMonthlyGrowth): MonthlyGrowth {
   return {
     monthStart: db.month_start,
-    benefitTotal: db.benefit_total ?? 0,
-    incomeTotal: db.income_total ?? 0,
-    costTotal: db.cost_total ?? 0,
-    extraIncomeTotal: db.extra_income_total ?? 0,
-    econValue: db.econ_value ?? 0,
+    benefitTotal: toNumber(db.benefit_total),
+    incomeTotal: toNumber(db.income_total),
+    costTotal: toNumber(db.cost_total),
+    extraIncomeTotal: toNumber(db.extra_income_total),
+    econValue: toNumber(db.econ_value),
   }
 }
 

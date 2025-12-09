@@ -1,25 +1,24 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import type { Schedule, ExtraIncome, MonthlyGrowth } from "@/types"
 import { useExtraIncomes } from "@/hooks/use-extra-incomes"
-import { useMonthlyGrowth } from "@/hooks/use-monthly-growth"
 import ExtraIncomeModal from "./extra-income-modal"
 import IncomeHistoryModal from "./income-history-modal"
 export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
   const [showIncomeModal, setShowIncomeModal] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const cardShadow = "shadow-[0_14px_40px_rgba(18,34,64,0.08)]"
+  const toNumber = (value: unknown) => {
+    const num = Number(value)
+    return Number.isFinite(num) ? num : 0
+  }
   
   // Supabase 연동 - useExtraIncomes 훅 사용
   const { extraIncomes, createExtraIncome, deleteExtraIncome } = useExtraIncomes()
-  const { monthlyGrowth, loading: monthlyGrowthLoading, refetch: refetchMonthlyGrowth } = useMonthlyGrowth()
 
   const handleAddIncome = async (income: Omit<ExtraIncome, "id">) => {
-    const created = await createExtraIncome(income)
-    if (created) {
-      await refetchMonthlyGrowth()
-    }
+    await createExtraIncome(income)
   }
 
   // Calculate stats
@@ -46,20 +45,87 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
   }
 
   schedules.forEach((s) => {
-    totalBen += s.benefit
-    totalInc += s.income
-    totalCost += s.cost
+    const benefit = toNumber(s.benefit)
+    const income = toNumber(s.income)
+    const cost = toNumber(s.cost)
+
+    totalBen += benefit
+    totalInc += income
+    totalCost += cost
     if (typeCounts[s.category] !== undefined) typeCounts[s.category]++
-    if (s.benefit > 0) {
-      benefitByCategory[s.category] += s.benefit
+
+    // Category contribution uses full schedule economic value (benefit + income - cost)
+    const categoryValue = benefit + income - cost
+    if (categoryValue !== 0) {
+      benefitByCategory[s.category] += categoryValue
     }
   })
 
-  const totalExtraIncome = extraIncomes.reduce((sum, item) => sum + item.amount, 0)
-  const totalIncomeWithExtra = totalInc + totalExtraIncome
+  console.log('schedules', schedules)
 
-  const econValue = totalBen + totalIncomeWithExtra - totalCost
-  const hasIncomeData = totalBen > 0 || totalIncomeWithExtra > 0
+  const totalExtraIncome = extraIncomes.reduce((sum, item) => sum + toNumber(item.amount), 0)
+  const scheduleValue = totalBen + totalInc - totalCost
+  // 경제적 가치 = 스케줄(제공+수익-지출) + 부수입
+  const econValue = scheduleValue + totalExtraIncome
+  const hasIncomeData = totalBen > 0 || totalInc > 0 || totalCost > 0 || totalExtraIncome > 0
+
+  const monthlyGrowth: MonthlyGrowth[] = useMemo(() => {
+    const monthMap = new Map<string, MonthlyGrowth>()
+
+    const toMonthKey = (date: Date) => {
+      const year = date.getFullYear()
+      const month = (date.getMonth() + 1).toString().padStart(2, "0")
+      return `${year}-${month}-01`
+    }
+
+    const parseDate = (value?: string) => {
+      if (!value) return null
+      const d = new Date(value)
+      return Number.isNaN(d.getTime()) ? null : d
+    }
+
+    const ensureEntry = (key: string) => {
+      if (!monthMap.has(key)) {
+        monthMap.set(key, {
+          monthStart: key,
+          benefitTotal: 0,
+          incomeTotal: 0,
+          costTotal: 0,
+          extraIncomeTotal: 0,
+          econValue: 0,
+        })
+      }
+      return monthMap.get(key)!
+    }
+
+    schedules.forEach((s) => {
+      const date = parseDate(s.visit) || parseDate(s.dead) || new Date()
+      const key = toMonthKey(date)
+      const entry = ensureEntry(key)
+      entry.benefitTotal += toNumber(s.benefit)
+      entry.incomeTotal += toNumber(s.income)
+      entry.costTotal += toNumber(s.cost)
+    })
+
+    extraIncomes.forEach((income) => {
+      const date = parseDate(income.date) || new Date()
+      const key = toMonthKey(date)
+      const entry = ensureEntry(key)
+      entry.extraIncomeTotal += toNumber(income.amount)
+    })
+
+    monthMap.forEach((entry) => {
+      entry.econValue =
+        (entry.benefitTotal || 0) +
+        (entry.incomeTotal || 0) +
+        (entry.extraIncomeTotal || 0) -
+        (entry.costTotal || 0)
+    })
+
+    return Array.from(monthMap.values()).sort(
+      (a, b) => new Date(a.monthStart).getTime() - new Date(b.monthStart).getTime()
+    )
+  }, [schedules, extraIncomes])
 
   return (
     <>
@@ -87,11 +153,11 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
           <div className="grid grid-cols-2 gap-3 text-sm relative">
             <div className="p-4 rounded-2xl bg-white/10 shadow-sm text-white">
               <div className="text-[12px] text-white font-semibold mb-1">방어한 생활비</div>
-              <div className="text-[18px] font-extrabold text-white">₩ {totalBen.toLocaleString()}</div>
+              <div className="text-[18px] font-extrabold text-white">₩ {scheduleValue.toLocaleString()}</div>
             </div>
             <div className="p-4 rounded-2xl bg-white/10 shadow-sm text-white">
-              <div className="text-[12px] text-white font-semibold mb-1">부수입 포함 현금</div>
-              <div className="text-[18px] font-extrabold text-white">₩ {totalIncomeWithExtra.toLocaleString()}</div>
+              <div className="text-[12px] text-white font-semibold mb-1">부수입</div>
+              <div className="text-[18px] font-extrabold text-white">₩ {totalExtraIncome.toLocaleString()}</div>
             </div>
           </div>
         </div>
@@ -119,7 +185,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#fef4eb] text-[#f97316] text-lg">₩</span>
                       방어한 생활비
                     </div>
-                    <div className="text-sm font-bold text-[#f97316]">{totalBen.toLocaleString()}원</div>
+                    <div className="text-sm font-bold text-[#f97316]">{scheduleValue.toLocaleString()}원</div>
                   </div>
                   <div className="space-y-3 pl-2">
                     {(Object.keys(benefitByCategory) as Schedule["category"][])
@@ -127,8 +193,8 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
                       .sort((a, b) => benefitByCategory[b] - benefitByCategory[a])
                       .map((category) => {
                         const amount = benefitByCategory[category]
-                        const percentage = Math.round((amount / totalBen) * 100)
-                        
+                        const percentage = Math.round((amount / scheduleValue) * 100)
+
                       return (
                         <div key={category} className="flex items-center gap-3">
                           <div className="w-16 text-sm font-semibold text-[#4b5563]">{category}</div>
@@ -147,36 +213,20 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
               )}
 
               {/* 부수입 섹션 */}
-              {totalIncomeWithExtra > 0 && (
+              {totalExtraIncome > 0 && (
                 <div>
                   <div className="flex items-center justify-between mt-6 mb-3">
                     <div className="text-sm font-semibold text-[#0f172a] flex items-center gap-2">
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eef5ff] text-[#2563eb] text-lg">💵</span>
                       부수입 (현금)
                     </div>
-                    <div className="text-sm font-bold text-[#2563eb]">{totalIncomeWithExtra.toLocaleString()}원</div>
+                    <div className="text-sm font-bold text-[#2563eb]">{totalExtraIncome.toLocaleString()}원</div>
                   </div>
                   <div className="space-y-3 pl-2">
-                    {/* 리뷰 활동 수입 */}
-                    {totalInc > 0 && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-16 text-sm font-semibold text-[#4b5563]">리뷰활동</div>
-                        <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
-                            style={{ width: `${Math.round((totalInc / totalIncomeWithExtra) * 100)}%` }}
-                          />
-                        </div>
-                        <div className="w-12 text-right text-xs text-[#9ca3af] font-semibold">
-                          {Math.round((totalInc / totalIncomeWithExtra) * 100)}%
-                        </div>
-                      </div>
-                    )}
-                    {/* 기타 부수입 */}
                     {extraIncomes
                       .sort((a, b) => b.amount - a.amount)
                       .map((income) => {
-                        const percentage = Math.round((income.amount / totalIncomeWithExtra) * 100)
+                        const percentage = Math.round((income.amount / totalExtraIncome) * 100)
                         return (
                           <div key={income.id} className="flex items-center gap-3">
                             <div className="w-16 text-sm font-semibold text-[#4b5563] truncate" title={income.title}>
@@ -212,7 +262,6 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
         <TrendChart
           currentMonthValue={econValue}
           monthlyGrowth={monthlyGrowth}
-          loading={monthlyGrowthLoading}
         />
       </div>
       
@@ -238,14 +287,12 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
 function TrendChart({
   currentMonthValue,
   monthlyGrowth,
-  loading,
 }: {
   currentMonthValue: number
   monthlyGrowth: MonthlyGrowth[]
-  loading: boolean
 }) {
   const now = new Date()
-  const currentMonthKey = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+  const currentMonthKey = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-01`
 
   const isSameMonth = (monthStart: string) => {
     const date = new Date(monthStart)
@@ -271,7 +318,12 @@ function TrendChart({
     .slice()
     .sort((a, b) => new Date(a.monthStart).getTime() - new Date(b.monthStart).getTime())
 
-  const chartData = sortedData.slice(-4)
+  // Ensure unique months to avoid duplicate keys in the chart
+  const uniqueSortedData = Array.from(
+    sortedData.reduce((map, item) => map.set(item.monthStart, item), new Map<string, MonthlyGrowth>()).values()
+  )
+
+  const chartData = uniqueSortedData.slice(-4)
   const maxValue = Math.max(...chartData.map((item) => Math.abs(item.econValue)), 1)
 
   const bars = chartData.map((item) => {
@@ -302,7 +354,7 @@ function TrendChart({
     <div className="bg-white rounded-[26px] p-6 shadow-sm shadow-[0_14px_40px_rgba(18,34,64,0.08)]">
       <div className="text-[16px] font-bold text-[#0f172a] mb-1">월별 성장 추이</div>
       <div className="text-xs text-[#9ca3af] font-semibold mb-5">
-        {loading ? "데이터를 불러오는 중..." : "지난 4개월간의 활동입니다"}
+        지난 4개월간의 활동입니다
       </div>
       <div className="flex justify-start items-end h-[150px] pt-6 pb-4 gap-4">
         {bars.map((month) => (

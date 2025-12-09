@@ -335,17 +335,17 @@ export default function LandingPage() {
           {/* Badge with animation */}
           <div className="inline-flex items-center gap-1.5 bg-orange-100 text-orange-700 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold mb-4 md:mb-6 animate-fade-in-down">
             <span className="text-base md:text-lg"></span>
-            <span>엑셀·메모장으로 버티는 체험단 관리, 이제 그만.</span>
+            <span>어제는 엑셀, 오늘은 메모장… 나도 모르게 놓치는 리뷰들.</span>
           </div>
           <h1 className="text-3xl md:text-7xl font-extrabold leading-tight mb-4 md:mb-4 text-[#1A1A1A] animate-fade-in-up tracking-tight">
-            리뷰 관리,
+            체험단 일정·정산,
             <br />
             <span className="bg-gradient-to-r from-orange-600 via-orange-500 to-orange-600 bg-clip-text text-transparent">
-              이제 스트레스 받지 마세요.
+              여기저기 흩어져 있지 않나요?
             </span>
           </h1>
           <p className="text-lg md:text-2xl text-[#4A5568] font-semibold leading-relaxed mb-8 md:mb-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            체험단·협찬 블로거를 위한 일정·정산 캘린더
+            체험단 블로거를 위한 올인원 일정·정산 캘린더
           </p>
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center animate-fade-in" style={{ animationDelay: '0.4s' }}>
             <button

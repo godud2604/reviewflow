@@ -21,7 +21,7 @@ type IncomeHistoryItem = {
   amount: number
   date: string
   category: Schedule["category"] | "기타"
-  type: "benefit" | "income" | "extra"
+  type: "schedule" | "extra"
   extraIncomeId?: number
 }
 
@@ -42,28 +42,16 @@ export default function IncomeHistoryModal({
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; title: string } | null>(null)
   const { toast } = useToast()
 
-  // 방어한 생활비 항목들
-  const benefitItems = schedules
-    .filter((s) => s.benefit > 0)
+  // 체험단 항목: 제공 + 수익 - 지출을 합산하여 한 줄로 표현
+  const scheduleItems = schedules
+    .filter((s) => (s.benefit || 0) + (s.income || 0) + (s.cost || 0) !== 0)
     .map((s) => ({
-      id: `schedule-benefit-${s.id}`,
+      id: `schedule-${s.id}`,
       title: s.title,
-      amount: s.benefit,
+      amount: (s.benefit || 0) + (s.income || 0) - (s.cost || 0),
       date: s.visit || s.dead,
       category: s.category,
-      type: "benefit" as const,
-    })) satisfies IncomeHistoryItem[]
-
-  // 리뷰 활동 수입 항목들
-  const incomeItems = schedules
-    .filter((s) => s.income > 0)
-    .map((s) => ({
-      id: `schedule-income-${s.id}`,
-      title: s.title,
-      amount: s.income,
-      date: s.visit || s.dead,
-      category: s.category,
-      type: "income" as const,
+      type: "schedule" as const,
     })) satisfies IncomeHistoryItem[]
 
   // 기타 부수입 항목들
@@ -78,7 +66,7 @@ export default function IncomeHistoryModal({
   })) satisfies IncomeHistoryItem[]
 
   // 모든 항목 합치기 및 날짜순 정렬
-  const allItems = [...benefitItems, ...incomeItems, ...extraIncomeItems].sort(
+  const allItems = [...scheduleItems, ...extraIncomeItems].sort(
     (a, b) => {
       if (!a.date) return 1
       if (!b.date) return -1
@@ -86,19 +74,16 @@ export default function IncomeHistoryModal({
     }
   )
 
-  const totalBenefit = benefitItems.reduce((sum, item) => sum + item.amount, 0)
-  const totalIncome = incomeItems.reduce((sum, item) => sum + item.amount, 0)
+  const scheduleTotal = scheduleItems.reduce((sum, item) => sum + item.amount, 0)
   const totalExtra = extraIncomeItems.reduce((sum, item) => sum + item.amount, 0)
-  const grandTotal = totalBenefit + totalIncome + totalExtra
+  const grandTotal = scheduleTotal + totalExtra
   const hasData = allItems.length > 0
   const containerHeightClass = hasData ? "h-[85%]" : "h-[50%]"
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case "benefit":
+      case "schedule":
         return "방어한 생활비"
-      case "income":
-        return "리뷰 수입"
       case "extra":
         return "기타 부수입"
       default:
@@ -108,12 +93,10 @@ export default function IncomeHistoryModal({
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case "benefit":
-        return "bg-orange-50 text-orange-700"
-      case "income":
-        return "bg-green-50 text-green-700"
       case "extra":
         return "bg-blue-50 text-blue-700"
+      case "schedule":
+        return "bg-orange-50 text-orange-700"
       default:
         return "bg-neutral-100 text-neutral-700"
     }
@@ -152,23 +135,23 @@ export default function IncomeHistoryModal({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-base">💰</span>
-                  <span className="text-sm text-white/90 font-semibold">방어한 생활비</span>
+                  <span className="text-sm text-white/90 font-semibold">체험단 합산</span>
                 </div>
-                <span className="text-base font-bold text-white">₩{totalBenefit.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">💵</span>
-                  <span className="text-sm text-white/90 font-semibold">리뷰 수입</span>
-                </div>
-                <span className="text-base font-bold text-white">₩{totalIncome.toLocaleString()}</span>
+                <span className="text-base font-bold text-white">₩{scheduleTotal.toLocaleString()}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-base">💳</span>
-                  <span className="text-sm text-white/90 font-semibold">기타 부수입</span>
+                  <span className="text-sm text-white/90 font-semibold">부수입</span>
                 </div>
                 <span className="text-base font-bold text-white">₩{totalExtra.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between border-t border-white/20 pt-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">📈</span>
+                  <span className="text-sm text-white/90 font-semibold">총 경제적 가치</span>
+                </div>
+                <span className="text-base font-bold text-white">₩{grandTotal.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -214,7 +197,7 @@ export default function IncomeHistoryModal({
                         </button>
                       )}
                       <div className="text-right ml-3">
-                        <div className="text-lg font-bold text-[#333] mb-0.5">
+                        <div className={`text-lg font-bold mb-0.5 ${item.amount < 0 ? "text-red-500" : "text-[#333]"}`}>
                           ₩{item.amount.toLocaleString()}
                         </div>
                         {item.date && (

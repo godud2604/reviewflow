@@ -21,6 +21,11 @@ interface UseSchedulesReturn {
   refetch: () => Promise<void>
 }
 
+const toNumber = (value: unknown) => {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : 0
+}
+
 // DB -> Frontend 매핑
 function mapDbToSchedule(db: DbSchedule): Schedule {
   return {
@@ -35,9 +40,9 @@ function mapDbToSchedule(db: DbSchedule): Schedule {
     visit: db.visit_date || '',
     visitTime: db.visit_time || '',
     dead: db.deadline || '',
-    benefit: db.benefit || 0,
-    income: db.income || 0,
-    cost: db.cost || 0,
+    benefit: toNumber(db.benefit),
+    income: toNumber(db.income),
+    cost: toNumber(db.cost),
     postingLink: db.posting_link || '',
     purchaseLink: db.purchase_link || '',
     guideFiles: db.guide_files || [],

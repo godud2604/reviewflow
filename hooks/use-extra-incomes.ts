@@ -21,12 +21,17 @@ interface UseExtraIncomesReturn {
   refetch: () => Promise<void>
 }
 
+const toNumber = (value: unknown) => {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : 0
+}
+
 // DB -> Frontend 매핑
 function mapDbToExtraIncome(db: DbExtraIncome): ExtraIncome {
   return {
     id: db.id,
     title: db.title,
-    amount: db.amount || 0,
+    amount: toNumber(db.amount),
     date: db.date || '',
     memo: db.memo || undefined,
   }
