@@ -164,10 +164,12 @@ export default function Header({
       </div>
       <section className="rounded-3xl shadow-sm shadow-sm bg-white p-4">
         <div className="flex items-start gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-neutral-50 flex items-center justify-center text-xl">🚀</div>
-          <div className="flex-1 space-y-1">
-            <div className="text-[11px] font-bold text-neutral-500 uppercase">12월 20일 베타 오픈</div>
-            <div className="text-[13px] text-neutral-800 font-semibold leading-snug">사전신청 시 3개월 무료 혜택을 받을 수 있어요</div>
+          <div className="w-6 h-8 rounded-2xl bg-neutral-50 flex items-center justify-center text-[18px]">🚀</div>
+          <div className="flex justify-between flex-1 space-y-1">
+            <div>
+              <div className="text-[11px] font-bold text-neutral-500 uppercase">12월 20일 베타 오픈</div>
+              <div className="text-[11px] text-neutral-800 font-semibold leading-snug">사전신청 시 3개월 무료 혜택이 있어요</div>
+            </div>
             <div className="flex items-center gap-2 pt-1">
               <button
                 onClick={handlePreRegisterClick}
@@ -175,7 +177,6 @@ export default function Header({
               >
                 사전신청
               </button>
-              <span className="text-[11px] font-medium text-neutral-500">선착순 알림 받아보기</span>
             </div>
           </div>
         </div>
