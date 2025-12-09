@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import type { Schedule, ExtraIncome } from "@/types"
 import { exportAllDataToExcel } from "@/lib/export-utils"
 import { useToast } from "@/hooks/use-toast"
 import FeedbackModal from "./feedback-modal"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function ProfilePage({ 
   onShowPortfolio,
@@ -18,11 +19,35 @@ export default function ProfilePage({
 }) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
+  const { user, signOut } = useAuth()
 
-  const handleLogout = () => {
-    router.push("/?page=home")
+  const displayName = useMemo(() => {
+    const emailName = user?.email?.split("@")[0]
+    return user?.user_metadata?.name || emailName || "리뷰어"
+  }, [user])
+
+  const handleLogout = async () => {
+    try {
+      setIsSigningOut(true)
+      await signOut()
+      toast({
+        title: "로그아웃 되었습니다.",
+        duration: 1800,
+      })
+      router.push("/")
+    } catch (error) {
+      console.error("로그아웃 실패:", error)
+      toast({
+        title: "로그아웃에 실패했습니다.",
+        variant: "destructive",
+        duration: 2000,
+      })
+    } finally {
+      setIsSigningOut(false)
+    }
   }
 
   const handleBackup = () => {
@@ -61,7 +86,16 @@ export default function ProfilePage({
             backgroundSize: "cover",
           }}
         />
-        <h2 className="text-xl font-bold">김제미 님</h2>
+        <h2 className="text-xl font-bold">{displayName} 님</h2>
+      </div>
+
+      <div className="bg-white rounded-3xl p-4 mb-4 shadow-sm">
+        <div className="flex items-center justify-between bg-neutral-50 rounded-2xl px-4 py-3">
+          <span className="text-[13px] text-neutral-600">이메일</span>
+          <span className="text-sm font-semibold text-neutral-800 truncate max-w-[200px] text-right">
+            {user?.email || "알 수 없음"}
+          </span>
+        </div>
       </div>
 
       <div className="bg-white rounded-3xl p-4 mb-5 shadow-sm">
@@ -111,10 +145,11 @@ export default function ProfilePage({
 
       <button
         onClick={handleLogout}
+        disabled={isSigningOut}
         className="w-full p-4 bg-neutral-200 text-[#333] border-none rounded-2xl font-bold cursor-pointer
-          transition-all duration-200 hover:bg-neutral-300 active:scale-[0.98]"
+          transition-all duration-200 hover:bg-neutral-300 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        홈으로 가기
+        {isSigningOut ? "로그아웃 중..." : "로그아웃"}
       </button>
 
       <FeedbackModal
