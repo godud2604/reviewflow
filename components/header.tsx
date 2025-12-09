@@ -73,7 +73,6 @@ export default function Header({
               <div>
                 <p className="text-[11px] font-bold text-orange-600 mb-1">사전신청</p>
                 <h3 className="text-xl font-bold text-neutral-900 leading-tight">이메일을 남겨주세요</h3>
-                <p className="text-sm text-neutral-600 mt-1">PRO 버전 3개월 무료 혜택을 받을 수 있어요</p>
               </div>
               <button
                 onClick={handleCloseWaitlist}
@@ -83,6 +82,32 @@ export default function Header({
                   <path d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-3">
+              <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="px-2 py-1 rounded-lg bg-white text-[11px] font-bold text-neutral-700 border border-neutral-200">FREE</span>
+                  <span className="text-[12px] font-semibold text-neutral-600">지금 바로 이용 가능</span>
+                </div>
+                <ul className="text-[12px] text-neutral-700 space-y-1.5 list-disc list-inside">
+                  <li>체험단 일정 캘린더 관리</li>
+                  <li>할 일(To-do) 관리</li>
+                  <li>이번 달 수익/통계 페이지 제공</li>
+                </ul>
+              </div>
+              <div className="rounded-xl border border-[#ffd6be] bg-gradient-to-r from-[#fff3ea] via-[#ffe6d6] to-[#ffd7bd] p-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="px-2 py-1 rounded-lg bg-white text-[11px] font-bold text-[#ff5c39] border border-white/70 shadow-sm">PRO</span>
+                  <span className="text-[12px] font-semibold text-[#c24b30]">12월 20일 오픈 예정</span>
+                </div>
+                <ul className="text-[12px] text-neutral-800 space-y-1.5 list-disc list-inside">
+                  <li>월간 수익 리포트 · 알림</li>
+                  <li>활동 내역 다운로드(엑셀)</li>
+                  <li>하루 1번 요약 알림 제공</li>
+                  <span className="ml-3">(오늘 해야 할 방문/작성/발행 일정 등)</span>
+                </ul>
+                <p className="text-[11px] text-[#c24b30] font-semibold mt-2">사전신청 시 PRO 3개월 무료로 이용 가능</p>
+              </div>
             </div>
             <form className="mt-4 space-y-3" onSubmit={handleSubmitWaitlist}>
               <input
