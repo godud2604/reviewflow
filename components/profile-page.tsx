@@ -9,7 +9,6 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 
 export default function ProfilePage({ 
-  onShowPortfolio,
   schedules,
   extraIncomes
 }: { 
@@ -23,11 +22,6 @@ export default function ProfilePage({
   const { toast } = useToast()
   const router = useRouter()
   const { user, signOut } = useAuth()
-
-  const displayName = useMemo(() => {
-    const emailName = user?.email?.split("@")[0]
-    return user?.user_metadata?.name || emailName || "리뷰어"
-  }, [user])
 
   const handleLogout = async () => {
     try {
@@ -78,17 +72,6 @@ export default function ProfilePage({
 
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y">
-      <div className="text-center mt-5 mb-7">
-        <div
-          className="w-[100px] h-[100px] rounded-full mx-auto mb-3 bg-neutral-200"
-          style={{
-            backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix')",
-            backgroundSize: "cover",
-          }}
-        />
-        <h2 className="text-xl font-bold">{displayName} 님</h2>
-      </div>
-
       <div className="bg-white rounded-3xl p-4 mb-4 shadow-sm">
         <div className="flex items-center justify-between bg-neutral-50 rounded-2xl px-4 py-3">
           <span className="text-[13px] text-neutral-600">이메일</span>

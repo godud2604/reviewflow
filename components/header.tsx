@@ -1,10 +1,8 @@
 "use client"
 
-import { FileText, LogOut } from "lucide-react"
+import { FileText } from "lucide-react"
 import type { Todo } from "@/types"
-import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
 
 export default function Header({ 
   title, 
@@ -20,21 +18,14 @@ export default function Header({
   showTodoButton?: boolean
 }) {
   const incompleteTodoCount = todos.filter(t => !t.done).length
-  const { user, isAuthenticated, signOut, loading } = useAuth()
   const router = useRouter()
-  const [showMenu, setShowMenu] = useState(false)
 
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-      router.push("/")
-    } catch (error) {
-      console.error("로그아웃 실패:", error)
-    }
+  const handlePreRegisterClick = () => {
+    router.push("/#waitlist-section")
   }
 
   return (
-    <header className="px-6 pt-12 pb-1">
+    <header className="px-6 pt-6">
       <div className="flex items-center justify-between mb-2">
         {showTodoButton ? (
           <button
@@ -52,91 +43,21 @@ export default function Header({
         ) : (
           <div />
         )}
-        
-        <div className="relative">
-          <div
-            className="w-10 h-10 rounded-full bg-neutral-200 shadow-md border-2 border-white cursor-pointer transition-transform active:scale-95"
-            style={{
-              backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix')",
-              backgroundSize: "cover",
-            }}
-            onClick={() => setShowMenu(!showMenu)}
-          />
-          
-          {/* User Menu Dropdown */}
-          {showMenu && (
-            <>
-              <div 
-                className="fixed inset-0 z-10" 
-                onClick={() => setShowMenu(false)}
-              />
-              <div className="absolute right-0 top-12 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-20">
-                {!loading && (
-                  <>
-                    {isAuthenticated ? (
-                      <>
-                        <div className="px-4 py-2 border-b border-gray-100">
-                          <p className="text-xs text-gray-500">로그인됨</p>
-                          <p className="text-sm font-medium text-gray-800 truncate">
-                            {user?.email}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setShowMenu(false)
-                            onProfileClick()
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
-                        >
-                          프로필
-                        </button>
-                        <button
-                          onClick={handleSignOut}
-                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          로그아웃
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => {
-                            setShowMenu(false)
-                            router.push("/signin")
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
-                        >
-                          로그인
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowMenu(false)
-                            router.push("/signup")
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-[#FF5722] hover:bg-orange-50 cursor-pointer"
-                        >
-                          회원가입
-                        </button>
-                        <div className="border-t border-gray-100 mt-1 pt-1">
-                          <button
-                            onClick={() => {
-                              setShowMenu(false)
-                              onProfileClick()
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-500 hover:bg-gray-50"
-                          >
-                            프로필 (체험 모드)
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            </>
-          )}
+      </div>
+      <div className="mt-3 mb-4 bg-gradient-to-r from-orange-50 to-white border border-orange-100 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-inner text-xl">🚀</div>
+          <div>
+            <div className="text-xs font-bold text-orange-700">12월 20일 베타 오픈</div>
+            <div className="text-[13px] text-neutral-600 font-semibold">사전신청하고 3개월 무료 혜택 받기</div>
+          </div>
         </div>
+        <button
+          onClick={handlePreRegisterClick}
+          className="bg-[#FF5722] text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md shadow-orange-500/30 hover:bg-[#E64A19] transition cursor-pointer whitespace-nowrap"
+        >
+          사전신청
+        </button>
       </div>
     </header>
   )

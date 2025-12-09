@@ -66,3 +66,12 @@ export interface ExtraIncome {
   date: string
   memo?: string
 }
+
+export interface MonthlyGrowth {
+  monthStart: string   // YYYY-MM-01 형식
+  benefitTotal: number
+  incomeTotal: number
+  costTotal: number
+  extraIncomeTotal: number
+  econValue: number
+}

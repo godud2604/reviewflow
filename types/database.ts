@@ -79,6 +79,16 @@ export interface DbExtraIncome {
   updated_at: string
 }
 
+export interface DbMonthlyGrowth {
+  user_id: string
+  month_start: string
+  benefit_total: number
+  income_total: number
+  cost_total: number
+  extra_income_total: number
+  econ_value: number
+}
+
 // Insert Types (user_id 제외 - 서버에서 추가)
 export type DbScheduleInsert = Omit<DbSchedule, 'id' | 'created_at' | 'updated_at'>
 export type DbTodoInsert = Omit<DbTodo, 'id' | 'created_at' | 'updated_at'>

@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import type { Schedule, ExtraIncome } from "@/types"
+import type { Schedule, ExtraIncome, MonthlyGrowth } from "@/types"
 import { useExtraIncomes } from "@/hooks/use-extra-incomes"
+import { useMonthlyGrowth } from "@/hooks/use-monthly-growth"
 import ExtraIncomeModal from "./extra-income-modal"
 import IncomeHistoryModal from "./income-history-modal"
 
@@ -11,10 +12,14 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   
   // Supabase 연동 - useExtraIncomes 훅 사용
-  const { extraIncomes, createExtraIncome, deleteExtraIncome, loading: extraIncomesLoading } = useExtraIncomes()
+  const { extraIncomes, createExtraIncome, deleteExtraIncome } = useExtraIncomes()
+  const { monthlyGrowth, loading: monthlyGrowthLoading, refetch: refetchMonthlyGrowth } = useMonthlyGrowth()
 
   const handleAddIncome = async (income: Omit<ExtraIncome, "id">) => {
-    await createExtraIncome(income)
+    const created = await createExtraIncome(income)
+    if (created) {
+      await refetchMonthlyGrowth()
+    }
   }
 
   // Calculate stats
@@ -185,7 +190,11 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
         </div>
       
         {/* Trend Chart */}
-        <TrendChart currentMonthValue={econValue} />
+        <TrendChart
+          currentMonthValue={econValue}
+          monthlyGrowth={monthlyGrowth}
+          loading={monthlyGrowthLoading}
+        />
       </div>
       
       {/* Extra Income Modal */}
@@ -207,33 +216,93 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
   )
 }
 
-function TrendChart({ currentMonthValue }: { currentMonthValue: number }) {
-  const months = [
-    { label: "9월", value: 120000, height: 30 },
-    { label: "10월", value: 280000, height: 50 },
-    { label: "11월", value: 210000, height: 40 },
-    { label: "이번달", value: currentMonthValue, height: 85, active: true },
-  ]
+function TrendChart({
+  currentMonthValue,
+  monthlyGrowth,
+  loading,
+}: {
+  currentMonthValue: number
+  monthlyGrowth: MonthlyGrowth[]
+  loading: boolean
+}) {
+  const now = new Date()
+  const currentMonthKey = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+
+  const isSameMonth = (monthStart: string) => {
+    const date = new Date(monthStart)
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
+  }
+
+  const addCurrentIfMissing = (data: MonthlyGrowth[]) => {
+    if (data.some((item) => isSameMonth(item.monthStart))) return data
+    return [
+      ...data,
+      {
+        monthStart: currentMonthKey,
+        benefitTotal: 0,
+        incomeTotal: 0,
+        costTotal: 0,
+        extraIncomeTotal: 0,
+        econValue: currentMonthValue,
+      },
+    ]
+  }
+
+  const sortedData = addCurrentIfMissing(monthlyGrowth)
+    .slice()
+    .sort((a, b) => new Date(a.monthStart).getTime() - new Date(b.monthStart).getTime())
+
+  const chartData = sortedData.slice(-4)
+  const maxValue = Math.max(...chartData.map((item) => Math.abs(item.econValue)), 1)
+
+  const bars = chartData.map((item) => {
+    const monthDate = new Date(item.monthStart)
+    const isCurrent = isSameMonth(item.monthStart)
+    const height = Math.max(12, Math.round((Math.abs(item.econValue) / maxValue) * 90))
+
+    return {
+      key: item.monthStart,
+      label: isCurrent ? "이번달" : `${monthDate.getMonth() + 1}월`,
+      value: item.econValue,
+      height,
+      active: isCurrent,
+    }
+  })
+
+  const formatMoneyShort = (value: number) => {
+    const abs = Math.abs(value)
+    const sign = value < 0 ? "-" : ""
+    if (abs >= 100000000) return `${sign}${Math.round(abs / 100000000)}억`
+    if (abs >= 10000) return `${sign}${Math.round(abs / 10000)}만`
+    if (abs >= 1000) return `${sign}${Math.round(abs / 1000)}천`
+    if (abs === 0) return "0원"
+    return `${sign}${abs.toLocaleString()}원`
+  }
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm">
       <div className="text-lg font-bold mb-1">월별 성장 추이</div>
-      <div className="text-xs text-neutral-400 font-medium mb-5">지난 4개월간의 활동입니다</div>
-      <div className="flex justify-between items-end h-[140px] pt-5 pb-5">
-        {months.map((month, i) => (
+      <div className="text-xs text-neutral-400 font-medium mb-5">
+        {loading ? "Supabase에서 불러오는 중..." : "지난 4개월간의 활동입니다"}
+      </div>
+      <div className="flex justify-start items-end h-[140px] pt-5 pb-5 gap-4">
+        {bars.map((month) => (
           <div
-            key={i}
-            className={`w-[18%] rounded-lg relative flex justify-center transition-all duration-500 ${
+            key={month.key}
+            className={`w-[50%] rounded-lg relative flex justify-center transition-all duration-500 ${
               month.active ? "bg-[#651FFF]" : "bg-neutral-100"
             }`}
             style={{ height: `${month.height}%` }}
           >
             <span className="absolute -top-6 text-xs font-bold text-neutral-800">
-              {Math.round(month.value / 10000)}만
+              {formatMoneyShort(month.value)}
             </span>
             <span className="absolute -bottom-6 text-xs text-neutral-400 font-medium">{month.label}</span>
           </div>
         ))}
+        {!bars.length && (
+          <div className="text-sm text-neutral-400">데이터가 없습니다. 스케줄을 추가해주세요.</div>
+        )}
       </div>
     </div>
   )
