@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { getSupabaseClient } from '@/lib/supabase'
 
@@ -16,12 +16,9 @@ export function useAuth() {
     session: null,
     loading: true,
   })
-  const initializedRef = useRef(false)
 
   useEffect(() => {
-    // Prevent double initialization in StrictMode
-    if (initializedRef.current) return
-    initializedRef.current = true
+    let isMounted = true
 
     const supabase = getSupabaseClient()
 
@@ -35,6 +32,8 @@ export function useAuth() {
           setAuthState({ user: null, session: null, loading: false })
           return
         }
+
+        if (!isMounted) return
 
         setAuthState({
           user: session?.user ?? null,
@@ -53,6 +52,7 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         // Only update if user actually changed
+        if (!isMounted) return
         setAuthState(prev => {
           const newUserId = session?.user?.id
           const prevUserId = prev.user?.id
@@ -79,6 +79,7 @@ export function useAuth() {
     )
 
     return () => {
+      isMounted = false
       subscription.unsubscribe()
     }
   }, [])
@@ -90,6 +91,9 @@ export function useAuth() {
       console.error('로그아웃 오류:', error)
       throw error
     }
+
+    // Optimistically clear local auth state so UI reflects logout immediately
+    setAuthState({ user: null, session: null, loading: false })
   }
 
   return {
