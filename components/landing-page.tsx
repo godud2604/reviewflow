@@ -423,110 +423,93 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-[100px]">
             <div className="w-full md:w-auto md:flex-1 md:max-w-[500px] text-center md:text-left">
               <span className="text-[#FF5722] font-bold text-sm md:text-lg mb-3 md:mb-4 block">일정 관리</span>
-                <h2 className="text-2xl md:text-6xl font-bold leading-tight mb-4 md:mb-6 text-[#191F28]">
-                  겹치는 일정,
-                  <br />
-                  한눈에 보여드려요
-                </h2>
-                <p className="text-base md:text-xl text-[#6B7684] leading-relaxed">
-                  하루에 체험단이 여러 개여도,
-                  <br />체험단 전용 캘린더로 깔끔하게 관리
-                </p>
+              <h2 className="text-2xl md:text-6xl font-bold leading-tight mb-4 md:mb-6 text-[#191F28]">
+                겹치는 일정,
+                <br />
+                한눈에 보여드려요
+              </h2>
+              <p className="text-base md:text-xl text-[#6B7684] leading-relaxed">
+                마감·방문·작성 일정이 흩어지지 않게,<br />
+                하루 단위로 해야 할 일만 깔끔하게 모아드립니다.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 text-left">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-orange-100 text-orange-700 font-extrabold flex items-center justify-center text-sm">일정</div>
+                  <div>
+                    <p className="text-sm font-bold text-[#111827]">오늘 해야 할 것만 보기</p>
+                    <p className="text-[12px] text-[#6B7280]">마감초과는 🔥, 마감일은 숫자 핀으로 한눈에 구분</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-[#eef2ff] text-[#4f46e5] font-extrabold flex items-center justify-center text-sm">할 일</div>
+                  <div>
+                    <p className="text-sm font-bold text-[#111827]">할 일 등록으로 놓치지 않기</p>
+                    <p className="text-[12px] text-[#6B7280]">제품 주문하기, 사장님께 방문 문자 보내기 같은 할 일을 함께 적어 관리</p>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="w-full md:w-auto md:flex-shrink-0">
-              <div className="border-[10px] border-white rounded-[40px] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.12)] bg-[#F7F7F8] min-w-[300px] max-w-[360px] w-full mx-auto">
-                <div className="w-full px-5 py-4 flex flex-col">
-                  {/* Header with Todo Badge */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full">
-                      <span className="text-sm">📋 할 일</span>
-                      <span className="ml-1 px-1.5 py-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-full min-w-[18px] text-center">1</span>
+              <div className="border-[10px] border-white rounded-[36px] overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.12)] bg-white min-w-[320px] max-w-[380px] w-full mx-auto">
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center">
+                    <div className="inline-flex items-center gap-2 bg-white border border-neutral-200 shadow-sm px-3 py-1.5 rounded-full">
+                      <span className="text-lg">🗒️</span>
+                      <span className="text-[12px] font-semibold text-neutral-800">할 일</span>
+                      <span className="h-5 min-w-[18px] px-1.5 rounded-full bg-orange-500 text-white text-[10px] font-extrabold flex items-center justify-center">2</span>
                     </div>
-                    <div className="w-10 h-10 rounded-full bg-neutral-200" style={{ backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix')", backgroundSize: 'cover' }} />
                   </div>
 
-                  {/* Economic Value Card */}
-                  <div className="bg-white p-3 rounded-2xl mb-3 flex justify-between items-center">
-                    <span className="text-xs text-neutral-500 font-semibold">이번 달 경제적 가치 ✨</span>
-                    <span className="text-base font-extrabold text-[#333]">357,600원</span>
-                  </div>
-
-                  {/* Calendar */}
-                  <div className="bg-white rounded-3xl p-4 mb-3">
-                    <div className="flex items-center justify-between mb-3">
-                      <button className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-neutral-100">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M15 18l-6-6 6-6" />
-                        </svg>
-                      </button>
-                      <div className="text-sm font-bold text-neutral-800">2025년 12월</div>
-                      <button className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-neutral-100">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M9 18l6-6-6-6" />
-                        </svg>
-                      </button>
+                  <div className="bg-white rounded-[28px] border border-neutral-100 shadow-[0_16px_36px_rgba(15,23,42,0.08)] p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <button className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 border border-neutral-200">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+                        </button>
+                        <div className="text-base font-extrabold text-neutral-900">2025년 12월</div>
+                        <button className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 border border-neutral-200">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+                        </button>
+                      </div>
+                      <button className="text-[11px] font-semibold text-orange-600 hover:text-orange-700">오늘로 이동</button>
                     </div>
-                    <div className="grid grid-cols-7 text-center text-[10px] text-neutral-400 mb-2">
-                      {['일', '월', '화', '수', '목', '금', '토'].map((d, idx) => (
-                        <div key={d} className={idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : ''}>{d}</div>
+
+                    <div className="grid grid-cols-7 text-center text-[11px] text-neutral-400 font-semibold">
+                      {["일","월","화","수","목","금","토"].map((d, idx) => (
+                        <div key={d} className={idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : ""}>{d}</div>
                       ))}
                     </div>
-                    <div className="grid grid-cols-7 gap-0.5 text-center">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31].map((day) => {
-                        const hasDot = [3, 14, 23, 24, 30, 31].includes(day)
-                        const isToday = day === 5
-                        const isSunday = (day) % 7 === 0
-                        const isSaturday = (day + 1) % 7 === 0
+
+                    <div className="grid grid-cols-7 gap-y-2 text-center">
+                      {[...Array(1)].map((_, i) => <div key={`emp-${i}`} className="h-9" />)}
+                      {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31].map((day) => {
+                        const meta: { overdue?: boolean; deadline?: number; reconfirm?: boolean } =
+                          day === 9 ? { overdue: true, deadline: 4 } :
+                          day === 16 ? { deadline: 1 } :
+                          {}
+                        const isSelected = [9,16].includes(day)
+                        const hasDeadline = !!meta.deadline
                         return (
-                          <div key={day} className={`h-[26px] w-[26px] flex flex-col items-center justify-center text-[11px] font-semibold rounded-lg mx-auto relative ${
-                            isToday ? 'bg-orange-500 text-white' : 
-                            isSunday ? 'text-red-500' : 
-                            isSaturday ? 'text-blue-500' : 
-                            'text-neutral-700'
-                          }`}>
+                          <div
+                            key={day}
+                            className={`relative h-9 w-9 mx-auto flex items-center justify-center text-[11px] font-semibold rounded-full ${
+                              isSelected ? "shadow-[inset_0_0_0_2px_rgba(249,115,22,0.9)] text-orange-700" : "text-neutral-700"
+                            } ${hasDeadline ? "bg-white" : "bg-[#F5F6F8]"}`}
+                          >
                             {day}
-                            {hasDot && !isToday && <div className="w-1 h-1 bg-orange-500 rounded-full absolute bottom-0.5" />}
+                            {meta.deadline && (
+                              <span className="absolute -bottom-1.5 right-0 flex h-4 min-w-[14px] px-1 items-center justify-center rounded-full bg-white text-orange-600 text-[9px] font-extrabold shadow-[0_4px_10px_rgba(0,0,0,0.12)]">
+                                {meta.deadline}
+                              </span>
+                            )}
+                            {meta.overdue && (
+                              <span className="absolute -bottom-1.5 left-0 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] shadow-[0_4px_10px_rgba(0,0,0,0.12)]">
+                                🔥
+                              </span>
+                            )}
                           </div>
                         )
                       })}
-                    </div>
-                  </div>
-
-                  {/* Schedule List */}
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-bold">진행 중인 체험단 (3건)</h3>
-                    <span className="text-xs font-semibold text-orange-600">전체보기 (10)</span>
-                  </div>
-                  <div className="space-y-2 flex-1 overflow-y-auto">
-                    <div className="p-3 rounded-2xl flex items-center bg-white">
-                      <div className="text-xl mr-2.5">💄</div>
-                      <div className="flex-1">
-                        <div className="text-xs font-bold mb-0.5 text-[#1A1A1A]">신선선정</div>
-                        <div className="text-[10px] text-neutral-500">
-                          <span className="px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-semibold text-[9px]">선정됨</span>
-                        </div>
-                      </div>
-                      <div className="font-bold text-xs text-[#333]">₩23,400</div>
-                    </div>
-                    <div className="p-3 rounded-2xl flex items-center bg-white">
-                      <div className="text-xl mr-2.5">🍕</div>
-                      <div className="flex-1">
-                        <div className="text-xs font-bold mb-0.5 text-[#1A1A1A]">맛집 탐방</div>
-                        <div className="text-[10px] text-neutral-500">
-                          <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 font-semibold text-[9px]">방문 예정</span>
-                        </div>
-                      </div>
-                      <div className="font-bold text-xs text-[#333]">₩45,000</div>
-                    </div>
-                    <div className="p-3 rounded-2xl flex items-center bg-white">
-                      <div className="text-xl mr-2.5">☕</div>
-                      <div className="flex-1">
-                        <div className="text-xs font-bold mb-0.5 text-[#1A1A1A]">카페 리뷰</div>
-                        <div className="text-[10px] text-neutral-500">
-                          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 font-semibold text-[9px]">작성 중</span>
-                        </div>
-                      </div>
-                      <div className="font-bold text-xs text-[#333]">₩28,000</div>
                     </div>
                   </div>
                 </div>
