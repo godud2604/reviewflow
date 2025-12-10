@@ -42,6 +42,43 @@ const DEFAULT_VISIT_REVIEW_CHECKLIST: NonNullable<Schedule["visitReviewChecklist
   otherText: "",
 }
 
+const STATUS_ORDER: Schedule["status"][] = [
+  "선정됨",
+  "방문일 예약 완료",
+  "방문",
+  "구매 완료",
+  "제품 배송 완료",
+  "완료",
+  "취소",
+  "재확인",
+]
+
+const COMMON_STATUSES: Schedule["status"][] = ["선정됨", "완료", "취소", "재확인"]
+
+const STATUS_BY_REVIEW_TYPE: Record<Schedule["reviewType"], Schedule["status"][]> = {
+  방문형: ["방문일 예약 완료", "방문"],
+  구매평: ["구매 완료"],
+  제공형: ["제품 배송 완료"],
+  기자단: [],
+  "미션/인증": [],
+}
+
+const getStatusOptions = (reviewType: Schedule["reviewType"] | undefined): Schedule["status"][] => {
+  const extras = reviewType ? STATUS_BY_REVIEW_TYPE[reviewType] || [] : []
+  const allowed = new Set<Schedule["status"]>([...COMMON_STATUSES, ...extras])
+  return STATUS_ORDER.filter((status) => allowed.has(status))
+}
+
+const sanitizeStatusForReviewType = (
+  status: Schedule["status"] | undefined,
+  reviewType: Schedule["reviewType"] | undefined,
+): Schedule["status"] => {
+  if (!reviewType) return status || "선정됨"
+  const options = getStatusOptions(reviewType)
+  if (status && options.includes(status)) return status
+  return options[0] || "선정됨"
+}
+
 const createEmptyFormData = (): Partial<Schedule> => ({
   title: "",
   status: "선정됨",
@@ -184,19 +221,21 @@ export default function ScheduleModal({
       })
       return
     }
-    
+
+    const updatedFormData: Partial<Schedule> = { ...formData }
+
     // 재확인 상태일 때 사유를 별도 필드에 저장
-    if (formData.status === "재확인" && reconfirmReason) {
+    if (updatedFormData.status === "재확인" && reconfirmReason) {
       const reason = reconfirmReason === "기타" ? customReconfirmReason : reconfirmReason
-      formData.reconfirmReason = reason
+      updatedFormData.reconfirmReason = reason
     } else {
-      formData.reconfirmReason = ""
+      updatedFormData.reconfirmReason = ""
     }
 
-    const selectedChannels = sanitizeChannels(formData.channel || [])
+    const selectedChannels = sanitizeChannels(updatedFormData.channel || [])
 
     // 대기 중인 파일이 있으면 업로드
-    let finalGuideFiles = formData.guideFiles || []
+    let finalGuideFiles = updatedFormData.guideFiles || []
     if (pendingFiles.length > 0 && user) {
       setIsUploading(true)
       try {
@@ -216,8 +255,20 @@ export default function ScheduleModal({
       }
       setIsUploading(false)
     }
-    
-    onSave({ ...formData, channel: selectedChannels, guideFiles: finalGuideFiles } as Schedule)
+
+    const sanitizedStatus = sanitizeStatusForReviewType(
+      updatedFormData.status as Schedule["status"],
+      (updatedFormData.reviewType as Schedule["reviewType"]) || "제공형",
+    )
+
+    onSave(
+      {
+        ...updatedFormData,
+        status: sanitizedStatus,
+        channel: selectedChannels,
+        guideFiles: finalGuideFiles,
+      } as Schedule,
+    )
     toast({
       title: schedule ? "체험단 정보가 수정되었습니다." : "체험단이 등록되었습니다.",
       duration: 2000,
@@ -427,7 +478,7 @@ export default function ScheduleModal({
         <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 scrollbar-hide touch-pan-y min-h-0">
           {/* 재확인 경고 */}
           {formData.status === "재확인" && (
-            <div className="mb-4 px-4 py-2.5 bg-yellow-50 border border-yellow-200 rounded-xl gap-2">
+            <div className="mb-2.5 px-4 py-2.5 bg-yellow-50 border border-yellow-200 rounded-xl gap-2">
               <div className="flex items-center gap-2">
               <span className="text-[12px]">⚠️</span>
               <span className="text-[12px] font-bold text-yellow-700">재확인이 필요한 체험단입니다</span>
@@ -560,14 +611,20 @@ export default function ScheduleModal({
                 <div className="mb-4">
                   <label className="block text-[12px] font-bold text-neutral-500 mb-2">체험단 유형</label>
                   <div className="flex gap-2 flex-wrap">
-                    {["제공형", "페이백형", "페이백+구매평", "구매평", "기자단", "미션/인증", "방문형", "기타"].map(
+                    {["제공형", "구매평", "기자단", "미션/인증", "방문형", "기타"].map(
                       (type) => (
                         <div
                           key={type}
                           onClick={() => {
+                            const nextReviewType = type as Schedule["reviewType"]
+                            const nextStatus = sanitizeStatusForReviewType(
+                              formData.status as Schedule["status"],
+                              nextReviewType,
+                            )
                             const newFormData: Partial<Schedule> = {
                               ...formData,
-                              reviewType: type as Schedule["reviewType"],
+                              reviewType: nextReviewType,
+                              status: nextStatus,
                             }
                             // 방문형으로 변경 시 체크리스트 초기화
                             if (type === "방문형" && !formData.visitReviewChecklist) {
@@ -812,22 +869,11 @@ export default function ScheduleModal({
                       <SelectValue placeholder="선택하세요" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="선정됨" className="text-[12px]">선정됨</SelectItem>
-                      {formData.reviewType === "방문형" && (
-                        <>
-                          <SelectItem value="방문일 예약 완료" className="text-[12px]">방문일 예약 완료</SelectItem>
-                          <SelectItem value="방문" className="text-[12px]">방문</SelectItem>
-                        </>
-                      )}
-                      {["페이백형", "페이백+구매평", "구매평"].includes(formData.reviewType || "") && (
-                        <SelectItem value="구매 완료" className="text-[12px]">구매 완료</SelectItem>
-                      )}
-                      {formData.reviewType === "제공형" && (
-                        <SelectItem value="제품 배송 완료" className="text-[12px]">제품 배송 완료</SelectItem>
-                      )}
-                      <SelectItem value="완료" className="text-[12px]">완료</SelectItem>
-                      <SelectItem value="취소" className="text-[12px]">취소</SelectItem>
-                      <SelectItem value="재확인" className="text-[12px]">재확인</SelectItem>
+                      {getStatusOptions(formData.reviewType || "제공형").map((statusOption) => (
+                        <SelectItem key={statusOption} value={statusOption} className="text-[12px]">
+                          {statusOption}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -944,7 +990,7 @@ export default function ScheduleModal({
                   </div>
                 </div>
 
-                {["페이백형", "페이백+구매평", "구매평", "미션/인증"].includes(formData.reviewType || "") && (
+                {["구매평", "미션/인증"].includes(formData.reviewType || "") && (
                   <div>
                     <label className="block text-[12px] font-bold text-neutral-500 mb-2">구매할 링크</label>
                     <div className="relative">

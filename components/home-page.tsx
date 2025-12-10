@@ -343,7 +343,7 @@ function CalendarSection({
         </div>
         <button
           onClick={goToToday}
-          className="absolute right-[-6px] top-1/2 -translate-y-1/2 px-2 py-1.5 text-[11px] font-semibold text-orange-600 rounded-lg hover:bg-orange-100 transition-colors"
+          className="absolute right-[-6px] top-1/2 -translate-y-1/2 px-2 py-1.5 text-[11px] font-semibold text-[#c24b30] rounded-lg hover:bg-orange-100"
         >
           오늘로 이동
         </button>
