@@ -1001,7 +1001,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                   <div className="">
                     <label className="block text-[12px] font-bold text-neutral-500">자산 관리</label>
                     <span className="text-[11px] text-neutral-400">
-                      제공(물품) + 수익(현금) - 내가 쓴 돈 = 해당 체험에서 내가 얻은 경제적 가치예요.
+                      제공(물품) + 수익(현금) - 내가 쓴 돈 = 해당 체험에서 내가 얻은 경제적 가치
                     </span>
                   </div>
 
