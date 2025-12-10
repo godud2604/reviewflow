@@ -132,6 +132,8 @@ export default function ScheduleModal({
   const [fileToDelete, setFileToDelete] = useState<{ file: GuideFile; index: number } | null>(null)
   const [showCategoryManagement, setShowCategoryManagement] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState<Schedule["category"][]>([])
+  const [visitMode, setVisitMode] = useState(false)
+  const [nonVisitReviewType, setNonVisitReviewType] = useState<Schedule["reviewType"]>("제공형")
   const { toast } = useToast()
   const { user } = useAuth()
   const {
@@ -172,13 +174,29 @@ export default function ScheduleModal({
     [categoryValues],
   )
 
-  const arraysEqual = (a: string[], b: string[]) => {
-    if (a.length !== b.length) return false
-    return a.every((item, idx) => item === b[idx])
-  }
+const arraysEqual = (a: string[], b: string[]) => {
+  if (a.length !== b.length) return false
+  return a.every((item, idx) => item === b[idx])
+}
+
+  const hasVisitData = React.useCallback((data?: Partial<Schedule>) => {
+    if (!data) return false
+    const checklist = data.visitReviewChecklist
+    const hasChecklist =
+      !!checklist &&
+      (checklist.naverReservation ||
+        checklist.platformAppReview ||
+        checklist.cafeReview ||
+        checklist.googleReview ||
+        checklist.other ||
+        !!checklist.otherText)
+    return data.reviewType === "방문형" || !!data.visit || !!data.visitTime || hasChecklist
+  }, [])
 
   useEffect(() => {
     if (schedule) {
+      const initialNonVisit = schedule.reviewType !== "방문형" ? schedule.reviewType : "제공형"
+      setNonVisitReviewType(initialNonVisit)
       setFormData({
         ...schedule,
         visitReviewChecklist:
@@ -196,13 +214,16 @@ export default function ScheduleModal({
           setCustomReconfirmReason(reason)
         }
       }
+      setVisitMode(hasVisitData(schedule))
     } else {
       setFormData(createEmptyFormData())
       setReconfirmReason("")
       setCustomReconfirmReason("")
       setPendingFiles([])
+      setVisitMode(false)
+      setNonVisitReviewType("제공형")
     }
-  }, [schedule, isOpen])
+  }, [schedule, isOpen, hasVisitData])
 
   useEffect(() => {
     const sanitized = sanitizeCategories(userCategories)
@@ -241,6 +262,15 @@ export default function ScheduleModal({
     }
 
     const updatedFormData: Partial<Schedule> = { ...formData }
+    const reviewTypeForSave = visitMode ? "방문형" : nonVisitReviewType
+    updatedFormData.reviewType = reviewTypeForSave
+    if (!visitMode) {
+      updatedFormData.visit = ""
+      updatedFormData.visitTime = ""
+      updatedFormData.visitReviewChecklist = undefined
+    } else if (!updatedFormData.visitReviewChecklist) {
+      updatedFormData.visitReviewChecklist = { ...DEFAULT_VISIT_REVIEW_CHECKLIST }
+    }
 
     // 재확인 상태일 때 사유를 별도 필드에 저장
     if (updatedFormData.status === "재확인" && reconfirmReason) {
@@ -406,6 +436,33 @@ export default function ScheduleModal({
       const hasChannel = current.includes(channel)
       const nextChannels = hasChannel ? current.filter((c) => c !== channel) : [...current, channel]
       return { ...prev, channel: nextChannels }
+    })
+  }
+
+  const handleToggleVisitMode = (enabled: boolean) => {
+    if (enabled) {
+      setNonVisitReviewType((prev) =>
+        formData.reviewType && formData.reviewType !== "방문형"
+          ? (formData.reviewType as Schedule["reviewType"])
+          : prev,
+      )
+    }
+    setVisitMode(enabled)
+    setFormData((prev) => {
+      const nextReviewType: Schedule["reviewType"] = enabled ? "방문형" : nonVisitReviewType
+      const nextStatus = sanitizeStatusForReviewType(
+        (prev.status as Schedule["status"]) || "선정됨",
+        nextReviewType,
+      )
+      const nextChecklist =
+        enabled ? prev.visitReviewChecklist || { ...DEFAULT_VISIT_REVIEW_CHECKLIST } : undefined
+      return {
+        ...prev,
+        reviewType: nextReviewType,
+        status: nextStatus,
+        visitReviewChecklist: nextChecklist,
+        ...(enabled ? {} : { visit: "", visitTime: "" }),
+      }
     })
   }
 
@@ -691,142 +748,120 @@ export default function ScheduleModal({
                   </button>
                 </div>
 
-                {/* 작성 채널 */}
+                {/* 작성할 곳 (메인 + 방문 후 추가 리뷰) */}
                 <div className="mb-4">
-                  <label className="block text-[12px] font-bold text-neutral-500 mb-2">작성 채널</label>
-                  <div className="flex gap-2 flex-wrap">
-                    {SCHEDULE_CHANNEL_OPTIONS.map((channel) => {
-                      const isSelected = (formData.channel || []).includes(channel)
-                      return (
-                        <div
-                          key={channel}
-                          onClick={() => handleToggleChannel(channel)}
-                          className={`text-[11px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
-                            isSelected
-                              ? "bg-blue-50 text-blue-600 border border-blue-600"
-                              : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
-                          }`}
-                        >
-                          {channel}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
+                  <label className="block text-[12px] font-bold text-neutral-800 mb-2">작성할 곳</label>
+                  <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 px-3.5 py-3.5 space-y-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[12px] font-bold text-neutral-700">메인 채널</span>
+                        <span className="text-[11px] text-neutral-400">포스팅을 올릴 주요 채널</span>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        {SCHEDULE_CHANNEL_OPTIONS.map((channel) => {
+                          const isSelected = (formData.channel || []).includes(channel)
+                          return (
+                            <div
+                              key={channel}
+                              onClick={() => handleToggleChannel(channel)}
+                              className={`text-[11px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
+                                isSelected
+                                  ? "bg-blue-50 text-blue-600 border border-blue-600"
+                                  : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
+                              }`}
+                            >
+                              {channel}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
 
-                {/* 체험단 유형 */}
-                <div className="mb-4">
-                  <label className="block text-[12px] font-bold text-neutral-500 mb-2">체험단 유형</label>
-                  <div className="flex gap-2 flex-wrap">
-                    {["제공형", "구매형", "기자단", "미션/인증", "방문형", "기타"].map(
-                      (type) => (
-                        <div
-                          key={type}
-                          onClick={() => {
-                            const nextReviewType = type as Schedule["reviewType"]
-                            const nextStatus = sanitizeStatusForReviewType(
-                              formData.status as Schedule["status"],
-                              nextReviewType,
-                            )
-                            const newFormData: Partial<Schedule> = {
-                              ...formData,
-                              reviewType: nextReviewType,
-                              status: nextStatus,
-                            }
-                            // 방문형으로 변경 시 체크리스트 초기화
-                            if (type === "방문형" && !formData.visitReviewChecklist) {
-                              newFormData.visitReviewChecklist = { ...DEFAULT_VISIT_REVIEW_CHECKLIST }
-                            }
-                            setFormData(newFormData)
-                          }}
-                          className={`text-[11px] px-3 py-1 rounded-xl font-semibold cursor-pointer flex items-center justify-center ${
-                            formData.reviewType === type
-                              ? "bg-orange-50 text-[#FF5722] border border-[#FF5722]"
-                              : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
-                          }`}
-                        >
-                          {type}
+                    <div className="pt-2 border-t border-neutral-200/80">
+                      <label className="flex items-start gap-3 mb-2 cursor-pointer">
+                        <Checkbox
+                          checked={visitMode}
+                          onCheckedChange={(checked) => handleToggleVisitMode(!!checked)}
+                          className="mt-[2px]"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-bold text-blue-900 translate-y-[1.5px]">방문 일정이 있는 체험인가요?</span>
+                          </div>
                         </div>
-                      ),
+                      </label>
+                    </div>
+
+                    {visitMode && (
+                      <div className="pt-2 border-t border-neutral-200/80">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[12px] font-bold text-blue-900">방문 후 추가 리뷰</span>
+                          <span className="text-[11px] text-neutral-400">현장 방문 뒤 남길 추가 리뷰 채널</span>
+                        </div>
+                        <div className="space-y-2.5">
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <Checkbox
+                              checked={formData.visitReviewChecklist?.naverReservation || false}
+                              onCheckedChange={(checked) =>
+                                updateVisitChecklist({ naverReservation: checked as boolean })
+                              }
+                            />
+                            <span className="text-[12px] font-semibold text-blue-900">네이버 예약 리뷰</span>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <Checkbox
+                              checked={formData.visitReviewChecklist?.platformAppReview || false}
+                              onCheckedChange={(checked) =>
+                                updateVisitChecklist({ platformAppReview: checked as boolean })
+                              }
+                            />
+                            <span className="text-[12px] font-semibold text-blue-900">타플랫폼 어플 리뷰</span>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <Checkbox
+                              checked={formData.visitReviewChecklist?.googleReview || false}
+                              onCheckedChange={(checked) =>
+                                updateVisitChecklist({ googleReview: checked as boolean })
+                              }
+                            />
+                            <span className="text-[12px] font-semibold text-blue-900">구글 리뷰</span>
+                          </label>
+                          <div className="space-y-1">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <Checkbox
+                                checked={formData.visitReviewChecklist?.other || false}
+                                onCheckedChange={(checked) =>
+                                  updateVisitChecklist({
+                                    other: checked as boolean,
+                                    otherText: checked ? formData.visitReviewChecklist?.otherText || "" : "",
+                                  })
+                                }
+                              />
+                              <span className="text-[12px] font-semibold text-blue-900">기타</span>
+                            </label>
+                            {formData.visitReviewChecklist?.other && (
+                              <input
+                                type="text"
+                                value={formData.visitReviewChecklist?.otherText || ""}
+                                onChange={(e) =>
+                                  updateVisitChecklist({
+                                    other: true,
+                                    otherText: e.target.value,
+                                  })
+                                }
+                                className="w-full h-8 px-3 bg-white border border-blue-200 rounded-lg text-[11px] text-blue-900 placeholder:text-blue-300"
+                                placeholder="추가 리뷰를 입력하세요 (예: 네이버 지도 리뷰)"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* 방문형 리뷰 체크리스트 */}
-                {formData.reviewType === "방문형" && (
-                  <div className="mt-[-3px] px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl">
-                    <label className="block text-[12px] font-bold text-blue-900 mb-3">방문 후, 추가로 작성해야 할 리뷰</label>
-                    <div className="space-y-2.5">
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <Checkbox
-                          checked={formData.visitReviewChecklist?.naverReservation || false}
-                          onCheckedChange={(checked) =>
-                            updateVisitChecklist({ naverReservation: checked as boolean })
-                          }
-                        />
-                        <span className="text-[12px] font-semibold text-blue-900">네이버 예약 리뷰</span>
-                      </label>
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <Checkbox
-                          checked={formData.visitReviewChecklist?.platformAppReview || false}
-                          onCheckedChange={(checked) =>
-                            updateVisitChecklist({ platformAppReview: checked as boolean })
-                          }
-                        />
-                        <span className="text-[12px] font-semibold text-blue-900">타플랫폼 어플 리뷰</span>
-                      </label>
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <Checkbox
-                          checked={formData.visitReviewChecklist?.cafeReview || false}
-                          onCheckedChange={(checked) =>
-                            updateVisitChecklist({ cafeReview: checked as boolean })
-                          }
-                        />
-                        <span className="text-[12px] font-semibold text-blue-900">카페 리뷰</span>
-                      </label>
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <Checkbox
-                          checked={formData.visitReviewChecklist?.googleReview || false}
-                          onCheckedChange={(checked) =>
-                            updateVisitChecklist({ googleReview: checked as boolean })
-                          }
-                        />
-                        <span className="text-[12px] font-semibold text-blue-900">구글 리뷰</span>
-                      </label>
-                      <div className="space-y-1">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <Checkbox
-                            checked={formData.visitReviewChecklist?.other || false}
-                            onCheckedChange={(checked) =>
-                              updateVisitChecklist({
-                                other: checked as boolean,
-                                otherText: checked ? formData.visitReviewChecklist?.otherText || "" : "",
-                              })
-                            }
-                          />
-                          <span className="text-[12px] font-semibold text-blue-900">기타</span>
-                        </label>
-                        {formData.visitReviewChecklist?.other && (
-                          <input
-                            type="text"
-                            value={formData.visitReviewChecklist?.otherText || ""}
-                            onChange={(e) =>
-                              updateVisitChecklist({
-                                other: true,
-                                otherText: e.target.value,
-                              })
-                            }
-                            className="w-full h-8 px-3 bg-white border border-blue-200 rounded-lg text-[11px] text-blue-900 placeholder:text-blue-300"
-                            placeholder="추가 리뷰를 입력하세요 (예: 네이버 지도 리뷰)"
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* 방문형 일정 */}
-                {formData.reviewType === "방문형" && (
+                {visitMode && (
                   <div className="flex gap-2.5 flex-wrap">
                     <div className="flex-1 min-w-[180px]">
                       <label className="block text-[12px] font-bold text-neutral-500 mb-2">방문일</label>
@@ -965,7 +1000,7 @@ export default function ScheduleModal({
                 <div>
                   <div className="">
                     <label className="block text-[12px] font-bold text-neutral-500">자산 관리</label>
-                    <span className="text-[10px] text-neutral-400">
+                    <span className="text-[11px] text-neutral-400">
                       제공(물품) + 수익(현금) - 내가 쓴 돈 = 해당 체험에서 내가 얻은 경제적 가치예요.
                     </span>
                   </div>
@@ -1023,7 +1058,7 @@ export default function ScheduleModal({
                       type="url"
                       value={formData.postingLink || ""}
                       onChange={(e) => setFormData({ ...formData, postingLink: e.target.value })}
-                      className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[14px]"
+                      className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[12px]"
                       placeholder="https://..."
                     />
                     {formData.postingLink && (
@@ -1051,7 +1086,7 @@ export default function ScheduleModal({
                         type="url"
                         value={formData.purchaseLink || ""}
                         onChange={(e) => setFormData({ ...formData, purchaseLink: e.target.value })}
-                        className="w-full h-8 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
+                        className="w-full h-8 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[12px]"
                         placeholder="https://..."
                       />
                       {formData.purchaseLink && (
@@ -1148,7 +1183,7 @@ export default function ScheduleModal({
                     <textarea
                       value={formData.memo || ""}
                       onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
-                      className="w-full px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[14px] resize-none"
+                      className="w-full px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[12px] resize-none"
                       rows={3}
                       placeholder="가이드라인 복사 붙여넣기..."
                     />
