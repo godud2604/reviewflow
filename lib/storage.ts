@@ -27,6 +27,8 @@ export async function uploadGuideFile(
     .upload(filePath, file, {
       cacheControl: '3600',
       upsert: false,
+      // 모바일 브라우저에서 MIME이 비어 있는 경우가 있어 PDF로 강제 지정해 허용 타입 검사를 통과시킨다
+      contentType: file.type || 'application/pdf',
     })
   
   if (error) {
