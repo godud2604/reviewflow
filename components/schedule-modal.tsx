@@ -460,6 +460,73 @@ export default function ScheduleModal({
     setFormData({ ...formData, visitTime: `${paddedHour}:${finalMinute}` })
   }
 
+  const statusFields = (
+    <div className="space-y-3">
+      <div>
+        <label className="block text-[12px] font-bold text-neutral-500 mb-2">진행 상태</label>
+        <Select
+          value={formData.status}
+          onValueChange={(value) => {
+            setFormData({ ...formData, status: value as Schedule["status"] })
+            // 재확인이 아닌 상태로 변경하면 재확인 사유 초기화
+            if (value !== "재확인") {
+              setReconfirmReason("")
+              setCustomReconfirmReason("")
+            }
+          }}
+        >
+          <SelectTrigger size="sm" className="w-full bg-[#F7F7F8] border-none rounded-xl text-[12px]">
+            <SelectValue placeholder="선택하세요" />
+          </SelectTrigger>
+          <SelectContent>
+            {getStatusOptions(formData.reviewType || "제공형").map((statusOption) => (
+              <SelectItem key={statusOption} value={statusOption} className="text-[12px]">
+                {statusOption}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {formData.status === "재확인" && (
+        <div className="space-y-2">
+          <label className="block text-[12px] font-bold text-neutral-500">재확인 사유</label>
+          <Select
+            value={reconfirmReason}
+            onValueChange={(value) => {
+              setReconfirmReason(value)
+              if (value !== "기타") {
+                setCustomReconfirmReason("")
+              }
+            }}
+          >
+            <SelectTrigger size="sm" className="w-full bg-[#F7F7F8] border-none rounded-xl text-[12px]">
+              <SelectValue placeholder="사유를 선택하세요" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="입금 확인 필요" className="text-[12px]">입금/리워드 확인 필요</SelectItem>
+              <SelectItem value="가이드 내용 불분명" className="text-[12px]">가이드 내용 불분명</SelectItem>
+              <SelectItem value="플랫폼 답변 대기중" className="text-[12px]">플랫폼 답변 대기중</SelectItem>
+              <SelectItem value="기타" className="text-[12px]">기타</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {reconfirmReason === "기타" && (
+            <div>
+              <input
+                type="text"
+                value={customReconfirmReason}
+                onChange={(e) => setCustomReconfirmReason(e.target.value)}
+                className="w-full h-8 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[12px]"
+                placeholder="기타 사유를 입력하세요"
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
@@ -555,6 +622,8 @@ export default function ScheduleModal({
                     </PopoverContent>
                   </Popover>
                 </div>
+
+                {schedule && statusFields}
                 {/* 플랫폼 */}
                 <div>
                   <label className="block text-[12px] font-bold text-neutral-500 mb-2">플랫폼</label>
@@ -722,7 +791,7 @@ export default function ScheduleModal({
                 {formData.reviewType === "방문형" && (
                   <div className="flex gap-2.5 flex-wrap">
                     <div className="flex-1 min-w-[180px]">
-                      <label className="block text-sm font-bold text-neutral-500 mb-2">방문일</label>
+                      <label className="block text-[12px] font-bold text-neutral-500 mb-2">방문일</label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[13px] text-left cursor-pointer">
@@ -745,7 +814,7 @@ export default function ScheduleModal({
                       </Popover>
                     </div>
                     <div className="flex-1 min-w-[180px]">
-                      <label className="block text-sm font-bold text-neutral-500 mb-2">방문시간</label>
+                      <label className="block text-[12px] font-bold text-neutral-500 mb-2">방문시간</label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[13px] text-left cursor-pointer">
@@ -851,71 +920,8 @@ export default function ScheduleModal({
                   </button>
                 </div>
 
-                {/* 진행 상태 */}
-                <div className="mb-4">
-                  <label className="block text-[12px] font-bold text-neutral-500 mb-2">진행 상태</label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => {
-                      setFormData({ ...formData, status: value as Schedule["status"] })
-                      // 재확인이 아닌 상태로 변경하면 재확인 사유 초기화
-                      if (value !== "재확인") {
-                        setReconfirmReason("")
-                        setCustomReconfirmReason("")
-                      }
-                    }}
-                  >
-                    <SelectTrigger size="sm" className="w-full bg-[#F7F7F8] border-none rounded-xl text-[12px]">
-                      <SelectValue placeholder="선택하세요" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getStatusOptions(formData.reviewType || "제공형").map((statusOption) => (
-                        <SelectItem key={statusOption} value={statusOption} className="text-[12px]">
-                          {statusOption}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* 재확인 사유 */}
-                {formData.status === "재확인" && (
-                  <div className="space-y-2">
-                    <label className="block text-sm font-bold text-neutral-500">재확인 사유</label>
-                    <Select
-                      value={reconfirmReason}
-                      onValueChange={(value) => {
-                        setReconfirmReason(value)
-                        if (value !== "기타") {
-                          setCustomReconfirmReason("")
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-full h-8 bg-[#F7F7F8] border-none rounded-xl text-[13px]">
-                        <SelectValue placeholder="사유를 선택하세요" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="입금 확인 필요" className="text-[15px]">입금 확인 필요</SelectItem>
-                        <SelectItem value="리워드 미지급" className="text-[15px]">리워드 미지급</SelectItem>
-                        <SelectItem value="가이드 내용 불분명" className="text-[15px]">가이드 내용 불분명</SelectItem>
-                        <SelectItem value="플랫폼 답변 대기중" className="text-[15px]">플랫폼 답변 대기중</SelectItem>
-                        <SelectItem value="기타" className="text-[15px]">기타</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    {reconfirmReason === "기타" && (
-                      <div>
-                        <input
-                          type="text"
-                          value={customReconfirmReason}
-                          onChange={(e) => setCustomReconfirmReason(e.target.value)}
-                          className="w-full h-8 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
-                          placeholder="기타 사유를 입력하세요"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* 진행 상태 (신규 등록 시 기존 위치 유지) */}
+                {!schedule && statusFields}
 
                 {/* 자산 관리 */}
                 <div>
