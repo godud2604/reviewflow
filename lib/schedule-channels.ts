@@ -14,10 +14,16 @@ export const SCHEDULE_CHANNEL_OPTIONS: ScheduleChannel[] = [
 
 export const DEFAULT_SCHEDULE_CHANNEL: ScheduleChannel = SCHEDULE_CHANNEL_OPTIONS[0]
 
+interface SanitizeChannelOptions {
+  fallback?: ScheduleChannel | null
+  allowEmpty?: boolean
+}
+
 export function sanitizeChannels(
   channels: Array<string | ScheduleChannel> | undefined | null,
-  fallback: ScheduleChannel = DEFAULT_SCHEDULE_CHANNEL,
+  options: SanitizeChannelOptions = {},
 ): ScheduleChannel[] {
+  const { fallback = DEFAULT_SCHEDULE_CHANNEL, allowEmpty = false } = options
   const seen = new Set<ScheduleChannel>()
   const allowed = new Set(SCHEDULE_CHANNEL_OPTIONS)
 
@@ -28,29 +34,35 @@ export function sanitizeChannels(
     }
   }
 
-  if (seen.size === 0) return [fallback]
+  if (seen.size === 0) {
+    if (allowEmpty) return []
+    return fallback ? [fallback] : []
+  }
   return Array.from(seen)
 }
 
 export function parseStoredChannels(value: string | null): ScheduleChannel[] {
-  if (!value) return [DEFAULT_SCHEDULE_CHANNEL]
+  if (value === null) return [DEFAULT_SCHEDULE_CHANNEL]
+
+  const trimmed = value.trim()
+  if (trimmed === "") return []
 
   // 우선 JSON 배열로 저장된 경우 처리
-  if (value.startsWith("[") && value.endsWith("]")) {
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
     try {
-      const parsed = JSON.parse(value)
+      const parsed = JSON.parse(trimmed)
       if (Array.isArray(parsed)) {
-        return sanitizeChannels(parsed)
+        return sanitizeChannels(parsed, { allowEmpty: true })
       }
     } catch {
       // fall through to comma split
     }
   }
 
-  const parts = value.split(",").map((item) => item.trim())
-  return sanitizeChannels(parts)
+  const parts = trimmed.split(",").map((item) => item.trim())
+  return sanitizeChannels(parts, { allowEmpty: true })
 }
 
 export function stringifyChannels(channels: ScheduleChannel[]): string {
-  return sanitizeChannels(channels).join(", ")
+  return sanitizeChannels(channels, { allowEmpty: true }).join(", ")
 }

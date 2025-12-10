@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { useUserProfile } from "@/hooks/use-user-profile"
 import { uploadGuideFiles, downloadGuideFile, deleteGuideFile } from "@/lib/storage"
-import { DEFAULT_SCHEDULE_CHANNEL, SCHEDULE_CHANNEL_OPTIONS, sanitizeChannels } from "@/lib/schedule-channels"
+import { SCHEDULE_CHANNEL_OPTIONS, sanitizeChannels } from "@/lib/schedule-channels"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { X, Copy, Download, Loader2 } from "lucide-react"
@@ -85,7 +85,7 @@ const createEmptyFormData = (): Partial<Schedule> => ({
   status: "선정됨",
   platform: "",
   reviewType: "제공형",
-  channel: [DEFAULT_SCHEDULE_CHANNEL],
+  channel: [],
   category: "맛집/식품",
   visit: "",
   visitTime: "",
@@ -250,7 +250,7 @@ export default function ScheduleModal({
       updatedFormData.reconfirmReason = ""
     }
 
-    const selectedChannels = sanitizeChannels(updatedFormData.channel || [])
+    const selectedChannels = sanitizeChannels(updatedFormData.channel || [], { allowEmpty: true })
 
     // 대기 중인 파일이 있으면 업로드
     let finalGuideFiles = updatedFormData.guideFiles || []
