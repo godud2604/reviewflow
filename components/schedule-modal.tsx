@@ -17,6 +17,8 @@ import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { X, Copy, Download, Loader2 } from "lucide-react"
 
+const getTodayInKST = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date())
+
 const CATEGORY_OPTIONS: Array<{ value: Schedule["category"]; label: string; description: string; icon: string }> = [
   { value: "맛집/식품", label: "맛집/식품", description: "맛집, 식품, 음료", icon: "🍽️" },
   { value: "뷰티", label: "뷰티", description: "화장품, 스킨/바디, 향수", icon: "💄" },
@@ -579,7 +581,7 @@ export default function ScheduleModal({
           )}
           
           {/* 마감 초과 경고 */}
-          {formData.dead && formData.dead < new Date().toISOString().split("T")[0] && formData.status !== "완료" && (
+          {formData.dead && formData.dead < getTodayInKST() && formData.status !== "완료" && (
             <div className="mb-4 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
               <span className="text-[12px]">⚠️</span>
               <span className="text-[12px] font-bold text-red-700">마감 기한 초과된 체험단입니다</span>

@@ -2,6 +2,8 @@
 
 import type { Schedule } from "@/types"
 
+const getTodayInKST = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date())
+
 export default function AllSchedulesPage({
   schedules,
   onScheduleClick,
@@ -11,7 +13,7 @@ export default function AllSchedulesPage({
   onScheduleClick: (id: number) => void
   onBack: () => void
 }) {
-  const today = new Date().toISOString().split("T")[0]
+  const today = getTodayInKST()
   
   // Sort by deadline only
   const sortedSchedules = [...schedules].sort((a, b) => {

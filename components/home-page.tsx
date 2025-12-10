@@ -3,6 +3,14 @@
 import { useState } from "react"
 import type { Schedule } from "@/types"
 
+const formatDateStringKST = (date: Date) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(date)
+
+const parseDateString = (dateStr: string) => {
+  const [y, m, d] = dateStr.split("-").map(Number)
+  return new Date(y, (m || 1) - 1, d || 1)
+}
+
 export default function HomePage({
   schedules,
   onScheduleClick,
@@ -14,14 +22,7 @@ export default function HomePage({
   onShowAllClick: () => void
   onCompleteClick?: (id: number) => void
 }) {
-  const getLocalDateString = (date: Date) => {
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, "0")
-    const d = String(date.getDate()).padStart(2, "0")
-    return `${y}-${m}-${d}`
-  }
-
-  const today = getLocalDateString(new Date())
+  const today = formatDateStringKST(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(today)
   const [selectedFilter, setSelectedFilter] = useState<"all" | "active" | "reconfirm" | "overdue" | "noDeadline">("all")
   const [floatingPanel, setFloatingPanel] = useState<"none" | "noDeadline" | "reconfirm">("none")
@@ -273,25 +274,63 @@ function CalendarSection({
 }) {
   const weekDays = ["일", "월", "화", "수", "목", "금", "토"]
 
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const todayDate = new Date()
+  const [currentDate, setCurrentDate] = useState(() => parseDateString(today))
+  const todayDate = parseDateString(today)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
-  const scheduleByDate = schedules.reduce<Record<string, { count: number; hasDeadline: boolean; overdue: boolean; hasCompleted: boolean }>>((acc, schedule) => {
-    if (!schedule.dead) return acc
-    const info = acc[schedule.dead] ?? { count: 0, hasDeadline: false, overdue: false, hasCompleted: false }
+  const scheduleByDate = schedules.reduce<
+    Record<
+      string,
+      {
+        deadlineCount: number
+        visitCount: number
+        hasDeadline: boolean
+        hasVisit: boolean
+        overdue: boolean
+        hasCompleted: boolean
+      }
+    >
+  >((acc, schedule) => {
+    const ensureDayInfo = (key: string) => {
+      if (!acc[key]) {
+        acc[key] = {
+          deadlineCount: 0,
+          visitCount: 0,
+          hasDeadline: false,
+          hasVisit: false,
+          overdue: false,
+          hasCompleted: false,
+        }
+      }
+      return acc[key]
+    }
+
     const isCompleted = schedule.status === "완료"
-    if (isCompleted) {
-      info.hasCompleted = true
-    } else {
-      info.count += 1
+
+    if (schedule.dead) {
+      const info = ensureDayInfo(schedule.dead)
       info.hasDeadline = true
-      if (schedule.dead < today) {
+      if (isCompleted) {
+        info.hasCompleted = true
+      } else if (schedule.dead < today) {
+        info.deadlineCount += 1
         info.overdue = true
+      } else {
+        info.deadlineCount += 1
       }
     }
-    acc[schedule.dead] = info
+
+    if (schedule.visit) {
+      const info = ensureDayInfo(schedule.visit)
+      info.hasVisit = true
+      if (isCompleted) {
+        info.hasCompleted = true
+      } else {
+        info.visitCount += 1
+      }
+    }
+
     return acc
   }, {})
 
@@ -365,7 +404,7 @@ function CalendarSection({
           const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
           const isSelected = selectedDate === dateStr
           const dayInfo = scheduleByDate[dateStr]
-          const hasSchedule = !!dayInfo && (dayInfo.count > 0 || dayInfo.hasCompleted)
+          const hasSchedule = !!dayInfo && (dayInfo.deadlineCount > 0 || dayInfo.visitCount > 0 || dayInfo.hasCompleted)
           const isTodayDate = isToday(day)
           const indicatorType = dayInfo?.overdue
             ? "overdue"
@@ -378,8 +417,8 @@ function CalendarSection({
             indicatorType === "overdue"
               ? "text-orange-800 bg-white shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.65)]"
               : indicatorType === "deadline"
-                ? "text-orange-700 bg-white shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.6)]"
-                : "text-neutral-800 bg-white"
+              ? "text-orange-700 bg-white shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.6)]"
+              : "text-neutral-800 bg-white"
           const hoverable = !isSelected && !isTodayDate && hasSchedule
           return (
             <button
@@ -396,18 +435,16 @@ function CalendarSection({
                 ${!isSelected && !isToday(day) && dayOfWeek === 6 ? "text-blue-500" : ""}`}
             >
               <span className="leading-none text-current">{day}</span>
-              {hasSchedule && dayInfo?.count > 0 && (
+              {hasSchedule && dayInfo?.hasDeadline && (
                 <>
                   <span
-                    className={`absolute -bottom-0.5 -right-0.5 flex h-4 text-[10px] min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] font-extrabold leading-none shadow-[0_4px_10px_rgba(0,0,0,0.12)] ${
-                      indicatorType === "overdue"
-                        ? "bg-white text-orange-600"
-                      : indicatorType === "deadline"
-                          ? "bg-white text-orange-600"
-                          : "bg-white text-neutral-700"
+                    className={`absolute -bottom-0.5 -right-0.5 flex h-4 text-[10px] min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] font-extrabold leading-none ${
+                      dayInfo.deadlineCount > 0
+                        ? "shadow-[0_4px_10px_rgba(0,0,0,0.12)] bg-white text-orange-600"
+                        : "shadow-none bg-transparent text-orange-600"
                     }`}
                   >
-                    {dayInfo.count}
+                    {dayInfo.deadlineCount > 0 ? dayInfo.deadlineCount : ""}
                   </span>
                   {indicatorType === "overdue" ? (
                     <span className="absolute -bottom-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-[0_6px_14px_rgba(0,0,0,0.12)] text-[10px]">
@@ -416,7 +453,15 @@ function CalendarSection({
                   ) : null}
                 </>
               )}
-              {hasSchedule && dayInfo?.count === 0 && dayInfo?.hasCompleted && (
+              {hasSchedule && dayInfo?.hasVisit && (
+                <span
+                  className={`absolute ${dayInfo?.overdue ? "top-0 left-0" : "-bottom-0.5 -left-0.5"} flex h-4 min-w-[16px] items-center justify-center gap-0.5 rounded-full px-1 text-[9px] font-extrabold leading-none shadow-[0_4px_10px_rgba(0,0,0,0.12)] bg-sky-50 text-sky-700`}
+                >
+                  📍
+                  {dayInfo.visitCount > 1 ? dayInfo.visitCount : ""}
+                </span>
+              )}
+              {hasSchedule && dayInfo?.deadlineCount === 0 && dayInfo?.visitCount === 0 && dayInfo?.hasCompleted && (
                 <span className="absolute -bottom-[1px] -right-[-3px] h-2 w-2 rounded-full bg-orange-400 shadow-[0_4px_10px_rgba(0,0,0,0.12)]" />
               )}
             </button>
