@@ -58,7 +58,7 @@ const COMMON_STATUSES: Schedule["status"][] = ["선정됨", "완료", "재확인
 
 const STATUS_BY_REVIEW_TYPE: Record<Schedule["reviewType"], Schedule["status"][]> = {
   방문형: ["방문일 예약 완료", "방문"],
-  구매평: ["구매 완료"],
+  구매형: ["구매 완료"],
   제공형: ["제품 배송 완료"],
   기자단: [],
   "미션/인증": [],
@@ -701,7 +701,7 @@ export default function ScheduleModal({
                 <div className="mb-4">
                   <label className="block text-[12px] font-bold text-neutral-500 mb-2">체험단 유형</label>
                   <div className="flex gap-2 flex-wrap">
-                    {["제공형", "구매평", "기자단", "미션/인증", "방문형", "기타"].map(
+                    {["제공형", "구매형", "기자단", "미션/인증", "방문형", "기타"].map(
                       (type) => (
                         <div
                           key={type}
@@ -1026,7 +1026,7 @@ export default function ScheduleModal({
                   </div>
                 </div>
 
-                {["구매평", "미션/인증"].includes(formData.reviewType || "") && (
+                {["구매형", "미션/인증"].includes(formData.reviewType || "") && (
                   <div>
                     <label className="block text-[12px] font-bold text-neutral-500 mb-2">구매할 링크</label>
                     <div className="relative">
