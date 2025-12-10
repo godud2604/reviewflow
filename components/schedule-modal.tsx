@@ -240,15 +240,32 @@ export default function ScheduleModal({
       try {
         const scheduleId = schedule?.id || `new_${Date.now()}`
         const uploadedFiles = await uploadGuideFiles(user.id, scheduleId, pendingFiles)
+        if (uploadedFiles.length !== pendingFiles.length) {
+          const message = "일부 파일이 업로드되지 않았습니다. 다시 시도해주세요."
+          toast({
+            title: message,
+            variant: "destructive",
+            duration: 3000,
+          })
+          if (typeof window !== "undefined") {
+            alert(message)
+          }
+          setIsUploading(false)
+          return
+        }
         finalGuideFiles = [...finalGuideFiles, ...uploadedFiles]
         setPendingFiles([])
       } catch (error) {
         console.error('파일 업로드 실패:', error)
+        const message = "파일 업로드에 실패했습니다. 다시 시도해주세요."
         toast({
-          title: "파일 업로드에 실패했습니다.",
+          title: message,
           variant: "destructive",
           duration: 2000,
         })
+        if (typeof window !== "undefined") {
+          alert(message)
+        }
         setIsUploading(false)
         return
       }
