@@ -99,27 +99,8 @@ export default function HomePage({
 
       {/* Summary / Filters */}
       {showStatusHighlights && (
-        <div className="space-y-1 mt-2 mb-3.5">
-          <div className="flex gap-2.5 mt-1">
-            {overdueCount > 0 && (
-              <button
-                onClick={() => handleFilterClick("overdue")}
-                className={`flex-1 flex items-center justify-between rounded-2xl px-4 py-3 shadow-sm transition-all cursor-pointer ${
-                  selectedFilter === "overdue"
-                    ? "bg-red-50 border-red-200 text-red-700"
-                    : "bg-white border-neutral-200 text-neutral-800 hover:border-red-200 hover:text-red-700"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">⏰</span>
-                  <div className="text-left">
-                    <p className="text-[12px] font-bold leading-tight">마감초과</p>
-                    <p className="text-[11px] text-neutral-500 font-medium leading-tight">즉시 확인 필요</p>
-                  </div>
-                </div>
-                <span className="text-base font-bold">{overdueCount}건</span>
-              </button>
-            )}
+        <div className="space-y-1 mb-3.5 mt-2">
+          <div className="flex gap-2.5">
             {reconfirmCount > 0 && (
               <button
                 onClick={() => handleFilterClick("reconfirm")}
