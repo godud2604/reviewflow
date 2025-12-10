@@ -23,10 +23,13 @@ export default function HomePage({
 
   const today = getLocalDateString(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(today)
-  const [selectedFilter, setSelectedFilter] = useState<"all" | "active" | "reconfirm" | "overdue">("all")
+  const [selectedFilter, setSelectedFilter] = useState<"all" | "active" | "reconfirm" | "overdue" | "noDeadline">("all")
+  const [floatingPanel, setFloatingPanel] = useState<"none" | "noDeadline" | "reconfirm">("none")
   const activeSchedules = schedules.filter((s) => s.status !== "완료" && s.status !== "취소")
   const activeCount = activeSchedules.length
-  const reconfirmCount = schedules.filter((s) => s.status === "재확인").length
+  const reconfirmSchedules = schedules.filter((s) => s.status === "재확인")
+  const reconfirmCount = reconfirmSchedules.length
+  const noDeadlineSchedules = schedules.filter((s) => !s.dead)
   const overdueCount = schedules.filter((s) => s.dead && s.dead < today && s.status !== "완료" && s.status !== "취소").length
   const showStatusHighlights = overdueCount > 0 || reconfirmCount > 0
 
@@ -41,6 +44,8 @@ export default function HomePage({
     filteredSchedules = schedules.filter((s) => s.status === "재확인")
   } else if (selectedFilter === "overdue") {
     filteredSchedules = schedules.filter((s) => s.dead && s.dead < today && s.status !== "완료" && s.status !== "취소")
+  } else if (selectedFilter === "noDeadline") {
+    filteredSchedules = schedules.filter((s) => !s.dead)
   }
 
   // Sort schedules: overdue/reconfirm first, then by deadline (closest first)
@@ -79,7 +84,7 @@ export default function HomePage({
     }
   }
 
-  const handleFilterClick = (filter: "active" | "reconfirm" | "overdue") => {
+  const handleFilterClick = (filter: "active" | "reconfirm" | "overdue" | "noDeadline") => {
     if (selectedFilter === filter) {
       setSelectedFilter("all")
     } else {
@@ -96,34 +101,6 @@ export default function HomePage({
 
   return (
     <div className={containerClassName}>
-
-      {/* Summary / Filters */}
-      {showStatusHighlights && (
-        <div className="space-y-1 mb-3.5 mt-2">
-          <div className="flex gap-2.5">
-            {reconfirmCount > 0 && (
-              <button
-                onClick={() => handleFilterClick("reconfirm")}
-                className={`flex-1 flex items-center justify-between rounded-2xl px-4 py-3 shadow-sm transition-all cursor-pointer ${
-                  selectedFilter === "reconfirm"
-                    ? "bg-amber-50 border-amber-200 text-amber-700"
-                    : "bg-white border-neutral-200 text-neutral-800 hover:border-amber-200 hover:text-amber-700"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">⚠️</span>
-                  <div className="text-left">
-                    <p className="text-[12px] font-bold leading-tight">재확인</p>
-                    <p className="text-[11px] text-neutral-500 font-medium leading-tight">상세 일정 점검</p>
-                  </div>
-                </div>
-                <span className="text-base font-extrabold">{reconfirmCount}건</span>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Calendar */}
       <CalendarSection
         schedules={schedules}
@@ -143,6 +120,8 @@ export default function HomePage({
                 ? "재확인 일정"
                 : selectedFilter === "overdue"
                   ? "마감 초과 일정"
+                  : selectedFilter === "noDeadline"
+                    ? "마감일 미정"
                   : "진행 중인 체험단"}
             <span className="ml-1 text-sm font-semibold text-orange-600">
               {selectedDate || selectedFilter !== "all" ? filteredSchedules.length : activeCount}건
@@ -180,6 +159,101 @@ export default function HomePage({
           </div>
         )}
       </div>
+
+      {/* Floating quick filters */}
+      <div
+        className="fixed z-40 flex flex-col gap-3"
+        style={{
+          right: "calc((100vw - min(100vw, 390px)) / 2 + 20px)",
+          bottom: "calc((100vh - min(100vh, 844px)) / 2 + 100px)",
+        }}
+      >
+        {reconfirmCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setFloatingPanel(floatingPanel === "reconfirm" ? "none" : "reconfirm")}
+            className="flex items-center gap-2 rounded-full bg-white border border-amber-300 shadow-[0_14px_100px_rgba(245,158,11,0.18)] px-2 py-2 active:scale-[0.98] transition-all ring-2 ring-amber-300/70"
+          >
+            <span className="text-base">⚠️</span>
+            <div className="text-left leading-tight">
+              <div className="text-[11px] font-bold text-amber-900">재확인</div>
+              <div className="text-[10px] font-semibold text-amber-800">목록 보기</div>
+            </div>
+            <span className="ml-4 rounded-full bg-orange-200 px-2 py-0.5 text-[11px] font-extrabold text-amber-800 shadow-sm">
+              {reconfirmCount}
+            </span>
+          </button>
+        )}
+        {noDeadlineSchedules.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setFloatingPanel(floatingPanel === "noDeadline" ? "none" : "noDeadline")}
+            className="flex items-center gap-2 rounded-full bg-white from-orange-200/90 to-amber-200/90 border border-orange-300 shadow-[0_14px_100px_rgba(249,115,22,0.18)] px-2 py-2 active:scale-[0.98] transition-all ring-2 ring-orange-300/70"
+          >
+            <span className="text-base">📌</span>
+            <div className="text-left leading-tight">
+              <div className="text-[11px] font-bold text-orange-900">마감일 미정</div>
+              <div className="text-[10px] font-semibold text-orange-800">목록 보기</div>
+            </div>
+            <span className="ml-1 rounded-full bg-orange-200 px-2 py-0.5 text-[11px] font-extrabold text-orange-800 shadow-sm">
+              {noDeadlineSchedules.length}
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* Slide-up panel */}
+      {floatingPanel !== "none" && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/35"
+            onClick={() => setFloatingPanel("none")}
+          />
+          <div className="fixed inset-x-0 bottom-0 z-50 max-h-[70vh] rounded-t-3xl bg-white shadow-2xl border-t border-neutral-200">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">
+                  {floatingPanel === "reconfirm" ? "⚠️" : "📌"}
+                </span>
+                <div className="leading-tight">
+                  <div className="text-[13px] font-bold text-neutral-900">
+                    {floatingPanel === "reconfirm" ? "재확인 체험단" : "마감일 미정"}
+                  </div>
+                  <div className="text-[11px] text-neutral-500">
+                    {floatingPanel === "reconfirm"
+                      ? "확인이 필요한 일정 목록"
+                      : "캘린더에 없는 일정 목록"}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFloatingPanel("none")}
+                className="text-[12px] font-semibold text-neutral-500 hover:text-neutral-700"
+              >
+                닫기
+              </button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto px-4 py-3 space-y-3">
+              {(floatingPanel === "reconfirm" ? reconfirmSchedules : noDeadlineSchedules).map((schedule) => (
+                <ScheduleItem
+                  key={schedule.id}
+                  schedule={schedule}
+                  onClick={() => {
+                    onScheduleClick(schedule.id)
+                    setFloatingPanel("none")
+                  }}
+                  onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
+                  today={today}
+                />
+              ))}
+              {(floatingPanel === "reconfirm" ? reconfirmSchedules : noDeadlineSchedules).length === 0 && (
+                <div className="text-[12px] text-neutral-500 text-center py-4">표시할 일정이 없습니다.</div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -244,7 +318,7 @@ function CalendarSection({
   }
 
   return (
-    <div className="rounded-[24px] p-4 shadow-sm bg-gradient-to-b from-white to-neutral-100">
+    <div className="rounded-[24px] p-4 shadow-sm bg-gradient-to-b from-white to-neutral-100 mt-2">
       <div className="relative flex items-center justify-center mb-3 gap-2">
         <div className="flex items-center gap-3">
           <button
