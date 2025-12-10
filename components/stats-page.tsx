@@ -180,7 +180,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.22),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.15),transparent_28%)]" />
           <div className="relative flex items-start justify-between mb-5">
             <div>
-              <div className="text-[14px] font-semibold text-white uppercase flex items-center gap-1">
+              <div className="text-[14px] font-semibold text-white uppercase flex items-center gap-1 mb-1">
                 이번 달 경제적 가치 <span role="img" aria-label="money bag">💰</span>
               </div>
               <div className="text-[36px] font-black leading-[1.05] text-white drop-shadow-[0_14px_36px_rgba(255,120,64,0.28)] tracking-tight">
