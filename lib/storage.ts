@@ -33,7 +33,7 @@ export async function uploadGuideFile(
   
   if (error) {
     console.error('파일 업로드 오류:', error)
-    return null
+    throw new Error(error.message || '파일 업로드 오류가 발생했습니다.')
   }
   
   return {
@@ -55,8 +55,8 @@ export async function uploadGuideFiles(
   const results = await Promise.all(
     files.map(file => uploadGuideFile(userId, scheduleId, file))
   )
-  
-  return results.filter((r): r is UploadedFile => r !== null)
+
+  return results
 }
 
 /**
