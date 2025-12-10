@@ -986,7 +986,7 @@ export default function ScheduleModal({
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-sm font-bold text-neutral-900">추가사항</span>
-                <span className="text-xs text-neutral-400">기록하고 싶을 때만 적어주세요</span>
+                <span className="text-xs text-neutral-400 translate-y-[1px]">기록하고 싶을 때 적어주세요</span>
               </div>
               <div className="space-y-4">
                 {/* 링크 */}

@@ -314,7 +314,8 @@ function CalendarSection({
       const info = ensureDayInfo(schedule.visit)
       info.hasVisit = true
       info.visitCount += 1
-      if (isCompleted) {
+      // Only mark completed on visit date when there's no separate deadline, to avoid showing the completed dot on visit days
+      if (isCompleted && !schedule.dead) {
         info.hasCompleted = true
       }
     }
@@ -408,6 +409,7 @@ function CalendarSection({
               ? "text-orange-700 bg-white shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.6)]"
               : "text-neutral-800 bg-white"
           const hoverable = !isSelected && !isTodayDate && hasSchedule
+          console.log(dateStr, "hasSchedule :", hasSchedule, "dayInfo :", dayInfo)
           return (
             <button
               key={day}
@@ -449,7 +451,7 @@ function CalendarSection({
                   {dayInfo.visitCount > 1 ? dayInfo.visitCount : ""}
                 </span>
               )}
-              {hasSchedule && dayInfo?.hasCompleted && !dayInfo?.hasVisit && !dayInfo?.hasDeadline && (
+              {hasSchedule && dayInfo?.hasCompleted && !dayInfo?.hasDeadline && (
                 <span className="absolute -bottom-[1px] -right-[-3px] h-2 w-2 rounded-full bg-orange-400 shadow-[0_4px_10px_rgba(0,0,0,0.12)]" />
               )}
             </button>
