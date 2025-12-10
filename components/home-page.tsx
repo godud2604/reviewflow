@@ -7,10 +7,12 @@ export default function HomePage({
   schedules,
   onScheduleClick,
   onShowAllClick,
+  onCompleteClick,
 }: {
   schedules: Schedule[]
   onScheduleClick: (id: number) => void
   onShowAllClick: () => void
+  onCompleteClick?: (id: number) => void
 }) {
   const getLocalDateString = (date: Date) => {
     const y = date.getFullYear()
@@ -178,7 +180,13 @@ export default function HomePage({
       <div className="space-y-3">
         {displayedSchedules.length > 0 ? (
           displayedSchedules.map((schedule) => (
-            <ScheduleItem key={schedule.id} schedule={schedule} onClick={() => onScheduleClick(schedule.id)} today={today} />
+            <ScheduleItem
+              key={schedule.id}
+              schedule={schedule}
+              onClick={() => onScheduleClick(schedule.id)}
+              onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
+              today={today}
+            />
           ))
         ) : (
           <div className="bg-white rounded-3xl p-8 text-center shadow-sm shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
@@ -350,7 +358,17 @@ function CalendarSection({
   )
 }
 
-function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClick: () => void; today: string }) {
+function ScheduleItem({
+  schedule,
+  onClick,
+  onCompleteClick,
+  today,
+}: {
+  schedule: Schedule
+  onClick: () => void
+  onCompleteClick?: () => void
+  today: string
+}) {
   const icons: Record<Schedule["category"], string> = {
     맛집: "🍝",
     식품: "🥗",
@@ -389,6 +407,9 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
   const status = statusConfig[schedule.status] || { class: "bg-neutral-100 text-neutral-600", text: "미정" }
   const isOverdue = schedule.dead && schedule.dead < today && schedule.status !== "완료" && schedule.status !== "취소"
   const isReconfirm = schedule.status === "재확인"
+  const isCompleted = schedule.status === "완료"
+  const isCancelled = schedule.status === "취소"
+  const canComplete = !!onCompleteClick && !isCompleted && !isCancelled
 
   return (
     <div
@@ -397,12 +418,40 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
       }`}
       onClick={onClick}
     >
-      <div className="text-2xl mr-4 w-[34px] h-[34px] rounded-2xl bg-neutral-50 flex items-center justify-center text-center shadow-inner">
-        {icons[schedule.category] || "📦"}
+      <div className="mr-4 flex flex-col items-center gap-1">
+        <button
+          type="button"
+          aria-label="일정 완료 처리"
+          disabled={!canComplete}
+          className={`w-5 h-5 flex items-center justify-center rounded-full border-2 transition-colors shadow-sm ${
+            isCompleted
+              ? "bg-orange-400 border-orange-400 text-white"
+              : canComplete
+                ? "bg-white border-orange-200 text-orange-300 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-500"
+                : "bg-neutral-50 border-neutral-200 text-neutral-300"
+          } ${canComplete ? "cursor-pointer" : "cursor-default"}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            if (canComplete) {
+              onCompleteClick?.()
+            }
+          }}
+        >
+          <span className="text-[13px] font-black leading-none">✓</span>
+        </button>
+        <span
+          className={`mt-1 text-[10.5px] font-semibold leading-none ${
+            isCompleted ? "text-orange-600" : canComplete ? "text-orange-300" : "text-neutral-300"
+          }`}
+        >
+          완료
+        </span>
       </div>
+
       <div className="flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="text-[15px] font-bold text-[#0F172A] flex items-center gap-1.5">
+            <span className="text-[18px]">{icons[schedule.category] || "📦"}</span>
             {schedule.title}
             {schedule.memo && (
               <span className="text-sm" title="메모 있음">
@@ -415,7 +464,7 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
           </div>
         </div>
         <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1">
-          <span className={`px-1.5 py-0.5 rounded-lg font-semibold text-[11px] translate-y-[-0.5px] inline-flex items-center gap-1 ${status.class}`}>{status.text}</span>
+          <span className={`px-1.5 py-0.5 rounded-lg font-semibold text-[10.5px] translate-y-[-0.5px] inline-flex items-center gap-1 ${status.class}`}>{status.text}</span>
           <span className="h-[14px] w-px bg-neutral-200" />
           <span className="font-medium text-neutral-600">{dDate}</span>
         </div>

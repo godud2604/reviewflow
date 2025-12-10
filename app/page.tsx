@@ -135,6 +135,10 @@ function PageContent() {
     await updateSchedule(id, { guideFiles: files })
   }
 
+  const handleCompleteSchedule = async (id: number) => {
+    await updateSchedule(id, { status: "완료" })
+  }
+
   const handleAddTodo = async (text: string) => {
     await addTodo(text)
   }
@@ -264,6 +268,7 @@ function PageContent() {
                 schedules={schedules}
                 onScheduleClick={handleOpenScheduleModal}
                 onShowAllClick={handleShowAllSchedules}
+                onCompleteClick={handleCompleteSchedule}
               />
             )}
 
