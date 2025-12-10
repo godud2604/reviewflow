@@ -193,25 +193,6 @@ export default function ScheduleModal({
       formData.reconfirmReason = ""
     }
 
-    if (formData.reviewType === "방문형") {
-      if (!formData.visit) {
-        toast({
-          title: "방문일을 선택해주세요.",
-          variant: "destructive",
-          duration: 2000,
-        })
-        return
-      }
-      if (!formData.visitTime) {
-        toast({
-          title: "방문시간을 입력해주세요.",
-          variant: "destructive",
-          duration: 2000,
-        })
-        return
-      }
-    }
-
     const selectedChannels = sanitizeChannels(formData.channel || [])
 
     // 대기 중인 파일이 있으면 업로드
