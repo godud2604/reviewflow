@@ -384,9 +384,6 @@ export default function ScheduleModal({
           
           <div className="space-y-8">
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm font-bold text-neutral-900">필수사항</span>
-              </div>
               <div className="space-y-4">
                 {/* 체험단명 */}
                 <div>
@@ -850,7 +847,7 @@ export default function ScheduleModal({
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-sm font-bold text-neutral-900">추가사항</span>
-                <span className="text-xs text-neutral-400">필요할 때만 적어주세요</span>
+                <span className="text-xs text-neutral-400">기록하고 싶을 때만 적어주세요</span>
               </div>
               <div className="space-y-6">
                 {/* 링크 */}

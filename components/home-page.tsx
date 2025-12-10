@@ -434,13 +434,11 @@ function ScheduleItem({
         >
           <span className="text-[13px] font-black leading-none">✓</span>
         </button>
-        <span
-          className={`mt-1 text-[10.5px] font-semibold leading-none ${
-            isCompleted ? "text-orange-600" : canComplete ? "text-orange-300" : "text-neutral-300"
-          }`}
-        >
-          완료
-        </span>
+        {canComplete && (
+          <span className="mt-1 text-[10.5px] font-semibold leading-none text-orange-600">
+            완료
+          </span>
+        )}
       </div>
 
       <div className="flex-1">
