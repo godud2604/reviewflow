@@ -6,11 +6,20 @@ import { useAuth } from './use-auth'
 import { useToast } from './use-toast'
 
 const DEFAULT_PLATFORMS = ['레뷰', '리뷰노트', '스타일씨', '리뷰플레이스']
+const DEFAULT_CATEGORIES = [
+  '맛집/식품',
+  '뷰티/바디케어',
+  '출산/육아',
+  '반려동물',
+  '생활/리빙',
+  '주방/가전',
+] as const
 
 interface UserProfile {
   id: string
   nickname: string | null
   platforms: string[]
+  categories: string[]
 }
 
 interface UseUserProfileOptions {
@@ -20,11 +29,13 @@ interface UseUserProfileOptions {
 interface UseUserProfileReturn {
   profile: UserProfile | null
   platforms: string[]
+  categories: string[]
   loading: boolean
   error: string | null
   addPlatform: (platform: string) => Promise<boolean>
   removePlatform: (platform: string) => Promise<boolean>
   updateNickname: (nickname: string) => Promise<boolean>
+  updateCategories: (categories: string[]) => Promise<boolean>
   refetch: () => Promise<void>
 }
 
@@ -78,7 +89,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
         if (fetchError.code === 'PGRST116') {
           const { data: newProfile, error: insertError } = await supabase
             .from('user_profiles')
-            .insert([{ id: userId, platforms: DEFAULT_PLATFORMS }])
+            .insert([{ id: userId, platforms: DEFAULT_PLATFORMS, categories: DEFAULT_CATEGORIES }])
             .select()
             .single()
           
@@ -90,6 +101,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
               id: newProfile.id,
               nickname: newProfile.nickname,
               platforms: newProfile.platforms || DEFAULT_PLATFORMS,
+              categories: newProfile.categories || [...DEFAULT_CATEGORIES],
             })
             hasFetchedRef.current = true
           }
@@ -102,6 +114,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
           id: data.id,
           nickname: data.nickname,
           platforms: data.platforms || DEFAULT_PLATFORMS,
+          categories: data.categories && data.categories.length > 0 ? data.categories : [...DEFAULT_CATEGORIES],
         })
         hasFetchedRef.current = true
       }
@@ -206,14 +219,41 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
     }
   }, [userId, profile, showError])
 
+  const updateCategories = useCallback(async (categories: string[]): Promise<boolean> => {
+    if (!userId || !profile) return false
+
+    const cleaned = Array.from(new Set(categories.map((c) => c.trim()).filter(Boolean)))
+
+    try {
+      const supabase = getSupabaseClient()
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ categories: cleaned })
+        .eq('id', userId)
+
+      if (updateError) {
+        showError(updateError.message)
+        return false
+      }
+
+      setProfile({ ...profile, categories: cleaned })
+      return true
+    } catch (err) {
+      showError(err instanceof Error ? err.message : '알 수 없는 오류')
+      return false
+    }
+  }, [userId, profile, showError])
+
   return {
     profile,
     platforms: profile?.platforms || [],
+    categories: profile?.categories || [],
     loading,
     error,
     addPlatform,
     removePlatform,
     updateNickname,
+    updateCategories,
     refetch: () => fetchProfile(true),
   }
 }
