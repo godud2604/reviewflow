@@ -432,7 +432,7 @@ export default function LandingPage() {
                 마감·방문·작성 일정이 흩어지지 않게,<br />
                 하루 단위로 해야 할 일만 깔끔하게 모아드립니다.
               </p>
-              <div className="mt-6 flex flex-col gap-3 text-left">
+              <div className="mt-6 flex flex-col gap-3 text-left ml-10 md:ml-0">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-2xl bg-orange-100 text-orange-700 font-extrabold flex items-center justify-center text-sm">일정</div>
                   <div>
@@ -441,7 +441,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-[#eef2ff] text-[#4f46e5] font-extrabold flex items-center justify-center text-sm">할 일</div>
+                  <div className="h-10 w-10 rounded-2xl bg-[#eef2ff] text-[#4f46e5] font-extrabold flex items-center justify-center text-sm">할일</div>
                   <div>
                     <p className="text-sm font-bold text-[#111827]">할 일 등록으로 놓치지 않기</p>
                     <p className="text-[12px] text-[#6B7280]">제품 주문하기, 사장님께 방문 문자 보내기 같은 할 일을 함께 적어 관리</p>
