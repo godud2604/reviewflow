@@ -13,6 +13,39 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
     const num = Number(value)
     return Number.isFinite(num) ? num : 0
   }
+
+  const today = new Date()
+  const currentYear = today.getFullYear()
+  const currentMonth = today.getMonth()
+
+  const parseDate = (value?: string) => {
+    if (!value) return null
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  const isCurrentMonthDate = (date: Date | null) => {
+    if (!date) return false
+    return date.getFullYear() === currentYear && date.getMonth() === currentMonth
+  }
+
+  const getScheduleDate = (schedule: Schedule) => parseDate(schedule.visit) || parseDate(schedule.dead)
+
+  const createCategoryMap = () => ({
+    "맛집/식품": 0,
+    "뷰티": 0,
+    "생활/리빙": 0,
+    "출산/육아": 0,
+    "주방/가전": 0,
+    반려동물: 0,
+    "여행/레저": 0,
+    "티켓/문화생활": 0,
+    "디지털/전자기기": 0,
+    "건강/헬스": 0,
+    "자동차/모빌리티": 0,
+    "문구/오피스": 0,
+    기타: 0,
+  })
   
   // Supabase 연동 - useExtraIncomes 훅 사용
   const { extraIncomes, createExtraIncome, deleteExtraIncome } = useExtraIncomes()
@@ -21,61 +54,47 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
     await createExtraIncome(income)
   }
 
-  // Calculate stats
-  let totalBen = 0,
-    totalInc = 0,
-    totalCost = 0
-  const typeCounts: Record<Schedule["category"], number> = {
-    "맛집/식품": 0,
-    "뷰티": 0,
-    "생활/리빙": 0,
-    "출산/육아": 0,
-    "주방/가전": 0,
-    반려동물: 0,
-    "여행/레저": 0,
-    "티켓/문화생활": 0,
-    "디지털/전자기기": 0,
-    "건강/헬스": 0,
-    "자동차/모빌리티": 0,
-    "문구/오피스": 0,
-    기타: 0,
-  }
-  const benefitByCategory: Record<Schedule["category"], number> = {
-    "맛집/식품": 0,
-    "뷰티": 0,
-    "생활/리빙": 0,
-    "출산/육아": 0,
-    "주방/가전": 0,
-    반려동물: 0,
-    "여행/레저": 0,
-    "티켓/문화생활": 0,
-    "디지털/전자기기": 0,
-    "건강/헬스": 0,
-    "자동차/모빌리티": 0,
-    "문구/오피스": 0,
-    기타: 0,
-  }
+  const currentMonthSchedules = useMemo(
+    () => schedules.filter((schedule) => isCurrentMonthDate(getScheduleDate(schedule))),
+    [schedules, currentYear, currentMonth]
+  )
 
-  schedules.forEach((s) => {
-    const benefit = toNumber(s.benefit)
-    const income = toNumber(s.income)
-    const cost = toNumber(s.cost)
+  const currentMonthExtraIncomes = useMemo(
+    () => extraIncomes.filter((income) => isCurrentMonthDate(parseDate(income.date))),
+    [extraIncomes, currentYear, currentMonth]
+  )
 
-    totalBen += benefit
-    totalInc += income
-    totalCost += cost
-    if (typeCounts[s.category] !== undefined) typeCounts[s.category]++
+  const { totalBen, totalInc, totalCost, benefitByCategory } = useMemo(() => {
+    const benefits = createCategoryMap()
+    let benefitTotal = 0
+    let incomeTotal = 0
+    let costTotal = 0
 
-    // Category contribution uses full schedule economic value (benefit + income - cost)
-    const categoryValue = benefit + income - cost
-    if (categoryValue !== 0) {
-      benefitByCategory[s.category] += categoryValue
+    currentMonthSchedules.forEach((s) => {
+      const benefit = toNumber(s.benefit)
+      const income = toNumber(s.income)
+      const cost = toNumber(s.cost)
+
+      benefitTotal += benefit
+      incomeTotal += income
+      costTotal += cost
+
+      // Category contribution uses full schedule economic value (benefit + income - cost)
+      const categoryValue = benefit + income - cost
+      if (categoryValue !== 0) {
+        benefits[s.category] += categoryValue
+      }
+    })
+
+    return {
+      totalBen: benefitTotal,
+      totalInc: incomeTotal,
+      totalCost: costTotal,
+      benefitByCategory: benefits,
     }
-  })
+  }, [currentMonthSchedules])
 
-  console.log('schedules', schedules)
-
-  const totalExtraIncome = extraIncomes.reduce((sum, item) => sum + toNumber(item.amount), 0)
+  const totalExtraIncome = currentMonthExtraIncomes.reduce((sum, item) => sum + toNumber(item.amount), 0)
   const scheduleValue = totalBen + totalInc - totalCost
   // 경제적 가치 = 스케줄(제공+수익-지출) + 부수입
   const econValue = scheduleValue + totalExtraIncome
@@ -135,12 +154,6 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
       return `${year}-${month}-01`
     }
 
-    const parseDate = (value?: string) => {
-      if (!value) return null
-      const d = new Date(value)
-      return Number.isNaN(d.getTime()) ? null : d
-    }
-
     const ensureEntry = (key: string) => {
       if (!monthMap.has(key)) {
         monthMap.set(key, {
@@ -156,7 +169,8 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
     }
 
     schedules.forEach((s) => {
-      const date = parseDate(s.visit) || parseDate(s.dead) || new Date()
+      const date = parseDate(s.visit) || parseDate(s.dead)
+      if (!date) return
       const key = toMonthKey(date)
       const entry = ensureEntry(key)
       entry.benefitTotal += toNumber(s.benefit)
@@ -165,7 +179,8 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
     })
 
     extraIncomes.forEach((income) => {
-      const date = parseDate(income.date) || new Date()
+      const date = parseDate(income.date)
+      if (!date) return
       const key = toMonthKey(date)
       const entry = ensureEntry(key)
       entry.extraIncomeTotal += toNumber(income.amount)
@@ -280,7 +295,8 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
                     <div className="text-[14px] font-bold text-[#2563eb]">{totalExtraIncome.toLocaleString()}원</div>
                   </div>
                   <div className="space-y-3 pl-2">
-                    {extraIncomes
+                    {currentMonthExtraIncomes
+                      .slice()
                       .sort((a, b) => b.amount - a.amount)
                       .map((income) => {
                         const percentage = Math.round((income.amount / totalExtraIncome) * 100)
@@ -333,8 +349,8 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
       <IncomeHistoryModal
         isOpen={showHistoryModal}
         onClose={() => setShowHistoryModal(false)}
-        schedules={schedules}
-        extraIncomes={extraIncomes}
+        schedules={currentMonthSchedules}
+        extraIncomes={currentMonthExtraIncomes}
         onDeleteExtraIncome={deleteExtraIncome}
       />
     </>

@@ -946,36 +946,45 @@ export default function ScheduleModal({
 
                 {/* 자산 관리 */}
                 <div>
-                  <label className="block text-[12px] font-bold text-neutral-500 mb-2">자산 관리</label>
-                  <div className="bg-neutral-50 border border-neutral-200 rounded-2xl px-2 py-3 flex gap-2.5">
+                  <div className="">
+                    <label className="block text-[12px] font-bold text-neutral-500">자산 관리</label>
+                    <span className="text-[10px] text-neutral-400">
+                      제공(물품) + 수익(현금) - 내가 쓴 돈 = 해당 체험에서 내가 얻은 경제적 가치예요.
+                    </span>
+                  </div>
+
+                  <div className="bg-neutral-50 border border-neutral-200 rounded-2xl px-2 py-3 flex gap-2.5 mt-1">
                     <div className="flex-1 text-center">
-                      <span className="block text-[11px] text-neutral-400 font-semibold mb-2">제공(물품)</span>
+                      <span className="block text-[11px] text-neutral-500 font-semibold mb-1">📦 제공(물품)</span>
+                      <span className="block text-[10px] text-neutral-400 mb-2">받은 제품/서비스 값</span>
                       <input
                         type="text"
                         value={formatNumber(formData.benefit || 0)}
                         onChange={(e) => handleNumberChange("benefit", e.target.value)}
-                        className="w-full h-8 px-3 py-2 bg-white border-none rounded-xl text-center font-bold text-[12px]"
-                        placeholder="0"
+                        className="w-full h-9 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center font-bold text-[12px] text-emerald-700"
+                        placeholder="+ 0"
                       />
                     </div>
                     <div className="flex-1 text-center">
-                      <span className="block text-[11px] text-neutral-400 font-semibold mb-2">수익(현금)</span>
+                      <span className="block text-[11px] text-neutral-500 font-semibold mb-1">💸 수익(현금)</span>
+                      <span className="block text-[10px] text-neutral-400 mb-2">입금된 현금 및 리워드</span>
                       <input
                         type="text"
                         value={formatNumber(formData.income || 0)}
                         onChange={(e) => handleNumberChange("income", e.target.value)}
-                        className="w-full h-8 px-3 py-2 bg-white border-none rounded-xl text-center font-bold text-[12px]"
-                        placeholder="0"
+                        className="w-full h-9 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center font-bold text-[12px] text-emerald-700"
+                        placeholder="+ 0"
                       />
                     </div>
                     <div className="flex-1 text-center">
-                      <span className="block text-[11px] text-red-600 font-semibold mb-2">내 지출</span>
+                      <span className="block text-[11px] text-red-600 font-semibold mb-1">⬇️ 내가 쓴 돈</span>
+                      <span className="block text-[10px] text-neutral-400 mb-2">내가 직접 결제한 금액</span>
                       <input
                         type="text"
                         value={formatNumber(formData.cost || 0)}
                         onChange={(e) => handleNumberChange("cost", e.target.value)}
-                        className="w-full h-8 px-3 py-2 bg-white border-none rounded-xl text-center font-bold text-red-600 text-[12px]"
-                        placeholder="0"
+                        className="w-full h-9 px-3 py-2 bg-rose-50 border border-rose-100 rounded-xl text-center font-bold text-red-600 text-[12px]"
+                        placeholder="- 0"
                       />
                     </div>
                   </div>
