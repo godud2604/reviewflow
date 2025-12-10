@@ -148,6 +148,14 @@ export default function ScheduleModal({
     return [...userPlatforms].sort((a, b) => a.localeCompare(b, 'ko'))
   }, [userPlatforms])
 
+  // 유저 목록에 없는 플랫폼을 선택해둔 경우에도 표시
+  const platformOptions = React.useMemo(() => {
+    if (formData.platform && !allPlatforms.includes(formData.platform)) {
+      return [...allPlatforms, formData.platform]
+    }
+    return allPlatforms
+  }, [allPlatforms, formData.platform])
+
   const categoryValues = React.useMemo(() => CATEGORY_OPTIONS.map((option) => option.value), [])
 
   const sanitizeCategories = React.useCallback(
@@ -212,6 +220,15 @@ export default function ScheduleModal({
       setFormData((prev) => ({ ...prev, category: nextCategory as Schedule["category"] }))
     }
   }, [selectedCategories, formData.category, categoryValues])
+
+  // 신규 등록 시 플랫폼 기본값을 첫 번째 항목으로 지정
+  useEffect(() => {
+    if (schedule) return
+    const defaultPlatform = allPlatforms[0]
+    if (!defaultPlatform) return
+    if (formData.platform) return
+    setFormData((prev) => ({ ...prev, platform: defaultPlatform }))
+  }, [allPlatforms, schedule, formData.platform])
 
   const handleSave = async () => {
     if (!formData.title) {
@@ -649,7 +666,7 @@ export default function ScheduleModal({
                 <div>
                   <label className="block text-[12px] font-bold text-neutral-500 mb-2">플랫폼</label>
                   <div className="flex gap-2 flex-wrap">
-                    {allPlatforms.map((platform) => (
+                    {platformOptions.map((platform) => (
                       <div
                         key={platform}
                         onClick={() => setFormData({ ...formData, platform })}
@@ -662,7 +679,7 @@ export default function ScheduleModal({
                         {platform}
                       </div>
                     ))}
-                    {allPlatforms.length === 0 && (
+                    {platformOptions.length === 0 && (
                       <span className="text-sm text-neutral-400">플랫폼을 추가해주세요.</span>
                     )}
                   </div>
