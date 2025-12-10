@@ -37,7 +37,7 @@ export default function ScheduleModal({
     platform: "",
     reviewType: "제공형",
     channel: "네이버블로그",
-    category: "맛집",
+    category: "식품",
     visit: "",
     visitTime: "",
     dead: "",
@@ -98,7 +98,7 @@ export default function ScheduleModal({
         platform: "",
         reviewType: "제공형",
         channel: "네이버블로그",
-        category: "맛집",
+        category: "식품",
         visit: "",
         visitTime: "",
         dead: "",
@@ -707,7 +707,7 @@ export default function ScheduleModal({
                 <div className="mb-4">
                   <label className="block text-sm font-bold text-neutral-500 mb-2">카테고리</label>
                   <div className="flex gap-2 flex-wrap">
-                    {["맛집", "식품", "뷰티", "여행", "디지털", "반려동물", "기타"].map((category) => (
+                    {["식품", "뷰티", "여행", "디지털", "반려동물", "기타"].map((category) => (
                       <div
                         key={category}
                         onClick={() =>
@@ -1080,7 +1080,7 @@ export default function ScheduleModal({
                     type="text"
                     value={newPlatform}
                     onChange={(e) => setNewPlatform(e.target.value)}
-                    className="flex-1 min-w-0 h-8 px-3 py-2 bg-[#F7F7F8] border-none rounded-lg text-[15px]"
+                    className="flex-1 min-w-0 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-lg text-[15px]"
                     placeholder="새 플랫폼 이름"
                     onKeyPress={(e) => e.key === "Enter" && addCustomPlatform()}
                   />

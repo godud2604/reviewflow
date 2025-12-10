@@ -19,7 +19,6 @@ export default function PortfolioPage({
   
   // Category distribution
   const typeCounts: Record<Schedule["category"], number> = {
-    맛집: 0,
     식품: 0,
     뷰티: 0,
     여행: 0,
@@ -38,8 +37,7 @@ export default function PortfolioPage({
     .slice(0, 3)
   
   const categoryIcons: Record<Schedule["category"], string> = {
-    맛집: "🍝",
-    식품: "🍱",
+    식품: "🍝",
     뷰티: "💄",
     여행: "✈️",
     디지털: "💻",

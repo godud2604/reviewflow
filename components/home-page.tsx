@@ -365,8 +365,7 @@ function ScheduleItem({
   today: string
 }) {
   const icons: Record<Schedule["category"], string> = {
-    맛집: "🍝",
-    식품: "🥗",
+    식품: "🍝",
     뷰티: "💄",
     여행: "✈️",
     디지털: "📱",

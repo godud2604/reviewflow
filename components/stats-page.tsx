@@ -26,7 +26,6 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
     totalInc = 0,
     totalCost = 0
   const typeCounts: Record<Schedule["category"], number> = {
-    맛집: 0,
     식품: 0,
     뷰티: 0,
     여행: 0,
@@ -35,7 +34,6 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
     기타: 0,
   }
   const benefitByCategory: Record<Schedule["category"], number> = {
-    맛집: 0,
     식품: 0,
     뷰티: 0,
     여행: 0,

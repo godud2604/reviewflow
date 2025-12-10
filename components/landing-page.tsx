@@ -574,7 +574,7 @@ export default function LandingPage() {
                       </div>
                       <div className="space-y-2 pl-1">
                         <div className="flex items-center gap-2">
-                          <div className="w-12 text-[10px] font-medium text-neutral-600">맛집</div>
+                          <div className="w-12 text-[10px] font-medium text-neutral-600">식품</div>
                           <div className="flex-1 bg-neutral-100 rounded-full h-1.5 overflow-hidden">
                             <div className="h-full bg-orange-400 rounded-full" style={{ width: '50%' }} />
                           </div>
