@@ -19,9 +19,9 @@ export default function HomePage({
     return `${y}-${m}-${d}`
   }
 
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [selectedFilter, setSelectedFilter] = useState<"all" | "active" | "reconfirm" | "overdue">("all")
   const today = getLocalDateString(new Date())
+  const [selectedDate, setSelectedDate] = useState<string | null>(today)
+  const [selectedFilter, setSelectedFilter] = useState<"all" | "active" | "reconfirm" | "overdue">("all")
   const activeSchedules = schedules.filter((s) => s.status !== "완료" && s.status !== "취소")
   const activeCount = activeSchedules.length
   const reconfirmCount = schedules.filter((s) => s.status === "재확인").length
@@ -67,11 +67,6 @@ export default function HomePage({
   }
 
   const displayedSchedules = sortSchedules(selectedDate || selectedFilter !== "all" ? filteredSchedules : activeSchedules)
-
-  const handleClearFilter = () => {
-    setSelectedDate(null)
-    setSelectedFilter("all")
-  }
 
   const handleDateClick = (dateStr: string) => {
     if (selectedDate === dateStr) {
@@ -172,14 +167,6 @@ export default function HomePage({
           </h3>
         </div>
         <div className="flex items-center gap-2">
-          {(selectedDate || selectedFilter !== "all") && (
-            <button
-              onClick={handleClearFilter}
-              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 transition-colors cursor-pointer"
-            >
-              초기화
-            </button>
-          )}
           <button
             onClick={onShowAllClick}
             className="text-[12px] font-semibold text-orange-600 hover:text-orange-700 transition-colors cursor-pointer"
@@ -311,24 +298,25 @@ function CalendarSection({
           const isSelected = selectedDate === dateStr
           const dayInfo = scheduleByDate[dateStr]
           const hasSchedule = !!dayInfo
+          const isTodayDate = isToday(day)
           const indicatorType = dayInfo?.overdue ? "overdue" : dayInfo?.hasDeadline ? "deadline" : "none"
           const baseStyle =
             indicatorType === "overdue"
               ? "text-orange-800 bg-white shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.65)]"
               : indicatorType === "deadline"
                 ? "text-orange-700 bg-white shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.6)]"
-              : "text-neutral-800 bg-white"
-          const hoverable = !isSelected && !isToday(day) && hasSchedule
+                : "text-neutral-800 bg-white"
+          const hoverable = !isSelected && !isTodayDate && hasSchedule
           return (
             <button
               key={day}
-              onClick={() => hasSchedule && onDateClick(dateStr)}
-              disabled={!hasSchedule}
+              onClick={() => (hasSchedule || dateStr === today) && onDateClick(dateStr)}
+              disabled={!hasSchedule && dateStr !== today}
               className={`relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-all ${
-                hasSchedule ? "cursor-pointer" : "cursor-default"
+                hasSchedule || dateStr === today ? "cursor-pointer" : "cursor-default"
               } ${baseStyle}
                 ${isSelected ? "bg-orange-50 text-orange-800 shadow-[inset_0_0_0_2px_rgba(249,115,22,0.9)]" : ""}
-                ${!isSelected && isToday(day) ? "bg-orange-50/80 text-orange-800 shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.7)]" : ""}
+                ${!isSelected && isTodayDate ? "bg-orange-50/80 text-orange-800 shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.7)]" : ""}
                 ${hoverable ? "hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(0,0,0,0.08)]" : ""}
                 ${!isSelected && !isToday(day) && dayOfWeek === 0 ? "text-red-500" : ""}
                 ${!isSelected && !isToday(day) && dayOfWeek === 6 ? "text-blue-500" : ""}`}
