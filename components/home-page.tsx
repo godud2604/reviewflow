@@ -297,24 +297,25 @@ function CalendarSection({
 
     if (schedule.dead) {
       const info = ensureDayInfo(schedule.dead)
-      info.hasDeadline = true
       if (isCompleted) {
         info.hasCompleted = true
-      } else if (schedule.dead < today) {
-        info.deadlineCount += 1
-        info.overdue = true
       } else {
-        info.deadlineCount += 1
+        info.hasDeadline = true
+        if (schedule.dead < today) {
+          info.deadlineCount += 1
+          info.overdue = true
+        } else {
+          info.deadlineCount += 1
+        }
       }
     }
 
     if (schedule.visit) {
       const info = ensureDayInfo(schedule.visit)
       info.hasVisit = true
+      info.visitCount += 1
       if (isCompleted) {
         info.hasCompleted = true
-      } else {
-        info.visitCount += 1
       }
     }
 
@@ -344,7 +345,7 @@ function CalendarSection({
   }
 
   return (
-    <div className="rounded-[24px] p-4 shadow-sm bg-gradient-to-b from-white to-neutral-100 mt-2">
+    <div className="rounded-[24px] p-4 shadow-sm bg-gradient-to-b from-white to-neutral-100">
       <div className="relative flex items-center justify-center mb-3 gap-2">
         <div className="flex items-center gap-3">
           <button
@@ -448,7 +449,7 @@ function CalendarSection({
                   {dayInfo.visitCount > 1 ? dayInfo.visitCount : ""}
                 </span>
               )}
-              {hasSchedule && dayInfo?.deadlineCount === 0 && dayInfo?.visitCount === 0 && dayInfo?.hasCompleted && (
+              {hasSchedule && dayInfo?.hasCompleted && !dayInfo?.hasVisit && !dayInfo?.hasDeadline && (
                 <span className="absolute -bottom-[1px] -right-[-3px] h-2 w-2 rounded-full bg-orange-400 shadow-[0_4px_10px_rgba(0,0,0,0.12)]" />
               )}
             </button>
