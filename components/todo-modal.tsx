@@ -68,7 +68,16 @@ export default function TodoModal({
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
       <div className="absolute bottom-0 left-0 w-full min-h-[30%] max-h-[60%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
-        <div className="p-5 border-b border-neutral-100 text-center font-bold">할 일 목록</div>
+        <div className="relative p-5 border-b border-neutral-100 text-center font-bold">
+          할 일 목록
+          <button
+            onClick={onClose}
+            className="absolute right-5 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
+            aria-label="닫기"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
         {/* Sticky Input Section */}
         <div className="sticky top-0 bg-white px-4 pt-6 pb-4 border-b border-neutral-100 z-10">

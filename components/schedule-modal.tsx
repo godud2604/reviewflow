@@ -348,8 +348,15 @@ export default function ScheduleModal({
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
       <div className="absolute bottom-0 left-0 w-full h-[80%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
-        <div className="px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
+        <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
           <span className="font-bold text-base">{schedule ? "체험단 수정" : "체험단 등록"}</span>
+          <button
+            onClick={onClose}
+            className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
+            aria-label="닫기"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 scrollbar-hide touch-pan-y min-h-0">
@@ -1069,8 +1076,15 @@ export default function ScheduleModal({
         <>
           <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-50" onClick={() => setShowPlatformManagement(false)} style={{ touchAction: 'none' }} />
           <div className="absolute bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
-            <div className="px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
+            <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-base">플랫폼 관리</span>
+              <button
+                onClick={() => setShowPlatformManagement(false)}
+                className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
+                aria-label="닫기"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             
             <div className="flex-1 overflow-y-auto px-6 py-6">

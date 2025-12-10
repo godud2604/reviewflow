@@ -125,6 +125,13 @@ export default function IncomeHistoryModal({
         {/* Header */}
         <div className="p-5 pb-3 text-center relative flex-shrink-0">
           <h2 className="text-[16px] font-bold text-neutral-900">전체 수입 내역</h2>
+          <button
+            onClick={onClose}
+            className="absolute right-5 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
+            aria-label="닫기"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Summary Card */}

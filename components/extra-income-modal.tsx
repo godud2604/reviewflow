@@ -86,7 +86,16 @@ export default function ExtraIncomeModal({
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={handleClose} style={{ touchAction: 'none' }} />
       <div className="absolute bottom-0 left-0 w-full h-[390px] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
-        <div className="p-5 border-b border-neutral-100 text-center font-bold">부수입 추가</div>
+        <div className="relative p-5 border-b border-neutral-100 text-center font-bold">
+          부수입 추가
+          <button
+            onClick={handleClose}
+            className="absolute right-5 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
+            aria-label="닫기"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
         {/* Add Form */}
         <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent hover:scrollbar-thumb-neutral-400 touch-pan-y">
