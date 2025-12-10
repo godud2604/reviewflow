@@ -8,7 +8,7 @@ import { useToast } from './use-toast'
 const DEFAULT_PLATFORMS = ['레뷰', '리뷰노트', '스타일씨', '리뷰플레이스']
 const DEFAULT_CATEGORIES = [
   '맛집/식품',
-  '뷰티/바디케어',
+  '뷰티',
   '출산/육아',
   '반려동물',
   '생활/리빙',

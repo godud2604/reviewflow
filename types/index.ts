@@ -11,10 +11,10 @@ export interface Schedule {
   status: "선정됨" | "방문일 예약 완료" | "방문" | "구매 완료" | "제품 배송 완료" | "완료" | "취소" | "재확인"
   platform: string
   reviewType: "제공형" | "페이백형" | "페이백+구매평" | "구매평" | "기자단" | "미션/인증" | "방문형"
-  channel: "네이버블로그" | "인스타그램" | "인스타그램 reels" | "네이버클립" | "유튜브 shorts" | "틱톡" | "쓰레드" | "기타(구매평/인증)"
+  channel: ScheduleChannel[]
   category:
     | "맛집/식품"
-    | "뷰티/바디케어"
+    | "뷰티"
     | "생활/리빙"
     | "출산/육아"
     | "주방/가전"
@@ -43,8 +43,21 @@ export interface Schedule {
     platformAppReview: boolean
     cafeReview: boolean
     googleReview: boolean
+    other?: boolean
+    otherText?: string
   }
 }
+
+export type ScheduleChannel =
+  | "네이버블로그"
+  | "인스타그램"
+  | "인스타그램 reels"
+  | "네이버클립"
+  | "유튜브 shorts"
+  | "틱톡"
+  | "쓰레드"
+  | "카페"
+  | "기타(구매평/인증)"
 
 export interface Todo {
   id: number

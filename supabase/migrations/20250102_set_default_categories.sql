@@ -2,7 +2,7 @@
 ALTER TABLE user_profiles
   ALTER COLUMN categories SET DEFAULT ARRAY[
     '맛집/식품',
-    '뷰티/바디케어',
+    '뷰티',
     '출산/육아',
     '반려동물',
     '생활/리빙',
@@ -13,7 +13,7 @@ ALTER TABLE user_profiles
 UPDATE user_profiles
 SET categories = ARRAY[
   '맛집/식품',
-  '뷰티/바디케어',
+  '뷰티',
   '출산/육아',
   '반려동물',
   '생활/리빙',

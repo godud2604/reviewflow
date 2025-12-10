@@ -77,7 +77,7 @@ export default function AllSchedulesPage({
 function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClick: () => void; today: string }) {
   const icons: Record<Schedule["category"], string> = {
     "맛집/식품": "🍽️",
-    "뷰티/바디케어": "💄",
+    "뷰티": "💄",
     "생활/리빙": "🏡",
     "출산/육아": "🤱",
     "주방/가전": "🧺",

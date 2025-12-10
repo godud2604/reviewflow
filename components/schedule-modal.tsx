@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import type { Schedule, GuideFile } from "@/types"
+import type { Schedule, GuideFile, ScheduleChannel } from "@/types"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -12,13 +12,14 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { useUserProfile } from "@/hooks/use-user-profile"
 import { uploadGuideFiles, downloadGuideFile, deleteGuideFile } from "@/lib/storage"
+import { DEFAULT_SCHEDULE_CHANNEL, SCHEDULE_CHANNEL_OPTIONS, sanitizeChannels } from "@/lib/schedule-channels"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { X, Copy, Download, Loader2 } from "lucide-react"
 
 const CATEGORY_OPTIONS: Array<{ value: Schedule["category"]; label: string; description: string; icon: string }> = [
   { value: "맛집/식품", label: "맛집/식품", description: "맛집, 식품, 음료", icon: "🍽️" },
-  { value: "뷰티/바디케어", label: "뷰티/바디케어", description: "화장품, 스킨/바디, 향수", icon: "💄" },
+  { value: "뷰티", label: "뷰티", description: "화장품, 스킨/바디, 향수", icon: "💄" },
   { value: "생활/리빙", label: "생활/리빙", description: "생활용품, 홈데코/인테리어", icon: "🏡" },
   { value: "출산/육아", label: "출산/육아", description: "유아동, 출산 용품", icon: "🤱" },
   { value: "주방/가전", label: "주방/가전", description: "주방용품, 가전디지털", icon: "🧺" },
@@ -31,6 +32,36 @@ const CATEGORY_OPTIONS: Array<{ value: Schedule["category"]; label: string; desc
   { value: "문구/오피스", label: "문구/오피스", description: "문구류, 오피스 용품", icon: "✏️" },
   { value: "기타", label: "기타", description: "그 외 모든 카테고리", icon: "📦" },
 ]
+
+const DEFAULT_VISIT_REVIEW_CHECKLIST: NonNullable<Schedule["visitReviewChecklist"]> = {
+  naverReservation: false,
+  platformAppReview: false,
+  cafeReview: false,
+  googleReview: false,
+  other: false,
+  otherText: "",
+}
+
+const createEmptyFormData = (): Partial<Schedule> => ({
+  title: "",
+  status: "선정됨",
+  platform: "",
+  reviewType: "제공형",
+  channel: [DEFAULT_SCHEDULE_CHANNEL],
+  category: "맛집/식품",
+  visit: "",
+  visitTime: "",
+  dead: "",
+  benefit: 0,
+  income: 0,
+  cost: 0,
+  postingLink: "",
+  purchaseLink: "",
+  guideFiles: [],
+  memo: "",
+  reconfirmReason: "",
+  visitReviewChecklist: { ...DEFAULT_VISIT_REVIEW_CHECKLIST },
+})
 
 export default function ScheduleModal({
   isOpen,
@@ -47,31 +78,7 @@ export default function ScheduleModal({
   onUpdateFiles?: (id: number, files: GuideFile[]) => Promise<void>
   schedule?: Schedule
 }) {
-  const [formData, setFormData] = useState<Partial<Schedule>>({
-    title: "",
-    status: "선정됨",
-    platform: "",
-    reviewType: "제공형",
-    channel: "네이버블로그",
-    category: "맛집/식품",
-    visit: "",
-    visitTime: "",
-    dead: "",
-    benefit: 0,
-    income: 0,
-    cost: 0,
-    postingLink: "",
-    purchaseLink: "",
-    guideFiles: [],
-    memo: "",
-    reconfirmReason: "",
-    visitReviewChecklist: {
-      naverReservation: false,
-      platformAppReview: false,
-      cafeReview: false,
-      googleReview: false,
-    },
-  })
+  const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData())
 
   const [customPlatforms, setCustomPlatforms] = useState<string[]>([])
   const [newPlatform, setNewPlatform] = useState("")
@@ -126,7 +133,13 @@ export default function ScheduleModal({
 
   useEffect(() => {
     if (schedule) {
-      setFormData(schedule)
+      setFormData({
+        ...schedule,
+        visitReviewChecklist:
+          schedule.reviewType === "방문형"
+            ? { ...DEFAULT_VISIT_REVIEW_CHECKLIST, ...schedule.visitReviewChecklist }
+            : schedule.visitReviewChecklist,
+      })
       // 재확인 사유 로드
       if (schedule.status === "재확인" && schedule.reconfirmReason) {
         const reason = schedule.reconfirmReason
@@ -138,31 +151,7 @@ export default function ScheduleModal({
         }
       }
     } else {
-      setFormData({
-        title: "",
-        status: "선정됨",
-        platform: "",
-        reviewType: "제공형",
-        channel: "네이버블로그",
-        category: "맛집/식품",
-        visit: "",
-        visitTime: "",
-        dead: "",
-        benefit: 0,
-        income: 0,
-        cost: 0,
-        postingLink: "",
-        purchaseLink: "",
-        guideFiles: [],
-        memo: "",
-        reconfirmReason: "",
-        visitReviewChecklist: {
-          naverReservation: false,
-          platformAppReview: false,
-          cafeReview: false,
-          googleReview: false,
-        },
-      })
+      setFormData(createEmptyFormData())
       setReconfirmReason("")
       setCustomReconfirmReason("")
       setPendingFiles([])
@@ -223,6 +212,8 @@ export default function ScheduleModal({
       }
     }
 
+    const selectedChannels = sanitizeChannels(formData.channel || [])
+
     // 대기 중인 파일이 있으면 업로드
     let finalGuideFiles = formData.guideFiles || []
     if (pendingFiles.length > 0 && user) {
@@ -245,7 +236,7 @@ export default function ScheduleModal({
       setIsUploading(false)
     }
     
-    onSave({ ...formData, guideFiles: finalGuideFiles } as Schedule)
+    onSave({ ...formData, channel: selectedChannels, guideFiles: finalGuideFiles } as Schedule)
     toast({
       title: schedule ? "체험단 정보가 수정되었습니다." : "체험단이 등록되었습니다.",
       duration: 2000,
@@ -337,6 +328,25 @@ export default function ScheduleModal({
   const handleNumberChange = (field: "benefit" | "income" | "cost", value: string) => {
     const numValue = parseNumber(value)
     setFormData({ ...formData, [field]: numValue })
+  }
+
+  const handleToggleChannel = (channel: ScheduleChannel) => {
+    setFormData((prev) => {
+      const current = prev.channel || []
+      const hasChannel = current.includes(channel)
+      const nextChannels = hasChannel ? current.filter((c) => c !== channel) : [...current, channel]
+      return { ...prev, channel: nextChannels }
+    })
+  }
+
+  const updateVisitChecklist = (partial: Partial<NonNullable<Schedule["visitReviewChecklist"]>>) => {
+    setFormData((prev) => {
+      const current = prev.visitReviewChecklist || { ...DEFAULT_VISIT_REVIEW_CHECKLIST }
+      return {
+        ...prev,
+        visitReviewChecklist: { ...current, ...partial },
+      }
+    })
   }
 
   const addCustomPlatform = async () => {
@@ -546,33 +556,22 @@ export default function ScheduleModal({
                 <div className="mb-4">
                   <label className="block text-[12px] font-bold text-neutral-500 mb-2">작성 채널</label>
                   <div className="flex gap-2 flex-wrap">
-                    {[
-                      "네이버블로그",
-                      "인스타그램",
-                      "인스타그램 reels",
-                      "네이버클립",
-                      "유튜브 shorts",
-                      "틱톡",
-                      "쓰레드",
-                      "기타(구매평/인증)",
-                    ].map((channel) => (
-                      <div
-                        key={channel}
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            channel: channel as Schedule["channel"],
-                          })
-                        }
-                        className={`text-[11px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
-                          formData.channel === channel
-                            ? "bg-blue-50 text-blue-600 border border-blue-600"
-                            : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
-                        }`}
-                      >
-                        {channel}
-                      </div>
-                    ))}
+                    {SCHEDULE_CHANNEL_OPTIONS.map((channel) => {
+                      const isSelected = (formData.channel || []).includes(channel)
+                      return (
+                        <div
+                          key={channel}
+                          onClick={() => handleToggleChannel(channel)}
+                          className={`text-[11px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
+                            isSelected
+                              ? "bg-blue-50 text-blue-600 border border-blue-600"
+                              : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
+                          }`}
+                        >
+                          {channel}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
 
@@ -580,7 +579,7 @@ export default function ScheduleModal({
                 <div className="mb-4">
                   <label className="block text-[12px] font-bold text-neutral-500 mb-2">체험단 유형</label>
                   <div className="flex gap-2 flex-wrap">
-                    {["제공형", "페이백형", "페이백+구매평", "구매평", "기자단", "미션/인증", "방문형"].map(
+                    {["제공형", "페이백형", "페이백+구매평", "구매평", "기자단", "미션/인증", "방문형", "기타"].map(
                       (type) => (
                         <div
                           key={type}
@@ -591,16 +590,11 @@ export default function ScheduleModal({
                             }
                             // 방문형으로 변경 시 체크리스트 초기화
                             if (type === "방문형" && !formData.visitReviewChecklist) {
-                              newFormData.visitReviewChecklist = {
-                                naverReservation: false,
-                                platformAppReview: false,
-                                cafeReview: false,
-                                googleReview: false,
-                              }
+                              newFormData.visitReviewChecklist = { ...DEFAULT_VISIT_REVIEW_CHECKLIST }
                             }
                             setFormData(newFormData)
                           }}
-                          className={`text-[11px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
+                          className={`text-[11px] px-3 py-1 rounded-xl font-semibold cursor-pointer flex items-center justify-center ${
                             formData.reviewType === type
                               ? "bg-orange-50 text-[#FF5722] border border-[#FF5722]"
                               : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
@@ -616,19 +610,13 @@ export default function ScheduleModal({
                 {/* 방문형 리뷰 체크리스트 */}
                 {formData.reviewType === "방문형" && (
                   <div className="mt-[-3px] px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl">
-                    <label className="block text-[12px] font-bold text-blue-900 mb-3">추가로 작성해야 할 리뷰</label>
+                    <label className="block text-[12px] font-bold text-blue-900 mb-3">방문 후, 추가로 작성해야 할 리뷰</label>
                     <div className="space-y-2.5">
                       <label className="flex items-center gap-3 cursor-pointer">
                         <Checkbox
                           checked={formData.visitReviewChecklist?.naverReservation || false}
                           onCheckedChange={(checked) =>
-                            setFormData({
-                              ...formData,
-                              visitReviewChecklist: {
-                                ...formData.visitReviewChecklist!,
-                                naverReservation: checked as boolean,
-                              },
-                            })
+                            updateVisitChecklist({ naverReservation: checked as boolean })
                           }
                         />
                         <span className="text-[12px] font-semibold text-blue-900">네이버 예약 리뷰</span>
@@ -637,13 +625,7 @@ export default function ScheduleModal({
                         <Checkbox
                           checked={formData.visitReviewChecklist?.platformAppReview || false}
                           onCheckedChange={(checked) =>
-                            setFormData({
-                              ...formData,
-                              visitReviewChecklist: {
-                                ...formData.visitReviewChecklist!,
-                                platformAppReview: checked as boolean,
-                              },
-                            })
+                            updateVisitChecklist({ platformAppReview: checked as boolean })
                           }
                         />
                         <span className="text-[12px] font-semibold text-blue-900">타플랫폼 어플 리뷰</span>
@@ -652,13 +634,7 @@ export default function ScheduleModal({
                         <Checkbox
                           checked={formData.visitReviewChecklist?.cafeReview || false}
                           onCheckedChange={(checked) =>
-                            setFormData({
-                              ...formData,
-                              visitReviewChecklist: {
-                                ...formData.visitReviewChecklist!,
-                                cafeReview: checked as boolean,
-                              },
-                            })
+                            updateVisitChecklist({ cafeReview: checked as boolean })
                           }
                         />
                         <span className="text-[12px] font-semibold text-blue-900">카페 리뷰</span>
@@ -667,17 +643,39 @@ export default function ScheduleModal({
                         <Checkbox
                           checked={formData.visitReviewChecklist?.googleReview || false}
                           onCheckedChange={(checked) =>
-                            setFormData({
-                              ...formData,
-                              visitReviewChecklist: {
-                                ...formData.visitReviewChecklist!,
-                                googleReview: checked as boolean,
-                              },
-                            })
+                            updateVisitChecklist({ googleReview: checked as boolean })
                           }
                         />
                         <span className="text-[12px] font-semibold text-blue-900">구글 리뷰</span>
                       </label>
+                      <div className="space-y-1">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <Checkbox
+                            checked={formData.visitReviewChecklist?.other || false}
+                            onCheckedChange={(checked) =>
+                              updateVisitChecklist({
+                                other: checked as boolean,
+                                otherText: checked ? formData.visitReviewChecklist?.otherText || "" : "",
+                              })
+                            }
+                          />
+                          <span className="text-[12px] font-semibold text-blue-900">기타</span>
+                        </label>
+                        {formData.visitReviewChecklist?.other && (
+                          <input
+                            type="text"
+                            value={formData.visitReviewChecklist?.otherText || ""}
+                            onChange={(e) =>
+                              updateVisitChecklist({
+                                other: true,
+                                otherText: e.target.value,
+                              })
+                            }
+                            className="w-full h-8 px-3 bg-white border border-blue-200 rounded-lg text-[11px] text-blue-900 placeholder:text-blue-300"
+                            placeholder="추가 리뷰를 입력하세요 (예: 네이버 지도 리뷰)"
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -789,18 +787,17 @@ export default function ScheduleModal({
                           const meta = CATEGORY_OPTIONS.find((c) => c.value === category)
                           const isActive = formData.category === category
                           return (
-                            <button
+                            <div
                               key={category}
-                              type="button"
                               onClick={() => setFormData((prev) => ({ ...prev, category }))}
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-2xl text-[11px] font-semibold shadow-sm transition-all cursor-pointer ${
+                              className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center ${
                                 isActive
                                   ? "bg-orange-100 text-[#D9480F] border border-[#FF5722]/70"
                                   : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
                               }`}
                             >
                               <span className="truncate max-w-[120px]">{meta?.label || category}</span>
-                            </button>
+                            </div>
                           )
                         })
                       ) : (
@@ -937,7 +934,7 @@ export default function ScheduleModal({
                 <span className="text-sm font-bold text-neutral-900">추가사항</span>
                 <span className="text-xs text-neutral-400">기록하고 싶을 때만 적어주세요</span>
               </div>
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* 링크 */}
                 <div>
                   <label className="block text-[12px] font-bold text-neutral-500 mb-2">포스팅 링크</label>

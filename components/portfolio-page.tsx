@@ -20,7 +20,7 @@ export default function PortfolioPage({
   // Category distribution
   const typeCounts: Record<Schedule["category"], number> = {
     "맛집/식품": 0,
-    "뷰티/바디케어": 0,
+    "뷰티": 0,
     "생활/리빙": 0,
     "출산/육아": 0,
     "주방/가전": 0,
@@ -45,7 +45,7 @@ export default function PortfolioPage({
   
   const categoryIcons: Record<Schedule["category"], string> = {
     "맛집/식품": "🍽️",
-    "뷰티/바디케어": "💄",
+    "뷰티": "💄",
     "생활/리빙": "🏡",
     "출산/육아": "🤱",
     "주방/가전": "🧺",

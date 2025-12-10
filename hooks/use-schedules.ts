@@ -6,6 +6,7 @@ import { useAuth } from './use-auth'
 import { useToast } from './use-toast'
 import type { Schedule } from '@/types'
 import type { DbSchedule } from '@/types/database'
+import { parseStoredChannels, stringifyChannels } from '@/lib/schedule-channels'
 
 interface UseSchedulesOptions {
   enabled?: boolean
@@ -34,7 +35,7 @@ function mapDbToSchedule(db: DbSchedule): Schedule {
     status: db.status as Schedule['status'],
     platform: db.platform || '',
     reviewType: (db.review_type || '제공형') as Schedule['reviewType'],
-    channel: (db.channel || '네이버블로그') as Schedule['channel'],
+    channel: parseStoredChannels(db.channel),
     category: (db.category || '기타') as Schedule['category'],
     region: db.region || '',
     visit: db.visit_date || '',
@@ -60,7 +61,7 @@ function mapScheduleToDb(schedule: Omit<Schedule, 'id'>, userId: string) {
     status: schedule.status,
     platform: schedule.platform || null,
     review_type: schedule.reviewType,
-    channel: schedule.channel,
+    channel: stringifyChannels(schedule.channel),
     category: schedule.category,
     region: schedule.region || null,
     visit_date: schedule.visit || null,
@@ -86,7 +87,7 @@ function mapScheduleUpdatesToDb(updates: Partial<Schedule>) {
   if (updates.status !== undefined) dbUpdates.status = updates.status
   if (updates.platform !== undefined) dbUpdates.platform = updates.platform
   if (updates.reviewType !== undefined) dbUpdates.review_type = updates.reviewType
-  if (updates.channel !== undefined) dbUpdates.channel = updates.channel
+  if (updates.channel !== undefined) dbUpdates.channel = stringifyChannels(updates.channel)
   if (updates.category !== undefined) dbUpdates.category = updates.category
   if (updates.region !== undefined) dbUpdates.region = updates.region
   if (updates.visit !== undefined) dbUpdates.visit_date = updates.visit
