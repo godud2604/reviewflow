@@ -8,7 +8,7 @@ export interface GuideFile {
 export interface Schedule {
   id: number
   title: string
-  status: "선정됨" | "방문일 예약 완료" | "방문" | "구매 완료" | "제품 배송 완료" | "완료" | "취소" | "재확인"
+  status: "선정됨" | "방문일 예약 완료" | "방문" | "구매 완료" | "제품 배송 완료" | "완료" | "재확인"
   platform: string
   reviewType: "제공형" | "구매평" | "기자단" | "미션/인증" | "방문형"
   channel: ScheduleChannel[]

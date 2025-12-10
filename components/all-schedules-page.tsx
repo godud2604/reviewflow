@@ -46,19 +46,13 @@ export default function AllSchedulesPage({
           <div className="flex-1">
             <div className="text-xs text-neutral-500 mb-1">진행 중</div>
             <div className="text-2xl font-extrabold text-[#FF5722]">
-              {schedules.filter((s) => s.status !== "완료" && s.status !== "취소").length}건
+              {schedules.filter((s) => s.status !== "완료").length}건
             </div>
           </div>
           <div className="flex-1">
             <div className="text-xs text-neutral-500 mb-1">완료</div>
             <div className="text-2xl font-extrabold text-[#4CAF50]">
               {schedules.filter((s) => s.status === "완료").length}건
-            </div>
-          </div>
-          <div className="flex-1">
-            <div className="text-xs text-neutral-500 mb-1">취소</div>
-            <div className="text-2xl font-extrabold text-[#999]">
-              {schedules.filter((s) => s.status === "취소").length}건
             </div>
           </div>
         </div>
@@ -98,7 +92,6 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
     "구매 완료": { class: "bg-neutral-100 text-neutral-600", text: "구매 완료" },
     "제품 배송 완료": { class: "bg-neutral-100 text-neutral-600", text: "배송 완료" },
     완료: { class: "bg-neutral-100 text-neutral-600", text: "완료" },
-    취소: { class: "bg-neutral-100 text-neutral-600", text: "취소" },
     재확인: { class: "bg-neutral-100 text-neutral-600", text: "재확인" },
   }
 
@@ -117,7 +110,7 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
 
   const total = schedule.benefit + schedule.income - schedule.cost
   const status = statusConfig[schedule.status] || { class: "bg-neutral-100 text-neutral-600", text: "미정" }
-  const isOverdue = schedule.dead && schedule.dead < today && schedule.status !== "완료" && schedule.status !== "취소"
+  const isOverdue = schedule.dead && schedule.dead < today && schedule.status !== "완료"
 
   return (
     <div

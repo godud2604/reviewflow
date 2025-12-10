@@ -25,12 +25,12 @@ export default function HomePage({
   const [selectedDate, setSelectedDate] = useState<string | null>(today)
   const [selectedFilter, setSelectedFilter] = useState<"all" | "active" | "reconfirm" | "overdue" | "noDeadline">("all")
   const [floatingPanel, setFloatingPanel] = useState<"none" | "noDeadline" | "reconfirm">("none")
-  const activeSchedules = schedules.filter((s) => s.status !== "완료" && s.status !== "취소")
+  const activeSchedules = schedules.filter((s) => s.status !== "완료")
   const activeCount = activeSchedules.length
   const reconfirmSchedules = schedules.filter((s) => s.status === "재확인")
   const reconfirmCount = reconfirmSchedules.length
   const noDeadlineSchedules = schedules.filter((s) => !s.dead)
-  const overdueCount = schedules.filter((s) => s.dead && s.dead < today && s.status !== "완료" && s.status !== "취소").length
+  const overdueCount = schedules.filter((s) => s.dead && s.dead < today && s.status !== "완료").length
   const showStatusHighlights = overdueCount > 0 || reconfirmCount > 0
 
   // Filter schedules based on selected date and filter
@@ -43,7 +43,7 @@ export default function HomePage({
   } else if (selectedFilter === "reconfirm") {
     filteredSchedules = schedules.filter((s) => s.status === "재확인")
   } else if (selectedFilter === "overdue") {
-    filteredSchedules = schedules.filter((s) => s.dead && s.dead < today && s.status !== "완료" && s.status !== "취소")
+    filteredSchedules = schedules.filter((s) => s.dead && s.dead < today && s.status !== "완료")
   } else if (selectedFilter === "noDeadline") {
     filteredSchedules = schedules.filter((s) => !s.dead)
   }
@@ -51,8 +51,8 @@ export default function HomePage({
   // Sort schedules: overdue/reconfirm first, then by deadline (closest first)
   const sortSchedules = (schedules: Schedule[]) => {
     return [...schedules].sort((a, b) => {
-      const aIsOverdue = a.dead && a.dead < today && a.status !== "완료" && a.status !== "취소"
-      const bIsOverdue = b.dead && b.dead < today && b.status !== "완료" && b.status !== "취소"
+      const aIsOverdue = a.dead && a.dead < today && a.status !== "완료"
+      const bIsOverdue = b.dead && b.dead < today && b.status !== "완료"
       const aIsReconfirm = a.status === "재확인"
       const bIsReconfirm = b.status === "재확인"
       
@@ -287,7 +287,7 @@ function CalendarSection({
     } else {
       info.count += 1
       info.hasDeadline = true
-      if (schedule.dead < today && schedule.status !== "취소") {
+      if (schedule.dead < today) {
         info.overdue = true
       }
     }
@@ -461,7 +461,6 @@ function ScheduleItem({
     "구매 완료": { class: "bg-indigo-50 text-indigo-700 border border-indigo-100", text: "구매 완료" },
     "제품 배송 완료": { class: "bg-indigo-50 text-indigo-700 border border-indigo-100", text: "배송 완료" },
     완료: { class: "bg-neutral-100 text-neutral-700 border border-neutral-200", text: "완료" },
-    취소: { class: "bg-neutral-100 text-neutral-500 border border-neutral-200", text: "취소" },
     재확인: { class: "bg-amber-50 text-amber-700 border border-amber-200", text: "재확인" },
   }
 
@@ -480,11 +479,10 @@ function ScheduleItem({
 
   const total = schedule.benefit + schedule.income - schedule.cost
   const status = statusConfig[schedule.status] || { class: "bg-neutral-100 text-neutral-600", text: "미정" }
-  const isOverdue = schedule.dead && schedule.dead < today && schedule.status !== "완료" && schedule.status !== "취소"
+  const isOverdue = schedule.dead && schedule.dead < today && schedule.status !== "완료"
   const isReconfirm = schedule.status === "재확인"
   const isCompleted = schedule.status === "완료"
-  const isCancelled = schedule.status === "취소"
-  const canComplete = !!onCompleteClick && !isCompleted && !isCancelled
+  const canComplete = !!onCompleteClick && !isCompleted
 
   return (
     <div

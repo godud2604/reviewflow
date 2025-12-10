@@ -49,11 +49,10 @@ const STATUS_ORDER: Schedule["status"][] = [
   "구매 완료",
   "제품 배송 완료",
   "완료",
-  "취소",
   "재확인",
 ]
 
-const COMMON_STATUSES: Schedule["status"][] = ["선정됨", "완료", "취소", "재확인"]
+const COMMON_STATUSES: Schedule["status"][] = ["선정됨", "완료", "재확인"]
 
 const STATUS_BY_REVIEW_TYPE: Record<Schedule["reviewType"], Schedule["status"][]> = {
   방문형: ["방문일 예약 완료", "방문"],
@@ -560,7 +559,7 @@ export default function ScheduleModal({
           )}
           
           {/* 마감 초과 경고 */}
-          {formData.dead && formData.dead < new Date().toISOString().split("T")[0] && formData.status !== "완료" && formData.status !== "취소" && (
+          {formData.dead && formData.dead < new Date().toISOString().split("T")[0] && formData.status !== "완료" && (
             <div className="mb-4 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
               <span className="text-[12px]">⚠️</span>
               <span className="text-[12px] font-bold text-red-700">마감 기한 초과된 체험단입니다</span>
