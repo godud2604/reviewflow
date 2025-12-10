@@ -1044,7 +1044,7 @@ export default function ScheduleModal({
                   </div>
                 )}
 
-                <div>
+                {/* <div>
                   <label className="block text-[12px] font-bold text-neutral-500 mb-2">가이드 첨부파일</label>
                   <input
                     type="file"
@@ -1052,10 +1052,10 @@ export default function ScheduleModal({
                     accept="image/*,.pdf,.doc,.docx"
                     onChange={handleFileSelect}
                     className="w-full h-10 px-2 py-1.5 bg-[#F7F7F8] border-none rounded-xl text-[14px] cursor-pointer file:mr-3 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#FF5722] file:text-white hover:file:bg-[#FF5722]/90 file:cursor-pointer "
-                  />
+                  /> */}
                   
                   {/* 업로드 대기 중인 파일 (저장 시 업로드됨) */}
-                  {pendingFiles.length > 0 && (
+                  {/* {pendingFiles.length > 0 && (
                     <div className="mt-2 space-y-2">
                       <span className="text-[12px] text-neutral-400">저장 시 업로드될 파일:</span>
                       {pendingFiles.map((file, index) => (
@@ -1076,10 +1076,10 @@ export default function ScheduleModal({
                         </div>
                       ))}
                     </div>
-                  )}
+                  )} */}
 
                   {/* 이미 업로드된 파일 */}
-                  {formData.guideFiles && formData.guideFiles.length > 0 && (
+                  {/* {formData.guideFiles && formData.guideFiles.length > 0 && (
                     <div className="mt-2 space-y-2">
                       <span className="text-[12px] text-neutral-400">업로드된 파일:</span>
                       {formData.guideFiles.map((file, index) => (
@@ -1110,8 +1110,8 @@ export default function ScheduleModal({
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
+                  )} */}
+                {/* </div> */}
 
                 {/* 메모장 */}
                 <div>
