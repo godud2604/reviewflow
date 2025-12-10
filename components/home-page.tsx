@@ -77,21 +77,8 @@ export default function HomePage({
   const displayedSchedules = sortSchedules(selectedDate || selectedFilter !== "all" ? filteredSchedules : activeSchedules)
 
   const handleDateClick = (dateStr: string) => {
-    if (selectedDate === dateStr) {
-      setSelectedDate(null)
-    } else {
-      setSelectedDate(dateStr)
-      setSelectedFilter("all")
-    }
-  }
-
-  const handleFilterClick = (filter: "active" | "reconfirm" | "overdue" | "noDeadline") => {
-    if (selectedFilter === filter) {
-      setSelectedFilter("all")
-    } else {
-      setSelectedFilter(filter)
-      setSelectedDate(null)
-    }
+    setSelectedDate(dateStr)
+    setSelectedFilter("all")
   }
 
   const containerClassName = `mt-1 flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3${showStatusHighlights ? "" : " pt-2"}`
@@ -121,9 +108,9 @@ export default function HomePage({
                 ? "재확인 일정"
                 : selectedFilter === "overdue"
                   ? "마감 초과 일정"
-                  : selectedFilter === "noDeadline"
-                    ? "마감일 미정"
-                  : "진행 중인 체험단"}
+                : selectedFilter === "noDeadline"
+                  ? "마감일 미정"
+                  : "체험단 일정"}
             <span className="ml-1 text-sm font-semibold text-orange-600">
               {selectedDate || selectedFilter !== "all" ? filteredSchedules.length : activeCount}건
             </span>
