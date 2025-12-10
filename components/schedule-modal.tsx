@@ -38,7 +38,6 @@ export default function ScheduleModal({
     reviewType: "제공형",
     channel: "네이버블로그",
     category: "맛집",
-    region: "",
     visit: "",
     visitTime: "",
     dead: "",
@@ -100,7 +99,6 @@ export default function ScheduleModal({
         reviewType: "제공형",
         channel: "네이버블로그",
         category: "맛집",
-        region: "",
         visit: "",
         visitTime: "",
         dead: "",
@@ -384,643 +382,636 @@ export default function ScheduleModal({
             </div>
           )}
           
-          {/* 체험단명 */}
-          <label className="block text-sm font-bold text-neutral-500 mb-2">체험단명 (필수)</label>
-          <div className="relative">
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full h-11 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
-              placeholder="예: 강남역 파스타"
-            />
-            {formData.title && (
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(formData.title || "")
-                  toast({
-                    title: "체험단명이 복사되었습니다.",
-                    duration: 2000,
-                  })
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
-              >
-                <Copy className="w-4 h-4 cursor-pointer" />
-              </button>
-            )}
-          </div>
-
-          {/* 플랫폼 */}
-          <div className="mt-6">
-            <label className="block text-sm font-bold text-neutral-500 mb-2">플랫폼</label>
-            <Select
-              value={formData.platform}
-              onValueChange={(value) => setFormData({ ...formData, platform: value })}
-            >
-              <SelectTrigger className="w-full h-11 bg-[#F7F7F8] border-none rounded-xl text-[15px]">
-                <SelectValue placeholder="선택하세요" />
-              </SelectTrigger>
-              <SelectContent>
-                {allPlatforms.map((platform) => (
-                  <SelectItem 
-                    key={platform} 
-                    value={platform}
-                    className={"text-[15px]"}
-                  >
-                    <div className="flex items-center justify-between w-full gap-2">
-                      <span className="flex-1">{platform}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <button
-              onClick={() => setShowPlatformManagement(true)}
-              className="mt-2 text-sm text-[#FF5722] font-semibold cursor-pointer"
-            >
-              + 플랫폼 관리
-            </button>
-          </div>
-
-          {/* 체험단 유형 */}
-          <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">체험단 유형</label>
-          <div className="flex gap-2 flex-wrap">
-            {["제공형", "페이백형", "페이백+구매평", "구매평", "기자단", "미션/인증", "방문형"].map(
-              (type) => (
-                <div
-                  key={type}
-                  onClick={() => {
-                    const newFormData: Partial<Schedule> = {
-                      ...formData,
-                      reviewType: type as Schedule["reviewType"],
-                    }
-                    // 방문형으로 변경 시 체크리스트 초기화
-                    if (type === "방문형" && !formData.visitReviewChecklist) {
-                      newFormData.visitReviewChecklist = {
-                        naverReservation: false,
-                        platformAppReview: false,
-                        cafeReview: false,
-                        googleReview: false,
-                      }
-                    }
-                    setFormData(newFormData)
-                  }}
-                  className={`h-11 px-3 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
-                    formData.reviewType === type
-                      ? "bg-orange-50 text-[#FF5722] border border-[#FF5722]"
-                      : "bg-[#F7F7F8] text-neutral-500"
-                  }`}
-                >
-                  {type}
-                </div>
-              ),
-            )}
-          </div>
-
-          {/* 방문형 리뷰 체크리스트 */}
-          {formData.reviewType === "방문형" && (
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <label className="block text-sm font-bold text-blue-900 mb-3">작성해야 할 리뷰</label>
-              <div className="space-y-2.5">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <Checkbox
-                    checked={formData.visitReviewChecklist?.naverReservation || false}
-                    onCheckedChange={(checked) =>
-                      setFormData({
-                        ...formData,
-                        visitReviewChecklist: {
-                          ...formData.visitReviewChecklist!,
-                          naverReservation: checked as boolean,
-                        },
-                      })
-                    }
-                  />
-                  <span className="text-sm font-semibold text-blue-900">네이버 예약 리뷰</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <Checkbox
-                    checked={formData.visitReviewChecklist?.platformAppReview || false}
-                    onCheckedChange={(checked) =>
-                      setFormData({
-                        ...formData,
-                        visitReviewChecklist: {
-                          ...formData.visitReviewChecklist!,
-                          platformAppReview: checked as boolean,
-                        },
-                      })
-                    }
-                  />
-                  <span className="text-sm font-semibold text-blue-900">타플랫폼 어플 리뷰</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <Checkbox
-                    checked={formData.visitReviewChecklist?.cafeReview || false}
-                    onCheckedChange={(checked) =>
-                      setFormData({
-                        ...formData,
-                        visitReviewChecklist: {
-                          ...formData.visitReviewChecklist!,
-                          cafeReview: checked as boolean,
-                        },
-                      })
-                    }
-                  />
-                  <span className="text-sm font-semibold text-blue-900">카페 리뷰</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <Checkbox
-                    checked={formData.visitReviewChecklist?.googleReview || false}
-                    onCheckedChange={(checked) =>
-                      setFormData({
-                        ...formData,
-                        visitReviewChecklist: {
-                          ...formData.visitReviewChecklist!,
-                          googleReview: checked as boolean,
-                        },
-                      })
-                    }
-                  />
-                  <span className="text-sm font-semibold text-blue-900">구글 리뷰</span>
-                </label>
+          <div className="space-y-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-sm font-bold text-neutral-900">필수사항</span>
               </div>
-            </div>
-          )}
-
-          {/* 진행 상태 */}
-          <div className="mt-6">
-            <label className="block text-sm font-bold text-neutral-500 mb-2">진행 상태</label>
-            <Select
-              value={formData.status}
-              onValueChange={(value) => {
-                setFormData({ ...formData, status: value as Schedule["status"] })
-                // 재확인이 아닌 상태로 변경하면 재확인 사유 초기화
-                if (value !== "재확인") {
-                  setReconfirmReason("")
-                  setCustomReconfirmReason("")
-                }
-              }}
-            >
-              <SelectTrigger className="w-full h-11 bg-[#F7F7F8] border-none rounded-xl text-[15px]">
-                <SelectValue placeholder="선택하세요" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="선정됨" className="text-[15px]">선정됨</SelectItem>
-                {formData.reviewType === "방문형" && (
-                  <>
-                    <SelectItem value="방문일 예약 완료" className="text-[15px]">방문일 예약 완료</SelectItem>
-                    <SelectItem value="방문" className="text-[15px]">방문</SelectItem>
-                  </>
-                )}
-                {["페이백형", "페이백+구매평", "구매평"].includes(formData.reviewType || "") && (
-                  <SelectItem value="구매 완료" className="text-[15px]">구매 완료</SelectItem>
-                )}
-                {formData.reviewType === "제공형" && (
-                  <SelectItem value="제품 배송 완료" className="text-[15px]">제품 배송 완료</SelectItem>
-                )}
-                <SelectItem value="완료" className="text-[15px]">완료</SelectItem>
-                <SelectItem value="취소" className="text-[15px]">취소</SelectItem>
-                <SelectItem value="재확인" className="text-[15px]">재확인</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 재확인 사유 */}
-          {formData.status === "재확인" && (
-            <div className="mt-4">
-              <label className="block text-sm font-bold text-neutral-500 mb-2">재확인 사유</label>
-              <Select
-                value={reconfirmReason}
-                onValueChange={(value) => {
-                  setReconfirmReason(value)
-                  if (value !== "기타") {
-                    setCustomReconfirmReason("")
-                  }
-                }}
-              >
-                <SelectTrigger className="w-full h-11 bg-[#F7F7F8] border-none rounded-xl text-[15px]">
-                  <SelectValue placeholder="사유를 선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="입금 확인 필요" className="text-[15px]">입금 확인 필요</SelectItem>
-                  <SelectItem value="리워드 미지급" className="text-[15px]">리워드 미지급</SelectItem>
-                  <SelectItem value="가이드 내용 불분명" className="text-[15px]">가이드 내용 불분명</SelectItem>
-                  <SelectItem value="플랫폼 답변 대기중" className="text-[15px]">플랫폼 답변 대기중</SelectItem>
-                  <SelectItem value="기타" className="text-[15px]">기타</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              {reconfirmReason === "기타" && (
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    value={customReconfirmReason}
-                    onChange={(e) => setCustomReconfirmReason(e.target.value)}
-                    className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
-                    placeholder="기타 사유를 입력하세요"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 작성 채널 */}
-          <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">작성 채널</label>
-          <div className="flex gap-2 flex-wrap">
-            {[
-              "네이버블로그",
-              "인스타그램",
-              "인스타그램 reels",
-              "네이버클립",
-              "유튜브 shorts",
-              "틱톡",
-              "쓰레드",
-              "기타(구매평/인증)",
-            ].map((channel) => (
-              <div
-                key={channel}
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    channel: channel as Schedule["channel"],
-                  })
-                }
-                className={`h-11 px-3 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
-                  formData.channel === channel
-                    ? "bg-blue-50 text-blue-600 border border-blue-600"
-                    : "bg-[#F7F7F8] text-neutral-500"
-                }`}
-              >
-                {channel}
-              </div>
-            ))}
-          </div>
-
-          {/* 카테고리 */}
-          <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">카테고리</label>
-          <div className="flex gap-2 flex-wrap">
-            {["맛집", "식품", "뷰티", "여행", "디지털", "반려동물", "기타"].map((category) => (
-              <div
-                key={category}
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    category: category as Schedule["category"],
-                  })
-                }
-                className={`h-11 px-4 rounded-2xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
-                  formData.category === category
-                    ? "bg-purple-50 text-purple-600 border border-purple-600"
-                    : "bg-[#F7F7F8] text-neutral-500"
-                }`}
-              >
-                {category}
-              </div>
-            ))}
-          </div>
-
-          {/* 지역 - only show when reviewType is 방문형 */}
-          {formData.reviewType === "방문형" && (
-            <div className="mt-6">
-              <label className="block text-sm font-bold text-neutral-500 mb-2">지역</label>
-              <Select
-                value={formData.region}
-                onValueChange={(value) => setFormData({ ...formData, region: value })}
-              >
-                <SelectTrigger className="w-full h-11 bg-[#F7F7F8] border-none rounded-xl text-[15px]">
-                  <SelectValue placeholder="선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[
-                    "서울",
-                    "경기",
-                    "인천",
-                    "강원",
-                    "대전",
-                    "세종",
-                    "충남",
-                    "충북",
-                    "부산",
-                    "울산",
-                    "경남",
-                    "경북",
-                    "대구",
-                    "광주",
-                    "전남",
-                    "전북",
-                    "제주",
-                  ].map((region) => (
-                    <SelectItem key={region} value={region} className="text-[15px]">
-                      {region}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* 날짜 */}
-          <div className="flex gap-2.5 mt-6 flex-wrap">
-            {formData.reviewType === "방문형" && (
-              <>
-                <div className="flex-1 min-w-[180px]">
-                  <label className="block text-sm font-bold text-neutral-500 mb-2">방문일</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
-                        {formData.visit ? format(new Date(formData.visit), "PPP", { locale: ko }) : "날짜 선택"}
+              <div className="space-y-6">
+                {/* 체험단명 */}
+                <div>
+                  <label className="block text-sm font-bold text-neutral-500 mb-2">체험단명 (필수)</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full h-11 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
+                      placeholder="예: 강남역 파스타"
+                    />
+                    {formData.title && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(formData.title || "")
+                          toast({
+                            title: "체험단명이 복사되었습니다.",
+                            duration: 2000,
+                          })
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                      >
+                        <Copy className="w-4 h-4 cursor-pointer" />
                       </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.visit ? new Date(formData.visit) : undefined}
-                        onSelect={(date) =>
+                    )}
+                  </div>
+                </div>
+
+                {/* 체험단 유형 */}
+                <div>
+                  <label className="block text-sm font-bold text-neutral-500 mb-2">체험단 유형</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {["제공형", "페이백형", "페이백+구매평", "구매평", "기자단", "미션/인증", "방문형"].map(
+                      (type) => (
+                        <div
+                          key={type}
+                          onClick={() => {
+                            const newFormData: Partial<Schedule> = {
+                              ...formData,
+                              reviewType: type as Schedule["reviewType"],
+                            }
+                            // 방문형으로 변경 시 체크리스트 초기화
+                            if (type === "방문형" && !formData.visitReviewChecklist) {
+                              newFormData.visitReviewChecklist = {
+                                naverReservation: false,
+                                platformAppReview: false,
+                                cafeReview: false,
+                                googleReview: false,
+                              }
+                            }
+                            setFormData(newFormData)
+                          }}
+                          className={`h-11 px-3 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
+                            formData.reviewType === type
+                              ? "bg-orange-50 text-[#FF5722] border border-[#FF5722]"
+                              : "bg-[#F7F7F8] text-neutral-500"
+                          }`}
+                        >
+                          {type}
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </div>
+
+                {/* 방문형 리뷰 체크리스트 */}
+                {formData.reviewType === "방문형" && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                    <label className="block text-sm font-bold text-blue-900 mb-3">추가로 작성해야 할 리뷰</label>
+                    <div className="space-y-2.5">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <Checkbox
+                          checked={formData.visitReviewChecklist?.naverReservation || false}
+                          onCheckedChange={(checked) =>
+                            setFormData({
+                              ...formData,
+                              visitReviewChecklist: {
+                                ...formData.visitReviewChecklist!,
+                                naverReservation: checked as boolean,
+                              },
+                            })
+                          }
+                        />
+                        <span className="text-sm font-semibold text-blue-900">네이버 예약 리뷰</span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <Checkbox
+                          checked={formData.visitReviewChecklist?.platformAppReview || false}
+                          onCheckedChange={(checked) =>
+                            setFormData({
+                              ...formData,
+                              visitReviewChecklist: {
+                                ...formData.visitReviewChecklist!,
+                                platformAppReview: checked as boolean,
+                              },
+                            })
+                          }
+                        />
+                        <span className="text-sm font-semibold text-blue-900">타플랫폼 어플 리뷰</span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <Checkbox
+                          checked={formData.visitReviewChecklist?.cafeReview || false}
+                          onCheckedChange={(checked) =>
+                            setFormData({
+                              ...formData,
+                              visitReviewChecklist: {
+                                ...formData.visitReviewChecklist!,
+                                cafeReview: checked as boolean,
+                              },
+                            })
+                          }
+                        />
+                        <span className="text-sm font-semibold text-blue-900">카페 리뷰</span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <Checkbox
+                          checked={formData.visitReviewChecklist?.googleReview || false}
+                          onCheckedChange={(checked) =>
+                            setFormData({
+                              ...formData,
+                              visitReviewChecklist: {
+                                ...formData.visitReviewChecklist!,
+                                googleReview: checked as boolean,
+                              },
+                            })
+                          }
+                        />
+                        <span className="text-sm font-semibold text-blue-900">구글 리뷰</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* 날짜 */}
+                <div className="flex gap-2.5 flex-wrap">
+                  {formData.reviewType === "방문형" && (
+                    <>
+                      <div className="flex-1 min-w-[180px]">
+                        <label className="block text-sm font-bold text-neutral-500 mb-2">방문일</label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
+                              {formData.visit ? format(new Date(formData.visit), "PPP", { locale: ko }) : "날짜 선택"}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={formData.visit ? new Date(formData.visit) : undefined}
+                              onSelect={(date) =>
+                                setFormData({
+                                  ...formData,
+                                  visit: date ? format(date, "yyyy-MM-dd") : "",
+                                })
+                              }
+                              locale={ko}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="flex-1 min-w-[180px]">
+                        <label className="block text-sm font-bold text-neutral-500 mb-2">방문시간</label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
+                              {displayVisitTime}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[280px] p-3" align="start">
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="space-y-1">
+                                <span className="text-xs font-semibold text-neutral-500">오전/오후</span>
+                                <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
+                                  <div className="p-1 space-y-1">
+                                    {timeOptions.periods.map((p) => (
+                                      <button
+                                        key={p}
+                                        className={`w-full rounded-md px-3 py-2 text-sm font-semibold text-left cursor-pointer transition-colors ${
+                                          p === period ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
+                                        }`}
+                                        onClick={() => updateVisitTime({ period: p })}
+                                      >
+                                        {p}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </ScrollArea>
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-xs font-semibold text-neutral-500">시</span>
+                                <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
+                                  <div className="p-1 grid grid-cols-2 gap-1">
+                                    {timeOptions.hours.map((h) => (
+                                      <button
+                                        key={h}
+                                        className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
+                                          h === hour ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
+                                        }`}
+                                        onClick={() => updateVisitTime({ hour: h })}
+                                      >
+                                        {h}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </ScrollArea>
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-xs font-semibold text-neutral-500">분</span>
+                                <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
+                                  <div className="p-1 grid grid-cols-2 gap-1">
+                                    {timeOptions.minutes.map((m) => (
+                                      <button
+                                        key={m}
+                                        className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
+                                          m === minute ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
+                                        }`}
+                                        onClick={() => updateVisitTime({ minute: m })}
+                                      >
+                                        {m}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </ScrollArea>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </>
+                  )}
+                  <div className={formData.reviewType === "방문형" ? "flex-1 min-w-[180px]" : "w-full"}>
+                    <label className="block text-sm font-bold text-[#FF5722] mb-2">마감일</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
+                          {formData.dead ? format(new Date(formData.dead), "PPP", { locale: ko }) : "날짜 선택"}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={formData.dead ? new Date(formData.dead) : undefined}
+                          onSelect={(date) =>
+                            setFormData({
+                              ...formData,
+                              dead: date ? format(date, "yyyy-MM-dd") : "",
+                            })
+                          }
+                          locale={ko}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                {/* 플랫폼 */}
+                <div>
+                  <label className="block text-sm font-bold text-neutral-500 mb-2">플랫폼</label>
+                  <Select
+                    value={formData.platform}
+                    onValueChange={(value) => setFormData({ ...formData, platform: value })}
+                  >
+                    <SelectTrigger className="w-full h-11 bg-[#F7F7F8] border-none rounded-xl text-[15px]">
+                      <SelectValue placeholder="선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allPlatforms.map((platform) => (
+                        <SelectItem 
+                          key={platform} 
+                          value={platform}
+                          className={"text-[15px]"}
+                        >
+                          <div className="flex items-center justify-between w-full gap-2">
+                            <span className="flex-1">{platform}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <button
+                    onClick={() => setShowPlatformManagement(true)}
+                    className="mt-2 text-sm text-[#FF5722] font-semibold cursor-pointer"
+                  >
+                    + 플랫폼 관리
+                  </button>
+                </div>
+
+                {/* 작성 채널 */}
+                <div>
+                  <label className="block text-sm font-bold text-neutral-500 mb-2">작성 채널</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      "네이버블로그",
+                      "인스타그램",
+                      "인스타그램 reels",
+                      "네이버클립",
+                      "유튜브 shorts",
+                      "틱톡",
+                      "쓰레드",
+                      "기타(구매평/인증)",
+                    ].map((channel) => (
+                      <div
+                        key={channel}
+                        onClick={() =>
                           setFormData({
                             ...formData,
-                            visit: date ? format(date, "yyyy-MM-dd") : "",
+                            channel: channel as Schedule["channel"],
                           })
                         }
-                        locale={ko}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="flex-1 min-w-[180px]">
-                  <label className="block text-sm font-bold text-neutral-500 mb-2">방문시간</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
-                        {displayVisitTime}
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[280px] p-3" align="start">
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <span className="text-xs font-semibold text-neutral-500">오전/오후</span>
-                          <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
-                            <div className="p-1 space-y-1">
-                              {timeOptions.periods.map((p) => (
-                                <button
-                                  key={p}
-                                  className={`w-full rounded-md px-3 py-2 text-sm font-semibold text-left cursor-pointer transition-colors ${
-                                    p === period ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
-                                  }`}
-                                  onClick={() => updateVisitTime({ period: p })}
-                                >
-                                  {p}
-                                </button>
-                              ))}
-                            </div>
-                          </ScrollArea>
-                        </div>
-                        <div className="space-y-1">
-                          <span className="text-xs font-semibold text-neutral-500">시</span>
-                          <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
-                            <div className="p-1 grid grid-cols-2 gap-1">
-                              {timeOptions.hours.map((h) => (
-                                <button
-                                  key={h}
-                                  className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
-                                    h === hour ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
-                                  }`}
-                                  onClick={() => updateVisitTime({ hour: h })}
-                                >
-                                  {h}
-                                </button>
-                              ))}
-                            </div>
-                          </ScrollArea>
-                        </div>
-                        <div className="space-y-1">
-                          <span className="text-xs font-semibold text-neutral-500">분</span>
-                          <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
-                            <div className="p-1 grid grid-cols-2 gap-1">
-                              {timeOptions.minutes.map((m) => (
-                                <button
-                                  key={m}
-                                  className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
-                                    m === minute ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
-                                  }`}
-                                  onClick={() => updateVisitTime({ minute: m })}
-                                >
-                                  {m}
-                                </button>
-                              ))}
-                            </div>
-                          </ScrollArea>
-                        </div>
+                        className={`h-11 px-3 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
+                          formData.channel === channel
+                            ? "bg-blue-50 text-blue-600 border border-blue-600"
+                            : "bg-[#F7F7F8] text-neutral-500"
+                        }`}
+                      >
+                        {channel}
                       </div>
-                    </PopoverContent>
-                  </Popover>
+                    ))}
+                  </div>
                 </div>
-              </>
-            )}
-            <div className={formData.reviewType === "방문형" ? "flex-1 min-w-[180px]" : "w-full"}>
-              <label className="block text-sm font-bold text-[#FF5722] mb-2">마감일</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
-                    {formData.dead ? format(new Date(formData.dead), "PPP", { locale: ko }) : "날짜 선택"}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.dead ? new Date(formData.dead) : undefined}
-                    onSelect={(date) =>
-                      setFormData({
-                        ...formData,
-                        dead: date ? format(date, "yyyy-MM-dd") : "",
-                      })
-                    }
-                    locale={ko}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
 
-          {/* 자산 관리 */}
-          <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">자산 관리</label>
-          <div className="bg-neutral-50 border border-neutral-200 rounded-2xl px-2 py-3 flex gap-2.5">
-            <div className="flex-1 text-center">
-              <span className="block text-xs text-neutral-400 font-semibold mb-2">제공(물품)</span>
-              <input
-                type="text"
-                value={formatNumber(formData.benefit || 0)}
-                onChange={(e) => handleNumberChange("benefit", e.target.value)}
-                className="w-full h-11 px-3 py-2 bg-white border-none rounded-xl text-center font-bold text-[15px]"
-                placeholder="0"
-              />
-            </div>
-            <div className="flex-1 text-center">
-              <span className="block text-xs text-neutral-400 font-semibold mb-2">수익(현금)</span>
-              <input
-                type="text"
-                value={formatNumber(formData.income || 0)}
-                onChange={(e) => handleNumberChange("income", e.target.value)}
-                className="w-full h-11 px-3 py-2 bg-white border-none rounded-xl text-center font-bold text-[15px]"
-                placeholder="0"
-              />
-            </div>
-            <div className="flex-1 text-center">
-              <span className="block text-xs text-red-600 font-semibold mb-2">내 지출</span>
-              <input
-                type="text"
-                value={formatNumber(formData.cost || 0)}
-                onChange={(e) => handleNumberChange("cost", e.target.value)}
-                className="w-full h-11 px-3 py-2 bg-white border-none rounded-xl text-center font-bold text-red-600 text-[15px]"
-                placeholder="0"
-              />
-            </div>
-          </div>
+                {/* 카테고리 */}
+                <div>
+                  <label className="block text-sm font-bold text-neutral-500 mb-2">카테고리</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {["맛집", "식품", "뷰티", "여행", "디지털", "반려동물", "기타"].map((category) => (
+                      <div
+                        key={category}
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            category: category as Schedule["category"],
+                          })
+                        }
+                        className={`h-11 px-4 rounded-2xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
+                          formData.category === category
+                            ? "bg-purple-50 text-purple-600 border border-purple-600"
+                            : "bg-[#F7F7F8] text-neutral-500"
+                        }`}
+                      >
+                        {category}
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-          {/* 링크 */}
-          <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">포스팅 링크</label>
-          <div className="relative">
-            <input
-              type="url"
-              value={formData.postingLink || ""}
-              onChange={(e) => setFormData({ ...formData, postingLink: e.target.value })}
-              className="w-full h-11 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
-              placeholder="https://..."
-            />
-            {formData.postingLink && (
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(formData.postingLink || "")
-                  toast({
-                    title: "포스팅 링크가 복사되었습니다.",
-                    duration: 2000,
-                  })
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
-              >
-                <Copy className="w-4 h-4 cursor-pointer" />
-              </button>
-            )}
-          </div>
-
-          {["페이백형", "페이백+구매평", "구매평", "미션/인증"].includes(formData.reviewType || "") && (
-            <>
-              <label className="block text-sm font-bold text-neutral-500 mb-2 mt-4">구매할 링크</label>
-              <div className="relative">
-                <input
-                  type="url"
-                  value={formData.purchaseLink || ""}
-                  onChange={(e) => setFormData({ ...formData, purchaseLink: e.target.value })}
-                  className="w-full h-11 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
-                  placeholder="https://..."
-                />
-                {formData.purchaseLink && (
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(formData.purchaseLink || "")
-                      toast({
-                        title: "구매 링크가 복사되었습니다.",
-                        duration: 2000,
-                      })
+                {/* 진행 상태 */}
+                <div>
+                  <label className="block text-sm font-bold text-neutral-500 mb-2">진행 상태</label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, status: value as Schedule["status"] })
+                      // 재확인이 아닌 상태로 변경하면 재확인 사유 초기화
+                      if (value !== "재확인") {
+                        setReconfirmReason("")
+                        setCustomReconfirmReason("")
+                      }
                     }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
                   >
-                    <Copy className="w-4 h-4 cursor-pointer" />
-                  </button>
+                    <SelectTrigger className="w-full h-11 bg-[#F7F7F8] border-none rounded-xl text-[15px]">
+                      <SelectValue placeholder="선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="선정됨" className="text-[15px]">선정됨</SelectItem>
+                      {formData.reviewType === "방문형" && (
+                        <>
+                          <SelectItem value="방문일 예약 완료" className="text-[15px]">방문일 예약 완료</SelectItem>
+                          <SelectItem value="방문" className="text-[15px]">방문</SelectItem>
+                        </>
+                      )}
+                      {["페이백형", "페이백+구매평", "구매평"].includes(formData.reviewType || "") && (
+                        <SelectItem value="구매 완료" className="text-[15px]">구매 완료</SelectItem>
+                      )}
+                      {formData.reviewType === "제공형" && (
+                        <SelectItem value="제품 배송 완료" className="text-[15px]">제품 배송 완료</SelectItem>
+                      )}
+                      <SelectItem value="완료" className="text-[15px]">완료</SelectItem>
+                      <SelectItem value="취소" className="text-[15px]">취소</SelectItem>
+                      <SelectItem value="재확인" className="text-[15px]">재확인</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 재확인 사유 */}
+                {formData.status === "재확인" && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-neutral-500">재확인 사유</label>
+                    <Select
+                      value={reconfirmReason}
+                      onValueChange={(value) => {
+                        setReconfirmReason(value)
+                        if (value !== "기타") {
+                          setCustomReconfirmReason("")
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full h-11 bg-[#F7F7F8] border-none rounded-xl text-[15px]">
+                        <SelectValue placeholder="사유를 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="입금 확인 필요" className="text-[15px]">입금 확인 필요</SelectItem>
+                        <SelectItem value="리워드 미지급" className="text-[15px]">리워드 미지급</SelectItem>
+                        <SelectItem value="가이드 내용 불분명" className="text-[15px]">가이드 내용 불분명</SelectItem>
+                        <SelectItem value="플랫폼 답변 대기중" className="text-[15px]">플랫폼 답변 대기중</SelectItem>
+                        <SelectItem value="기타" className="text-[15px]">기타</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {reconfirmReason === "기타" && (
+                      <div>
+                        <input
+                          type="text"
+                          value={customReconfirmReason}
+                          onChange={(e) => setCustomReconfirmReason(e.target.value)}
+                          className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
+                          placeholder="기타 사유를 입력하세요"
+                        />
+                      </div>
+                    )}
+                  </div>
                 )}
+
+                {/* 자산 관리 */}
+                <div>
+                  <label className="block text-sm font-bold text-neutral-500 mb-2">자산 관리</label>
+                  <div className="bg-neutral-50 border border-neutral-200 rounded-2xl px-2 py-3 flex gap-2.5">
+                    <div className="flex-1 text-center">
+                      <span className="block text-xs text-neutral-400 font-semibold mb-2">제공(물품)</span>
+                      <input
+                        type="text"
+                        value={formatNumber(formData.benefit || 0)}
+                        onChange={(e) => handleNumberChange("benefit", e.target.value)}
+                        className="w-full h-11 px-3 py-2 bg-white border-none rounded-xl text-center font-bold text-[15px]"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="flex-1 text-center">
+                      <span className="block text-xs text-neutral-400 font-semibold mb-2">수익(현금)</span>
+                      <input
+                        type="text"
+                        value={formatNumber(formData.income || 0)}
+                        onChange={(e) => handleNumberChange("income", e.target.value)}
+                        className="w-full h-11 px-3 py-2 bg-white border-none rounded-xl text-center font-bold text-[15px]"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="flex-1 text-center">
+                      <span className="block text-xs text-red-600 font-semibold mb-2">내 지출</span>
+                      <input
+                        type="text"
+                        value={formatNumber(formData.cost || 0)}
+                        onChange={(e) => handleNumberChange("cost", e.target.value)}
+                        className="w-full h-11 px-3 py-2 bg-white border-none rounded-xl text-center font-bold text-red-600 text-[15px]"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </>
-          )}
-
-          <label className="block text-sm font-bold text-neutral-500 mb-2 mt-4">가이드 첨부파일</label>
-          <input
-            type="file"
-            multiple
-            accept="image/*,.pdf,.doc,.docx"
-            onChange={handleFileSelect}
-            className="w-full h-13 px-2 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#FF5722] file:text-white hover:file:bg-[#FF5722]/90 file:cursor-pointer "
-          />
-          
-          {/* 업로드 대기 중인 파일 (저장 시 업로드됨) */}
-          {pendingFiles.length > 0 && (
-            <div className="mt-2 space-y-2">
-              <span className="text-xs text-neutral-400">저장 시 업로드될 파일:</span>
-              {pendingFiles.map((file, index) => (
-                <div
-                  key={`pending-${index}`}
-                  className="flex items-center justify-between px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg"
-                >
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-neutral-700 truncate block">{file.name}</span>
-                    <span className="text-xs text-neutral-400">{formatFileSize(file.size)}</span>
-                  </div>
-                  <button
-                    onClick={() => handleRemovePendingFile(index)}
-                    className="ml-2 text-neutral-400 hover:text-red-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
             </div>
-          )}
 
-          {/* 이미 업로드된 파일 */}
-          {formData.guideFiles && formData.guideFiles.length > 0 && (
-            <div className="mt-2 space-y-2">
-              <span className="text-xs text-neutral-400">업로드된 파일:</span>
-              {formData.guideFiles.map((file, index) => (
-                <div
-                  key={`uploaded-${index}`}
-                  className="flex items-center justify-between px-3 py-2 bg-neutral-50 rounded-lg"
-                >
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-neutral-700 truncate block">{file.name}</span>
-                    <span className="text-xs text-neutral-400">{formatFileSize(file.size)}</span>
-                  </div>
-                  <div className="flex items-center gap-1 ml-2">
-                    <button
-                      onClick={() => handleDownloadFile(file)}
-                      className="p-1.5 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="다운로드"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setFileToDelete({ file, index })}
-                      className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="삭제"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-sm font-bold text-neutral-900">추가사항</span>
+                <span className="text-xs text-neutral-400">필요할 때만 적어주세요</span>
+              </div>
+              <div className="space-y-6">
+                {/* 링크 */}
+                <div>
+                  <label className="block text-sm font-bold text-neutral-500 mb-2">포스팅 링크</label>
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={formData.postingLink || ""}
+                      onChange={(e) => setFormData({ ...formData, postingLink: e.target.value })}
+                      className="w-full h-11 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
+                      placeholder="https://..."
+                    />
+                    {formData.postingLink && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(formData.postingLink || "")
+                          toast({
+                            title: "포스팅 링크가 복사되었습니다.",
+                            duration: 2000,
+                          })
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                      >
+                        <Copy className="w-4 h-4 cursor-pointer" />
+                      </button>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
 
-          {/* 메모장 */}
-          <label className="block text-sm font-bold text-neutral-500 mb-2 mt-6">메모장</label>
-          <div className="relative">
-            <textarea
-              value={formData.memo || ""}
-              onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
-              className="w-full px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px] resize-none"
-              rows={3}
-              placeholder="가이드라인 복사 붙여넣기..."
-            />
-            {formData.memo && (
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(formData.memo || "")
-                  toast({
-                    title: "메모 내용이 복사되었습니다.",
-                    duration: 2000,
-                  })
-                }}
-                className="absolute right-2 top-2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
-              >
-                <Copy className="w-4 h-4 cursor-pointer" />
-              </button>
-            )}
+                {["페이백형", "페이백+구매평", "구매평", "미션/인증"].includes(formData.reviewType || "") && (
+                  <div>
+                    <label className="block text-sm font-bold text-neutral-500 mb-2">구매할 링크</label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={formData.purchaseLink || ""}
+                        onChange={(e) => setFormData({ ...formData, purchaseLink: e.target.value })}
+                        className="w-full h-11 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px]"
+                        placeholder="https://..."
+                      />
+                      {formData.purchaseLink && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(formData.purchaseLink || "")
+                            toast({
+                              title: "구매 링크가 복사되었습니다.",
+                              duration: 2000,
+                            })
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                        >
+                          <Copy className="w-4 h-4 cursor-pointer" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-bold text-neutral-500 mb-2">가이드 첨부파일</label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf,.doc,.docx"
+                    onChange={handleFileSelect}
+                    className="w-full h-13 px-2 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#FF5722] file:text-white hover:file:bg-[#FF5722]/90 file:cursor-pointer "
+                  />
+                  
+                  {/* 업로드 대기 중인 파일 (저장 시 업로드됨) */}
+                  {pendingFiles.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      <span className="text-xs text-neutral-400">저장 시 업로드될 파일:</span>
+                      {pendingFiles.map((file, index) => (
+                        <div
+                          key={`pending-${index}`}
+                          className="flex items-center justify-between px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm text-neutral-700 truncate block">{file.name}</span>
+                            <span className="text-xs text-neutral-400">{formatFileSize(file.size)}</span>
+                          </div>
+                          <button
+                            onClick={() => handleRemovePendingFile(index)}
+                            className="ml-2 text-neutral-400 hover:text-red-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 이미 업로드된 파일 */}
+                  {formData.guideFiles && formData.guideFiles.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      <span className="text-xs text-neutral-400">업로드된 파일:</span>
+                      {formData.guideFiles.map((file, index) => (
+                        <div
+                          key={`uploaded-${index}`}
+                          className="flex items-center justify-between px-3 py-2 bg-neutral-50 rounded-lg"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm text-neutral-700 truncate block">{file.name}</span>
+                            <span className="text-xs text-neutral-400">{formatFileSize(file.size)}</span>
+                          </div>
+                          <div className="flex items-center gap-1 ml-2">
+                            <button
+                              onClick={() => handleDownloadFile(file)}
+                              className="p-1.5 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="다운로드"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setFileToDelete({ file, index })}
+                              className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="삭제"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 메모장 */}
+                <div>
+                  <label className="block text-sm font-bold text-neutral-500 mb-2">메모장</label>
+                  <div className="relative">
+                    <textarea
+                      value={formData.memo || ""}
+                      onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
+                      className="w-full px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[15px] resize-none"
+                      rows={3}
+                      placeholder="가이드라인 복사 붙여넣기..."
+                    />
+                    {formData.memo && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(formData.memo || "")
+                          toast({
+                            title: "메모 내용이 복사되었습니다.",
+                            duration: 2000,
+                          })
+                        }}
+                        className="absolute right-2 top-2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                      >
+                        <Copy className="w-4 h-4 cursor-pointer" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="h-20"></div>

@@ -11,7 +11,6 @@ export function exportSchedulesToExcel(schedules: Schedule[]) {
     '유형': schedule.reviewType,
     '채널': schedule.channel,
     '카테고리': schedule.category,
-    '지역': schedule.region,
     '방문일': schedule.visit || '-',
     '방문시간': schedule.visitTime || '-',
     '마감일': schedule.dead || '-',
@@ -40,7 +39,6 @@ export function exportSchedulesToExcel(schedules: Schedule[]) {
     { wch: 15 }, // 유형
     { wch: 15 }, // 채널
     { wch: 12 }, // 카테고리
-    { wch: 10 }, // 지역
     { wch: 12 }, // 방문일
     { wch: 12 }, // 방문시간
     { wch: 12 }, // 마감일
@@ -111,7 +109,6 @@ export function exportAllDataToExcel(schedules: Schedule[], extraIncomes: ExtraI
     '유형': schedule.reviewType,
     '채널': schedule.channel,
     '카테고리': schedule.category,
-    '지역': schedule.region,
     '방문일': schedule.visit || '-',
     '방문시간': schedule.visitTime || '-',
     '마감일': schedule.dead || '-',
@@ -141,9 +138,8 @@ export function exportAllDataToExcel(schedules: Schedule[], extraIncomes: ExtraI
   const ws1 = XLSX.utils.json_to_sheet(scheduleData)
   ws1['!cols'] = [
     { wch: 8 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 15 },
-    { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
-    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-    { wch: 35 },
+    { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 35 },
     { wch: 35 }, { wch: 35 }, { wch: 30 },
   ]
   XLSX.utils.book_append_sheet(wb, ws1, '체험단 활동 내역')
