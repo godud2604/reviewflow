@@ -565,12 +565,12 @@ function ScheduleItem({
       </div>
 
       <div className="flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <div className="text-[15px] font-bold text-[#0F172A] flex items-center gap-1.5">
-            <span className="text-[18px]">{icons[schedule.category] || "📦"}</span>
-            {schedule.title}
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-[15px] font-bold text-[#0F172A] flex items-center gap-1.5 flex-1 min-w-0">
+            <span className="text-[18px] shrink-0">{icons[schedule.category] || "📦"}</span>
+            <span className="block truncate w-[120px]">{schedule.title}</span>
             {schedule.memo && (
-              <span className="text-sm" title="메모 있음">
+              <span className="text-sm shrink-0" title="메모 있음">
                 📝
               </span>
             )}

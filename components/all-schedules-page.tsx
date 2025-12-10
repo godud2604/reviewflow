@@ -124,10 +124,10 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
       <div className="text-2xl mr-3.5 w-[30px] text-center">{icons[schedule.category] || "📦"}</div>
       <div className="flex-1">
         <div className="flex items-start justify-between gap-2">
-          <div className="text-[15px] font-bold text-[#1A1A1A] flex items-center gap-1.5">
-            {schedule.title}
+          <div className="text-[15px] font-bold text-[#1A1A1A] flex items-center gap-1.5 flex-1 min-w-0">
+            <span className="block truncate">{schedule.title}</span>
             {schedule.memo && (
-              <span className="text-sm" title="메모 있음">
+              <span className="text-sm shrink-0" title="메모 있음">
                 📝
               </span>
             )}
