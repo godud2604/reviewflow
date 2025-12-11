@@ -96,14 +96,14 @@ export default function HomePage({
   const shouldShowFilterTutorial =
     hasSchedules && schedules.length <= 1 && displayedSchedules.length === 0
   const renderTutorialCard = (footerText?: string) => (
-    <div className="space-y-5 rounded-3xl border border-neutral-200 bg-gradient-to-b from-[#fff6ed] via-white to-white px-5 py-6 shadow-[0_24px_60px_rgba(15,23,42,0.09)]">
+    <div className="space-y-5 rounded-3xl border border-neutral-200 bg-gradient-to-b from-[#fff6ed] via-white to-white px-5 py-4 shadow-[0_24px_60px_rgba(15,23,42,0.09)]">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffecd1] to-[#ffe1cc] text-[#ff6a1f] shadow-inner">
             ✨
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-orange-500">
+            <p className="text-[11px] font-semibold uppercase text-orange-500">
               next 튜토리얼
             </p>
             <p className="text-sm font-bold text-neutral-900">다음 단계를 미리 살펴볼까요?</p>
