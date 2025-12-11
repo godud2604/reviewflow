@@ -19,7 +19,7 @@ export default function Header({
   const incompleteTodoCount = todos.filter(t => !t.done).length
 
   return (
-    <header className="px-5 pt-2 space-y-3.5 mb-0.5">
+    <header className="px-5 pt-2 mb-2">
       <div className="flex items-center justify-between">
         {showTodoButton ? (
           <button

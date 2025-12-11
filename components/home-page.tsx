@@ -143,7 +143,7 @@ export default function HomePage({
     setSelectedFilter("all")
   }
 
-  const containerClassName = `mt-1 flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3${showStatusHighlights ? "" : " pt-2"}`
+  const containerClassName = `flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3${showStatusHighlights ? "" : " pt-2"}`
   const handleGoToToday = () => {
     setSelectedDate(today)
     setSelectedFilter("all")
@@ -284,7 +284,7 @@ export default function HomePage({
           <button
             type="button"
             onClick={() => setFloatingPanel(floatingPanel === "reconfirm" ? "none" : "reconfirm")}
-            className="flex items-center gap-2 rounded-full bg-white border border-amber-300 shadow-[0_14px_100px_rgba(245,158,11,0.18)] px-2 py-2 active:scale-[0.98] transition-all ring-2 ring-amber-300/70"
+            className="flex items-center gap-2 rounded-full bg-white border border-orange-500 shadow-[0_14px_100px_rgba(249,115,22,0.18)] px-2 py-2 active:scale-[0.98] transition-all ring-2 ring-orange-500/70"
           >
             <span className="text-base">⚠️</span>
             <div className="text-left leading-tight">
@@ -300,7 +300,7 @@ export default function HomePage({
           <button
             type="button"
             onClick={() => setFloatingPanel(floatingPanel === "noDeadline" ? "none" : "noDeadline")}
-            className="flex items-center gap-2 rounded-full bg-white from-orange-200/90 to-amber-200/90 border border-orange-300 shadow-[0_14px_100px_rgba(249,115,22,0.18)] px-2 py-2 active:scale-[0.98] transition-all ring-2 ring-orange-300/70"
+            className="flex items-center gap-2 rounded-full bg-white from-orange-200/90 to-amber-200/90 border border-orange-500 shadow-[0_14px_100px_rgba(249,115,22,0.18)] px-2 py-2 active:scale-[0.98] transition-all ring-2 ring-orange-500/70"
           >
             <span className="text-base">📌</span>
             <div className="text-left leading-tight">

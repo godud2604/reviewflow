@@ -221,7 +221,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
     <>
       <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y relative">
         {/* Hero Card */}
-        <div className="relative overflow-hidden rounded-[30px] p-6 mt-3 mb-3.5 bg-gradient-to-br from-[#ff9a3c] via-[#ff6a1f] to-[#ff3b0c]">
+        <div className="relative overflow-hidden rounded-[30px] p-6 mt-1 mb-3.5 bg-gradient-to-br from-[#ff9a3c] via-[#ff6a1f] to-[#ff3b0c]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.22),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.15),transparent_28%)]" />
           <div className="relative flex items-start justify-between mb-5">
             <div>

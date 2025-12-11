@@ -99,7 +99,7 @@ export default function ProfilePage({
   ]
 
   return (
-    <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y mt-3">
+    <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y mt-1">
       {isWaitlistOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center px-5"
