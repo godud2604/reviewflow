@@ -191,6 +191,17 @@ export default function IncomeHistoryModal({
                         </span>
                         <span className="text-xs text-neutral-500 font-medium">{item.category}</span>
                       </div>
+                      {/* 부수입 메모 표시 */}
+                      {item.type === "extra" &&
+                        (() => {
+                          const extra = extraIncomes.find(e => e.id === item.extraIncomeId);
+                          return extra?.memo ? (
+                            <div className="mt-2 text-xs text-neutral-400 break-words">
+                              {extra.memo}
+                            </div>
+                          ) : null;
+                        })()
+                      }
                     </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
                       {item.type === "extra" && item.extraIncomeId && (
