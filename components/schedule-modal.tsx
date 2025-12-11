@@ -815,6 +815,42 @@ const arraysEqual = (a: string[], b: string[]) => {
                   </button>
                 </div>
 
+                                {/* 카테고리 */}
+                <div className="mb-6">
+                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">카테고리</label>
+                  <div className="rounded-2xl flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {selectedCategories.length > 0 ? (
+                        selectedCategories.map((category) => {
+                          const meta = CATEGORY_OPTIONS.find((c) => c.value === category)
+                          const isActive = formData.category === category
+                          return (
+                            <div
+                              key={category}
+                              onClick={() => setFormData((prev) => ({ ...prev, category }))}
+                              className={`px-2.5 py-1 rounded-xl text-[14px] font-semibold transition-all cursor-pointer flex items-center justify-center ${
+                                isActive
+                                  ? "bg-orange-100 text-[#D9480F] border border-[#FF5722]/70"
+                                  : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
+                              }`}
+                            >
+                              <span className="truncate max-w-[120px]">{meta?.label || category}</span>
+                            </div>
+                          )
+                        })
+                      ) : (
+                        <span className="text-xs text-neutral-400">표시할 카테고리를 선택하세요.</span>
+                      )}
+                    </div>
+                  </div>
+                    <button
+                      onClick={() => setShowCategoryManagement(true)}
+                      className="mt-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer"
+                    >
+                      + 카테고리 선택
+                  </button>
+                </div>
+
                 {/* 작성할 곳 (메인 + 방문 후 추가 리뷰) */}
                 <div className="mb-6">
                   <div className="flex">
@@ -1030,42 +1066,6 @@ const arraysEqual = (a: string[], b: string[]) => {
                     </div>
                   </div>
                 )}
-
-                {/* 카테고리 */}
-                <div className="mb-6">
-                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">카테고리</label>
-                  <div className="rounded-2xl flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {selectedCategories.length > 0 ? (
-                        selectedCategories.map((category) => {
-                          const meta = CATEGORY_OPTIONS.find((c) => c.value === category)
-                          const isActive = formData.category === category
-                          return (
-                            <div
-                              key={category}
-                              onClick={() => setFormData((prev) => ({ ...prev, category }))}
-                              className={`px-2.5 py-1 rounded-xl text-[14px] font-semibold transition-all cursor-pointer flex items-center justify-center ${
-                                isActive
-                                  ? "bg-orange-100 text-[#D9480F] border border-[#FF5722]/70"
-                                  : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
-                              }`}
-                            >
-                              <span className="truncate max-w-[120px]">{meta?.label || category}</span>
-                            </div>
-                          )
-                        })
-                      ) : (
-                        <span className="text-xs text-neutral-400">표시할 카테고리를 선택하세요.</span>
-                      )}
-                    </div>
-                  </div>
-                    <button
-                      onClick={() => setShowCategoryManagement(true)}
-                      className="mt-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer"
-                    >
-                      + 카테고리 선택
-                  </button>
-                </div>
 
                 {/* 진행 상태 (신규 등록 시 기존 위치 유지) */}
                 {!schedule && statusFields}
