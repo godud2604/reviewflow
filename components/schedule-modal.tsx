@@ -623,7 +623,7 @@ const arraysEqual = (a: string[], b: string[]) => {
   }
 
   const statusFields = (
-    <div className="space-y-3 mb-4.5">
+    <div className="space-y-6 mb-6">
       <div>
         <label className="block text-[15px] font-bold text-neutral-500 mb-2">진행 상태</label>
         <Select
@@ -731,10 +731,10 @@ const arraysEqual = (a: string[], b: string[]) => {
           
           <div className="space-y-8">
             <div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {/* 체험단명 */}
                 <div>
-                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">체험단명 (필수)</label>
+                  <label className="block text-[15px] font-bold text-neutral-500 mb-2.5">체험단명 (필수)</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -816,14 +816,15 @@ const arraysEqual = (a: string[], b: string[]) => {
                 </div>
 
                 {/* 작성할 곳 (메인 + 방문 후 추가 리뷰) */}
-                <div className="mb-4">
-                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">작성할 채널</label>
+                <div className="mb-6">
+                  <div className="flex">
+                    <label className="mr-2 block text-[15px] font-bold text-neutral-500 mb-2">작성할 채널</label>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[13px] text-neutral-400">포스팅을 올릴 주요 채널 (복수 선택 가능)</span>
+                    </div>
+                  </div>
                   <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 px-3.5 py-3.5 space-y-3">
                     <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[14px] font-bold text-neutral-700">메인 채널</span>
-                        <span className="text-[13px] text-neutral-400">포스팅을 올릴 주요 채널 (복수 선택 가능)</span>
-                      </div>
                       <div className="flex gap-2 flex-wrap">
                         {channelOptions.map((channel) => {
                           const isSelected = (formData.channel || []).includes(channel)
@@ -1031,7 +1032,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                 )}
 
                 {/* 카테고리 */}
-                <div className="mb-4">
+                <div className="mb-6">
                   <label className="block text-[15px] font-bold text-neutral-500 mb-2">카테고리</label>
                   <div className="rounded-2xl flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -1071,9 +1072,9 @@ const arraysEqual = (a: string[], b: string[]) => {
 
                 {/* 자산 관리 */}
                 <div>
-                  <div className="">
-                    <label className="text-[15px] font-bold text-neutral-500">자산 관리</label>
-                    <p className="text-[13px] text-neutral-400 mb-2">
+                  <div className="flex items-center">
+                    <label className="mr-2 text-[15px] font-bold text-neutral-500">자산 관리</label>
+                    <p className="text-[13px] text-neutral-400">
                       제공(물품) + 수익(현금) - 내가 쓴 돈 = 수익
                     </p>
                   </div>
@@ -1088,7 +1089,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                         pattern="[0-9]*"
                         value={formatNumber(formData.benefit || 0)}
                         onChange={(e) => handleNumberChange("benefit", e.target.value)}
-                        className="w-full h-9 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center font-bold text-[16px] text-emerald-700"
+                        className="w-full h-9 px-3 py-2 bg-neutral-100 border border-neutral-200 rounded-xl text-center font-bold text-[16px] text-neutral-700"
                         placeholder="+ 0"
                       />
                     </div>
@@ -1101,7 +1102,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                         pattern="[0-9]*"
                         value={formatNumber(formData.income || 0)}
                         onChange={(e) => handleNumberChange("income", e.target.value)}
-                        className="w-full h-9 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center font-bold text-[16px] text-emerald-700"
+                        className="w-full h-9 px-3 py-2 bg-neutral-100 border border-neutral-200 rounded-xl text-center font-bold text-[16px] text-neutral-700"
                         placeholder="+ 0"
                       />
                     </div>
@@ -1128,7 +1129,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                 <span className="text-[15px] font-bold text-neutral-900">추가사항</span>
                 <span className="text-[13px] text-neutral-400 translate-y-[1px]">기록하고 싶을 때 적어주세요</span>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {/* 링크 */}
                 <div>
                   <label className="block text-[15px] font-bold text-neutral-500 mb-2">포스팅 링크</label>
