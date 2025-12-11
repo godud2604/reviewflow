@@ -673,7 +673,7 @@ function ScheduleItem({
         <div className="flex items-center justify-between gap-2">
           <div className="text-[15px] font-bold text-[#0F172A] flex items-center gap-1.5 flex-1 min-w-0">
             <span className="text-[18px] shrink-0">{icons[schedule.category] || "📦"}</span>
-            <span className="block truncate max-w-[120px]">{schedule.title}</span>
+            <span className="block truncate max-w-[150px]">{schedule.title}</span>
             {schedule.memo && (
               <span className="text-sm shrink-0" title="메모 있음">
                 📝

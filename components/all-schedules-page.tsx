@@ -116,7 +116,7 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
 
   return (
     <div
-      className={`p-4 rounded-2xl flex items-center shadow-sm cursor-pointer transition-transform active:scale-[0.98] ${
+      className={`mb-3 p-4 rounded-2xl flex items-center shadow-sm cursor-pointer transition-transform active:scale-[0.98] ${
         isOverdue ? "bg-red-50/50" : "bg-white"
       }`}
       onClick={onClick}
@@ -125,7 +125,7 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
       <div className="flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="text-[15px] font-bold text-[#1A1A1A] flex items-center gap-1.5 flex-1 min-w-0">
-            <span className="block truncate">{schedule.title}</span>
+            <span className="block truncate max-w-[150px]">{schedule.title}</span>
             {schedule.memo && (
               <span className="text-sm shrink-0" title="메모 있음">
                 📝
