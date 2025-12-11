@@ -95,7 +95,7 @@ export default function HomePage({
     hasSchedules && schedules.length === 1 && displayedSchedules.length > 0
   const shouldShowFilterTutorial =
     hasSchedules && schedules.length <= 1 && displayedSchedules.length === 0
-  const renderTutorialCard = (footerText?: string) => (
+  const renderTutorialCard = () => (
     <div className="space-y-5 rounded-3xl border border-neutral-200 bg-gradient-to-b from-[#fff6ed] via-white to-white px-5 py-4 shadow-[0_24px_60px_rgba(15,23,42,0.09)]">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -132,9 +132,6 @@ export default function HomePage({
           </div>
         </li>
       </ol>
-      {footerText && (
-        <p className="text-[13px] font-medium text-neutral-500">{footerText}</p>
-      )}
     </div>
   )
 
@@ -263,7 +260,7 @@ export default function HomePage({
             />
           ))
         ) : shouldShowFilterTutorial ? (
-          renderTutorialCard("선택한 날짜/필터에 맞는 일정이 없어요.")
+          renderTutorialCard()
         ) : (
           <div className="rounded-3xl border border-dashed border-neutral-200 px-4 py-6 text-center text-[13px] text-neutral-500">
             선택한 날짜/필터에 맞는 일정이 없어요.
