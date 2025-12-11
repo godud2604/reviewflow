@@ -1074,7 +1074,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                   <div className="">
                     <label className="text-[15px] font-bold text-neutral-500">자산 관리</label>
                     <p className="text-[13px] text-neutral-400 mb-2">
-                      제공(물품) + 수익(현금) - 내가 쓴 돈 = 해당 체험에서 내가 얻은 경제적 가치
+                      제공(물품) + 수익(현금) - 내가 쓴 돈 = 수익
                     </p>
                   </div>
 
@@ -1084,6 +1084,8 @@ const arraysEqual = (a: string[], b: string[]) => {
                       <span className="block text-[12px] text-neutral-400 mb-2">받은 제품/서비스 값</span>
                       <input
                         type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={formatNumber(formData.benefit || 0)}
                         onChange={(e) => handleNumberChange("benefit", e.target.value)}
                         className="w-full h-9 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center font-bold text-[16px] text-emerald-700"
@@ -1095,6 +1097,8 @@ const arraysEqual = (a: string[], b: string[]) => {
                       <span className="block text-[12px] text-neutral-400 mb-2">입금된 현금 및 리워드</span>
                       <input
                         type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={formatNumber(formData.income || 0)}
                         onChange={(e) => handleNumberChange("income", e.target.value)}
                         className="w-full h-9 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center font-bold text-[16px] text-emerald-700"
@@ -1106,6 +1110,8 @@ const arraysEqual = (a: string[], b: string[]) => {
                       <span className="block text-[12px] text-neutral-400 mb-2">내가 직접 결제한 금액</span>
                       <input
                         type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={formatNumber(formData.cost || 0)}
                         onChange={(e) => handleNumberChange("cost", e.target.value)}
                         className="w-full h-9 px-3 py-2 bg-rose-50 border border-rose-100 rounded-xl text-center font-bold text-red-600 text-[16px]"
@@ -1353,14 +1359,14 @@ const arraysEqual = (a: string[], b: string[]) => {
                     type="text"
                     value={newPlatform}
                     onChange={(e) => setNewPlatform(e.target.value)}
-                    className="flex-1 min-w-0 h-8.5 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
+                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
                     placeholder="새 플랫폼 이름"
                     onKeyPress={(e) => e.key === "Enter" && addCustomPlatform()}
                   />
                   <button
                     onClick={addCustomPlatform}
                     disabled={profileLoading}
-                    className="flex-shrink-0 w-[56px] h-8.5 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
+                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
                   >
                     추가
                   </button>
@@ -1433,14 +1439,14 @@ const arraysEqual = (a: string[], b: string[]) => {
                     type="text"
                     value={newChannel}
                     onChange={(e) => setNewChannel(e.target.value)}
-                    className="flex-1 min-w-0 h-8.5 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
+                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
                     placeholder="작성할 채널 이름"
                     onKeyPress={(e) => e.key === "Enter" && addCustomChannel()}
                   />
                   <button
                     onClick={addCustomChannel}
                     disabled={profileLoading}
-                    className="flex-shrink-0 w-[56px] h-8.5 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
+                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
                   >
                     추가
                   </button>

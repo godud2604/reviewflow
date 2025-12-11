@@ -87,10 +87,10 @@ export default function TodoModal({
               value={newTodo}
               onChange={(e) => setNewTodo(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="flex-1 min-w-0 h-8.5 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] outline-none focus:ring-2 focus:ring-[#FF5722]/30"
+              className="flex-1 min-w-0 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] outline-none focus:ring-2 focus:ring-[#FF5722]/30"
               placeholder="사장님께 방문 일정 문자 남기기 ..."
             />
-            <button onClick={handleAdd} className="flex-shrink-0 w-[56px] h-8.5 bg-[#FF5722] text-white border-none rounded-xl font-bold hover:bg-[#F4511E] transition-colors text-[15px]">
+            <button onClick={handleAdd} className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white border-none rounded-xl font-bold hover:bg-[#F4511E] transition-colors text-[15px]">
               추가
             </button>
           </div>
