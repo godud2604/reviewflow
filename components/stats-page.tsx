@@ -237,7 +237,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
         {/* Income Details - Always Visible */}
         <div className={`bg-white rounded-[26px] p-6 mb-3.5 shadow-sm ${cardShadow}`}>
           <div className="flex items-center justify-between mb-3">
-            <div className="text-[16px] font-bold text-[#0f172a]">수입 상세 내역</div>
+            <div className="text-[16px] font-bold text-[#0f172a]">이번달 수입 상세 내역</div>
             <button
               onClick={() => setShowHistoryModal(true)}
               className="text-[12px] text-[#6b7685] hover:text-[#111827] font-semibold flex items-center gap-1 cursor-pointer transition-colors"

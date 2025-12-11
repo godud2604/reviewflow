@@ -124,7 +124,7 @@ export default function IncomeHistoryModal({
       <div className={`absolute bottom-0 left-0 w-full ${containerHeightClass} bg-gradient-to-b from-neutral-50 to-white rounded-t-[32px] z-40 flex flex-col animate-slide-up overscroll-none shadow-2xl`}>
         {/* Header */}
         <div className="p-5 pb-3 text-center relative flex-shrink-0">
-          <h2 className="text-[16px] font-bold text-neutral-900">전체 수입 내역</h2>
+          <h2 className="text-[16px] font-bold text-neutral-900">이번달 전체 수입 내역</h2>
           <button
             onClick={onClose}
             className="absolute right-5 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
