@@ -285,8 +285,8 @@ export default function HomePage({
           >
             <span className="text-base">⚠️</span>
             <div className="text-left leading-tight">
-              <div className="text-[11px] font-bold text-amber-900">재확인</div>
-              <div className="text-[10px] font-semibold text-amber-800">목록 보기</div>
+              <div className="text-[13px] font-bold text-amber-900">재확인</div>
+              <div className="text-[12.5px] font-semibold text-amber-800">목록 보기</div>
             </div>
             <span className="ml-4 rounded-full bg-orange-200 px-2 py-0.5 text-[11px] font-extrabold text-amber-800 shadow-sm">
               {reconfirmCount}
@@ -301,14 +301,15 @@ export default function HomePage({
           >
             <span className="text-base">📌</span>
             <div className="text-left leading-tight">
-              <div className="text-[11px] font-bold text-orange-900">마감일 미정</div>
-              <div className="text-[10px] font-semibold text-orange-800">목록 보기</div>
+              <div className="text-[13px] font-bold text-orange-900">마감일 미정</div>
+              <div className="text-[12.5px] font-semibold text-orange-800">목록 보기</div>
             </div>
             <span className="ml-1 rounded-full bg-orange-200 px-2 py-0.5 text-[11px] font-extrabold text-orange-800 shadow-sm">
               {noDeadlineSchedules.length}
             </span>
           </button>
         )}
+        
       </div>
 
       {/* Slide-up panel */}
@@ -467,7 +468,7 @@ function CalendarSection({
   }
 
   return (
-    <div className="rounded-[24px] p-4 shadow-sm bg-gradient-to-b from-white to-neutral-100">
+    <div className="rounded-[24px] p-4 shadow-sm bg-gradient-to-b from-white to-neutral-100 mt-2">
       <div className="relative flex items-center justify-center mb-3 gap-2">
         <div className="flex items-center gap-3">
           <button
@@ -492,7 +493,7 @@ function CalendarSection({
         </div>
         <button
           onClick={goToToday}
-          className="absolute right-[-6px] top-1/2 -translate-y-1/2 px-2 py-1.5 text-[11px] font-semibold text-[#c24b30] rounded-lg hover:bg-orange-100"
+          className="absolute right-[-6px] top-1/2 -translate-y-1/2 px-2 py-1.5 text-[12px] font-semibold text-[#c24b30] rounded-lg hover:bg-orange-100"
         >
           오늘로 이동
         </button>
@@ -679,7 +680,7 @@ function ScheduleItem({
         <div className="flex items-center justify-between gap-2">
           <div className="text-[15px] font-bold text-[#0F172A] flex items-center gap-1.5 flex-1 min-w-0">
             <span className="text-[18px] shrink-0">{icons[schedule.category] || "📦"}</span>
-            <span className="block truncate w-[120px]">{schedule.title}</span>
+            <span className="block truncate max-w-[120px]">{schedule.title}</span>
             {schedule.memo && (
               <span className="text-sm shrink-0" title="메모 있음">
                 📝
