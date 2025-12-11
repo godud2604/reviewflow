@@ -85,7 +85,7 @@ export default function ExtraIncomeModal({
   return (
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={handleClose} style={{ touchAction: 'none' }} />
-      <div className="absolute bottom-0 left-0 w-full h-[410px] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
+      <div className="absolute bottom-0 left-0 w-full h-[430px] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
         <div className="relative p-5 border-b border-neutral-100 text-center font-bold">
           부수입 추가
           <button
