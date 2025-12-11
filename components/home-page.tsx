@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { usePostHog } from "posthog-js/react"
 import type { Schedule } from "@/types"
 
 const formatDateStringKST = (date: Date) =>
@@ -16,16 +18,29 @@ export default function HomePage({
   onScheduleClick,
   onShowAllClick,
   onCompleteClick,
+  onAddClick,
 }: {
   schedules: Schedule[]
   onScheduleClick: (id: number) => void
   onShowAllClick: () => void
   onCompleteClick?: (id: number) => void
+  onAddClick?: () => void
 }) {
+  const router = useRouter()
+  const posthog = usePostHog()
   const today = formatDateStringKST(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(today)
   const [selectedFilter, setSelectedFilter] = useState<"all" | "active" | "reconfirm" | "overdue" | "noDeadline">("all")
   const [floatingPanel, setFloatingPanel] = useState<"none" | "noDeadline" | "reconfirm">("none")
+  const [showDemo, setShowDemo] = useState(false)
+  const demoSchedules = useMemo(
+    () => [
+      { title: "강남 파스타 리뷰", status: "방문 예약 → 마감 3/20", value: "₩55,000", tag: "방문형" },
+      { title: "영양제 제공형", status: "배송 완료 · 3/25 마감", value: "₩32,000", tag: "제공형" },
+      { title: "카페 인스타 포스팅", status: "3/18 방문 · 추가 리뷰 체크", value: "₩24,000", tag: "복수 채널" },
+    ],
+    [],
+  )
   const activeSchedules = schedules.filter((s) => s.status !== "완료")
   const activeCount = activeSchedules.length
   const reconfirmSchedules = schedules.filter((s) => s.status === "재확인")
@@ -137,13 +152,68 @@ export default function HomePage({
             />
           ))
         ) : (
-          <div className="bg-white rounded-3xl p-8 text-center shadow-sm shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-            <div className="text-4xl mb-3">📭</div>
-            <p className="text-[12px] text-neutral-500 font-medium">
-              {selectedDate
-                ? "해당 날짜에 일정이 없습니다"
-                : "해당하는 일정이 없습니다"}
-            </p>
+          <div className="bg-white rounded-3xl p-4 text-center shadow-sm shadow-[0_18px_40px_rgba(15,23,42,0.06)] border border-neutral-100 space-y-4">
+            <div className="space-y-1">
+              <p className="text-[13px] font-bold text-neutral-900">
+                아직 체험단 일정이 없어요
+              </p>
+              <p className="text-[11px] text-neutral-500 font-medium">
+                체험단을 등록하면 캘린더와 수익 리포트가 자동으로 채워져요
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  posthog?.capture("home_empty_add_clicked", { context: selectedDate ? "date" : "list" })
+                  onAddClick?.()
+                }}
+                className="cursor-pointer px-4 py-2.5 rounded-xl bg-[#ff6a1f] text-white text-[13px] font-bold shadow-sm active:scale-[0.98] w-full sm:w-auto"
+              >
+                체험단 등록하기
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const nextShowDemo = !showDemo
+                  setShowDemo(nextShowDemo)
+                  posthog?.capture("home_empty_demo_toggled", { open: nextShowDemo })
+                }}
+                className="cursor-pointer px-4 py-2.5 rounded-xl bg-neutral-50 text-neutral-700 text-[13px] font-semibold border border-neutral-200 w-full sm:w-auto"
+              >
+                데모 일정 살펴보기
+              </button>
+            </div>
+            {showDemo && (
+              <div className="mt-2 space-y-3 text-left">
+                <div className="text-[11px] font-bold text-neutral-500 uppercase">샘플 일정</div>
+                <div className="space-y-2">
+                  {demoSchedules.map((demo) => (
+                    <div
+                      key={demo.title}
+                      className="flex items-center justify-between rounded-2xl border border-neutral-200 px-3 py-2.5 bg-neutral-50/70"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="text-[13px] font-bold text-neutral-900">{demo.title}</div>
+                        <div className="text-[11px] text-neutral-500 font-semibold">{demo.status}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[13px] font-bold text-[#f97316]">{demo.value}</div>
+                        <div className="text-[11px] text-neutral-500">{demo.tag}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-2xl bg-gradient-to-r from-[#eef2ff] via-white to-[#fff7ed] border border-neutral-100 p-3">
+                  <div className="text-[12px] font-bold text-neutral-900 mb-1">짧은 투어</div>
+                  <ul className="text-[11.5px] text-neutral-600 space-y-1.5 list-disc list-inside">
+                    <li>체험단 등록 → 캘린더에 일정 표시</li>
+                    <li>마감·방문일 관리하며 수익/비용 입력</li>
+                    <li>통계 탭에서 이번 달 수익 자동 확인</li>
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

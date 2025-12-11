@@ -269,6 +269,7 @@ function PageContent() {
                 onScheduleClick={handleOpenScheduleModal}
                 onShowAllClick={handleShowAllSchedules}
                 onCompleteClick={handleCompleteSchedule}
+                onAddClick={() => handleOpenScheduleModal()}
               />
             )}
 
