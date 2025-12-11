@@ -755,7 +755,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-[12px] font-bold text-neutral-700">메인 채널</span>
-                        <span className="text-[11px] text-neutral-400">포스팅을 올릴 주요 채널</span>
+                        <span className="text-[11px] text-neutral-400">포스팅을 올릴 주요 채널 (복수 선택 가능)</span>
                       </div>
                       <div className="flex gap-2 flex-wrap">
                         {SCHEDULE_CHANNEL_OPTIONS.map((channel) => {
