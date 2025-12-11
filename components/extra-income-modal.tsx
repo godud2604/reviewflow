@@ -85,7 +85,7 @@ export default function ExtraIncomeModal({
   return (
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={handleClose} style={{ touchAction: 'none' }} />
-      <div className="absolute bottom-0 left-0 w-full h-[390px] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
+      <div className="absolute bottom-0 left-0 w-full h-[410px] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
         <div className="relative p-5 border-b border-neutral-100 text-center font-bold">
           부수입 추가
           <button
@@ -96,9 +96,12 @@ export default function ExtraIncomeModal({
             <X className="w-5 h-5" />
           </button>
         </div>
+        <p className="px-6 text-[12px] text-[#6b7280] mt-3 leading-relaxed">
+          체험단 외의 부업/임시 수입도 자유롭게 등록하면 월간 경제적 가치에 반영됩니다.
+        </p>
 
         {/* Add Form */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent hover:scrollbar-thumb-neutral-400 touch-pan-y">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-4 scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent hover:scrollbar-thumb-neutral-400 touch-pan-y">
           <div className="space-y-3">
           <input
             type="text"
