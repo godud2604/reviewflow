@@ -111,7 +111,9 @@ export default function ExtraIncomeModal({
             className="w-full h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] outline-none focus:ring-2 focus:ring-orange-200"
           />
           <input
-            type="text"
+            type="tel"
+            inputMode="numeric"
+            pattern="[0-9,]*"
             value={newIncome.amount}
             onChange={(e) => handleAmountChange(e.target.value)}
             placeholder="금액"

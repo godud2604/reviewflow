@@ -1094,7 +1094,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                     </div>
                     <div className="flex-1 text-center">
                       <span className="block text-[13px] text-neutral-500 font-semibold mb-1">💸 수익(현금)</span>
-                      <span className="block text-[12px] text-neutral-400 mb-2">입금된 현금 및 리워드</span>
+                      <span className="block text-[12px] text-neutral-400 mb-2">입금된 현금</span>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -1107,7 +1107,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                     </div>
                     <div className="flex-1 text-center">
                       <span className="block text-[13px] text-red-600 font-semibold mb-1">⬇️ 내가 쓴 돈</span>
-                      <span className="block text-[12px] text-neutral-400 mb-2">내가 직접 결제한 금액</span>
+                      <span className="block text-[12px] text-neutral-400 mb-2">내가 결제한 금액</span>
                       <input
                         type="text"
                         inputMode="numeric"
