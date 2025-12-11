@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type KeyboardEvent } from "react"
 import { X } from "lucide-react"
 import type { Schedule, ExtraIncome } from "@/types"
 import { useToast } from "@/hooks/use-toast"
@@ -23,6 +23,8 @@ type IncomeHistoryItem = {
   category: Schedule["category"] | "기타"
   type: "schedule" | "extra"
   extraIncomeId?: number
+  sourceSchedule?: Schedule
+  sourceExtraIncome?: ExtraIncome
 }
 
 export default function IncomeHistoryModal({
@@ -31,12 +33,18 @@ export default function IncomeHistoryModal({
   schedules,
   extraIncomes,
   onDeleteExtraIncome,
+  onScheduleItemClick,
+  onExtraIncomeItemClick,
+  isDisabled = false,
 }: {
   isOpen: boolean
   onClose: () => void
   schedules: Schedule[]
   extraIncomes: ExtraIncome[]
   onDeleteExtraIncome?: (id: number) => Promise<boolean>
+  onScheduleItemClick?: (schedule: Schedule) => void
+  onExtraIncomeItemClick?: (income: ExtraIncome) => void
+  isDisabled?: boolean
 }) {
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; title: string } | null>(null)
@@ -52,6 +60,7 @@ export default function IncomeHistoryModal({
       date: s.visit || s.dead,
       category: s.category,
       type: "schedule" as const,
+      sourceSchedule: s,
     })) satisfies IncomeHistoryItem[]
 
   // 기타 부수입 항목들
@@ -63,6 +72,7 @@ export default function IncomeHistoryModal({
     category: "기타" as const,
     type: "extra" as const,
     extraIncomeId: income.id,
+    sourceExtraIncome: income,
   })) satisfies IncomeHistoryItem[]
 
   // 모든 항목 합치기 및 날짜순 정렬
@@ -102,6 +112,21 @@ export default function IncomeHistoryModal({
     }
   }
 
+  const handleItemClick = (item: IncomeHistoryItem) => {
+    if (item.type === "schedule" && item.sourceSchedule) {
+      onScheduleItemClick?.(item.sourceSchedule)
+    } else if (item.type === "extra" && item.sourceExtraIncome) {
+      onExtraIncomeItemClick?.(item.sourceExtraIncome)
+    }
+  }
+
+  const handleItemKeyDown = (event: KeyboardEvent<HTMLDivElement>, item: IncomeHistoryItem) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      handleItemClick(item)
+    }
+  }
+
   const handleDeleteExtraIncome = async (incomeId?: number) => {
     if (!incomeId || !onDeleteExtraIncome) return
     setDeletingId(incomeId)
@@ -121,7 +146,9 @@ export default function IncomeHistoryModal({
   return (
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm z-30 overscroll-none" onClick={onClose} style={{ touchAction: 'none' }} />
-      <div className={`absolute bottom-0 left-0 w-full ${containerHeightClass} bg-gradient-to-b from-neutral-50 to-white rounded-t-[32px] z-40 flex flex-col animate-slide-up overscroll-none shadow-2xl`}>
+      <div
+        className={`absolute bottom-0 left-0 w-full ${containerHeightClass} bg-gradient-to-b from-neutral-50 to-white rounded-t-[32px] z-40 flex flex-col animate-slide-up overscroll-none shadow-2xl relative transition-opacity ${isDisabled ? "pointer-events-none opacity-70" : ""}`}
+      >
         {/* Header */}
         <div className="p-5 pb-3 text-center relative flex-shrink-0">
           <h2 className="text-[16px] font-bold text-neutral-900">이번달 전체 수입 내역</h2>
@@ -175,10 +202,14 @@ export default function IncomeHistoryModal({
             </div>
           ) : (
             <div className="space-y-2.5">
-              {allItems.map((item) => (
+            {allItems.map((item) => (
                 <div 
                   key={item.id} 
-                  className="bg-white rounded-2xl p-4 shadow-sm transition-transform active:scale-[0.98] border border-neutral-100"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleItemClick(item)}
+                  onKeyDown={(event) => handleItemKeyDown(event, item)}
+                  className="bg-white rounded-2xl p-4 shadow-sm transition-transform active:scale-[0.98] border border-neutral-100 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#ff6a1f]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -204,16 +235,6 @@ export default function IncomeHistoryModal({
                       }
                     </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      {item.type === "extra" && item.extraIncomeId && (
-                        <button
-                          onClick={() => setDeleteTarget({ id: item.extraIncomeId!, title: item.title })}
-                          disabled={deletingId === item.extraIncomeId}
-                          className="flex items-center gap-1 text-[11px] font-semibold text-red-500 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                          삭제
-                        </button>
-                      )}
                       <div className="text-right ml-3">
                         <div className={`text-lg font-bold mb-0.5 ${item.amount < 0 ? "text-red-500" : "text-[#333]"}`}>
                           ₩{item.amount.toLocaleString()}

@@ -7,10 +7,22 @@ import ExtraIncomeModal from "./extra-income-modal"
 import IncomeHistoryModal from "./income-history-modal"
 const incomeTutorialStorageKey = "reviewflow-stats-income-tutorial-shown"
 
-export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
+type StatsPageProps = {
+  schedules: Schedule[]
+  onScheduleItemClick: (schedule: Schedule) => void
+  isScheduleModalOpen: boolean
+}
+
+export default function StatsPage({
+  schedules,
+  onScheduleItemClick,
+  isScheduleModalOpen,
+}: StatsPageProps) {
   const [showIncomeModal, setShowIncomeModal] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [showIncomeTutorial, setShowIncomeTutorial] = useState(false)
+  const [editingExtraIncome, setEditingExtraIncome] = useState<ExtraIncome | null>(null)
+  const historyDisabled = showIncomeModal || isScheduleModalOpen
   const cardShadow = "shadow-[0_14px_40px_rgba(18,34,64,0.08)]"
   const toNumber = (value: unknown) => {
     const num = Number(value)
@@ -51,10 +63,40 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
   })
   
   // Supabase 연동 - useExtraIncomes 훅 사용
-  const { extraIncomes, createExtraIncome, deleteExtraIncome } = useExtraIncomes()
+  const { extraIncomes, createExtraIncome, updateExtraIncome, deleteExtraIncome } = useExtraIncomes()
 
   const handleAddIncome = async (income: Omit<ExtraIncome, "id">) => {
     await createExtraIncome(income)
+  }
+
+  const handleOpenIncomeModal = (income?: ExtraIncome) => {
+    setEditingExtraIncome(income ?? null)
+    setShowIncomeModal(true)
+    setShowIncomeTutorial(false)
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(incomeTutorialStorageKey, "1")
+    }
+  }
+
+  const handleIncomeModalClose = () => {
+    setShowIncomeModal(false)
+    setEditingExtraIncome(null)
+  }
+
+  const handleUpdateExtraIncome = (id: number, updates: Omit<ExtraIncome, "id">) => {
+    return updateExtraIncome(id, updates)
+  }
+
+  const handleDeleteEditingIncome = (id: number) => {
+    return deleteExtraIncome(id)
+  }
+
+  const handleHistoryScheduleClick = (schedule: Schedule) => {
+    onScheduleItemClick(schedule)
+  }
+
+  const handleHistoryExtraIncomeClick = (income: ExtraIncome) => {
+    handleOpenIncomeModal(income)
   }
 
   const currentMonthSchedules = useMemo(
@@ -234,13 +276,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
             </div>
             <div className="relative inline-flex items-center">
               <button
-                onClick={() => {
-                  setShowIncomeModal(true)
-                  setShowIncomeTutorial(false)
-                  if (typeof window !== "undefined") {
-                    window.localStorage.setItem(incomeTutorialStorageKey, "1")
-                  }
-                }}
+                onClick={() => handleOpenIncomeModal()}
                 className="cursor-pointer px-2.5 py-2 rounded-full text-[11px] font-semibold text-white border border-white/35 bg-white/10 backdrop-blur-[2px] shadow-sm hover:bg-white/18 hover:border-white/50 transition-all active:scale-[0.98]"
               >
                 부수입 추가
@@ -270,9 +306,9 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
         </div>
 
         {/* Income Details - Always Visible */}
-        <div className={`bg-white rounded-[26px] p-6 mb-3.5 shadow-sm ${cardShadow}`}>
+        <div className={`bg-white rounded-[26px] py-6 px-5 mb-3.5 shadow-sm ${cardShadow}`}>
           <div className="flex items-center justify-between mb-3">
-            <div className="text-[16px] font-bold text-[#0f172a]">이번달 수입 상세 내역</div>
+            <div className="ml-1.5 text-[16px] font-bold text-[#0f172a]">이번달 수입 상세 내역</div>
             <button
               onClick={() => setShowHistoryModal(true)}
               className="text-[12px] text-[#6b7685] hover:text-[#111827] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
@@ -304,7 +340,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
 
                       return (
                         <div key={category} className="flex items-center gap-3">
-                          <div className="w-16 text-sm font-semibold text-[#4b5563]">{category}</div>
+                          <div className="w-26 text-[12px] font-semibold text-[#4b5563]">{category}</div>
                           <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                             <div
                               className="h-full bg-gradient-to-r from-[#ff9431] to-[#ff6b2c] rounded-full transition-all duration-500"
@@ -337,7 +373,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
                         const percentage = Math.round((income.amount / totalExtraIncome) * 100)
                         return (
                           <div key={income.id} className="flex items-center gap-3">
-                            <div className="w-16 text-sm font-semibold text-[#4b5563] truncate" title={income.title}>
+                            <div className="w-26 text-[12px] font-semibold text-[#4b5563] truncate" title={income.title}>
                               {income.title}
                             </div>
                             <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
@@ -374,8 +410,11 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
       {/* Extra Income Modal */}
       <ExtraIncomeModal
         isOpen={showIncomeModal}
-        onClose={() => setShowIncomeModal(false)}
+        onClose={handleIncomeModalClose}
         onAddIncome={handleAddIncome}
+        extraIncome={editingExtraIncome}
+        onUpdateIncome={handleUpdateExtraIncome}
+        onDeleteIncome={handleDeleteEditingIncome}
       />
 
       {/* Income History Modal */}
@@ -385,6 +424,9 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
         schedules={currentMonthSchedules}
         extraIncomes={currentMonthExtraIncomes}
         onDeleteExtraIncome={deleteExtraIncome}
+        onScheduleItemClick={handleHistoryScheduleClick}
+        onExtraIncomeItemClick={handleHistoryExtraIncomeClick}
+        isDisabled={historyDisabled}
       />
     </>
   )

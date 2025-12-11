@@ -273,7 +273,13 @@ function PageContent() {
               />
             )}
 
-            {currentPage === "stats" && <StatsPage schedules={schedules} />}
+            {currentPage === "stats" && (
+              <StatsPage
+                schedules={schedules}
+                onScheduleItemClick={(schedule) => handleOpenScheduleModal(schedule.id)}
+                isScheduleModalOpen={isScheduleModalOpen}
+              />
+            )}
 
             {currentPage === "profile" && (
               <ProfilePage 

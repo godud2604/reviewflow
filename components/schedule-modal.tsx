@@ -692,7 +692,7 @@ const arraysEqual = (a: string[], b: string[]) => {
   return (
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
-      <div className="absolute bottom-0 left-0 w-full h-[80%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
+      <div className="absolute bottom-0 left-0 w-full h-[84.5%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
         <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
           <span className="font-bold text-[16px]">{schedule ? "체험단 수정" : "체험단 등록"}</span>
           <button
