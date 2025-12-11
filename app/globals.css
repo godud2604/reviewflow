@@ -125,7 +125,16 @@
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: none;
   }
-  
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  input,
+  textarea,
+  select,
+  button {
+    font-size: 16px;
+  }
+
   /* 모바일 뷰포트 높이 최적화 */
   @supports (-webkit-touch-callout: none) {
     body {
