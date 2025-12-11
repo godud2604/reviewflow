@@ -48,6 +48,7 @@ export default function HomePage({
   const noDeadlineSchedules = schedules.filter((s) => !s.dead)
   const overdueCount = schedules.filter((s) => s.dead && s.dead < today && s.status !== "완료").length
   const showStatusHighlights = overdueCount > 0 || reconfirmCount > 0
+  const hasSchedules = schedules.length > 0
 
   // Filter schedules based on selected date and filter
   let filteredSchedules = schedules
@@ -90,6 +91,52 @@ export default function HomePage({
   }
 
   const displayedSchedules = sortSchedules(selectedDate || selectedFilter !== "all" ? filteredSchedules : activeSchedules)
+  const shouldShowFirstScheduleTutorial =
+    hasSchedules && schedules.length === 1 && displayedSchedules.length > 0
+  const shouldShowFilterTutorial =
+    hasSchedules && schedules.length <= 1 && displayedSchedules.length === 0
+  const renderTutorialCard = (footerText?: string) => (
+    <div className="space-y-5 rounded-3xl border border-neutral-200 bg-gradient-to-b from-[#fff6ed] via-white to-white px-5 py-6 shadow-[0_24px_60px_rgba(15,23,42,0.09)]">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffecd1] to-[#ffe1cc] text-[#ff6a1f] shadow-inner">
+            ✨
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-orange-500">
+              next 튜토리얼
+            </p>
+            <p className="text-sm font-bold text-neutral-900">다음 단계를 미리 살펴볼까요?</p>
+          </div>
+        </div>
+      </div>
+      <ol className="space-y-3 text-left text-[13px] text-neutral-700">
+        <li className="flex items-start gap-3 rounded-2xl border border-orange-100 bg-white/80 p-3 shadow-sm">
+          <span className="mt-0.5 text-lg font-bold text-orange-500">1</span>
+          <div>
+            <p className="font-semibold text-neutral-900">할 일 기록하기</p>
+            <div className="space-y-1 pl-2 border-l-2 border-orange-200">
+              <p className="text-[12px] text-neutral-500"><span className="font-bold text-orange-600">좌측 상단</span>의 <span className="font-bold text-orange-600">할 일</span> 버튼을 누르면, <span className="font-bold text-orange-600">잊지 말아야 할 메모</span>를 간단히 기록해둘 수 있어요.</p>
+            </div>
+          </div>
+        </li>
+        <li className="flex items-start gap-3 rounded-2xl border border-dashed border-orange-100 bg-white/80 p-3 shadow-sm">
+          <span className="mt-0.5 text-lg font-bold text-orange-500">2</span>
+          <div>
+            <p className="font-semibold text-neutral-900 mb-1">통계 페이지에서 수익 보기</p>
+            <div className="space-y-1 pl-2 border-l-2 border-orange-200">
+              <p className="text-[12px] text-neutral-500 leading-relaxed"><span className="font-bold text-orange-600">하단 네비게이션 바</span>에서 <b className="text-orange-500">"통계"</b>를 누르면 바로 이동할 수 있어요.</p>
+              <p className="text-[12px] text-neutral-500 leading-relaxed">체험단에 <span className="font-bold text-orange-600">금액</span>을 입력하면 이번 달 <span className="font-bold text-orange-600">예상 수익</span>을 자동으로 확인할 수 있어요.</p>
+              <p className="text-[12px] text-neutral-500 leading-relaxed">애드포스트·원고료 등 <span className="font-bold text-orange-600">부수익</span>도 함께 기록하면 <span className="font-bold text-orange-600">전체 수익</span>이 한눈에 보여요!</p>
+            </div>
+          </div>
+        </li>
+      </ol>
+      {footerText && (
+        <p className="text-[13px] font-medium text-neutral-500">{footerText}</p>
+      )}
+    </div>
+  )
 
   const handleDateClick = (dateStr: string) => {
     setSelectedDate(dateStr)
@@ -141,17 +188,7 @@ export default function HomePage({
         </div>
       </div>
       <div className="space-y-3">
-        {displayedSchedules.length > 0 ? (
-          displayedSchedules.map((schedule) => (
-            <ScheduleItem
-              key={schedule.id}
-              schedule={schedule}
-              onClick={() => onScheduleClick(schedule.id)}
-              onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
-              today={today}
-            />
-          ))
-        ) : (
+        {!hasSchedules ? (
           <div className="bg-white rounded-3xl p-4 text-center shadow-sm shadow-[0_18px_40px_rgba(15,23,42,0.06)] border border-neutral-100 space-y-4">
             <div className="space-y-1">
               <p className="text-[13px] font-bold text-neutral-900">
@@ -215,7 +252,24 @@ export default function HomePage({
               </div>
             )}
           </div>
+        ) : displayedSchedules.length > 0 ? (
+          displayedSchedules.map((schedule) => (
+            <ScheduleItem
+              key={schedule.id}
+              schedule={schedule}
+              onClick={() => onScheduleClick(schedule.id)}
+              onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
+              today={today}
+            />
+          ))
+        ) : shouldShowFilterTutorial ? (
+          renderTutorialCard("선택한 날짜/필터에 맞는 일정이 없어요.")
+        ) : (
+          <div className="rounded-3xl border border-dashed border-neutral-200 px-4 py-6 text-center text-[13px] text-neutral-500">
+            선택한 날짜/필터에 맞는 일정이 없어요.
+          </div>
         )}
+        {shouldShowFirstScheduleTutorial && renderTutorialCard()}
       </div>
 
       {/* Floating quick filters */}
