@@ -29,6 +29,8 @@ export interface DbSchedule {
     cafeReview: boolean
     googleReview: boolean
   } | null
+  payback_expected: boolean
+  payback_confirmed: boolean
   created_at: string
   updated_at: string
 }

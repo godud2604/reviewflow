@@ -99,6 +99,8 @@ const createEmptyFormData = (): Partial<Schedule> => ({
   memo: "",
   reconfirmReason: "",
   visitReviewChecklist: { ...DEFAULT_VISIT_REVIEW_CHECKLIST },
+  paybackExpected: false,
+  paybackConfirmed: false,
 })
 
 export default function ScheduleModal({
@@ -139,6 +141,8 @@ export default function ScheduleModal({
   const [selectedCategories, setSelectedCategories] = useState<Schedule["category"][]>([])
   const [visitMode, setVisitMode] = useState(false)
   const [nonVisitReviewType, setNonVisitReviewType] = useState<Schedule["reviewType"]>("제공형")
+  const [pendingStatus, setPendingStatus] = useState<Schedule["status"] | null>(null)
+  const [showStatusConfirm, setShowStatusConfirm] = useState(false)
   const { toast } = useToast()
   const { user } = useAuth()
   const {
@@ -225,6 +229,8 @@ const arraysEqual = (a: string[], b: string[]) => {
           schedule.reviewType === "방문형"
             ? { ...DEFAULT_VISIT_REVIEW_CHECKLIST, ...schedule.visitReviewChecklist }
             : schedule.visitReviewChecklist,
+        paybackExpected: schedule.paybackExpected ?? false,
+        paybackConfirmed: schedule.paybackExpected ? !!schedule.paybackConfirmed : false,
       })
       // 재확인 사유 로드
       if (schedule.status === "재확인" && schedule.reconfirmReason) {
@@ -455,6 +461,21 @@ const arraysEqual = (a: string[], b: string[]) => {
     setFormData({ ...formData, [field]: numValue })
   }
 
+  const handlePaybackExpectedChange = (checked: boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      paybackExpected: checked,
+      paybackConfirmed: checked ? Boolean(prev.paybackConfirmed) : false,
+    }))
+  }
+
+  const handlePaybackConfirmedChange = (checked: boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      paybackConfirmed: prev.paybackExpected ? checked : false,
+    }))
+  }
+
   const handleToggleChannel = (channel: ScheduleChannel) => {
     setFormData((prev) => {
       const current = prev.channel || []
@@ -622,20 +643,36 @@ const arraysEqual = (a: string[], b: string[]) => {
     setFormData({ ...formData, visitTime: `${paddedHour}:${finalMinute}` })
   }
 
+  const applyStatusChange = (value: Schedule["status"]) => {
+    setFormData((prev) => ({ ...prev, status: value }))
+    if (value !== "재확인") {
+      setReconfirmReason("")
+      setCustomReconfirmReason("")
+    }
+  }
+
+  const handleStatusChange = (value: Schedule["status"]) => {
+    const requiresPaybackCheck =
+      value === "완료" &&
+      formData.paybackExpected &&
+      !formData.paybackConfirmed
+
+    if (requiresPaybackCheck) {
+      setPendingStatus(value)
+      setShowStatusConfirm(true)
+      return
+    }
+
+    applyStatusChange(value)
+  }
+
   const statusFields = (
     <div className="space-y-6 mb-6">
       <div>
         <label className="block text-[15px] font-bold text-neutral-500 mb-2">진행 상태</label>
         <Select
           value={formData.status}
-          onValueChange={(value) => {
-            setFormData({ ...formData, status: value as Schedule["status"] })
-            // 재확인이 아닌 상태로 변경하면 재확인 사유 초기화
-            if (value !== "재확인") {
-              setReconfirmReason("")
-              setCustomReconfirmReason("")
-            }
-          }}
+          onValueChange={(value) => handleStatusChange(value as Schedule["status"])}
         >
           <SelectTrigger size="sm" className="w-full bg-[#F7F7F8] border-none rounded-xl text-[16px]">
             <SelectValue placeholder="선택하세요" />
@@ -1120,73 +1157,35 @@ const arraysEqual = (a: string[], b: string[]) => {
                       />
                     </div>
                   </div>
+                  <div className="mt-2.5 space-y-1">
+                    <label className="flex items-start gap-3">
+                      <Checkbox
+                        checked={formData.paybackExpected || false}
+                        onCheckedChange={(checked) => handlePaybackExpectedChange(Boolean(checked))}
+                        className="mt-[5px]"
+                      />
+                      <div className="min-w-0">
+                        <span className="text-[14px] font-semibold text-neutral-900">광고주에게 돌려받아야 할 돈이 있나요?</span>
+                        <p className="text-[12px] text-neutral-500">구매비용을 페이백 받기로 한 의뢰가 있는 경우 체크하세요.</p>
+                      </div>
+                    </label>
+                    {formData.paybackExpected && (
+                      <label className="flex items-center gap-3 pl-8">
+                        <Checkbox
+                          checked={formData.paybackConfirmed || false}
+                          onCheckedChange={(checked) => handlePaybackConfirmedChange(Boolean(checked))}
+                          className="mt-[2px]"
+                        />
+                        <span className="text-[13px] font-semibold text-neutral-900 translate-y-[1px]">입금 확인 (정산 완료)</span>
+                      </label>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-[15px] font-bold text-neutral-900">추가사항</span>
-                <span className="text-[13px] text-neutral-400 translate-y-[1px]">기록하고 싶을 때 적어주세요</span>
-              </div>
               <div className="space-y-6">
-                {/* 링크 */}
-                <div>
-                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">포스팅 링크</label>
-                  <div className="relative">
-                    <input
-                      type="url"
-                      value={formData.postingLink || ""}
-                      onChange={(e) => setFormData({ ...formData, postingLink: e.target.value })}
-                      className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
-                      placeholder="https://..."
-                    />
-                    {formData.postingLink && (
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(formData.postingLink || "")
-                          toast({
-                            title: "포스팅 링크가 복사되었습니다.",
-                            duration: 2000,
-                          })
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
-                      >
-                        <Copy className="w-4 h-4 cursor-pointer" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {["구매형", "미션/인증"].includes(formData.reviewType || "") && (
-                  <div>
-                    <label className="block text-[12px] font-bold text-neutral-500 mb-2">구매할 링크</label>
-                    <div className="relative">
-                      <input
-                        type="url"
-                        value={formData.purchaseLink || ""}
-                        onChange={(e) => setFormData({ ...formData, purchaseLink: e.target.value })}
-                        className="w-full h-8 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[12px]"
-                        placeholder="https://..."
-                      />
-                      {formData.purchaseLink && (
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(formData.purchaseLink || "")
-                            toast({
-                              title: "구매 링크가 복사되었습니다.",
-                              duration: 2000,
-                            })
-                          }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
-                        >
-                          <Copy className="w-4 h-4 cursor-pointer" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {/* <div>
                   <label className="block text-[12px] font-bold text-neutral-500 mb-2">가이드 첨부파일</label>
                   <input
@@ -1567,6 +1566,39 @@ const arraysEqual = (a: string[], b: string[]) => {
               className="bg-red-600 hover:bg-red-700"
             >
               삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showStatusConfirm} onOpenChange={(open) => {
+        setShowStatusConfirm(open)
+        if (!open) {
+          setPendingStatus(null)
+        }
+      }}>
+        <AlertDialogContent className="w-[320px] rounded-2xl p-6 gap-4">
+          <AlertDialogHeader className="space-y-2 text-center">
+            <AlertDialogTitle className="text-base font-bold text-neutral-900">페이백 입금 확인</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
+              아직 입금 확인이 되지 않았습니다. 그래도 '완료' 처리하시겠어요?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-center gap-2">
+            <AlertDialogCancel className="h-10 px-6 text-sm font-bold rounded-xl shadow-sm">
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingStatus) {
+                  applyStatusChange(pendingStatus)
+                }
+                setShowStatusConfirm(false)
+                setPendingStatus(null)
+              }}
+              className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
+            >
+              완료 처리
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

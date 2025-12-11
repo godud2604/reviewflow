@@ -46,6 +46,8 @@ export interface Schedule {
     other?: boolean
     otherText?: string
   }
+  paybackExpected?: boolean
+  paybackConfirmed?: boolean
 }
 
 export type ScheduleChannel = string
