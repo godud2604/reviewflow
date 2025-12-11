@@ -68,7 +68,7 @@ export default function TodoModal({
     <>
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
       <div className="absolute bottom-0 left-0 w-full min-h-[30%] max-h-[60%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
-        <div className="relative p-5 border-b border-neutral-100 text-center font-bold">
+        <div className="relative p-5 border-b border-neutral-100 text-center font-bold text-[16px]">
           할 일 목록
           <button
             onClick={onClose}
@@ -87,10 +87,10 @@ export default function TodoModal({
               value={newTodo}
               onChange={(e) => setNewTodo(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="flex-1 min-w-0 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] outline-none focus:ring-2 focus:ring-[#FF5722]/30"
+              className="flex-1 min-w-0 h-8.5 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] outline-none focus:ring-2 focus:ring-[#FF5722]/30"
               placeholder="사장님께 방문 일정 문자 남기기 ..."
             />
-            <button onClick={handleAdd} className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white border-none rounded-xl font-bold hover:bg-[#F4511E] transition-colors text-sm">
+            <button onClick={handleAdd} className="flex-shrink-0 w-[56px] h-8.5 bg-[#FF5722] text-white border-none rounded-xl font-bold hover:bg-[#F4511E] transition-colors text-[15px]">
               추가
             </button>
           </div>
@@ -103,7 +103,7 @@ export default function TodoModal({
               <p className="text-[15px] text-neutral-500 font-medium">확인해야 할 일이 없어요</p>
             </div>
           ) : (
-            <div className="space-y-0 w-full px-6 py-4">
+            <div className="space-y-0 w-full px-6 py-2">
               {todos.map((todo) => (
                 <div key={todo.id} className="flex items-center py-3 border-b border-neutral-100 last:border-none">
                   <div

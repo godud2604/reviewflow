@@ -48,16 +48,7 @@ export interface Schedule {
   }
 }
 
-export type ScheduleChannel =
-  | "네이버블로그"
-  | "인스타그램"
-  | "인스타그램 reels"
-  | "네이버클립"
-  | "유튜브 shorts"
-  | "틱톡"
-  | "쓰레드"
-  | "카페"
-  | "기타(구매평/인증)"
+export type ScheduleChannel = string
 
 export interface Todo {
   id: number

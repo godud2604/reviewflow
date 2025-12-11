@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { getSupabaseClient } from '@/lib/supabase'
+import { DEFAULT_SCHEDULE_CHANNEL_OPTIONS } from '@/lib/schedule-channels'
 import { useAuth } from './use-auth'
 import { useToast } from './use-toast'
 
@@ -20,6 +21,7 @@ interface UserProfile {
   nickname: string | null
   platforms: string[]
   categories: string[]
+  scheduleChannels: string[]
 }
 
 interface UseUserProfileOptions {
@@ -30,10 +32,13 @@ interface UseUserProfileReturn {
   profile: UserProfile | null
   platforms: string[]
   categories: string[]
+  scheduleChannels: string[]
   loading: boolean
   error: string | null
   addPlatform: (platform: string) => Promise<boolean>
   removePlatform: (platform: string) => Promise<boolean>
+  addScheduleChannel: (channel: string) => Promise<boolean>
+  removeScheduleChannel: (channel: string) => Promise<boolean>
   updateNickname: (nickname: string) => Promise<boolean>
   updateCategories: (categories: string[]) => Promise<boolean>
   refetch: () => Promise<void>
@@ -102,6 +107,10 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
               nickname: newProfile.nickname,
               platforms: newProfile.platforms || DEFAULT_PLATFORMS,
               categories: newProfile.categories || [...DEFAULT_CATEGORIES],
+              scheduleChannels:
+                newProfile.schedule_channels && newProfile.schedule_channels.length > 0
+                  ? newProfile.schedule_channels
+                  : DEFAULT_SCHEDULE_CHANNEL_OPTIONS,
             })
             hasFetchedRef.current = true
           }
@@ -114,7 +123,14 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
           id: data.id,
           nickname: data.nickname,
           platforms: data.platforms || DEFAULT_PLATFORMS,
-          categories: data.categories && data.categories.length > 0 ? data.categories : [...DEFAULT_CATEGORIES],
+          categories:
+            data.categories && data.categories.length > 0
+              ? data.categories
+              : [...DEFAULT_CATEGORIES],
+          scheduleChannels:
+            data.schedule_channels && data.schedule_channels.length > 0
+              ? data.schedule_channels
+              : DEFAULT_SCHEDULE_CHANNEL_OPTIONS,
         })
         hasFetchedRef.current = true
       }
@@ -196,6 +212,71 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
     }
   }, [userId, profile, showError])
 
+  const addScheduleChannel = useCallback(async (channel: string): Promise<boolean> => {
+    if (!userId || !profile) return false
+
+    const trimmedChannel = channel.trim()
+    if (!trimmedChannel) return false
+
+    const exists = profile.scheduleChannels.some(
+      (existing) => existing.toLowerCase() === trimmedChannel.toLowerCase(),
+    )
+    if (exists) {
+      toast({
+        title: '이미 등록된 작성할 곳입니다.',
+        variant: 'destructive',
+        duration: 2000,
+      })
+      return false
+    }
+
+    const newChannels = [...profile.scheduleChannels, trimmedChannel]
+
+    try {
+      const supabase = getSupabaseClient()
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ schedule_channels: newChannels })
+        .eq('id', userId)
+
+      if (updateError) {
+        showError(updateError.message)
+        return false
+      }
+
+      setProfile({ ...profile, scheduleChannels: newChannels })
+      return true
+    } catch (err) {
+      showError(err instanceof Error ? err.message : '알 수 없는 오류')
+      return false
+    }
+  }, [userId, profile, showError, toast])
+
+  const removeScheduleChannel = useCallback(async (channel: string): Promise<boolean> => {
+    if (!userId || !profile) return false
+
+    const newChannels = profile.scheduleChannels.filter((value) => value !== channel)
+
+    try {
+      const supabase = getSupabaseClient()
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ schedule_channels: newChannels })
+        .eq('id', userId)
+
+      if (updateError) {
+        showError(updateError.message)
+        return false
+      }
+
+      setProfile({ ...profile, scheduleChannels: newChannels })
+      return true
+    } catch (err) {
+      showError(err instanceof Error ? err.message : '알 수 없는 오류')
+      return false
+    }
+  }, [userId, profile, showError])
+
   const updateNickname = useCallback(async (nickname: string): Promise<boolean> => {
     if (!userId || !profile) return false
 
@@ -248,10 +329,13 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
     profile,
     platforms: profile?.platforms || [],
     categories: profile?.categories || [],
+    scheduleChannels: profile?.scheduleChannels || [],
     loading,
     error,
     addPlatform,
     removePlatform,
+    addScheduleChannel,
+    removeScheduleChannel,
     updateNickname,
     updateCategories,
     refetch: () => fetchProfile(true),

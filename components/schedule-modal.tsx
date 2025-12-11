@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { useUserProfile } from "@/hooks/use-user-profile"
 import { uploadGuideFiles, downloadGuideFile, deleteGuideFile } from "@/lib/storage"
-import { SCHEDULE_CHANNEL_OPTIONS, sanitizeChannels } from "@/lib/schedule-channels"
+import { DEFAULT_SCHEDULE_CHANNEL_OPTIONS, sanitizeChannels } from "@/lib/schedule-channels"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { X, Copy, Download, Loader2 } from "lucide-react"
@@ -125,6 +125,11 @@ export default function ScheduleModal({
   const [emptyPlatformAlert, setEmptyPlatformAlert] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showPlatformManagement, setShowPlatformManagement] = useState(false)
+  const [showChannelManagement, setShowChannelManagement] = useState(false)
+  const [newChannel, setNewChannel] = useState("")
+  const [channelToDelete, setChannelToDelete] = useState<string | null>(null)
+  const [duplicateChannelAlert, setDuplicateChannelAlert] = useState(false)
+  const [emptyChannelAlert, setEmptyChannelAlert] = useState(false)
   const [reconfirmReason, setReconfirmReason] = useState("")
   const [customReconfirmReason, setCustomReconfirmReason] = useState("")
   const [isUploading, setIsUploading] = useState(false)
@@ -139,10 +144,13 @@ export default function ScheduleModal({
   const {
     platforms: userPlatforms,
     categories: userCategories,
+    scheduleChannels: userChannels,
     addPlatform,
     removePlatform,
+    addScheduleChannel,
+    removeScheduleChannel,
     updateCategories,
-    loading: platformsLoading,
+    loading: profileLoading,
   } = useUserProfile()
 
   // 사용 가능한 플랫폼 목록 (DB에서 가져온 유저 플랫폼)
@@ -157,6 +165,20 @@ export default function ScheduleModal({
     }
     return allPlatforms
   }, [allPlatforms, formData.platform])
+
+  const allChannels = React.useMemo(() => {
+    const baseChannels =
+      userChannels.length > 0 ? userChannels : DEFAULT_SCHEDULE_CHANNEL_OPTIONS
+    return [...baseChannels].sort((a, b) => a.localeCompare(b, "ko"))
+  }, [userChannels])
+
+  const channelOptions = React.useMemo(() => {
+    const existing = new Set(allChannels)
+    const extras = Array.from(
+      new Set((formData.channel || []).filter((channel) => !existing.has(channel)))
+    )
+    return [...allChannels, ...extras]
+  }, [allChannels, formData.channel])
 
   const categoryValues = React.useMemo(() => CATEGORY_OPTIONS.map((option) => option.value), [])
 
@@ -280,7 +302,10 @@ const arraysEqual = (a: string[], b: string[]) => {
       updatedFormData.reconfirmReason = ""
     }
 
-    const selectedChannels = sanitizeChannels(updatedFormData.channel || [], { allowEmpty: true })
+    const selectedChannels = sanitizeChannels(updatedFormData.channel || [], {
+      allowEmpty: true,
+      allowed: channelOptions,
+    })
 
     // 대기 중인 파일이 있으면 업로드
     let finalGuideFiles = updatedFormData.guideFiles || []
@@ -519,6 +544,48 @@ const arraysEqual = (a: string[], b: string[]) => {
     setPlatformToDelete(null)
   }
 
+  const addCustomChannel = async () => {
+    const trimmedChannel = newChannel.trim()
+
+    if (!trimmedChannel) {
+      setEmptyChannelAlert(true)
+      return
+    }
+
+    const channelExists = allChannels.some(
+      (channel) => channel.toLowerCase() === trimmedChannel.toLowerCase()
+    )
+
+    if (channelExists) {
+      setDuplicateChannelAlert(true)
+      return
+    }
+
+    const success = await addScheduleChannel(trimmedChannel)
+    if (success) {
+      setNewChannel("")
+      toast({
+        title: "작성할 채널이 추가되었습니다.",
+        duration: 2000,
+      })
+    }
+  }
+
+  const deleteChannel = async (channelName: string) => {
+    const success = await removeScheduleChannel(channelName)
+    if (success) {
+      setFormData((prev) => ({
+        ...prev,
+        channel: (prev.channel || []).filter((item) => item !== channelName),
+      }))
+      toast({
+        title: "작성할 채널이 삭제되었습니다.",
+        duration: 2000,
+      })
+    }
+    setChannelToDelete(null)
+  }
+
   if (!isOpen) return null
 
   const parseVisitTime = (value: string) => {
@@ -556,9 +623,9 @@ const arraysEqual = (a: string[], b: string[]) => {
   }
 
   const statusFields = (
-    <div className="space-y-3">
+    <div className="space-y-3 mb-4.5">
       <div>
-        <label className="block text-[12px] font-bold text-neutral-500 mb-2">진행 상태</label>
+        <label className="block text-[15px] font-bold text-neutral-500 mb-2">진행 상태</label>
         <Select
           value={formData.status}
           onValueChange={(value) => {
@@ -570,12 +637,12 @@ const arraysEqual = (a: string[], b: string[]) => {
             }
           }}
         >
-          <SelectTrigger size="sm" className="w-full bg-[#F7F7F8] border-none rounded-xl text-[12px]">
+          <SelectTrigger size="sm" className="w-full bg-[#F7F7F8] border-none rounded-xl text-[16px]">
             <SelectValue placeholder="선택하세요" />
           </SelectTrigger>
           <SelectContent>
             {getStatusOptions(formData.reviewType || "제공형").map((statusOption) => (
-              <SelectItem key={statusOption} value={statusOption} className="text-[12px]">
+              <SelectItem key={statusOption} value={statusOption} className="text-[15px]">
                 {statusOption}
               </SelectItem>
             ))}
@@ -585,7 +652,7 @@ const arraysEqual = (a: string[], b: string[]) => {
 
       {formData.status === "재확인" && (
         <div className="space-y-2">
-          <label className="block text-[12px] font-bold text-neutral-500">재확인 사유</label>
+          <label className="block text-[15px] font-bold text-neutral-500">재확인 사유</label>
           <Select
             value={reconfirmReason}
             onValueChange={(value) => {
@@ -595,14 +662,14 @@ const arraysEqual = (a: string[], b: string[]) => {
               }
             }}
           >
-            <SelectTrigger size="sm" className="w-full bg-[#F7F7F8] border-none rounded-xl text-[12px]">
+            <SelectTrigger size="sm" className="w-full bg-[#F7F7F8] border-none rounded-xl text-[15px]">
               <SelectValue placeholder="사유를 선택하세요" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="입금 확인 필요" className="text-[12px]">입금/리워드 확인 필요</SelectItem>
-              <SelectItem value="가이드 내용 불분명" className="text-[12px]">가이드 내용 불분명</SelectItem>
-              <SelectItem value="플랫폼 답변 대기중" className="text-[12px]">플랫폼 답변 대기중</SelectItem>
-              <SelectItem value="기타" className="text-[12px]">기타</SelectItem>
+              <SelectItem value="입금 확인 필요" className="text-[15px]">입금/리워드 확인 필요</SelectItem>
+              <SelectItem value="가이드 내용 불분명" className="text-[15px]">가이드 내용 불분명</SelectItem>
+              <SelectItem value="플랫폼 답변 대기중" className="text-[15px]">플랫폼 답변 대기중</SelectItem>
+              <SelectItem value="기타" className="text-[15px]">기타</SelectItem>
             </SelectContent>
           </Select>
           
@@ -612,7 +679,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                 type="text"
                 value={customReconfirmReason}
                 onChange={(e) => setCustomReconfirmReason(e.target.value)}
-                className="w-full h-8 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[12px]"
+                className="w-full h-8.5 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
                 placeholder="기타 사유를 입력하세요"
               />
             </div>
@@ -627,7 +694,7 @@ const arraysEqual = (a: string[], b: string[]) => {
       <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30" onClick={onClose} style={{ touchAction: 'none' }} />
       <div className="absolute bottom-0 left-0 w-full h-[80%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
         <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
-          <span className="font-bold text-base">{schedule ? "체험단 수정" : "체험단 등록"}</span>
+          <span className="font-bold text-[16px]">{schedule ? "체험단 수정" : "체험단 등록"}</span>
           <button
             onClick={onClose}
             className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
@@ -667,13 +734,13 @@ const arraysEqual = (a: string[], b: string[]) => {
               <div className="space-y-4">
                 {/* 체험단명 */}
                 <div>
-                  <label className="block text-[12px] font-bold text-neutral-500 mb-2">체험단명 (필수)</label>
+                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">체험단명 (필수)</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[12px]"
+                      className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
                       placeholder="예: 강남역 파스타"
                     />
                     {formData.title && (
@@ -695,10 +762,10 @@ const arraysEqual = (a: string[], b: string[]) => {
 
                 {/* 마감일 */}
                 <div>
-                  <label className="block text-[12px] font-bold text-[#FF5722] mb-2">마감일</label>
+                  <label className="block text-[15px] font-bold text-[#FF5722] mb-2">마감일</label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className="w-full h-8.5 px-3 bg-[#F7F7F8] border-none rounded-xl text-[12px] text-left cursor-pointer">
+                      <button className="w-full h-8.5 px-3 bg-[#F7F7F8] border-none rounded-xl text-[16px] text-left cursor-pointer">
                         {formData.dead ? format(new Date(formData.dead), "PPP", { locale: ko }) : "날짜 선택"}
                       </button>
                     </PopoverTrigger>
@@ -721,13 +788,13 @@ const arraysEqual = (a: string[], b: string[]) => {
                 {schedule && statusFields}
                 {/* 플랫폼 */}
                 <div>
-                  <label className="block text-[12px] font-bold text-neutral-500 mb-2">플랫폼</label>
+                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">플랫폼</label>
                   <div className="flex gap-2 flex-wrap">
                     {platformOptions.map((platform) => (
                       <div
                         key={platform}
                         onClick={() => setFormData({ ...formData, platform })}
-                        className={`text-[11px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
+                        className={`text-[14px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
                           formData.platform === platform
                             ? "bg-orange-50 text-[#FF5722] border border-[#FF5722]"
                             : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
@@ -742,7 +809,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                   </div>
                   <button
                     onClick={() => setShowPlatformManagement(true)}
-                    className="mt-2 text-[12px] text-[#FF5722] font-semibold cursor-pointer"
+                    className="mt-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer"
                   >
                     + 플랫폼 관리
                   </button>
@@ -750,21 +817,21 @@ const arraysEqual = (a: string[], b: string[]) => {
 
                 {/* 작성할 곳 (메인 + 방문 후 추가 리뷰) */}
                 <div className="mb-4">
-                  <label className="block text-[12px] font-bold text-neutral-800 mb-2">작성할 곳</label>
+                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">작성할 채널</label>
                   <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 px-3.5 py-3.5 space-y-3">
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[12px] font-bold text-neutral-700">메인 채널</span>
-                        <span className="text-[11px] text-neutral-400">포스팅을 올릴 주요 채널 (복수 선택 가능)</span>
+                        <span className="text-[14px] font-bold text-neutral-700">메인 채널</span>
+                        <span className="text-[13px] text-neutral-400">포스팅을 올릴 주요 채널 (복수 선택 가능)</span>
                       </div>
                       <div className="flex gap-2 flex-wrap">
-                        {SCHEDULE_CHANNEL_OPTIONS.map((channel) => {
+                        {channelOptions.map((channel) => {
                           const isSelected = (formData.channel || []).includes(channel)
                           return (
                             <div
                               key={channel}
                               onClick={() => handleToggleChannel(channel)}
-                              className={`text-[11px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
+                              className={`text-[14px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
                                 isSelected
                                   ? "bg-blue-50 text-blue-600 border border-blue-600"
                                   : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
@@ -776,6 +843,12 @@ const arraysEqual = (a: string[], b: string[]) => {
                         })}
                       </div>
                     </div>
+                    <button
+                      onClick={() => setShowChannelManagement(true)}
+                      className="ml-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer translate-y-[-8px]"
+                    >
+                      + 작성할 채널 관리
+                    </button>
 
                     <div className="pt-2 border-t border-neutral-200/80">
                       <label className="flex items-start gap-3 mb-2 cursor-pointer">
@@ -786,7 +859,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-[12px] font-bold text-blue-900 translate-y-[1.5px]">방문 일정이 있는 체험인가요?</span>
+                            <span className="text-[14px] font-bold text-blue-900 translate-y-[1.5px]">방문 일정이 있는 체험인가요?</span>
                           </div>
                         </div>
                       </label>
@@ -795,8 +868,8 @@ const arraysEqual = (a: string[], b: string[]) => {
                     {visitMode && (
                       <div className="pt-2 border-t border-neutral-200/80">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[12px] font-bold text-blue-900">방문 후 추가 리뷰</span>
-                          <span className="text-[11px] text-neutral-400">현장 방문 뒤 남길 추가 리뷰 채널</span>
+                          <span className="text-[14px] font-bold text-blue-900">방문 후 추가 리뷰</span>
+                          <span className="text-[13px] text-neutral-400">현장 방문 뒤 남길 추가 리뷰 채널</span>
                         </div>
                         <div className="space-y-2.5">
                           <label className="flex items-center gap-3 cursor-pointer">
@@ -806,7 +879,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                                 updateVisitChecklist({ naverReservation: checked as boolean })
                               }
                             />
-                            <span className="text-[12px] font-semibold text-blue-900">네이버 예약 리뷰</span>
+                            <span className="text-[14px] font-semibold text-blue-900">네이버 예약 리뷰</span>
                           </label>
                           <label className="flex items-center gap-3 cursor-pointer">
                             <Checkbox
@@ -815,7 +888,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                                 updateVisitChecklist({ platformAppReview: checked as boolean })
                               }
                             />
-                            <span className="text-[12px] font-semibold text-blue-900">타플랫폼 어플 리뷰</span>
+                            <span className="text-[14px] font-semibold text-blue-900">타플랫폼 어플 리뷰</span>
                           </label>
                           <label className="flex items-center gap-3 cursor-pointer">
                             <Checkbox
@@ -824,7 +897,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                                 updateVisitChecklist({ googleReview: checked as boolean })
                               }
                             />
-                            <span className="text-[12px] font-semibold text-blue-900">구글 리뷰</span>
+                            <span className="text-[14px] font-semibold text-blue-900">구글 리뷰</span>
                           </label>
                           <div className="space-y-1">
                             <label className="flex items-center gap-3 cursor-pointer">
@@ -837,7 +910,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                                   })
                                 }
                               />
-                              <span className="text-[12px] font-semibold text-blue-900">기타</span>
+                              <span className="text-[14px] font-semibold text-blue-900">기타</span>
                             </label>
                             {formData.visitReviewChecklist?.other && (
                               <input
@@ -849,7 +922,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                                     otherText: e.target.value,
                                   })
                                 }
-                                className="w-full h-8 px-3 bg-white border border-blue-200 rounded-lg text-[11px] text-blue-900 placeholder:text-blue-300"
+                                className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
                                 placeholder="추가 리뷰를 입력하세요 (예: 네이버 지도 리뷰)"
                               />
                             )}
@@ -864,10 +937,10 @@ const arraysEqual = (a: string[], b: string[]) => {
                 {visitMode && (
                   <div className="flex gap-2.5 flex-wrap">
                     <div className="flex-1 min-w-[180px]">
-                      <label className="block text-[12px] font-bold text-neutral-500 mb-2">방문일</label>
+                      <label className="block text-[15px] font-bold text-neutral-500 mb-2">방문일</label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[13px] text-left cursor-pointer">
+                          <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[16px] text-left cursor-pointer">
                             {formData.visit ? format(new Date(formData.visit), "PPP", { locale: ko }) : "날짜 선택"}
                           </button>
                         </PopoverTrigger>
@@ -887,10 +960,10 @@ const arraysEqual = (a: string[], b: string[]) => {
                       </Popover>
                     </div>
                     <div className="flex-1 min-w-[180px]">
-                      <label className="block text-[12px] font-bold text-neutral-500 mb-2">방문시간</label>
+                      <label className="block text-[16px] font-bold text-neutral-500 mb-2">방문시간</label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[13px] text-left cursor-pointer">
+                          <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
                             {displayVisitTime}
                           </button>
                         </PopoverTrigger>
@@ -959,7 +1032,7 @@ const arraysEqual = (a: string[], b: string[]) => {
 
                 {/* 카테고리 */}
                 <div className="mb-4">
-                  <label className="block text-[12px] font-bold text-neutral-500 mb-2">카테고리</label>
+                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">카테고리</label>
                   <div className="rounded-2xl flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap">
                       {selectedCategories.length > 0 ? (
@@ -970,7 +1043,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                             <div
                               key={category}
                               onClick={() => setFormData((prev) => ({ ...prev, category }))}
-                              className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center ${
+                              className={`px-2.5 py-1 rounded-xl text-[14px] font-semibold transition-all cursor-pointer flex items-center justify-center ${
                                 isActive
                                   ? "bg-orange-100 text-[#D9480F] border border-[#FF5722]/70"
                                   : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
@@ -987,7 +1060,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                   </div>
                     <button
                       onClick={() => setShowCategoryManagement(true)}
-                      className="mt-2 text-[12px] text-[#FF5722] font-semibold cursor-pointer"
+                      className="mt-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer"
                     >
                       + 카테고리 선택
                   </button>
@@ -999,43 +1072,43 @@ const arraysEqual = (a: string[], b: string[]) => {
                 {/* 자산 관리 */}
                 <div>
                   <div className="">
-                    <label className="block text-[12px] font-bold text-neutral-500">자산 관리</label>
-                    <span className="text-[11px] text-neutral-400">
+                    <label className="text-[15px] font-bold text-neutral-500">자산 관리</label>
+                    <p className="text-[13px] text-neutral-400 mb-2">
                       제공(물품) + 수익(현금) - 내가 쓴 돈 = 해당 체험에서 내가 얻은 경제적 가치
-                    </span>
+                    </p>
                   </div>
 
                   <div className="bg-neutral-50 border border-neutral-200 rounded-2xl px-2 py-3 flex gap-2.5 mt-1">
                     <div className="flex-1 text-center">
-                      <span className="block text-[11px] text-neutral-500 font-semibold mb-1">📦 제공(물품)</span>
-                      <span className="block text-[10px] text-neutral-400 mb-2">받은 제품/서비스 값</span>
+                      <span className="block text-[13px] text-neutral-500 font-semibold mb-1">📦 제공(물품)</span>
+                      <span className="block text-[12px] text-neutral-400 mb-2">받은 제품/서비스 값</span>
                       <input
                         type="text"
                         value={formatNumber(formData.benefit || 0)}
                         onChange={(e) => handleNumberChange("benefit", e.target.value)}
-                        className="w-full h-9 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center font-bold text-[12px] text-emerald-700"
+                        className="w-full h-9 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center font-bold text-[16px] text-emerald-700"
                         placeholder="+ 0"
                       />
                     </div>
                     <div className="flex-1 text-center">
-                      <span className="block text-[11px] text-neutral-500 font-semibold mb-1">💸 수익(현금)</span>
-                      <span className="block text-[10px] text-neutral-400 mb-2">입금된 현금 및 리워드</span>
+                      <span className="block text-[13px] text-neutral-500 font-semibold mb-1">💸 수익(현금)</span>
+                      <span className="block text-[12px] text-neutral-400 mb-2">입금된 현금 및 리워드</span>
                       <input
                         type="text"
                         value={formatNumber(formData.income || 0)}
                         onChange={(e) => handleNumberChange("income", e.target.value)}
-                        className="w-full h-9 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center font-bold text-[12px] text-emerald-700"
+                        className="w-full h-9 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-center font-bold text-[16px] text-emerald-700"
                         placeholder="+ 0"
                       />
                     </div>
                     <div className="flex-1 text-center">
-                      <span className="block text-[11px] text-red-600 font-semibold mb-1">⬇️ 내가 쓴 돈</span>
-                      <span className="block text-[10px] text-neutral-400 mb-2">내가 직접 결제한 금액</span>
+                      <span className="block text-[13px] text-red-600 font-semibold mb-1">⬇️ 내가 쓴 돈</span>
+                      <span className="block text-[12px] text-neutral-400 mb-2">내가 직접 결제한 금액</span>
                       <input
                         type="text"
                         value={formatNumber(formData.cost || 0)}
                         onChange={(e) => handleNumberChange("cost", e.target.value)}
-                        className="w-full h-9 px-3 py-2 bg-rose-50 border border-rose-100 rounded-xl text-center font-bold text-red-600 text-[12px]"
+                        className="w-full h-9 px-3 py-2 bg-rose-50 border border-rose-100 rounded-xl text-center font-bold text-red-600 text-[16px]"
                         placeholder="- 0"
                       />
                     </div>
@@ -1046,19 +1119,19 @@ const arraysEqual = (a: string[], b: string[]) => {
 
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm font-bold text-neutral-900">추가사항</span>
-                <span className="text-xs text-neutral-400 translate-y-[1px]">기록하고 싶을 때 적어주세요</span>
+                <span className="text-[15px] font-bold text-neutral-900">추가사항</span>
+                <span className="text-[13px] text-neutral-400 translate-y-[1px]">기록하고 싶을 때 적어주세요</span>
               </div>
               <div className="space-y-4">
                 {/* 링크 */}
                 <div>
-                  <label className="block text-[12px] font-bold text-neutral-500 mb-2">포스팅 링크</label>
+                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">포스팅 링크</label>
                   <div className="relative">
                     <input
                       type="url"
                       value={formData.postingLink || ""}
                       onChange={(e) => setFormData({ ...formData, postingLink: e.target.value })}
-                      className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[12px]"
+                      className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
                       placeholder="https://..."
                     />
                     {formData.postingLink && (
@@ -1178,12 +1251,12 @@ const arraysEqual = (a: string[], b: string[]) => {
 
                 {/* 메모장 */}
                 <div>
-                  <label className="block text-[12px] font-bold text-neutral-500 mb-2">메모장</label>
+                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">메모장</label>
                   <div className="relative">
                     <textarea
                       value={formData.memo || ""}
                       onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
-                      className="w-full px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[12px] resize-none"
+                      className="w-full px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px] resize-none h-60"
                       rows={3}
                       placeholder="가이드라인 복사 붙여넣기..."
                     />
@@ -1261,7 +1334,7 @@ const arraysEqual = (a: string[], b: string[]) => {
           <div className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-50" onClick={() => setShowPlatformManagement(false)} style={{ touchAction: 'none' }} />
           <div className="absolute bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
-              <span className="font-bold text-base">플랫폼 관리</span>
+              <span className="font-bold text-[16px]">플랫폼 관리</span>
               <button
                 onClick={() => setShowPlatformManagement(false)}
                 className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
@@ -1274,20 +1347,20 @@ const arraysEqual = (a: string[], b: string[]) => {
             <div className="flex-1 overflow-y-auto px-6 py-6">
               {/* 플랫폼 추가 영역 */}
               <div className="mb-6">
-                <label className="block text-[12px] font-bold text-neutral-500 mb-2">새 플랫폼 추가</label>
+                <label className="block text-[15px] font-bold text-neutral-500 mb-2">새 플랫폼 추가</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={newPlatform}
                     onChange={(e) => setNewPlatform(e.target.value)}
-                    className="flex-1 min-w-0 h-8 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[12px]"
+                    className="flex-1 min-w-0 h-8.5 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
                     placeholder="새 플랫폼 이름"
                     onKeyPress={(e) => e.key === "Enter" && addCustomPlatform()}
                   />
                   <button
                     onClick={addCustomPlatform}
-                    disabled={platformsLoading}
-                    className="flex-shrink-0 w-[56px] h-8 bg-[#FF5722] text-white rounded-lg text-[12px] font-semibold cursor-pointer disabled:opacity-50"
+                    disabled={profileLoading}
+                    className="flex-shrink-0 w-[56px] h-8.5 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
                   >
                     추가
                   </button>
@@ -1296,8 +1369,8 @@ const arraysEqual = (a: string[], b: string[]) => {
 
               {/* 플랫폼 목록 */}
               <div>
-                <label className="block text-[12px] font-bold text-neutral-500 mb-2">등록된 플랫폼</label>
-                {platformsLoading ? (
+                <label className="block text-[15px] font-bold text-neutral-500 mb-2">등록된 플랫폼</label>
+                {profileLoading ? (
                   <div className="text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                     불러오는 중...
@@ -1313,13 +1386,92 @@ const arraysEqual = (a: string[], b: string[]) => {
                         key={platform}
                         className="flex items-center justify-between px-4 py-3 bg-neutral-50 rounded-xl"
                       >
-                        <span className="text-[12px] font-medium">{platform}</span>
+                        <span className="text-[15px] font-medium">{platform}</span>
                         <button
                           onClick={() => {
                             setPlatformToDelete(platform)
                             setShowPlatformManagement(false)
                           }}
-                          className="text-red-600 hover:text-red-700 font-semibold text-[12px] cursor-pointer"
+                          className="text-red-600 hover:text-red-700 font-semibold text-[15px] cursor-pointer"
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {showChannelManagement && (
+        <>
+          <div
+            className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-50"
+            onClick={() => setShowChannelManagement(false)}
+            style={{ touchAction: 'none' }}
+          />
+          <div className="absolute bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
+            <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
+              <span className="font-bold text-[16px]">작성할 채널 관리</span>
+              <button
+                onClick={() => setShowChannelManagement(false)}
+                className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
+                aria-label="닫기"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              <div className="mb-6">
+                <label className="block text-[15px] font-bold text-neutral-500 mb-2">작성할 채널 추가</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newChannel}
+                    onChange={(e) => setNewChannel(e.target.value)}
+                    className="flex-1 min-w-0 h-8.5 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
+                    placeholder="작성할 채널 이름"
+                    onKeyPress={(e) => e.key === "Enter" && addCustomChannel()}
+                  />
+                  <button
+                    onClick={addCustomChannel}
+                    disabled={profileLoading}
+                    className="flex-shrink-0 w-[56px] h-8.5 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
+                  >
+                    추가
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[15px] font-bold text-neutral-500 mb-2">등록된 작성할 채널</label>
+                {profileLoading ? (
+                  <div className="text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+                    불러오는 중...
+                  </div>
+                ) : allChannels.length === 0 ? (
+                  <div className="text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
+                    등록된 작성할 채널이 없습니다
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {allChannels.map((channel) => (
+                      <div
+                        key={channel}
+                        className="flex items-center justify-between px-4 py-3 bg-neutral-50 rounded-xl"
+                      >
+                        <span className="text-[15px] font-medium truncate">{channel}</span>
+                        <button
+                          onClick={() => {
+                            setChannelToDelete(channel)
+                            setShowChannelManagement(false)
+                          }}
+                          className="text-red-600 hover:text-red-700 font-semibold text-[15px] cursor-pointer"
                         >
                           삭제
                         </button>
@@ -1443,6 +1595,69 @@ const arraysEqual = (a: string[], b: string[]) => {
           <AlertDialogFooter className="flex-row justify-center gap-2">
             <AlertDialogAction 
               onClick={() => setEmptyPlatformAlert(false)} 
+              className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
+            >
+              확인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={channelToDelete !== null} onOpenChange={(open) => {
+        if (!open) {
+          setChannelToDelete(null)
+          setShowChannelManagement(true)
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>작성할 채널 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              '{channelToDelete}' 작성할 채널을 삭제하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => channelToDelete && deleteChannel(channelToDelete)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={duplicateChannelAlert} onOpenChange={setDuplicateChannelAlert}>
+        <AlertDialogContent className="w-[280px] rounded-2xl p-6 gap-4">
+          <AlertDialogHeader className="space-y-2 text-center">
+            <AlertDialogTitle className="text-base font-bold text-neutral-900">중복된 작성할 채널</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
+              이미 존재하는 작성할 채널입니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-center gap-2">
+            <AlertDialogAction
+              onClick={() => setDuplicateChannelAlert(false)}
+              className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
+            >
+              확인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={emptyChannelAlert} onOpenChange={setEmptyChannelAlert}>
+        <AlertDialogContent className="w-[280px] rounded-2xl p-6 gap-4">
+          <AlertDialogHeader className="space-y-2 text-center">
+            <AlertDialogTitle className="text-base font-bold text-neutral-900">작성할 채널 이름 입력</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
+              작성할 채널 이름을 입력해주세요.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-center gap-2">
+            <AlertDialogAction
+              onClick={() => setEmptyChannelAlert(false)}
               className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
             >
               확인

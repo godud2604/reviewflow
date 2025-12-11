@@ -1,35 +1,37 @@
 import type { ScheduleChannel } from "@/types"
 
-export const SCHEDULE_CHANNEL_OPTIONS: ScheduleChannel[] = [
+export const DEFAULT_SCHEDULE_CHANNEL_OPTIONS: ScheduleChannel[] = [
   "네이버블로그",
   "인스타그램",
   "인스타그램 reels",
   "네이버클립",
   "유튜브 shorts",
-  "틱톡",
-  "쓰레드",
-  "카페",
-  "기타(구매평/인증)",
+  "구매평",
 ]
 
-export const DEFAULT_SCHEDULE_CHANNEL: ScheduleChannel = SCHEDULE_CHANNEL_OPTIONS[0]
+export const DEFAULT_SCHEDULE_CHANNEL: ScheduleChannel = DEFAULT_SCHEDULE_CHANNEL_OPTIONS[0]
 
 interface SanitizeChannelOptions {
   fallback?: ScheduleChannel | null
   allowEmpty?: boolean
+  allowed?: ScheduleChannel[]
 }
 
 export function sanitizeChannels(
   channels: Array<string | ScheduleChannel> | undefined | null,
   options: SanitizeChannelOptions = {},
 ): ScheduleChannel[] {
-  const { fallback = DEFAULT_SCHEDULE_CHANNEL, allowEmpty = false } = options
+  const {
+    fallback = DEFAULT_SCHEDULE_CHANNEL,
+    allowEmpty = false,
+    allowed = DEFAULT_SCHEDULE_CHANNEL_OPTIONS,
+  } = options
   const seen = new Set<ScheduleChannel>()
-  const allowed = new Set(SCHEDULE_CHANNEL_OPTIONS)
+  const allowedSet = new Set(allowed)
 
   for (const raw of channels || []) {
     const trimmed = (raw || "").trim() as ScheduleChannel
-    if (allowed.has(trimmed) && !seen.has(trimmed)) {
+    if (allowedSet.has(trimmed) && !seen.has(trimmed)) {
       seen.add(trimmed)
     }
   }
@@ -47,20 +49,50 @@ export function parseStoredChannels(value: string | null): ScheduleChannel[] {
   const trimmed = value.trim()
   if (trimmed === "") return []
 
-  // 우선 JSON 배열로 저장된 경우 처리
-  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-    try {
-      const parsed = JSON.parse(trimmed)
-      if (Array.isArray(parsed)) {
-        return sanitizeChannels(parsed, { allowEmpty: true })
-      }
-    } catch {
-      // fall through to comma split
+  const parsedFromJson = tryParseChannelArray(trimmed)
+  if (parsedFromJson !== null) {
+    return parsedFromJson
+  }
+
+  const parts = trimmed.split(",")
+  return normalizeChannelInputs(parts)
+}
+
+function tryParseChannelArray(value: string): ScheduleChannel[] | null {
+  if (!value.startsWith("[") || !value.endsWith("]")) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(value)
+    if (Array.isArray(parsed)) {
+      return normalizeChannelInputs(parsed)
+    }
+  } catch {
+    // fall through to comma split
+  }
+
+  return null
+}
+
+function normalizeChannelInputs(inputs: Array<string | ScheduleChannel | unknown>): ScheduleChannel[] {
+  const cleaned = inputs
+    .map((item) => {
+      if (item === null || item === undefined) return ""
+      return String(item).trim()
+    })
+    .filter((chunk): chunk is ScheduleChannel => chunk !== "")
+
+  const unique: ScheduleChannel[] = []
+  const seen = new Set<ScheduleChannel>()
+  for (const channel of cleaned) {
+    if (!seen.has(channel)) {
+      seen.add(channel)
+      unique.push(channel)
     }
   }
 
-  const parts = trimmed.split(",").map((item) => item.trim())
-  return sanitizeChannels(parts, { allowEmpty: true })
+  return unique
 }
 
 export function stringifyChannels(channels: ScheduleChannel[]): string {
