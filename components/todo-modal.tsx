@@ -80,7 +80,7 @@ export default function TodoModal({
         </div>
 
         {/* Sticky Input Section */}
-        <div className="sticky top-0 bg-white px-4 pt-6 pb-4 border-b border-neutral-100 z-10">
+        <div className="sticky top-0 bg-white px-4 pt-4 pb-4 border-b border-neutral-100 z-10">
           <div className="flex gap-2">
             <input
               type="text"
