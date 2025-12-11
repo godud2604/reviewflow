@@ -326,23 +326,16 @@ export default function HomePage({
                   {floatingPanel === "reconfirm" ? "⚠️" : "📌"}
                 </span>
                 <div className="leading-tight">
-                  <div className="text-[13px] font-bold text-neutral-900">
+                  <div className="text-[16px] font-bold text-neutral-900">
                     {floatingPanel === "reconfirm" ? "재확인 체험단" : "마감일 미정"}
                   </div>
-                  <div className="text-[11px] text-neutral-500">
+                  <div className="text-[14px] text-neutral-500">
                     {floatingPanel === "reconfirm"
                       ? "확인이 필요한 일정 목록"
                       : "캘린더에 없는 일정 목록"}
                   </div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setFloatingPanel("none")}
-                className="text-[12px] font-semibold text-neutral-500 hover:text-neutral-700"
-              >
-                닫기
-              </button>
             </div>
             <div className="max-h-[60vh] overflow-y-auto px-4 py-3 space-y-3">
               {(floatingPanel === "reconfirm" ? reconfirmSchedules : noDeadlineSchedules).map((schedule) => (
