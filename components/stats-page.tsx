@@ -241,7 +241,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
                     window.localStorage.setItem(incomeTutorialStorageKey, "1")
                   }
                 }}
-                className="cursor-pointer px-2.5 py-2 rounded-full text-[10.5px] font-semibold text-white border border-white/35 bg-white/10 backdrop-blur-[2px] shadow-sm hover:bg-white/18 hover:border-white/50 transition-all active:scale-[0.98]"
+                className="cursor-pointer px-2.5 py-2 rounded-full text-[11px] font-semibold text-white border border-white/35 bg-white/10 backdrop-blur-[2px] shadow-sm hover:bg-white/18 hover:border-white/50 transition-all active:scale-[0.98]"
               >
                 부수입 추가
               </button>
@@ -346,9 +346,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
                                 style={{ width: `${percentage}%` }}
                               />
                             </div>
-                            <div className="w-20 text-right text-sm font-bold text-[#0f172a]">
-                              {income.amount.toLocaleString()}원
-                            </div>
+                            
                             <div className="w-12 text-right text-xs text-[#9ca3af] font-semibold">{percentage}%</div>
                           </div>
                         )
