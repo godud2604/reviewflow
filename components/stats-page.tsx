@@ -358,7 +358,7 @@ export default function StatsPage({ schedules }: { schedules: Schedule[] }) {
               )}
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center py-10 gap-2 rounded-2xl bg-gradient-to-br from-[#f8fafc] via-white to-[#f8fafc] border border-[#eef2f7]">
+            <div className="flex flex-col items-center justify-center py-6 gap-2 rounded-2xl bg-gradient-to-br from-[#f8fafc] via-white to-[#f8fafc] border border-[#eef2f7]">
               <div className="w-14 h-14 rounded-full bg-[#fef3e7] flex items-center justify-center text-2xl">💸</div>
               <div className="text-sm font-semibold text-[#111827]">아직 수입 데이터가 없어요</div>
               <div className="text-xs text-[#6b7280]">체험단 스케줄을 추가하거나 부수입을 등록해보세요.</div>
