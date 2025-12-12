@@ -167,7 +167,7 @@ export default function IncomeHistoryModal({
 
   const viewDescriptionMap: Record<HistoryView, string> = {
     all: "체험단 수입, 지출, 부수입을 모두 합산해 보여드립니다.",
-    benefit: "체험단에서 방어한 생활비 항목만 뽑아 보여줘요.",
+    benefit: "체험단에서 받은 제품/서비스 값 항목만 뽑아 보여줘요.",
     income: "체험단 수입과 등록한 부수입을 함께 확인해보세요.",
     cost: "카테고리별 지출을 정리해서 보여드립니다.",
   }
@@ -261,13 +261,6 @@ export default function IncomeHistoryModal({
                   <span className="text-base font-bold text-white">₩{totalExtra.toLocaleString()}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between border-t border-white/20 pt-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">📈</span>
-                  <span className="text-sm text-white/90 font-semibold">총 경제적 가치</span>
-                </div>
-                <span className="text-base font-bold text-white">₩{grandTotal.toLocaleString()}</span>
-              </div>
               <p className="text-[11px] text-white/90 leading-relaxed">{viewDescriptionMap[viewType]}</p>
             </div>
           </div>
