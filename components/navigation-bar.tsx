@@ -36,7 +36,7 @@ export default function NavigationBar({
         aria-label="메인 페이지로 이동"
       >
         <CalendarCheck2 className="w-6 h-6" />
-        <span className="text-xs font-semibold mt-0.5">일정</span>
+        <span className="text-[14px] font-semibold mt-0.5">일정</span>
       </button>
 
       <button
@@ -44,10 +44,10 @@ export default function NavigationBar({
         className="flex flex-col items-center justify-center text-neutral-400"
         aria-label="추가"
       >
-        <div className="w-[38px] h-[38px] bg-[#1A1A1A] rounded-full flex items-center justify-center text-white mb-1">
+        <div className="w-[38px] h-[38px] bg-orange-500 rounded-full flex items-center justify-center text-white mb-1">
           <Plus className="w-6 h-6" />
         </div>
-        <span className="text-xs font-semibold mt-0.5">체험단 추가</span>
+        <span className="text-[14px] font-semibold text-orange-500 mt-0.5">체험단 등록</span>
       </button>
 
       <button
@@ -56,7 +56,7 @@ export default function NavigationBar({
         aria-label="통계 페이지로 이동"
       >
         <Wallet className="w-6 h-6" />
-        <span className="text-xs font-semibold mt-0.5">통계</span>
+        <span className="text-[14px] font-semibold mt-0.5">통계</span>
       </button>
 
       <button
@@ -65,7 +65,7 @@ export default function NavigationBar({
         aria-label="프로필 페이지로 이동"
       >
         <User className="w-6 h-6" />
-        <span className="text-xs font-semibold mt-0.5">프로필</span>
+        <span className="text-[14px] font-semibold mt-0.5">프로필</span>
       </button>
     </nav>
   )
