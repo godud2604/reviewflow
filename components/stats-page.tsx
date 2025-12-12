@@ -376,7 +376,7 @@ export default function StatsPage({
                   전체 내역 보기
                 </button>
               </div>
-              <p className="text-xs text-[#6b7280] mt-1">체험단을 통해 확보한 방어용 생활비 항목들을 보여줘요.</p>
+              <p className="text-xs text-[#6b7280] mt-1">체험단에서 받은 제품/서비스 값 항목만 뽑아 보여줘요.</p>
               <div className="mt-4 space-y-3">
                 {benefitEntries.map(([category, amount]) => {
                   const percentage = totalBen ? Math.round((amount / totalBen) * 100) : 0
@@ -500,7 +500,7 @@ export default function StatsPage({
                   전체 내역 보기
                 </button>
               </div>
-              <p className="text-xs text-[#6b7280] mt-1">이번 달에 나간 비용들을 항목별로 정리합니다.</p>
+              <p className="text-xs text-[#6b7280] mt-1">이번 달에 나간 비용들을 카테고리 별로 정리합니다.</p>
               <div className="mt-4 space-y-3">
                 {costEntries.map(([category, amount]) => {
                   const percentage = totalCost ? Math.round((amount / totalCost) * 100) : 0
