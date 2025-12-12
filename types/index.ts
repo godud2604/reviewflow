@@ -95,3 +95,5 @@ export interface MonthlyGrowth {
   extraIncomeTotal: number
   econValue: number
 }
+
+export type HistoryView = "all" | "benefit" | "income" | "cost"

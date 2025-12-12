@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import type { Schedule, ExtraIncome, MonthlyGrowth } from "@/types"
+import type { Schedule, ExtraIncome, MonthlyGrowth, HistoryView } from "@/types"
 import { useExtraIncomes } from "@/hooks/use-extra-incomes"
 import ExtraIncomeModal from "./extra-income-modal"
 import IncomeHistoryModal from "./income-history-modal"
@@ -22,11 +22,17 @@ export default function StatsPage({
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [showIncomeTutorial, setShowIncomeTutorial] = useState(false)
   const [editingExtraIncome, setEditingExtraIncome] = useState<ExtraIncome | null>(null)
+  const [historyView, setHistoryView] = useState<HistoryView>("all")
   const historyDisabled = showIncomeModal || isScheduleModalOpen
   const cardShadow = "shadow-[0_14px_40px_rgba(18,34,64,0.08)]"
   const toNumber = (value: unknown) => {
     const num = Number(value)
     return Number.isFinite(num) ? num : 0
+  }
+
+  const openHistoryModal = (view: HistoryView) => {
+    setHistoryView(view)
+    setShowHistoryModal(true)
   }
 
   const today = new Date()
@@ -46,7 +52,7 @@ export default function StatsPage({
 
   const getScheduleDate = (schedule: Schedule) => parseDate(schedule.visit) || parseDate(schedule.dead)
 
-  const createCategoryMap = () => ({
+  const createCategoryMap = (): Record<Schedule["category"], number> => ({
     "맛집/식품": 0,
     "뷰티": 0,
     "생활/리빙": 0,
@@ -109,8 +115,10 @@ export default function StatsPage({
     [extraIncomes, currentYear, currentMonth]
   )
 
-  const { totalBen, totalInc, totalCost, benefitByCategory } = useMemo(() => {
-    const benefits = createCategoryMap()
+  const { totalBen, totalInc, totalCost, benefitByCategory, incomeByCategory, costByCategory } = useMemo(() => {
+    const benefitMap = createCategoryMap()
+    const incomeMap = createCategoryMap()
+    const costMap = createCategoryMap()
     let benefitTotal = 0
     let incomeTotal = 0
     let costTotal = 0
@@ -124,18 +132,18 @@ export default function StatsPage({
       incomeTotal += income
       costTotal += cost
 
-      // Category contribution uses full schedule economic value (benefit + income - cost)
-      const categoryValue = benefit + income - cost
-      if (categoryValue !== 0) {
-        benefits[s.category] += categoryValue
-      }
+      benefitMap[s.category] += benefit
+      incomeMap[s.category] += income
+      costMap[s.category] += cost
     })
 
     return {
       totalBen: benefitTotal,
       totalInc: incomeTotal,
       totalCost: costTotal,
-      benefitByCategory: benefits,
+      benefitByCategory: benefitMap,
+      incomeByCategory: incomeMap,
+      costByCategory: costMap,
     }
   }, [currentMonthSchedules])
 
@@ -191,6 +199,15 @@ export default function StatsPage({
   }, [econValue])
 
   const hasAnyExtraIncome = extraIncomes.length > 0
+
+  const getCategoryEntries = (categoryMap: Record<Schedule["category"], number>) =>
+    (Object.entries(categoryMap) as [Schedule["category"], number][])
+      .filter(([, amount]) => amount > 0)
+      .sort(([, aAmount], [, bAmount]) => bAmount - aAmount)
+
+  const benefitEntries = getCategoryEntries(benefitByCategory)
+  const incomeEntries = getCategoryEntries(incomeByCategory)
+  const costEntries = getCategoryEntries(costByCategory)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -263,11 +280,11 @@ export default function StatsPage({
     <>
       <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y relative">
         {/* Hero Card */}
-        <div className="relative overflow-hidden rounded-[30px] p-6 mt-1 mb-3.5 bg-gradient-to-br from-[#ff9a3c] via-[#ff6a1f] to-[#ff3b0c]">
+        <div className="relative overflow-hidden rounded-[30px] p-6 mt-1 mb-5 bg-gradient-to-br from-[#ff9a3c] via-[#ff6a1f] to-[#ff3b0c]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.22),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.15),transparent_28%)]" />
           <div className="relative flex items-start justify-between mb-5">
             <div>
-              <div className="text-[14px] font-semibold text-white uppercase flex items-center gap-1 mb-1">
+              <div className="text-[14px] font-semibold text-white uppercase flex items-center gap-1 mb-2">
                 이번 달 경제적 가치 <span role="img" aria-label="money bag">💰</span>
               </div>
               <div className="text-[32px] font-black leading-[1.05] text-white drop-shadow-[0_14px_36px_rgba(255,120,64,0.28)] tracking-tight">
@@ -292,58 +309,128 @@ export default function StatsPage({
               )}
             </div>
           </div>
-          <div className="relative mt-2 mb-4 border-t border-white/25" />
+          <div className="relative mt-3 mb-5 border-t border-white/20" />
+
           <div className="grid grid-cols-2 gap-3 text-sm relative">
-            <div className="p-4 rounded-2xl bg-white/10 shadow-sm text-white">
-              <div className="text-[12px] text-white font-semibold mb-1">방어한 생활비</div>
-              <div className="text-[14px] font-extrabold text-white">₩ {scheduleValue.toLocaleString()}</div>
+            {/* 체험단 경제 효과 (메인 카드) */}
+            <div className="p-4 rounded-2xl bg-white/15 backdrop-blur-sm shadow-md ring-1 ring-white/20 text-white">
+              <div className="text-[12px] font-semibold mb-1 tracking-tight">
+                체험단 경제 효과
+              </div>
+
+              <div className="text-[10.5px] text-white/80 mb-2 leading-snug">
+                방어한 생활비 + 현금 수입 − 실제 지출 기준
+              </div>
+
+              <div className="text-[18px] font-extrabold tracking-tight">
+                ₩ {scheduleValue.toLocaleString()}
+              </div>
             </div>
-            <div className="p-4 rounded-2xl bg-white/10 shadow-sm text-white">
-              <div className="text-[12px] text-white font-semibold mb-1">부수입</div>
-              <div className="text-[14px] font-extrabold text-white">₩ {totalExtraIncome.toLocaleString()}</div>
+
+            {/* 부수입 카드 (서브 카드) */}
+            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-sm shadow-sm text-white/90">
+              <div className="flex flex-col h-full justify-between min-h-[80px]">
+                <div>
+                  <div className="text-[12px] font-semibold mb-2">
+                    부수입
+                  </div>
+                  <div className="text-[10.5px] text-white/80 mb-2 leading-snug">
+                    체험단 외의 부업/임시 수입
+                  </div>
+                </div>
+                <div className="text-[16px] font-bold mt-auto">
+                  ₩ {totalExtraIncome.toLocaleString()}
+                </div>
+              </div>
             </div>
           </div>
+
         </div>
 
-        {/* Income Details - Always Visible */}
-        <div className={`bg-white rounded-[26px] py-6 px-5 mb-3.5 shadow-sm ${cardShadow}`}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="ml-1.5 text-[16px] font-bold text-[#0f172a]">이번달 수입 상세 내역</div>
-            <button
-              onClick={() => setShowHistoryModal(true)}
-              className="text-[12px] text-[#6b7685] hover:text-[#111827] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
-            >
-              전체 내역 보기
-              <span className="text-xs">→</span>
-            </button>
-          </div>
-          
-          {hasIncomeData ? (
-            <>
-              {/* 방어한 생활비 섹션 */}
-              {totalBen > 0 && (
-                <div className="">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-sm font-semibold text-[#0f172a] flex items-center gap-2">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#fef4eb] text-[#f97316] text-[14px]">₩</span>
-                      <span className="text-[14px]">방어한 생활비</span>
-                    </div>
-                    <div className="text-[14px] font-bold text-[#f97316]">{scheduleValue.toLocaleString()}원</div>
-                  </div>
-                  <div className="space-y-3 pl-2">
-                    {(Object.keys(benefitByCategory) as Schedule["category"][])
-                      .filter((category) => benefitByCategory[category] > 0)
-                      .sort((a, b) => benefitByCategory[b] - benefitByCategory[a])
-                      .map((category) => {
-                        const amount = benefitByCategory[category]
-                        const percentage = Math.round((amount / scheduleValue) * 100)
+        <div className="flex items-center justify-between mb-3.5">
+          <div className="ml-1.5 text-[16px] font-bold text-[#0f172a]">이번 달 재무 상세</div>
+          <button
+            onClick={() => openHistoryModal("all")}
+            className="text-[12px] text-[#6b7685] hover:text-[#111827] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+          >
+            전체 내역 보기
+            <span className="text-xs">→</span>
+          </button>
+        </div>
 
+        {hasIncomeData ? (
+          <div className="space-y-4 mb-3.5">
+            <section className={`bg-white rounded-[26px] p-6 shadow-sm ${cardShadow}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#fef4eb] text-[#f97316] text-[14px]">₩</span>
+                    방어한 생활비
+                  </div>
+                  <div className="text-[18px] font-bold text-[#f97316] mt-1">{totalBen.toLocaleString()} 원</div>
+                </div>
+                <button
+                  onClick={() => openHistoryModal("benefit")}
+                  className="text-[12px] font-semibold text-[#6b7685] hover:text-[#111827] transition-colors"
+                >
+                  전체 내역 보기
+                </button>
+              </div>
+              <p className="text-xs text-[#6b7280] mt-1">체험단을 통해 확보한 방어용 생활비 항목들을 보여줘요.</p>
+              <div className="mt-4 space-y-3">
+                {benefitEntries.map(([category, amount]) => {
+                  const percentage = totalBen ? Math.round((amount / totalBen) * 100) : 0
+                  return (
+                    <div key={category} className="flex items-center gap-3">
+                      <div className="w-26 text-[12px] font-semibold text-[#4b5563]">{category}</div>
+                      <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-[#ff9431] to-[#ff6b2c] rounded-full transition-all duration-500"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <div className="w-12 text-right text-xs text-[#9ca3af] font-semibold">{percentage}%</div>
+                    </div>
+                  )
+                })}
+                {!benefitEntries.length && (
+                  <div className="text-xs text-[#9ca3af]">이번 달 방어된 생활비 내역이 아직 없어요.</div>
+                )}
+              </div>
+            </section>
+
+            <section className={`bg-white rounded-[26px] p-6 shadow-sm ${cardShadow}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#eef5ff] text-[#2563eb] text-[14px]">💵</span>
+                    수입
+                  </div>
+                  <div className="text-[18px] font-bold text-[#2563eb] mt-1">{(totalInc + totalExtraIncome).toLocaleString()} 원</div>
+                </div>
+                <button
+                  onClick={() => openHistoryModal("income")}
+                  className="text-[12px] font-semibold text-[#6b7685] hover:text-[#111827] transition-colors"
+                >
+                  전체 내역 보기
+                </button>
+              </div>
+              <p className="text-xs text-[#6b7280] mt-1">체험단 현금 수입과 등록한 부수입을 한눈에 확인해보세요.</p>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-[13px] font-bold text-[#0f172a]">체험단 현금 수입</div>
+                    <div className="text-xs text-[#6b7280]">{totalInc ? `₩ ${totalInc.toLocaleString()}` : "없음"}</div>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    {incomeEntries.map(([category, amount]) => {
+                      const percentage = totalInc ? Math.round((amount / totalInc) * 100) : 0
                       return (
                         <div key={category} className="flex items-center gap-3">
                           <div className="w-26 text-[12px] font-semibold text-[#4b5563]">{category}</div>
                           <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                             <div
-                              className="h-full bg-gradient-to-r from-[#ff9431] to-[#ff6b2c] rounded-full transition-all duration-500"
+                              className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
@@ -351,54 +438,98 @@ export default function StatsPage({
                         </div>
                       )
                     })}
+                    {!incomeEntries.length && (
+                      <div className="mt-[-3px] text-xs text-[#9ca3af]">스케줄 수입 내역이 없습니다.</div>
+                    )}
                   </div>
                 </div>
-              )}
 
-              {/* 부수입 섹션 */}
-              {totalExtraIncome > 0 && (
                 <div>
-                  <div className="flex items-center justify-between mt-6 mb-3">
-                    <div className="text-sm font-semibold text-[#0f172a] flex items-center gap-2">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#eef5ff] text-[#2563eb] text-[14px]">💵</span>
-                      <span className="text-[14px]">부수입 (현금)</span>
-                    </div>
-                    <div className="text-[14px] font-bold text-[#2563eb]">{totalExtraIncome.toLocaleString()}원</div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-[13px] font-bold text-[#0f172a]">부수입</div>
+                    <div className="text-xs text-[#6b7685]">{totalExtraIncome ? `₩ ${totalExtraIncome.toLocaleString()}` : "없음"}</div>
                   </div>
-                  <div className="space-y-3 pl-2">
-                    {currentMonthExtraIncomes
-                      .slice()
-                      .sort((a, b) => b.amount - a.amount)
-                      .map((income) => {
-                        const percentage = Math.round((income.amount / totalExtraIncome) * 100)
-                        return (
-                          <div key={income.id} className="flex items-center gap-3">
-                            <div className="w-26 text-[12px] font-semibold text-[#4b5563] truncate" title={income.title}>
-                              {income.title}
-                            </div>
-                            <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                  <div className="mt-3 space-y-3">
+                    {currentMonthExtraIncomes.length > 0 ? (
+                      currentMonthExtraIncomes
+                        .slice()
+                        .sort((a, b) => b.amount - a.amount)
+                        .map((income) => {
+                          const percentage = totalExtraIncome
+                            ? Math.round((income.amount / totalExtraIncome) * 100)
+                            : 0
+                          return (
+                            <div key={income.id} className="flex items-center gap-3">
                               <div
-                                className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
-                                style={{ width: `${percentage}%` }}
-                              />
+                                className="w-26 text-[12px] font-semibold text-[#4b5563] truncate"
+                                title={income.title}
+                              >
+                                {income.title}
+                              </div>
+                              <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                              <div className="w-12 text-right text-xs text-[#9ca3af] font-semibold">{percentage}%</div>
                             </div>
-                            
-                            <div className="w-12 text-right text-xs text-[#9ca3af] font-semibold">{percentage}%</div>
-                          </div>
-                        )
-                      })}
+                          )
+                        })
+                    ) : (
+                      <div className="text-xs text-[#9ca3af]">등록한 부수입이 아직 없습니다.</div>
+                    )}
                   </div>
                 </div>
-              )}
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-6 gap-2 rounded-2xl bg-gradient-to-br from-[#f8fafc] via-white to-[#f8fafc] border border-[#eef2f7]">
-              <div className="w-14 h-14 rounded-full bg-[#fef3e7] flex items-center justify-center text-2xl">💸</div>
-              <div className="text-sm font-semibold text-[#111827]">아직 수입 데이터가 없어요</div>
-              <div className="text-xs text-[#6b7280]">체험단 스케줄을 추가하거나 부수입을 등록해보세요.</div>
-            </div>
-          )}
-        </div>
+              </div>
+            </section>
+
+            <section className={`bg-white rounded-[26px] p-6 shadow-sm ${cardShadow}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#fee2e2] text-[#ef4444] text-[14px]">🪙</span>
+                    지출
+                  </div>
+                  <div className="text-[18px] font-bold text-[#dc2626] mt-1">{totalCost.toLocaleString()} 원</div>
+                </div>
+                <button
+                  onClick={() => openHistoryModal("cost")}
+                  className="text-[12px] font-semibold text-[#6b7685] hover:text-[#111827] transition-colors"
+                >
+                  전체 내역 보기
+                </button>
+              </div>
+              <p className="text-xs text-[#6b7280] mt-1">이번 달에 나간 비용들을 항목별로 정리합니다.</p>
+              <div className="mt-4 space-y-3">
+                {costEntries.map(([category, amount]) => {
+                  const percentage = totalCost ? Math.round((amount / totalCost) * 100) : 0
+                  return (
+                    <div key={category} className="flex items-center gap-3">
+                      <div className="w-26 text-[12px] font-semibold text-[#4b5563]">{category}</div>
+                      <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-[#fca5a5] to-[#ef4444] rounded-full transition-all duration-500"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <div className="w-12 text-right text-xs text-[#9ca3af] font-semibold">{percentage}%</div>
+                    </div>
+                  )
+                })}
+                {!costEntries.length && (
+                  <div className="text-xs text-[#9ca3af]">아직 지출 내역이 기록되지 않았습니다.</div>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-6 gap-2 rounded-[26px] border border-[#eef2f7] bg-white mb-3.5">
+            <div className="w-14 h-14 rounded-full bg-[#fef3e7] flex items-center justify-center text-2xl">💸</div>
+            <div className="text-sm font-semibold text-[#111827]">아직 재무 데이터가 없어요</div>
+            <div className="text-xs text-[#6b7280]">체험단 스케줄을 추가하거나 부수입을 등록해보세요.</div>
+          </div>
+        )}
       
         {/* Trend Chart */}
         <TrendChart
@@ -423,6 +554,7 @@ export default function StatsPage({
         onClose={() => setShowHistoryModal(false)}
         schedules={currentMonthSchedules}
         extraIncomes={currentMonthExtraIncomes}
+        viewType={historyView}
         onDeleteExtraIncome={deleteExtraIncome}
         onScheduleItemClick={handleHistoryScheduleClick}
         onExtraIncomeItemClick={handleHistoryExtraIncomeClick}

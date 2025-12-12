@@ -2,7 +2,7 @@
 
 import { useState, type KeyboardEvent } from "react"
 import { X } from "lucide-react"
-import type { Schedule, ExtraIncome } from "@/types"
+import type { Schedule, ExtraIncome, HistoryView } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 import {
   AlertDialog,
@@ -32,6 +32,7 @@ export default function IncomeHistoryModal({
   onClose,
   schedules,
   extraIncomes,
+  viewType = "all",
   onDeleteExtraIncome,
   onScheduleItemClick,
   onExtraIncomeItemClick,
@@ -41,6 +42,7 @@ export default function IncomeHistoryModal({
   onClose: () => void
   schedules: Schedule[]
   extraIncomes: ExtraIncome[]
+  viewType?: HistoryView
   onDeleteExtraIncome?: (id: number) => Promise<boolean>
   onScheduleItemClick?: (schedule: Schedule) => void
   onExtraIncomeItemClick?: (income: ExtraIncome) => void
@@ -50,65 +52,142 @@ export default function IncomeHistoryModal({
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; title: string } | null>(null)
   const { toast } = useToast()
 
-  // 체험단 항목: 제공 + 수익 - 지출을 합산하여 한 줄로 표현
-  const scheduleItems = schedules
-    .filter((s) => (s.benefit || 0) + (s.income || 0) + (s.cost || 0) !== 0)
-    .map((s) => ({
-      id: `schedule-${s.id}`,
-      title: s.title,
-      amount: (s.benefit || 0) + (s.income || 0) - (s.cost || 0),
-      date: s.visit || s.dead,
-      category: s.category,
-      type: "schedule" as const,
-      sourceSchedule: s,
-    })) satisfies IncomeHistoryItem[]
+  const toNumber = (value?: number | string | null) => {
+    const num = Number(value)
+    return Number.isFinite(num) ? num : 0
+  }
 
-  // 기타 부수입 항목들
-  const extraIncomeItems = extraIncomes.map((income) => ({
-    id: `extra-${income.id}`,
-    title: income.title,
-    amount: income.amount,
-    date: income.date,
-    category: "기타" as const,
-    type: "extra" as const,
-    extraIncomeId: income.id,
-    sourceExtraIncome: income,
-  })) satisfies IncomeHistoryItem[]
+  type ScheduleHistoryPoolItem = {
+    id: string
+    title: string
+    date?: string
+    category: Schedule["category"]
+    type: "schedule"
+    sourceSchedule: Schedule
+    benefit: number
+    income: number
+    cost: number
+    netValue: number
+  }
 
-  // 모든 항목 합치기 및 날짜순 정렬
-  const allItems = [...scheduleItems, ...extraIncomeItems].sort(
-    (a, b) => {
-      if (!a.date) return 1
-      if (!b.date) return -1
-      return new Date(b.date).getTime() - new Date(a.date).getTime()
+  const schedulePool: ScheduleHistoryPoolItem[] = schedules.map((schedule) => {
+    const benefit = toNumber(schedule.benefit)
+    const income = toNumber(schedule.income)
+    const cost = toNumber(schedule.cost)
+    return {
+      id: `schedule-${schedule.id}`,
+      title: schedule.title,
+      date: schedule.visit || schedule.dead,
+      category: schedule.category,
+      type: "schedule",
+      sourceSchedule: schedule,
+      benefit,
+      income,
+      cost,
+      netValue: benefit + income - cost,
     }
-  )
+  })
 
-  const scheduleTotal = scheduleItems.reduce((sum, item) => sum + item.amount, 0)
-  const totalExtra = extraIncomeItems.reduce((sum, item) => sum + item.amount, 0)
-  const grandTotal = scheduleTotal + totalExtra
-  const hasData = allItems.length > 0
-  const containerHeightClass = hasData ? "h-[85%]" : "h-[50%]"
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case "schedule":
-        return "방어한 생활비"
-      case "extra":
-        return "기타 부수입"
+  const getScheduleAmount = (data: ScheduleHistoryPoolItem) => {
+    switch (viewType) {
+      case "benefit":
+        return data.benefit
+      case "income":
+        return data.income
+      case "cost":
+        return data.cost
       default:
-        return ""
+        return data.netValue
     }
   }
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "extra":
-        return "bg-blue-50 text-blue-700"
-      case "schedule":
+  const filteredSchedules = schedulePool
+    .map((item) => ({
+      ...item,
+      amount: getScheduleAmount(item),
+    }))
+    .filter((item) => (viewType === "all" ? item.netValue !== 0 : item.amount > 0))
+
+  const scheduleItems: IncomeHistoryItem[] = filteredSchedules.map((item) => ({
+    id: item.id,
+    title: item.title,
+    amount: item.amount,
+    date: item.date || "",
+    category: item.category,
+    type: "schedule",
+    sourceSchedule: item.sourceSchedule,
+  }))
+
+  const includeExtraIncomes = viewType === "all" || viewType === "income"
+  const extraIncomeItems = includeExtraIncomes
+    ? extraIncomes.map((income) => ({
+        id: `extra-${income.id}`,
+        title: income.title,
+        amount: income.amount,
+        date: income.date,
+        category: "기타" as const,
+        type: "extra" as const,
+        extraIncomeId: income.id,
+        sourceExtraIncome: income,
+      }))
+    : ([] as IncomeHistoryItem[])
+
+  const visibleItems = [...scheduleItems, ...extraIncomeItems].sort((a, b) => {
+    if (!a.date) return 1
+    if (!b.date) return -1
+    return new Date(b.date).getTime() - new Date(a.date).getTime()
+  })
+
+  const scheduleTotal = filteredSchedules.reduce((sum, item) => sum + item.amount, 0)
+  const totalExtra = extraIncomeItems.reduce((sum, item) => sum + item.amount, 0)
+  const grandTotal = scheduleTotal + totalExtra
+  const hasData = visibleItems.length > 0
+  const containerHeightClass = hasData ? "h-[85%]" : "h-[50%]"
+
+  const viewTitleMap: Record<HistoryView, string> = {
+    all: "이번 달 전체 수입 내역",
+    benefit: "이번 달 방어한 생활비 내역",
+    income: "이번 달 수입 내역",
+    cost: "이번 달 지출 내역",
+  }
+
+  const scheduleLabelMap: Record<HistoryView, string> = {
+    all: "체험단 합산",
+    benefit: "방어한 생활비",
+    income: "체험단 수입",
+    cost: "지출",
+  }
+
+  const viewIconMap: Record<HistoryView, string> = {
+    all: "💰",
+    benefit: "🛡️",
+    income: "💵",
+    cost: "🧾",
+  }
+
+  const viewDescriptionMap: Record<HistoryView, string> = {
+    all: "체험단 수입, 지출, 부수입을 모두 합산해 보여드립니다.",
+    benefit: "체험단에서 방어한 생활비 항목만 뽑아 보여줘요.",
+    income: "체험단 수입과 등록한 부수입을 함께 확인해보세요.",
+    cost: "카테고리별 지출을 정리해서 보여드립니다.",
+  }
+
+  const getTypeLabel = (item: IncomeHistoryItem) => {
+    if (item.type === "extra") return "기타 부수입"
+    return scheduleLabelMap[viewType]
+  }
+
+  const getTypeColor = (item: IncomeHistoryItem) => {
+    if (item.type === "extra") return "bg-blue-50 text-blue-700"
+    switch (viewType) {
+      case "benefit":
         return "bg-orange-50 text-orange-700"
+      case "income":
+        return "bg-blue-50 text-blue-700"
+      case "cost":
+        return "bg-red-50 text-red-700"
       default:
-        return "bg-neutral-100 text-neutral-700"
+        return "bg-orange-50 text-orange-700"
     }
   }
 
@@ -145,13 +224,13 @@ export default function IncomeHistoryModal({
 
   return (
     <>
-      <div className="absolute top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm z-30 overscroll-none" onClick={onClose} style={{ touchAction: 'none' }} />
+      <div className="absolute top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm z-40 overscroll-none" onClick={onClose} style={{ touchAction: 'none' }} />
       <div
-        className={`absolute bottom-0 left-0 w-full ${containerHeightClass} bg-gradient-to-b from-neutral-50 to-white rounded-t-[32px] z-40 flex flex-col animate-slide-up overscroll-none shadow-2xl relative transition-opacity ${isDisabled ? "pointer-events-none opacity-70" : ""}`}
+        className={`w-full absolute bottom-0 left-0 ${containerHeightClass} bg-gradient-to-b from-neutral-50 to-white rounded-t-[32px] z-40 flex flex-col animate-slide-up overscroll-none shadow-2xl transition-opacity ${isDisabled ? "pointer-events-none opacity-70" : ""}`}
       >
         {/* Header */}
         <div className="p-5 pb-3 text-center relative flex-shrink-0">
-          <h2 className="text-[16px] font-bold text-neutral-900">이번달 전체 수입 내역</h2>
+          <h2 className="text-[16px] font-bold text-neutral-900">{viewTitleMap[viewType]}</h2>
           <button
             onClick={onClose}
             className="absolute right-5 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
@@ -168,18 +247,20 @@ export default function IncomeHistoryModal({
             <div className="relative space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-base">💰</span>
-                  <span className="text-sm text-white/90 font-semibold">체험단 합산</span>
+                  <span className="text-base">{viewIconMap[viewType]}</span>
+                  <span className="text-sm text-white/90 font-semibold">{scheduleLabelMap[viewType]}</span>
                 </div>
                 <span className="text-base font-bold text-white">₩{scheduleTotal.toLocaleString()}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">💳</span>
-                  <span className="text-sm text-white/90 font-semibold">부수입</span>
+              {includeExtraIncomes && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">💳</span>
+                    <span className="text-sm text-white/90 font-semibold">부수입</span>
+                  </div>
+                  <span className="text-base font-bold text-white">₩{totalExtra.toLocaleString()}</span>
                 </div>
-                <span className="text-base font-bold text-white">₩{totalExtra.toLocaleString()}</span>
-              </div>
+              )}
               <div className="flex items-center justify-between border-t border-white/20 pt-2">
                 <div className="flex items-center gap-2">
                   <span className="text-base">📈</span>
@@ -187,6 +268,7 @@ export default function IncomeHistoryModal({
                 </div>
                 <span className="text-base font-bold text-white">₩{grandTotal.toLocaleString()}</span>
               </div>
+              <p className="text-[11px] text-white/90 leading-relaxed">{viewDescriptionMap[viewType]}</p>
             </div>
           </div>
         </div>
@@ -202,7 +284,7 @@ export default function IncomeHistoryModal({
             </div>
           ) : (
             <div className="space-y-2.5">
-            {allItems.map((item) => (
+            {visibleItems.map((item) => (
                 <div 
                   key={item.id} 
                   role="button"
@@ -217,8 +299,8 @@ export default function IncomeHistoryModal({
                         {item.title}
                       </h3>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-[11px] px-1.5 py-0.5 rounded font-semibold ${getTypeColor(item.type)}`}>
-                          {getTypeLabel(item.type)}
+                        <span className={`text-[11px] px-1.5 py-0.5 rounded font-semibold ${getTypeColor(item)}`}>
+                          {getTypeLabel(item)}
                         </span>
                         <span className="text-xs text-neutral-500 font-medium">{item.category}</span>
                       </div>
