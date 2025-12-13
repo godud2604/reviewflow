@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Check, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { Todo } from "@/types"
@@ -22,10 +22,12 @@ export default function TodoModal({
 }) {
   const [newTodo, setNewTodo] = useState("")
   const [isAdding, setIsAdding] = useState(false)
+  const addingRef = useRef(false)
   const { toast } = useToast()
 
   const handleAdd = () => {
-    if (!newTodo.trim() || isAdding) return
+    if (!newTodo.trim() || addingRef.current) return
+    addingRef.current = true
     setIsAdding(true)
     onAddTodo(newTodo.trim())
     setNewTodo("")
@@ -33,7 +35,10 @@ export default function TodoModal({
       title: "할 일이 추가되었습니다",
       duration: 2000,
     })
-    setTimeout(() => setIsAdding(false), 300)
+    setTimeout(() => {
+      addingRef.current = false
+      setIsAdding(false)
+    }, 300)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -90,7 +95,11 @@ export default function TodoModal({
               className="flex-1 min-w-0 h-11 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[15px] outline-none focus:ring-2 focus:ring-[#FF5722]/30"
               placeholder="사장님께 방문 일정 문자 남기기 ..."
             />
-            <button onClick={handleAdd} className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white border-none rounded-xl font-bold hover:bg-[#F4511E] transition-colors text-[15px]">
+            <button
+              onClick={handleAdd}
+              disabled={isAdding}
+              className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white border-none rounded-xl font-bold hover:bg-[#F4511E] transition-colors text-[15px] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               추가
             </button>
           </div>

@@ -140,6 +140,7 @@ export default function ScheduleModal({
   const [reconfirmReason, setReconfirmReason] = useState("")
   const [customReconfirmReason, setCustomReconfirmReason] = useState("")
   const [isUploading, setIsUploading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [fileToDelete, setFileToDelete] = useState<{ file: GuideFile; index: number } | null>(null)
   const [showCategoryManagement, setShowCategoryManagement] = useState(false)
@@ -161,6 +162,8 @@ export default function ScheduleModal({
     updateCategories,
     loading: profileLoading,
   } = useUserProfile()
+  const isSubmittingRef = useRef(false)
+  const isMountedRef = useRef(false)
 
   useEffect(() => {
     if (!isOpen) return;
@@ -183,6 +186,13 @@ export default function ScheduleModal({
       window.visualViewport?.removeEventListener("scroll", handleResize);
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   const allPlatforms = React.useMemo(() => {
     return [...userPlatforms].sort((a, b) => a.localeCompare(b, 'ko'))
@@ -303,6 +313,7 @@ export default function ScheduleModal({
   }, [allPlatforms, schedule, formData.platform])
 
   const handleSave = async () => {
+    if (isSubmittingRef.current) return
     if (!formData.title) {
       toast({
         title: "제목을 입력해주세요.",
@@ -312,41 +323,64 @@ export default function ScheduleModal({
       return
     }
 
-    const updatedFormData: Partial<Schedule> = { ...formData }
-    const reviewTypeForSave = visitMode ? "방문형" : nonVisitReviewType
-    updatedFormData.reviewType = reviewTypeForSave
-    if (!visitMode) {
-      updatedFormData.visit = ""
-      updatedFormData.visitTime = ""
-      updatedFormData.visitReviewChecklist = undefined
-    } else if (!updatedFormData.visitReviewChecklist) {
-      updatedFormData.visitReviewChecklist = { ...DEFAULT_VISIT_REVIEW_CHECKLIST }
-    }
+    isSubmittingRef.current = true
+    setIsSubmitting(true)
 
-    if (updatedFormData.status === "재확인" && reconfirmReason) {
-      const reason = reconfirmReason === "기타" ? customReconfirmReason : reconfirmReason
-      updatedFormData.reconfirmReason = reason
-    } else {
-      updatedFormData.reconfirmReason = ""
-    }
+    try {
+      const updatedFormData: Partial<Schedule> = { ...formData }
+      const reviewTypeForSave = visitMode ? "방문형" : nonVisitReviewType
+      updatedFormData.reviewType = reviewTypeForSave
+      if (!visitMode) {
+        updatedFormData.visit = ""
+        updatedFormData.visitTime = ""
+        updatedFormData.visitReviewChecklist = undefined
+      } else if (!updatedFormData.visitReviewChecklist) {
+        updatedFormData.visitReviewChecklist = { ...DEFAULT_VISIT_REVIEW_CHECKLIST }
+      }
 
-    const selectedChannels = sanitizeChannels(updatedFormData.channel || [], {
-      allowEmpty: true,
-      allowed: channelOptions,
-    })
+      if (updatedFormData.status === "재확인" && reconfirmReason) {
+        const reason = reconfirmReason === "기타" ? customReconfirmReason : reconfirmReason
+        updatedFormData.reconfirmReason = reason
+      } else {
+        updatedFormData.reconfirmReason = ""
+      }
 
-    let finalGuideFiles = updatedFormData.guideFiles || []
-    if (pendingFiles.length > 0 && user) {
-      setIsUploading(true)
-      try {
-        const scheduleId = schedule?.id || `new_${Date.now()}`
-        const uploadedFiles = await uploadGuideFiles(user.id, scheduleId, pendingFiles)
-        if (uploadedFiles.length !== pendingFiles.length) {
-          const message = "일부 파일이 업로드되지 않았습니다. 다시 시도해주세요."
+      const selectedChannels = sanitizeChannels(updatedFormData.channel || [], {
+        allowEmpty: true,
+        allowed: channelOptions,
+      })
+
+      let finalGuideFiles = updatedFormData.guideFiles || []
+      if (pendingFiles.length > 0 && user) {
+        setIsUploading(true)
+        try {
+          const scheduleId = schedule?.id || `new_${Date.now()}`
+          const uploadedFiles = await uploadGuideFiles(user.id, scheduleId, pendingFiles)
+          if (uploadedFiles.length !== pendingFiles.length) {
+            const message = "일부 파일이 업로드되지 않았습니다. 다시 시도해주세요."
+            toast({
+              title: message,
+              variant: "destructive",
+              duration: 3000,
+            })
+            if (typeof window !== "undefined") {
+              alert(message)
+            }
+            setIsUploading(false)
+            return
+          }
+          finalGuideFiles = [...finalGuideFiles, ...uploadedFiles]
+          setPendingFiles([])
+        } catch (error) {
+          console.error('파일 업로드 실패:', error)
+          const errorMsg = error instanceof Error ? error.message : ""
+          const message = errorMsg
+            ? `파일 업로드에 실패했습니다: ${errorMsg}`
+            : "파일 업로드에 실패했습니다. 다시 시도해주세요."
           toast({
             title: message,
             variant: "destructive",
-            duration: 3000,
+            duration: 2000,
           })
           if (typeof window !== "undefined") {
             alert(message)
@@ -354,45 +388,32 @@ export default function ScheduleModal({
           setIsUploading(false)
           return
         }
-        finalGuideFiles = [...finalGuideFiles, ...uploadedFiles]
-        setPendingFiles([])
-      } catch (error) {
-        console.error('파일 업로드 실패:', error)
-        const errorMsg = error instanceof Error ? error.message : ""
-        const message = errorMsg
-          ? `파일 업로드에 실패했습니다: ${errorMsg}`
-          : "파일 업로드에 실패했습니다. 다시 시도해주세요."
-        toast({
-          title: message,
-          variant: "destructive",
-          duration: 2000,
-        })
-        if (typeof window !== "undefined") {
-          alert(message)
-        }
         setIsUploading(false)
-        return
       }
-      setIsUploading(false)
+
+      const sanitizedStatus = sanitizeStatusForReviewType(
+        updatedFormData.status as Schedule["status"],
+        (updatedFormData.reviewType as Schedule["reviewType"]) || "제공형",
+      )
+
+      await Promise.resolve(
+        onSave({
+          ...updatedFormData,
+          status: sanitizedStatus,
+          channel: selectedChannels,
+          guideFiles: finalGuideFiles,
+        } as Schedule),
+      )
+      toast({
+        title: schedule ? "체험단 정보가 수정되었습니다." : "체험단이 등록되었습니다.",
+        duration: 2000,
+      })
+    } finally {
+      isSubmittingRef.current = false
+      if (isMountedRef.current) {
+        setIsSubmitting(false)
+      }
     }
-
-    const sanitizedStatus = sanitizeStatusForReviewType(
-      updatedFormData.status as Schedule["status"],
-      (updatedFormData.reviewType as Schedule["reviewType"]) || "제공형",
-    )
-
-    onSave(
-      {
-        ...updatedFormData,
-        status: sanitizedStatus,
-        channel: selectedChannels,
-        guideFiles: finalGuideFiles,
-      } as Schedule,
-    )
-    toast({
-      title: schedule ? "체험단 정보가 수정되었습니다." : "체험단이 등록되었습니다.",
-      duration: 2000,
-    })
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1236,14 +1257,14 @@ export default function ScheduleModal({
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
-                  disabled={isUploading}
+                  disabled={isUploading || isSubmitting}
                   className="flex-2 h-14 px-6 bg-red-50 text-red-600 border border-red-200 font-bold text-base rounded-2xl hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   삭제
                 </button>
                 <button
                   onClick={handleSave}
-                  disabled={isUploading}
+                  disabled={isUploading || isSubmitting}
                   className="flex-8 h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isUploading ? (
@@ -1259,7 +1280,7 @@ export default function ScheduleModal({
             ) : (
               <button
                 onClick={handleSave}
-                disabled={isUploading}
+                disabled={isUploading || isSubmitting}
                 className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isUploading ? (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { ExtraIncome } from "@/types"
@@ -59,6 +59,9 @@ export default function ExtraIncomeModal({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const { toast } = useToast()
   const isEditing = !!extraIncome
+  const [isSaving, setIsSaving] = useState(false)
+  const isSavingRef = useRef(false)
+  const isMountedRef = useRef(false)
 
   // ✅ [추가] Visual Viewport 리사이즈 감지 이벤트
   useEffect(() => {
@@ -84,6 +87,13 @@ export default function ExtraIncomeModal({
   }, [isOpen]);
 
   useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
     setNewIncome(getInitialForm(extraIncome))
   }, [extraIncome, isOpen])
 
@@ -95,6 +105,7 @@ export default function ExtraIncomeModal({
   }
 
   const handleSave = async () => {
+    if (isSavingRef.current) return
     if (!newIncome.title.trim() || !newIncome.amount) {
       toast({
         title: "항목명과 금액을 입력해주세요",
@@ -104,33 +115,43 @@ export default function ExtraIncomeModal({
       return
     }
 
-    const payload = {
-      title: newIncome.title.trim(),
-      amount: Number(newIncome.amount.replace(/,/g, "")),
-      date: newIncome.date,
-      memo: newIncome.memo.trim(),
-    }
+    isSavingRef.current = true
+    setIsSaving(true)
 
-    if (isEditing && extraIncome && onUpdateIncome) {
-      const success = await onUpdateIncome(extraIncome.id, payload)
-      if (success) {
-        toast({
-          title: "부수입이 수정되었습니다",
-          duration: 2000,
-        })
-        handleClose()
+    try {
+      const payload = {
+        title: newIncome.title.trim(),
+        amount: Number(newIncome.amount.replace(/,/g, "")),
+        date: newIncome.date,
+        memo: newIncome.memo.trim(),
       }
-      return
+
+      if (isEditing && extraIncome && onUpdateIncome) {
+        const success = await onUpdateIncome(extraIncome.id, payload)
+        if (success) {
+          toast({
+            title: "부수입이 수정되었습니다",
+            duration: 2000,
+          })
+          handleClose()
+        }
+        return
+      }
+
+      await onAddIncome(payload)
+
+      toast({
+        title: "부수입이 추가되었습니다",
+        duration: 2000,
+      })
+
+      handleClose()
+    } finally {
+      isSavingRef.current = false
+      if (isMountedRef.current) {
+        setIsSaving(false)
+      }
     }
-
-    await onAddIncome(payload)
-
-    toast({
-      title: "부수입이 추가되었습니다",
-      duration: 2000,
-    })
-
-    handleClose()
   }
 
   const handleDelete = async () => {
@@ -261,6 +282,7 @@ export default function ExtraIncomeModal({
               )}
               <button
                 onClick={handleSave}
+                disabled={isSaving}
                 className={`${isEditing && extraIncome && onDeleteIncome ? "flex-8" : "flex-1"} h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
               >
                 {isEditing ? "저장" : "추가"}
