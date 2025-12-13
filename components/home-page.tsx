@@ -577,6 +577,42 @@ function CalendarSection({
   )
 }
 
+const scheduleIcons: Record<Schedule["category"], string> = {
+  "맛집/식품": "🍽️",
+  "뷰티": "💄",
+  "생활/리빙": "🏡",
+  "출산/육아": "🤱",
+  "주방/가전": "🧺",
+  반려동물: "🐶",
+  "여행/레저": "✈️",
+  "티켓/문화생활": "🎫",
+  "디지털/전자기기": "🎧",
+  "건강/헬스": "💪",
+  "자동차/모빌리티": "🚗",
+  "문구/오피스": "✏️",
+  기타: "📦",
+}
+
+const platformLabelMap: Record<string, string> = {
+  instagram: "인스타그램",
+  youtube: "유튜브",
+  tiktok: "틱톡",
+  facebook: "페이스북",
+  "naver blog": "네이버 블로그",
+  naverpost: "네이버 포스트",
+  "naver post": "네이버 포스트",
+  naver쇼핑: "네이버 쇼핑",
+  stylec: "스타일씨",
+  blog: "블로그",
+  insta: "인스타",
+  tiktokshop: "틱톡",
+}
+
+const getPlatformDisplayName = (platform: string) => {
+  const normalized = platform.trim().toLowerCase()
+  return platformLabelMap[normalized] ?? platform
+}
+
 function ScheduleItem({
   schedule,
   onClick,
@@ -588,22 +624,6 @@ function ScheduleItem({
   onCompleteClick?: () => void
   today: string
 }) {
-  const icons: Record<Schedule["category"], string> = {
-    "맛집/식품": "🍽️",
-    "뷰티": "💄",
-    "생활/리빙": "🏡",
-    "출산/육아": "🤱",
-    "주방/가전": "🧺",
-    반려동물: "🐶",
-    "여행/레저": "✈️",
-    "티켓/문화생활": "🎫",
-    "디지털/전자기기": "🎧",
-    "건강/헬스": "💪",
-    "자동차/모빌리티": "🚗",
-    "문구/오피스": "✏️",
-    기타: "📦",
-  }
-
   const statusConfig: Record<Schedule["status"], { class: string; text: string }> = {
     선정됨: { class: "bg-emerald-50 text-emerald-700 border border-emerald-100", text: "선정됨" },
     "방문일 예약 완료": { class: "bg-blue-50 text-blue-700 border border-blue-100", text: "예약 완료" },
@@ -633,6 +653,7 @@ function ScheduleItem({
   const isReconfirm = schedule.status === "재확인"
   const isCompleted = schedule.status === "완료"
   const canComplete = !!onCompleteClick && !isCompleted
+  const platformLabel = schedule.platform ? getPlatformDisplayName(schedule.platform) : ""
 
   return (
     <div
@@ -670,24 +691,32 @@ function ScheduleItem({
       </div>
 
       <div className="flex-1">
+
         <div className="flex items-center justify-between gap-2">
           <div className="text-[15px] font-bold text-[#0F172A] flex items-center gap-1.5 flex-1 min-w-0">
-            <span className="text-[18px] shrink-0">{icons[schedule.category] || "📦"}</span>
-            <span className="block truncate max-w-[150px]">{schedule.title}</span>
-            {schedule.memo && (
-              <span className="text-sm shrink-0" title="메모 있음">
-                📝
-              </span>
-            )}
+            <span className="text-[16px] shrink-0">{scheduleIcons[schedule.category] || "📦"}</span>
+            <span className="text-[15px] block truncate max-w-[150px]">{schedule.title}</span>
+         
           </div>
           <div className="text-right min-w-[88px]">
             <div className="font-bold text-[15px] text-neutral-900 leading-tight">₩{total.toLocaleString()}</div>
           </div>
         </div>
         <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1">
-          <span className={`px-1.5 py-0.5 rounded-lg font-semibold text-[10.5px] translate-y-[-0.5px] inline-flex items-center gap-1 ${status.class}`}>{status.text}</span>
-          <span className="h-[14px] w-px bg-neutral-200" />
           <span className="font-medium text-neutral-600">{dDate}</span>
+        </div>
+        <div className="flex mt-2">
+          <p className={`text-[10.5px] font-semibold text-neutral-500 rounded-[10px] px-2 py-[2px] w-fit ${status.class}`}>{status.text}</p>
+          {platformLabel && (
+            <p className="text-[10.5px] font-semibold text-neutral-500 rounded-[10px] border border-neutral-200 bg-white/80 px-2 py-[2px] w-fit ml-2">
+              {platformLabel}
+            </p>
+          )}
+          {schedule.memo && (
+            <span className="text-sm shrink-0 ml-2" title="메모 있음">
+              📝
+            </span>
+          )}
         </div>
       </div>
     </div>
