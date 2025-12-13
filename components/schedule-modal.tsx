@@ -120,8 +120,10 @@ export default function ScheduleModal({
 }) {
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData())
 
-  // --- 레이아웃 이슈 해결을 위한 Ref 추가 ---
-  const viewportRef = useRef<HTMLDivElement>(null)
+  const [viewportStyle, setViewportStyle] = useState<{ height: string; top: string }>({
+    height: "100%",
+    top: "0px"
+  })
 
   const [customPlatforms, setCustomPlatforms] = useState<string[]>([])
   const [newPlatform, setNewPlatform] = useState("")
@@ -160,40 +162,32 @@ export default function ScheduleModal({
     loading: profileLoading,
   } = useUserProfile()
 
-  // --- Visual Viewport 핸들링 (키보드 대응 핵심 로직) ---
   useEffect(() => {
-    if (!isOpen || !window.visualViewport) return
+    if (!isOpen) return;
 
     const handleResize = () => {
-      if (viewportRef.current) {
-        // 키보드가 올라오면 전체 화면 높이가 줄어듭니다.
-        // 기존 84.5% 높이 비율을 유지하되, 현재 보이는(visual) 뷰포트 기준으로 계산합니다.
-        // 이렇게 하면 키보드 바로 위에 모달 하단이 위치하게 됩니다.
-        const currentVisualHeight = window.visualViewport?.height || window.innerHeight
-        viewportRef.current.style.height = `${currentVisualHeight * 0.85}px`
+      if (window.visualViewport) {
+        setViewportStyle({
+          height: `${window.visualViewport.height}px`,
+          top: `${window.visualViewport.offsetTop}px`
+        });
       }
-    }
+    };
 
-    window.visualViewport.addEventListener("resize", handleResize)
-    window.visualViewport.addEventListener("scroll", handleResize) // 스크롤 시에도 위치 재조정
-    
-    // 초기 실행
-    handleResize()
+    handleResize();
+    window.visualViewport?.addEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("scroll", handleResize);
 
     return () => {
-        if (window.visualViewport) {
-            window.visualViewport.removeEventListener("resize", handleResize)
-            window.visualViewport.removeEventListener("scroll", handleResize)
-        }
-    }
-  }, [isOpen])
+      window.visualViewport?.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("scroll", handleResize);
+    };
+  }, [isOpen]);
 
-  // 사용 가능한 플랫폼 목록 (DB에서 가져온 유저 플랫폼)
   const allPlatforms = React.useMemo(() => {
     return [...userPlatforms].sort((a, b) => a.localeCompare(b, 'ko'))
   }, [userPlatforms])
 
-  // ... (기존 로직 유지) ...
   const platformOptions = React.useMemo(() => {
     if (formData.platform && !allPlatforms.includes(formData.platform)) {
       return [...allPlatforms, formData.platform]
@@ -231,10 +225,10 @@ export default function ScheduleModal({
     [categoryValues],
   )
 
-const arraysEqual = (a: string[], b: string[]) => {
-  if (a.length !== b.length) return false
-  return a.every((item, idx) => item === b[idx])
-}
+  const arraysEqual = (a: string[], b: string[]) => {
+    if (a.length !== b.length) return false
+    return a.every((item, idx) => item === b[idx])
+  }
 
   const hasVisitData = React.useCallback((data?: Partial<Schedule>) => {
     if (!data) return false
@@ -263,7 +257,6 @@ const arraysEqual = (a: string[], b: string[]) => {
         paybackExpected: schedule.paybackExpected ?? false,
         paybackConfirmed: schedule.paybackExpected ? !!schedule.paybackConfirmed : false,
       })
-      // 재확인 사유 로드
       if (schedule.status === "재확인" && schedule.reconfirmReason) {
         const reason = schedule.reconfirmReason
         if (["입금 확인 필요", "리워드 미지급", "가이드 내용 불분명", "플랫폼 답변 대기중"].includes(reason)) {
@@ -330,7 +323,6 @@ const arraysEqual = (a: string[], b: string[]) => {
       updatedFormData.visitReviewChecklist = { ...DEFAULT_VISIT_REVIEW_CHECKLIST }
     }
 
-    // 재확인 상태일 때 사유를 별도 필드에 저장
     if (updatedFormData.status === "재확인" && reconfirmReason) {
       const reason = reconfirmReason === "기타" ? customReconfirmReason : reconfirmReason
       updatedFormData.reconfirmReason = reason
@@ -343,7 +335,6 @@ const arraysEqual = (a: string[], b: string[]) => {
       allowed: channelOptions,
     })
 
-    // 대기 중인 파일이 있으면 업로드
     let finalGuideFiles = updatedFormData.guideFiles || []
     if (pendingFiles.length > 0 && user) {
       setIsUploading(true)
@@ -404,7 +395,6 @@ const arraysEqual = (a: string[], b: string[]) => {
     })
   }
 
-  // ... (나머지 핸들러 함수들은 그대로 유지) ...
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length > 0) {
@@ -552,21 +542,17 @@ const arraysEqual = (a: string[], b: string[]) => {
 
   const addCustomPlatform = async () => {
     const trimmedPlatform = newPlatform.trim()
-
     if (!trimmedPlatform) {
       setEmptyPlatformAlert(true)
       return
     }
-    
     const platformExists = allPlatforms.some(
       (platform) => platform.toLowerCase() === trimmedPlatform.toLowerCase()
     )
-    
     if (platformExists) {
       setDuplicatePlatformAlert(true)
       return
     }
-    
     const success = await addPlatform(trimmedPlatform)
     if (success) {
       setFormData({ ...formData, platform: trimmedPlatform })
@@ -594,21 +580,17 @@ const arraysEqual = (a: string[], b: string[]) => {
 
   const addCustomChannel = async () => {
     const trimmedChannel = newChannel.trim()
-
     if (!trimmedChannel) {
       setEmptyChannelAlert(true)
       return
     }
-
     const channelExists = allChannels.some(
       (channel) => channel.toLowerCase() === trimmedChannel.toLowerCase()
     )
-
     if (channelExists) {
       setDuplicateChannelAlert(true)
       return
     }
-
     const success = await addScheduleChannel(trimmedChannel)
     if (success) {
       setNewChannel("")
@@ -713,7 +695,6 @@ const arraysEqual = (a: string[], b: string[]) => {
           </SelectContent>
         </Select>
       </div>
-
       {formData.status === "재확인" && (
         <div className="space-y-2">
           <label className="block text-[15px] font-bold text-neutral-500">재확인 사유</label>
@@ -736,7 +717,6 @@ const arraysEqual = (a: string[], b: string[]) => {
               <SelectItem value="기타" className="text-[15px]">기타</SelectItem>
             </SelectContent>
           </Select>
-          
           {reconfirmReason === "기타" && (
             <div>
               <input
@@ -755,244 +735,231 @@ const arraysEqual = (a: string[], b: string[]) => {
 
   return (
     <>
-      {/* ✅ 수정 포인트 1: 배경 오버레이를 fixed로 변경하여 스크롤 영향 최소화
-        touchAction: none으로 배경 스크롤 막음
-      */}
       <div 
-        className="fixed inset-0 w-full h-full bg-black/40 backdrop-blur-sm z-40" 
-        onClick={onClose} 
-        style={{ touchAction: 'none' }} 
-      />
-      
-      {/* ✅ 수정 포인트 2: 모달 컨테이너
-        - absolute -> fixed bottom-0 (뷰포트 기준 고정)
-        - h-[84.5%] -> h-[85dvh] (동적 뷰포트 높이 사용 + JS로 Resize 핸들링)
-        - Flex Column 구조로 내부 스크롤 관리
-      */}
-      <div 
-        ref={viewportRef}
-        className="fixed bottom-0 left-0 w-full h-[85dvh] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up shadow-2xl overflow-hidden"
+        className="fixed left-0 w-full z-40 flex flex-col justify-end"
+        style={{
+          height: viewportStyle.height,
+          top: viewportStyle.top,
+        }}
       >
-        {/* Header: Flex None (고정) */}
-        <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-none">
-          <span className="font-bold text-[16px]">{schedule ? "체험단 수정" : "체험단 등록"}</span>
-          <button
-            onClick={onClose}
-            className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
-            aria-label="닫기"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        <div 
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={onClose} 
+            style={{ touchAction: 'none' }} 
+        />
+        
+        <div 
+          className="relative w-full bg-white rounded-t-[30px] flex flex-col shadow-2xl overflow-hidden animate-slide-up"
+          style={{ maxHeight: '85%' }}
+        >
+          <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-none">
+            <span className="font-bold text-[16px]">{schedule ? "체험단 수정" : "체험단 등록"}</span>
+            <button
+              onClick={onClose}
+              className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
+              aria-label="닫기"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-        {/* Body: Flex 1 + Overflow Auto (여기만 스크롤 됨) */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 scrollbar-hide touch-pan-y min-h-0 pb-20">
-          {/* 재확인 경고 */}
-          {formData.status === "재확인" && (
-            <div className="mb-2.5 px-4 py-2.5 bg-yellow-50 border border-yellow-200 rounded-xl gap-2">
-              <div className="flex items-center gap-2">
-              <span className="text-[12px]">⚠️</span>
-              <span className="text-[12px] font-bold text-yellow-700">재확인이 필요한 체험단입니다</span>
+          <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 scrollbar-hide touch-pan-y min-h-0">
+            {formData.status === "재확인" && (
+              <div className="mb-2.5 px-4 py-2.5 bg-yellow-50 border border-yellow-200 rounded-xl gap-2">
+                <div className="flex items-center gap-2">
+                <span className="text-[12px]">⚠️</span>
+                <span className="text-[12px] font-bold text-yellow-700">재확인이 필요한 체험단입니다</span>
+                </div>
+                {reconfirmReason && (
+                  <span className="text-[12px] text-yellow-700">
+                    사유: {reconfirmReason === "기타" ? customReconfirmReason : reconfirmReason}
+                  </span>
+                )}
               </div>
-              {/* 재확인 사유 */}
-              {reconfirmReason && (
-                <span className="text-[12px] text-yellow-700">
-                  사유: {reconfirmReason === "기타" ? customReconfirmReason : reconfirmReason}
-                </span>
-              )}
-            </div>
-          )}
-          
-          {/* 마감 초과 경고 */}
-          {formData.dead && formData.dead < getTodayInKST() && formData.status !== "완료" && (
-            <div className="mb-4 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
-              <span className="text-[12px]">⚠️</span>
-              <span className="text-[12px] font-bold text-red-700">마감 기한 초과된 체험단입니다</span>
-            </div>
-          )}
-          
-          <div className="space-y-8">
-            {/* ... 기존 폼 내용들 ... */}
-            <div>
-              <div className="space-y-6">
-                {/* 체험단명 */}
-                <div>
-                  <label className="block text-[15px] font-bold text-neutral-500 mb-2.5">체험단명 (필수)</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
-                      placeholder="예: 강남역 파스타"
-                    />
-                    {formData.title && (
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(formData.title || "")
-                          toast({
-                            title: "체험단명이 복사되었습니다.",
-                            duration: 2000,
-                          })
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
-                      >
-                        <Copy className="w-4 h-4 cursor-pointer" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* 마감일 */}
-                <div>
-                  <label className="block text-[15px] font-bold text-[#FF5722] mb-2">마감일</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="w-full h-8.5 px-3 bg-[#F7F7F8] border-none rounded-xl text-[16px] text-left cursor-pointer">
-                        {formData.dead ? format(new Date(formData.dead), "PPP", { locale: ko }) : "날짜 선택"}
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.dead ? new Date(formData.dead) : undefined}
-                        onSelect={(date) =>
-                          setFormData({
-                            ...formData,
-                            dead: date ? format(date, "yyyy-MM-dd") : "",
-                          })
-                        }
-                        locale={ko}
+            )}
+            
+            {formData.dead && formData.dead < getTodayInKST() && formData.status !== "완료" && (
+              <div className="mb-4 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+                <span className="text-[12px]">⚠️</span>
+                <span className="text-[12px] font-bold text-red-700">마감 기한 초과된 체험단입니다</span>
+              </div>
+            )}
+            
+            <div className="space-y-8">
+              <div>
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-[15px] font-bold text-neutral-500 mb-2.5">체험단명 (필수)</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
+                        placeholder="예: 강남역 파스타"
                       />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {schedule && statusFields}
-                {/* 플랫폼 */}
-                <div>
-                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">플랫폼</label>
-                  <div className="flex gap-2 flex-wrap">
-                    {platformOptions.map((platform) => (
-                      <div
-                        key={platform}
-                        onClick={() => setFormData({ ...formData, platform })}
-                        className={`text-[14px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
-                          formData.platform === platform
-                            ? "bg-orange-50 text-[#FF5722] border border-[#FF5722]"
-                            : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
-                        }`}
-                      >
-                        {platform}
-                      </div>
-                    ))}
-                    {platformOptions.length === 0 && (
-                      <span className="text-sm text-neutral-400">플랫폼을 추가해주세요.</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setShowPlatformManagement(true)}
-                    className="mt-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer"
-                  >
-                    + 플랫폼 관리
-                  </button>
-                </div>
-
-                {/* 카테고리 */}
-                <div className="mb-6">
-                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">카테고리</label>
-                  <div className="rounded-2xl flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {selectedCategories.length > 0 ? (
-                        selectedCategories.map((category) => {
-                          const meta = CATEGORY_OPTIONS.find((c) => c.value === category)
-                          const isActive = formData.category === category
-                          return (
-                            <div
-                              key={category}
-                              onClick={() => setFormData((prev) => ({ ...prev, category }))}
-                              className={`px-2.5 py-1 rounded-xl text-[14px] font-semibold transition-all cursor-pointer flex items-center justify-center ${
-                                isActive
-                                  ? "bg-orange-100 text-[#D9480F] border border-[#FF5722]/70"
-                                  : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
-                              }`}
-                            >
-                              <span className="truncate max-w-[120px]">{meta?.label || category}</span>
-                            </div>
-                          )
-                        })
-                      ) : (
-                        <span className="text-xs text-neutral-400">표시할 카테고리를 선택하세요.</span>
+                      {formData.title && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(formData.title || "")
+                            toast({
+                              title: "체험단명이 복사되었습니다.",
+                              duration: 2000,
+                            })
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                        >
+                          <Copy className="w-4 h-4 cursor-pointer" />
+                        </button>
                       )}
                     </div>
                   </div>
+
+                  <div>
+                    <label className="block text-[15px] font-bold text-[#FF5722] mb-2">마감일</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="w-full h-8.5 px-3 bg-[#F7F7F8] border-none rounded-xl text-[16px] text-left cursor-pointer">
+                          {formData.dead ? format(new Date(formData.dead), "PPP", { locale: ko }) : "날짜 선택"}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={formData.dead ? new Date(formData.dead) : undefined}
+                          onSelect={(date) =>
+                            setFormData({
+                              ...formData,
+                              dead: date ? format(date, "yyyy-MM-dd") : "",
+                            })
+                          }
+                          locale={ko}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {schedule && statusFields}
+                  
+                  <div>
+                    <label className="block text-[15px] font-bold text-neutral-500 mb-2">플랫폼</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {platformOptions.map((platform) => (
+                        <div
+                          key={platform}
+                          onClick={() => setFormData({ ...formData, platform })}
+                          className={`text-[14px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
+                            formData.platform === platform
+                              ? "bg-orange-50 text-[#FF5722] border border-[#FF5722]"
+                              : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
+                          }`}
+                        >
+                          {platform}
+                        </div>
+                      ))}
+                      {platformOptions.length === 0 && (
+                        <span className="text-sm text-neutral-400">플랫폼을 추가해주세요.</span>
+                      )}
+                    </div>
                     <button
-                      onClick={() => setShowCategoryManagement(true)}
+                      onClick={() => setShowPlatformManagement(true)}
                       className="mt-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer"
                     >
-                      + 카테고리 선택
+                      + 플랫폼 관리
                     </button>
-                </div>
-
-                {/* 작성할 곳 */}
-                <div className="mb-6">
-                  <div className="flex">
-                    <label className="mr-2 block text-[15px] font-bold text-neutral-500 mb-2">작성할 채널</label>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[13px] text-neutral-400">포스팅을 올릴 주요 채널 (복수 선택 가능)</span>
-                    </div>
                   </div>
-                  <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 px-3.5 py-3.5 space-y-3">
-                    <div>
-                      <div className="flex gap-2 flex-wrap">
-                        {channelOptions.map((channel) => {
-                          const isSelected = (formData.channel || []).includes(channel)
-                          return (
-                            <div
-                              key={channel}
-                              onClick={() => handleToggleChannel(channel)}
-                              className={`text-[14px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
-                                isSelected
-                                  ? "bg-blue-50 text-blue-600 border border-blue-600"
-                                  : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
-                              }`}
-                            >
-                              {channel}
-                            </div>
-                          )
-                        })}
+
+                  <div className="mb-6">
+                    <label className="block text-[15px] font-bold text-neutral-500 mb-2">카테고리</label>
+                    <div className="rounded-2xl flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {selectedCategories.length > 0 ? (
+                          selectedCategories.map((category) => {
+                            const meta = CATEGORY_OPTIONS.find((c) => c.value === category)
+                            const isActive = formData.category === category
+                            return (
+                              <div
+                                key={category}
+                                onClick={() => setFormData((prev) => ({ ...prev, category }))}
+                                className={`px-2.5 py-1 rounded-xl text-[14px] font-semibold transition-all cursor-pointer flex items-center justify-center ${
+                                  isActive
+                                    ? "bg-orange-100 text-[#D9480F] border border-[#FF5722]/70"
+                                    : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
+                                }`}
+                              >
+                                <span className="truncate max-w-[120px]">{meta?.label || category}</span>
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <span className="text-xs text-neutral-400">표시할 카테고리를 선택하세요.</span>
+                        )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => setShowChannelManagement(true)}
-                      className="ml-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer translate-y-[-8px]"
-                    >
-                      + 작성할 채널 관리
-                    </button>
+                      <button
+                        onClick={() => setShowCategoryManagement(true)}
+                        className="mt-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer"
+                      >
+                        + 카테고리 선택
+                      </button>
+                  </div>
 
-                    <div className="pt-2 border-t border-neutral-200/80">
-                      <label className="flex items-start gap-3 mb-2 cursor-pointer">
-                        <Checkbox
-                          checked={visitMode}
-                          onCheckedChange={(checked) => handleToggleVisitMode(!!checked)}
-                          className="mt-[2px]"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[14px] font-bold text-blue-900 translate-y-[1.5px]">방문 일정이 있는 체험인가요?</span>
-                          </div>
-                        </div>
-                      </label>
+                  <div className="mb-6">
+                    <div className="flex">
+                      <label className="mr-2 block text-[15px] font-bold text-neutral-500 mb-2">작성할 채널</label>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[13px] text-neutral-400">포스팅을 올릴 주요 채널 (복수 선택 가능)</span>
+                      </div>
                     </div>
+                    <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 px-3.5 py-3.5 space-y-3">
+                      <div>
+                        <div className="flex gap-2 flex-wrap">
+                          {channelOptions.map((channel) => {
+                            const isSelected = (formData.channel || []).includes(channel)
+                            return (
+                              <div
+                                key={channel}
+                                onClick={() => handleToggleChannel(channel)}
+                                className={`text-[14px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
+                                  isSelected
+                                    ? "bg-blue-50 text-blue-600 border border-blue-600"
+                                    : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
+                                }`}
+                              >
+                                {channel}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowChannelManagement(true)}
+                        className="ml-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer translate-y-[-8px]"
+                      >
+                        + 작성할 채널 관리
+                      </button>
 
-                    {visitMode && (
                       <div className="pt-2 border-t border-neutral-200/80">
-                        <div className="flex items-center gap-2 mb-2">
+                        <label className="flex items-start gap-3 mb-2 cursor-pointer">
+                          <Checkbox
+                            checked={visitMode}
+                            onCheckedChange={(checked) => handleToggleVisitMode(!!checked)}
+                            className="mt-[2px]"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[14px] font-bold text-blue-900 translate-y-[1.5px]">방문 일정이 있는 체험인가요?</span>
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                      {visitMode && (
+                        <div className="pt-2 border-t border-neutral-200/80">
+                           <div className="flex items-center gap-2 mb-2">
                           <span className="text-[14px] font-bold text-blue-900">방문 후 추가 리뷰</span>
                           <span className="text-[13px] text-neutral-400">현장 방문 뒤 남길 추가 리뷰 채널</span>
                         </div>
                         <div className="space-y-2.5">
-                          {/* 체크박스들... (기존 코드 유지) */}
                           <label className="flex items-center gap-3 cursor-pointer">
                             <Checkbox
                               checked={formData.visitReviewChecklist?.naverReservation || false}
@@ -1049,13 +1016,12 @@ const arraysEqual = (a: string[], b: string[]) => {
                             )}
                           </div>
                         </div>
-                      </div>
-                    )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* 방문형 일정 */}
-                {visitMode && (
+                   {visitMode && (
                   <div className="flex gap-2.5 flex-wrap">
                     <div className="flex-1 min-w-[180px]">
                       <label className="block text-[15px] font-bold text-neutral-500 mb-2">방문일</label>
@@ -1089,9 +1055,8 @@ const arraysEqual = (a: string[], b: string[]) => {
                           </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[280px] p-3" align="start">
-                            {/* Time Picker Logic */}
                           <div className="grid grid-cols-3 gap-2">
-                            <div className="space-y-1">
+                              <div className="space-y-1">
                               <span className="text-xs font-semibold text-neutral-500">오전/오후</span>
                               <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
                                 <div className="p-1 space-y-1">
@@ -1152,11 +1117,9 @@ const arraysEqual = (a: string[], b: string[]) => {
                   </div>
                 )}
 
-                {/* 진행 상태 (신규 등록 시) */}
-                {!schedule && statusFields}
-
-                {/* 자산 관리 */}
-                <div>
+                  {!schedule && statusFields}
+                  
+                   <div>
                   <div className="flex items-center">
                     <label className="mr-2 text-[15px] font-bold text-neutral-500">자산 관리</label>
                     <p className="text-[13px] text-neutral-400">
@@ -1205,7 +1168,7 @@ const arraysEqual = (a: string[], b: string[]) => {
                       />
                     </div>
                   </div>
-                  <div className="mt-2.5 space-y-1">
+                   <div className="mt-2.5 space-y-1">
                     <label className="flex items-start gap-3">
                       <Checkbox
                         checked={formData.paybackExpected || false}
@@ -1229,63 +1192,75 @@ const arraysEqual = (a: string[], b: string[]) => {
                     )}
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* 메모장 */}
-            <div>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">메모장</label>
-                  <div className="relative">
-                    <textarea
-                      value={formData.memo || ""}
-                      onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
-                      className="w-full px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px] resize-none h-60 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      rows={3}
-                      placeholder="가이드라인 복사 붙여넣기..."
-                    />
-                    {formData.memo && (
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(formData.memo || "")
-                          toast({
-                            title: "메모 내용이 복사되었습니다.",
-                            duration: 2000,
-                          })
-                        }}
-                        className="absolute right-2 top-2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
-                      >
-                        <Copy className="w-4 h-4 cursor-pointer" />
-                      </button>
-                    )}
+                 <div>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-[15px] font-bold text-neutral-500 mb-2">메모장</label>
+                      <div className="relative">
+                        <textarea
+                          value={formData.memo || ""}
+                          onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
+                          className="w-full px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px] resize-none h-60 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          rows={3}
+                          placeholder="가이드라인 복사 붙여넣기..."
+                        />
+                        {formData.memo && (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(formData.memo || "")
+                              toast({
+                                title: "메모 내용이 복사되었습니다.",
+                                duration: 2000,
+                              })
+                            }}
+                            className="absolute right-2 top-2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                          >
+                            <Copy className="w-4 h-4 cursor-pointer" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
+                </div>
+
                 </div>
               </div>
             </div>
+            
+            <div className="h-10"></div>
           </div>
-          {/* 하단 여백: 스크롤을 끝까지 내렸을 때 버튼에 가려지지 않게 함 */}
-          <div className="h-10"></div>
-        </div>
 
-        {/* ✅ 수정 포인트 3: 플로팅 저장 버튼
-          - Flex None으로 설정하여 스크롤 영역 밖, 항상 하단에 고정
-          - pb-safe (안전 영역) 적용 필요 (Tailwind 설정 필요, 없으면 pb-4 등으로 대체)
-        */}
-        <div className="flex-none p-4 bg-white border-t border-neutral-100 z-50">
-          {schedule ? (
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={isUploading}
-                className="flex-2 h-14 px-6 bg-red-50 text-red-600 border border-red-200 font-bold text-base rounded-2xl hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                삭제
-              </button>
+          <div className="flex-none p-4 bg-white border-t border-neutral-100 z-50 pb-safe">
+            {schedule ? (
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isUploading}
+                  className="flex-2 h-14 px-6 bg-red-50 text-red-600 border border-red-200 font-bold text-base rounded-2xl hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  삭제
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={isUploading}
+                  className="flex-8 h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      업로드 중...
+                    </>
+                  ) : (
+                    '저장'
+                  )}
+                </button>
+              </div>
+            ) : (
               <button
                 onClick={handleSave}
                 disabled={isUploading}
-                className="flex-8 h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isUploading ? (
                   <>
@@ -1296,32 +1271,15 @@ const arraysEqual = (a: string[], b: string[]) => {
                   '저장'
                 )}
               </button>
-            </div>
-          ) : (
-            <button
-              onClick={handleSave}
-              disabled={isUploading}
-              className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  업로드 중...
-                </>
-              ) : (
-                '저장'
-              )}
-            </button>
-          )}
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* 플랫폼 관리 모달 (기존 유지) */}
       {showPlatformManagement && (
         <>
-          <div className="fixed inset-0 w-full h-full bg-black/40 backdrop-blur-sm z-50" onClick={() => setShowPlatformManagement(false)} style={{ touchAction: 'none' }} />
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" onClick={() => setShowPlatformManagement(false)} />
           <div className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
-            <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
+             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-[16px]">플랫폼 관리</span>
               <button
                 onClick={() => setShowPlatformManagement(false)}
@@ -1333,7 +1291,6 @@ const arraysEqual = (a: string[], b: string[]) => {
             </div>
             
             <div className="flex-1 overflow-y-auto px-6 py-6">
-              {/* 플랫폼 추가 영역 */}
               <div className="mb-6">
                 <label className="block text-[15px] font-bold text-neutral-500 mb-2">새 플랫폼 추가</label>
                 <div className="flex gap-2">
@@ -1355,7 +1312,6 @@ const arraysEqual = (a: string[], b: string[]) => {
                 </div>
               </div>
 
-              {/* 플랫폼 목록 */}
               <div>
                 <label className="block text-[15px] font-bold text-neutral-500 mb-2">등록된 플랫폼</label>
                 {profileLoading ? (
@@ -1394,16 +1350,11 @@ const arraysEqual = (a: string[], b: string[]) => {
         </>
       )}
 
-      {/* 기타 모달들 (채널 관리, 카테고리 관리 등) - 기존 구조와 유사하게 유지하되 fixed로 변경 권장 */}
       {showChannelManagement && (
         <>
-          <div
-            className="fixed inset-0 w-full h-full bg-black/40 backdrop-blur-sm z-50"
-            onClick={() => setShowChannelManagement(false)}
-            style={{ touchAction: 'none' }}
-          />
-          <div className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
-            <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" onClick={() => setShowChannelManagement(false)} />
+            <div className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
+                <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-[16px]">작성할 채널 관리</span>
               <button
                 onClick={() => setShowChannelManagement(false)}
@@ -1470,15 +1421,15 @@ const arraysEqual = (a: string[], b: string[]) => {
                 )}
               </div>
             </div>
-          </div>
+            </div>
         </>
       )}
 
       {showCategoryManagement && (
         <>
-          <div className="fixed inset-0 w-full h-full bg-black/40 backdrop-blur-sm z-50" onClick={() => setShowCategoryManagement(false)} style={{ touchAction: 'none' }} />
-          <div className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
-            <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" onClick={() => setShowCategoryManagement(false)} />
+            <div className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
+                 <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-base">카테고리 선택</span>
               <button
                 onClick={() => setShowCategoryManagement(false)}
@@ -1524,11 +1475,11 @@ const arraysEqual = (a: string[], b: string[]) => {
                 })}
               </div>
             </div>
-          </div>
+            </div>
         </>
       )}
+      </div>
 
-      {/* Alert Dialogs (기존 로직 유지) */}
       <AlertDialog open={platformToDelete !== null} onOpenChange={(open) => {
         if (!open) {
           setPlatformToDelete(null)
@@ -1554,14 +1505,13 @@ const arraysEqual = (a: string[], b: string[]) => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ... 나머지 Alert Dialogs (duplicatePlatformAlert, emptyPlatformAlert, channelToDelete 등) 생략 없이 기존 코드 그대로 유지 ... */}
       <AlertDialog open={showStatusConfirm} onOpenChange={(open) => {
         setShowStatusConfirm(open)
         if (!open) {
           setPendingStatus(null)
         }
       }}>
-        <AlertDialogContent className="w-[320px] rounded-2xl p-6 gap-4">
+         <AlertDialogContent className="w-[320px] rounded-2xl p-6 gap-4">
           <AlertDialogHeader className="space-y-2 text-center">
             <AlertDialogTitle className="text-base font-bold text-neutral-900">페이백 입금 확인</AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
@@ -1632,7 +1582,7 @@ const arraysEqual = (a: string[], b: string[]) => {
           setShowChannelManagement(true)
         }
       }}>
-        <AlertDialogContent>
+         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>작성할 채널 삭제</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1652,7 +1602,7 @@ const arraysEqual = (a: string[], b: string[]) => {
       </AlertDialog>
 
       <AlertDialog open={duplicateChannelAlert} onOpenChange={setDuplicateChannelAlert}>
-        <AlertDialogContent className="w-[280px] rounded-2xl p-6 gap-4">
+         <AlertDialogContent className="w-[280px] rounded-2xl p-6 gap-4">
           <AlertDialogHeader className="space-y-2 text-center">
             <AlertDialogTitle className="text-base font-bold text-neutral-900">중복된 작성할 채널</AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
@@ -1671,7 +1621,7 @@ const arraysEqual = (a: string[], b: string[]) => {
       </AlertDialog>
 
       <AlertDialog open={emptyChannelAlert} onOpenChange={setEmptyChannelAlert}>
-        <AlertDialogContent className="w-[280px] rounded-2xl p-6 gap-4">
+         <AlertDialogContent className="w-[280px] rounded-2xl p-6 gap-4">
           <AlertDialogHeader className="space-y-2 text-center">
             <AlertDialogTitle className="text-base font-bold text-neutral-900">작성할 채널 이름 입력</AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
@@ -1690,7 +1640,7 @@ const arraysEqual = (a: string[], b: string[]) => {
       </AlertDialog>
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="w-[280px] rounded-2xl p-6 gap-4">
+         <AlertDialogContent className="w-[280px] rounded-2xl p-6 gap-4">
           <AlertDialogHeader className="space-y-2 text-center">
             <AlertDialogTitle className="text-base font-bold text-neutral-900">체험단 삭제</AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
