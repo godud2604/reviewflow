@@ -525,7 +525,7 @@ function CalendarSection({
               : "text-neutral-800 bg-white"
           const hoverable = !isSelected && !isTodayDate && hasSchedule
           const todayHighlightClass = isTodayDate
-            ? "bg-gradient-to-br from-orange-500 to-orange-200 text-white shadow-[0_15px_40px_rgba(249,115,22,0.35)] ring-1 ring-orange-300"
+            ? "bg-gradient-to-br from-orange-500 to-orange-200 text-white shadow-[0_15px_40px_rgba(249,115,22,0.35)] ring-orange-300"
             : ""
           const selectedHighlightClass = isSelected
             ? "bg-gradient-to-br from-orange-200 via-orange-200 to-white text-orange-900 shadow-[0_18px_45px_rgba(249,115,22,0.25)] ring-orange-200"
