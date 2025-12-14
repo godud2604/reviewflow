@@ -5,6 +5,7 @@ import type { Schedule, ExtraIncome, MonthlyGrowth, HistoryView } from "@/types"
 import { useExtraIncomes } from "@/hooks/use-extra-incomes"
 import ExtraIncomeModal from "./extra-income-modal"
 import IncomeHistoryModal from "./income-history-modal"
+import ShareEarningsModal from "./share-earnings-modal"
 const incomeTutorialStorageKey = "reviewflow-stats-income-tutorial-shown"
 
 type StatsPageProps = {
@@ -23,6 +24,7 @@ export default function StatsPage({
   const [showIncomeTutorial, setShowIncomeTutorial] = useState(false)
   const [editingExtraIncome, setEditingExtraIncome] = useState<ExtraIncome | null>(null)
   const [historyView, setHistoryView] = useState<HistoryView>("all")
+  const [showShareModal, setShowShareModal] = useState(false)
   const historyDisabled = showIncomeModal || isScheduleModalOpen
   const cardShadow = "shadow-[0_14px_40px_rgba(18,34,64,0.08)]"
   const toNumber = (value: unknown) => {
@@ -38,6 +40,11 @@ export default function StatsPage({
   const today = new Date()
   const currentYear = today.getFullYear()
   const currentMonth = today.getMonth()
+  const currentMonthLabel = new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "long",
+  }).format(today)
+  const currentMonthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-01`
 
   const parseDate = (value?: string) => {
     if (!value) return null
@@ -291,22 +298,30 @@ export default function StatsPage({
                 ₩ {animatedEconValue.toLocaleString()}
               </div>
             </div>
-            <div className="relative inline-flex items-center">
+            <div className="flex items-center gap-2">
+              <div className="relative inline-flex">
+                <button
+                  onClick={() => handleOpenIncomeModal()}
+                  className="cursor-pointer px-2.5 py-2 rounded-full text-[11px] font-semibold text-white border border-white/35 bg-white/10 backdrop-blur-[2px] shadow-sm hover:bg-white/18 hover:border-white/50 transition-all active:scale-[0.98]"
+                >
+                  부수입 추가
+                </button>
+                {showIncomeTutorial && (
+                  <div className="absolute -right-0 top-full mt-1 w-[190px] rounded-2xl border border-[#ebeef2] bg-white px-3 py-2.5 text-[11px] leading-snug text-[#111827] shadow-md">
+                    <div className="text-[10px] font-semibold uppercase text-[#f97316] mb-1">부수입 가이드</div>
+                    <p className="text-[11px] leading-tight">
+                      이 버튼을 눌러 부수입을 추가해보세요
+                    </p>
+                    <span className="absolute -right-[-30px] top-[-7px] h-3 w-3 rotate-45 border-t border-r border-[#ebeef2] bg-white" />
+                  </div>
+                )}
+              </div>
               <button
-                onClick={() => handleOpenIncomeModal()}
-                className="cursor-pointer px-2.5 py-2 rounded-full text-[11px] font-semibold text-white border border-white/35 bg-white/10 backdrop-blur-[2px] shadow-sm hover:bg-white/18 hover:border-white/50 transition-all active:scale-[0.98]"
+                onClick={() => setShowShareModal(true)}
+                className="cursor-pointer whitespace-nowrap px-3 py-2 rounded-full text-[11px] font-semibold text-white border border-white/40 bg-white/10 backdrop-blur-[2px] shadow-sm hover:bg-white/20 hover:border-white/60 transition-all active:scale-[0.98]"
               >
-                부수입 추가
+                💸 자랑하기
               </button>
-              {showIncomeTutorial && (
-                <div className="absolute -right-0 top-full mt-1 w-[190px] rounded-2xl border border-[#ebeef2] bg-white px-3 py-2.5 text-[11px] leading-snug text-[#111827] shadow-md">
-                  <div className="text-[10px] font-semibold uppercase text-[#f97316] mb-1">부수입 가이드</div>
-                  <p className="text-[11px] leading-tight">
-                    이 버튼을 눌러 부수입을 추가해보세요
-                  </p>
-                  <span className="absolute -right-[-30px] top-[-7px] h-3 w-3 rotate-45 border-t border-r border-[#ebeef2] bg-white" />
-                </div>
-              )}
             </div>
           </div>
           <div className="relative mt-3 mb-5 border-t border-white/20" />
@@ -559,6 +574,22 @@ export default function StatsPage({
         onScheduleItemClick={handleHistoryScheduleClick}
         onExtraIncomeItemClick={handleHistoryExtraIncomeClick}
         isDisabled={historyDisabled}
+      />
+
+      <ShareEarningsModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        currentMonthLabel={currentMonthLabel}
+        currentMonthKey={currentMonthKey}
+        econValue={econValue}
+        scheduleValue={scheduleValue}
+        totalBen={totalBen}
+        totalInc={totalInc}
+        totalCost={totalCost}
+        totalExtraIncome={totalExtraIncome}
+        monthlyGrowth={monthlyGrowth}
+        benefitEntries={benefitEntries}
+        costEntries={costEntries}
       />
     </>
   )
