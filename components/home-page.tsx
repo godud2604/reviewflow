@@ -524,7 +524,13 @@ function CalendarSection({
               ? "text-orange-700 bg-white shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.6)]"
               : "text-neutral-800 bg-white"
           const hoverable = !isSelected && !isTodayDate && hasSchedule
-          console.log(dateStr, "hasSchedule :", hasSchedule, "dayInfo :", dayInfo)
+          const todayHighlightClass = isTodayDate
+            ? "bg-gradient-to-br from-orange-300 to-orange-400 text-white shadow-[0_15px_40px_rgba(249,115,22,0.35)] ring-1 ring-orange-300"
+            : ""
+          const selectedHighlightClass = isSelected
+            ? "bg-gradient-to-br from-orange-200 via-orange-200 to-white text-orange-900 shadow-[0_18px_45px_rgba(249,115,22,0.25)] ring-orange-200"
+            : ""
+          const selectedTodayClass = isSelected && isTodayDate && "ring-1"
           return (
             <button
               key={day}
@@ -533,8 +539,8 @@ function CalendarSection({
               className={`relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-all ${
                 hasSchedule || dateStr === today ? "cursor-pointer" : "cursor-default"
               } ${baseStyle}
-                ${isSelected ? "bg-orange-50 text-orange-800 shadow-[inset_0_0_0_2px_rgba(249,115,22,0.9)]" : ""}
-                ${!isSelected && isTodayDate ? "bg-orange-50/80 text-orange-800 shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.7)]" : ""}
+                ${!isSelected && todayHighlightClass}
+                ${selectedHighlightClass}
                 ${hoverable ? "hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(0,0,0,0.08)]" : ""}
                 ${!isSelected && !isToday(day) && dayOfWeek === 0 ? "text-red-500" : ""}
                 ${!isSelected && !isToday(day) && dayOfWeek === 6 ? "text-blue-500" : ""}`}
