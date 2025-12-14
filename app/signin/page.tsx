@@ -68,6 +68,8 @@ export default function SignInPage() {
       if (error) {
         if (error.message === "Invalid login credentials") {
           setError("이메일 또는 비밀번호가 올바르지 않습니다.")
+        } else if (error.message.includes("Email not confirmed")) {
+          setError("이메일 인증을 완료해야 로그인할 수 있어요. 인증 메일을 확인해주세요.")
         } else {
           setError(error.message)
         }
@@ -108,6 +110,12 @@ export default function SignInPage() {
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
             {error}
+            {error.includes("이메일 인증을 완료해야 로그인할 수 있어요") && (
+              <div className="text-left mt-4 mb-6 p-4 rounded-2xl bg-[#FFF9F4] border border-[#FFDCC2] text-[#62411F] text-sm">
+                <strong className="block text-[#FF5722] font-semibold mb-1">이메일 인증을 꼭 완료해주세요</strong>
+                회원가입 직후 인증 이메일을 전송했습니다. <br/><br/> <span className="font-bold text-sm">인증 메일이 보이지 않는다면</span> <br/> 1. 스팸함도 확인하시고 링크를 클릭해야 로그인할 수 있어요.<br/> 2. 잠시 후 새로고침하거나 메일함을 재확인해주세요.
+              </div>
+            )}
           </div>
         )}
 

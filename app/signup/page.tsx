@@ -126,11 +126,11 @@ export default function SignUpPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-[#191F28] mb-2">가입 완료!</h2>
-          <p className="text-[#6B7684] mb-6">
-            이메일로 인증 링크를 보냈습니다.<br />
-            이메일을 확인해주세요.
-          </p>
+          <h2 className="text-2xl font-bold text-[#191F28] mb-2">이메일 인증을 꼭 해주세요!</h2>
+          <div className="text-left mt-4 mb-6 p-4 rounded-2xl bg-[#FFF9F4] border border-[#FFDCC2] text-[#62411F] text-sm">
+            <strong className="block text-[#FF5722] font-semibold mb-1">이메일 인증을 꼭 완료해주세요</strong>
+            회원가입 직후 인증 이메일을 전송했습니다. <br/><br/> <span className="font-bold text-sm">인증 메일이 보이지 않는다면</span> <br/> 1. 스팸함도 확인하시고 링크를 클릭해야 로그인할 수 있어요.<br/> 2. 잠시 후 새로고침하거나 메일함을 재확인해주세요.
+          </div>
           <Link
             href="/signin"
             className="inline-block bg-[#FF5722] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#E64A19] transition"
