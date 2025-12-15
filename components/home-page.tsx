@@ -46,8 +46,6 @@ export default function HomePage({
   const reconfirmSchedules = schedules.filter((s) => s.status === "재확인")
   const reconfirmCount = reconfirmSchedules.length
   const noDeadlineSchedules = schedules.filter((s) => !s.dead)
-  const overdueCount = schedules.filter((s) => s.dead && s.dead < today && s.status !== "완료").length
-  const showStatusHighlights = overdueCount > 0 || reconfirmCount > 0
   const hasSchedules = schedules.length > 0
 
   // Filter schedules based on selected date and filter
@@ -111,17 +109,8 @@ export default function HomePage({
         </div>
       </div>
       <ol className="space-y-3 text-left text-[13px] text-neutral-700">
-        <li className="flex items-start gap-3 rounded-2xl border border-orange-100 bg-white/80 p-3 shadow-sm">
-          <span className="mt-0.5 text-lg font-bold text-orange-500">1</span>
-          <div>
-            <p className="font-semibold text-neutral-900">할 일 기록하기</p>
-            <div className="space-y-1 pl-2 border-l-2 border-orange-200">
-              <p className="text-[12px] text-neutral-500"><span className="font-bold text-orange-600">좌측 상단</span>의 <span className="font-bold text-orange-600">할 일</span> 버튼을 누르면, <span className="font-bold text-orange-600">잊지 말아야 할 메모</span>를 간단히 기록해둘 수 있어요.</p>
-            </div>
-          </div>
-        </li>
         <li className="flex items-start gap-3 rounded-2xl border border-dashed border-orange-100 bg-white/80 p-3 shadow-sm">
-          <span className="mt-0.5 text-lg font-bold text-orange-500">2</span>
+          <span className="mt-0.5 text-lg font-bold text-orange-500">1</span>
           <div>
             <p className="font-semibold text-neutral-900 mb-1">통계 페이지에서 수익 보기</p>
             <div className="space-y-1 pl-2 border-l-2 border-orange-200">
@@ -140,7 +129,7 @@ export default function HomePage({
     setSelectedFilter("all")
   }
 
-  const containerClassName = `flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3${showStatusHighlights ? "" : " pt-2"}`
+  const containerClassName = `flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3`
   const handleGoToToday = () => {
     setSelectedDate(today)
     setSelectedFilter("all")
@@ -274,7 +263,7 @@ export default function HomePage({
         className="fixed z-40 flex flex-col gap-3"
         style={{
           right: "calc((100vw - min(100vw, 390px)) / 2 + 20px)",
-          bottom: "calc((100vh - min(100vh, 844px)) / 2 + 100px)",
+          bottom: "calc((100vh - min(100vh, 844px)) / 2 + 130px)",
         }}
       >
         {reconfirmCount > 0 && (
@@ -297,12 +286,12 @@ export default function HomePage({
           <button
             type="button"
             onClick={() => setFloatingPanel(floatingPanel === "noDeadline" ? "none" : "noDeadline")}
-            className="flex items-center gap-2 rounded-full bg-white from-orange-200/90 to-amber-200/90 border border-orange-500 shadow-[0_14px_100px_rgba(249,115,22,0.18)] px-2 py-2 active:scale-[0.98] transition-all ring-2 ring-orange-500/70"
+            className="flex items-center gap-2 rounded-full bg-white from-orange-200/90 to-amber-200/90 border border-orange-500 shadow-[0_14px_100px_rgba(249,115,22,0.18)] px-4 py-2 active:scale-[0.98] transition-all ring-4 ring-orange-500/70"
           >
             <span className="text-base">📌</span>
             <div className="text-left leading-tight">
-              <div className="text-[13px] font-bold text-orange-900">마감일 미정</div>
-              <div className="text-[12.5px] font-semibold text-orange-800">목록 보기</div>
+              <div className="text-[16px] font-bold text-orange-500">마감일 미정 </div>
+              <div className="text-[14.5px] font-semibold text-orange-900">목록 보기</div>
             </div>
             <span className="ml-1 rounded-full bg-orange-200 px-2 py-0.5 text-[11px] font-extrabold text-orange-800 shadow-sm">
               {noDeadlineSchedules.length}

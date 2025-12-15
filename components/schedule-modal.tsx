@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import type { Schedule, GuideFile, ScheduleChannel } from "@/types"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -15,7 +15,7 @@ import { uploadGuideFiles, downloadGuideFile, deleteGuideFile } from "@/lib/stor
 import { DEFAULT_SCHEDULE_CHANNEL_OPTIONS, sanitizeChannels } from "@/lib/schedule-channels"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
-import { X, Copy, Download, Loader2 } from "lucide-react"
+import { X, Copy, Loader2 } from "lucide-react"
 
 const getTodayInKST = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date())
 
@@ -54,7 +54,7 @@ const STATUS_ORDER: Schedule["status"][] = [
   "재확인",
 ]
 
-const COMMON_STATUSES: Schedule["status"][] = ["선정됨", "완료", "재확인"]
+const COMMON_STATUSES: Schedule["status"][] = ["선정됨", "완료"]
 
 const STATUS_BY_REVIEW_TYPE: Record<Schedule["reviewType"], Schedule["status"][]> = {
   방문형: ["방문일 예약 완료", "방문"],
@@ -716,41 +716,6 @@ export default function ScheduleModal({
           </SelectContent>
         </Select>
       </div>
-      {formData.status === "재확인" && (
-        <div className="space-y-2">
-          <label className="block text-[15px] font-bold text-neutral-500">재확인 사유</label>
-          <Select
-            value={reconfirmReason}
-            onValueChange={(value) => {
-              setReconfirmReason(value)
-              if (value !== "기타") {
-                setCustomReconfirmReason("")
-              }
-            }}
-          >
-            <SelectTrigger size="sm" className="w-full bg-[#F7F7F8] border-none rounded-xl text-[15px]">
-              <SelectValue placeholder="사유를 선택하세요" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="입금 확인 필요" className="text-[15px]">입금/리워드 확인 필요</SelectItem>
-              <SelectItem value="가이드 내용 불분명" className="text-[15px]">가이드 내용 불분명</SelectItem>
-              <SelectItem value="플랫폼 답변 대기중" className="text-[15px]">플랫폼 답변 대기중</SelectItem>
-              <SelectItem value="기타" className="text-[15px]">기타</SelectItem>
-            </SelectContent>
-          </Select>
-          {reconfirmReason === "기타" && (
-            <div>
-              <input
-                type="text"
-                value={customReconfirmReason}
-                onChange={(e) => setCustomReconfirmReason(e.target.value)}
-                className="w-full h-8.5 px-3 py-2 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
-                placeholder="기타 사유를 입력하세요"
-              />
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 
@@ -861,38 +826,39 @@ export default function ScheduleModal({
                   </div>
 
                   {schedule && statusFields}
-                  
                   <div>
                     <label className="block text-[15px] font-bold text-neutral-500 mb-2">플랫폼</label>
-                    <div className="flex gap-2 flex-wrap">
-                      {platformOptions.map((platform) => (
-                        <div
-                          key={platform}
-                          onClick={() => setFormData({ ...formData, platform })}
-                          className={`text-[14px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
-                            formData.platform === platform
-                              ? "bg-orange-50 text-[#FF5722] border border-[#FF5722]"
-                              : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
-                          }`}
-                        >
-                          {platform}
-                        </div>
-                      ))}
-                      {platformOptions.length === 0 && (
-                        <span className="text-sm text-neutral-400">플랫폼을 추가해주세요.</span>
-                      )}
+                    <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 px-3.5 py-3.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {platformOptions.map((platform) => (
+                          <div
+                            key={platform}
+                            onClick={() => setFormData({ ...formData, platform })}
+                            className={`text-[14px] px-3 py-1 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center ${
+                              formData.platform === platform
+                                ? "bg-orange-50 text-[#FF5722] border border-[#FF5722]"
+                                : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300"
+                            }`}
+                          >
+                            {platform}
+                          </div>
+                        ))}
+                        {platformOptions.length === 0 && (
+                          <span className="text-sm text-neutral-400">플랫폼을 추가해주세요.</span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setShowPlatformManagement(true)}
+                        className="mt-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer"
+                      >
+                        + 플랫폼 관리
+                      </button>
                     </div>
-                    <button
-                      onClick={() => setShowPlatformManagement(true)}
-                      className="mt-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer"
-                    >
-                      + 플랫폼 관리
-                    </button>
                   </div>
 
                   <div className="mb-6">
                     <label className="block text-[15px] font-bold text-neutral-500 mb-2">카테고리</label>
-                    <div className="rounded-2xl flex items-center justify-between gap-3 flex-wrap">
+                    <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 px-3.5 py-3.5">
                       <div className="flex items-center gap-2 flex-wrap">
                         {selectedCategories.length > 0 ? (
                           selectedCategories.map((category) => {
@@ -916,23 +882,23 @@ export default function ScheduleModal({
                           <span className="text-xs text-neutral-400">표시할 카테고리를 선택하세요.</span>
                         )}
                       </div>
-                    </div>
                       <button
                         onClick={() => setShowCategoryManagement(true)}
                         className="mt-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer"
                       >
                         + 카테고리 선택
                       </button>
+                    </div>
                   </div>
 
                   <div className="mb-6">
                     <div className="flex">
-                      <label className="mr-2 block text-[15px] font-bold text-neutral-500 mb-2">작성할 채널</label>
+                      <label className="mr-2 block text-[15px] font-bold text-neutral-500 mb-2">체험 진행 정보</label>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[13px] text-neutral-400">포스팅을 올릴 주요 채널 (복수 선택 가능)</span>
+                        <span className="text-[13px] text-neutral-400">리뷰 채널과 방문 여부를 설정하세요</span>
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 px-3.5 py-3.5 space-y-3">
+                    <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 px-3.5 py-3.5">
                       <div>
                         <div className="flex gap-2 flex-wrap">
                           {channelOptions.map((channel) => {
@@ -955,7 +921,7 @@ export default function ScheduleModal({
                       </div>
                       <button
                         onClick={() => setShowChannelManagement(true)}
-                        className="ml-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer translate-y-[-8px]"
+                        className="mt-4 ml-2 text-[13px] text-[#FF5722] font-semibold cursor-pointer translate-y-[-8px]"
                       >
                         + 작성할 채널 관리
                       </button>
@@ -969,7 +935,9 @@ export default function ScheduleModal({
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-[14px] font-bold text-blue-900 translate-y-[1.5px]">방문 일정이 있는 체험인가요?</span>
+                              <div className="text-[14px] font-bold text-neutral-500 translate-y-[1.5px]">
+                                <span className="text-[#FF8A00]">📍 방문 일정</span>이 있는 체험인가요?
+                              </div>
                             </div>
                           </div>
                         </label>
@@ -977,7 +945,7 @@ export default function ScheduleModal({
                       {visitMode && (
                         <div className="pt-2 border-t border-neutral-200/80">
                            <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[14px] font-bold text-blue-900">방문 후 추가 리뷰</span>
+                          <span className="text-[14px] font-bold text-neutral-500">방문 후 추가 리뷰</span>
                           <span className="text-[13px] text-neutral-400">현장 방문 뒤 남길 추가 리뷰 채널</span>
                         </div>
                         <div className="space-y-2.5">
@@ -988,7 +956,7 @@ export default function ScheduleModal({
                                 updateVisitChecklist({ naverReservation: checked as boolean })
                               }
                             />
-                            <span className="text-[14px] font-semibold text-blue-900">네이버 예약 리뷰</span>
+                            <span className="text-[14px] font-semibold text-neutral-500">네이버 예약 리뷰</span>
                           </label>
                           <label className="flex items-center gap-3 cursor-pointer">
                             <Checkbox
@@ -997,7 +965,7 @@ export default function ScheduleModal({
                                 updateVisitChecklist({ platformAppReview: checked as boolean })
                               }
                             />
-                            <span className="text-[14px] font-semibold text-blue-900">타플랫폼 어플 리뷰</span>
+                            <span className="text-[14px] font-semibold text-neutral-500">타플랫폼 어플 리뷰</span>
                           </label>
                           <label className="flex items-center gap-3 cursor-pointer">
                             <Checkbox
@@ -1006,7 +974,7 @@ export default function ScheduleModal({
                                 updateVisitChecklist({ googleReview: checked as boolean })
                               }
                             />
-                            <span className="text-[14px] font-semibold text-blue-900">구글 리뷰</span>
+                            <span className="text-[14px] font-semibold text-neutral-500">구글 리뷰</span>
                           </label>
                           <div className="space-y-1">
                             <label className="flex items-center gap-3 cursor-pointer">
@@ -1019,7 +987,7 @@ export default function ScheduleModal({
                                   })
                                 }
                               />
-                              <span className="text-[14px] font-semibold text-blue-900">기타</span>
+                              <span className="text-[14px] font-semibold text-neutral-500">기타</span>
                             </label>
                             {formData.visitReviewChecklist?.other && (
                               <input
@@ -1039,110 +1007,112 @@ export default function ScheduleModal({
                         </div>
                         </div>
                       )}
+
+                             {visitMode && (
+                        <div className="flex gap-2.5 flex-wrap mt-4">
+                          <div className="flex-1 min-w-[180px]">
+                            <label className="block text-[15px] font-bold text-neutral-500 mb-2">방문일</label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[16px] text-left cursor-pointer">
+                                  {formData.visit ? format(new Date(formData.visit), "PPP", { locale: ko }) : "날짜 선택"}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={formData.visit ? new Date(formData.visit) : undefined}
+                                  onSelect={(date) =>
+                                    setFormData({
+                                      ...formData,
+                                      visit: date ? format(date, "yyyy-MM-dd") : "",
+                                    })
+                                  }
+                                  locale={ko}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <div className="flex-1 min-w-[180px]">
+                            <label className="block text-[15px] font-bold text-neutral-500 mb-2">방문시간</label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
+                                  {displayVisitTime}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[280px] p-3" align="start">
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="space-y-1">
+                                    <span className="text-xs font-semibold text-neutral-500">오전/오후</span>
+                                    <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
+                                      <div className="p-1 space-y-1">
+                                        {timeOptions.periods.map((p) => (
+                                          <button
+                                            key={p}
+                                            className={`w-full rounded-md px-3 py-2 text-sm font-semibold text-left cursor-pointer transition-colors ${
+                                              p === period ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
+                                            }`}
+                                            onClick={() => updateVisitTime({ period: p })}
+                                          >
+                                            {p}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </ScrollArea>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="text-xs font-semibold text-neutral-500">시</span>
+                                    <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
+                                      <div className="p-1 grid grid-cols-2 gap-1">
+                                        {timeOptions.hours.map((h) => (
+                                          <button
+                                            key={h}
+                                            className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
+                                              h === hour ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
+                                            }`}
+                                            onClick={() => updateVisitTime({ hour: h })}
+                                          >
+                                            {h}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </ScrollArea>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="text-xs font-semibold text-neutral-500">분</span>
+                                    <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
+                                      <div className="p-1 grid grid-cols-2 gap-1">
+                                        {timeOptions.minutes.map((m) => (
+                                          <button
+                                            key={m}
+                                            className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
+                                              m === minute ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
+                                            }`}
+                                            onClick={() => updateVisitTime({ minute: m })}
+                                          >
+                                            {m}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </ScrollArea>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                   {visitMode && (
-                  <div className="flex gap-2.5 flex-wrap">
-                    <div className="flex-1 min-w-[180px]">
-                      <label className="block text-[15px] font-bold text-neutral-500 mb-2">방문일</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[16px] text-left cursor-pointer">
-                            {formData.visit ? format(new Date(formData.visit), "PPP", { locale: ko }) : "날짜 선택"}
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={formData.visit ? new Date(formData.visit) : undefined}
-                            onSelect={(date) =>
-                              setFormData({
-                                ...formData,
-                                visit: date ? format(date, "yyyy-MM-dd") : "",
-                              })
-                            }
-                            locale={ko}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="flex-1 min-w-[180px]">
-                      <label className="block text-[16px] font-bold text-neutral-500 mb-2">방문시간</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
-                            {displayVisitTime}
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[280px] p-3" align="start">
-                          <div className="grid grid-cols-3 gap-2">
-                              <div className="space-y-1">
-                              <span className="text-xs font-semibold text-neutral-500">오전/오후</span>
-                              <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
-                                <div className="p-1 space-y-1">
-                                  {timeOptions.periods.map((p) => (
-                                    <button
-                                      key={p}
-                                      className={`w-full rounded-md px-3 py-2 text-sm font-semibold text-left cursor-pointer transition-colors ${
-                                        p === period ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
-                                      }`}
-                                      onClick={() => updateVisitTime({ period: p })}
-                                    >
-                                      {p}
-                                    </button>
-                                  ))}
-                                </div>
-                              </ScrollArea>
-                            </div>
-                            <div className="space-y-1">
-                              <span className="text-xs font-semibold text-neutral-500">시</span>
-                              <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
-                                <div className="p-1 grid grid-cols-2 gap-1">
-                                  {timeOptions.hours.map((h) => (
-                                    <button
-                                      key={h}
-                                      className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
-                                        h === hour ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
-                                      }`}
-                                      onClick={() => updateVisitTime({ hour: h })}
-                                    >
-                                      {h}
-                                    </button>
-                                  ))}
-                                </div>
-                              </ScrollArea>
-                            </div>
-                            <div className="space-y-1">
-                              <span className="text-xs font-semibold text-neutral-500">분</span>
-                              <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
-                                <div className="p-1 grid grid-cols-2 gap-1">
-                                  {timeOptions.minutes.map((m) => (
-                                    <button
-                                      key={m}
-                                      className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
-                                        m === minute ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
-                                      }`}
-                                      onClick={() => updateVisitTime({ minute: m })}
-                                    >
-                                      {m}
-                                    </button>
-                                  ))}
-                                </div>
-                              </ScrollArea>
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                )}
+               
 
                   {!schedule && statusFields}
                   
                    <div>
                   <div className="flex items-center">
-                    <label className="mr-2 text-[15px] font-bold text-neutral-500">자산 관리</label>
+                    <label className="mt-0.5 mr-2 text-[15px] font-bold text-neutral-500">자산 관리</label>
                     <p className="text-[13px] text-neutral-400">
                       제공(물품) + 수익(현금) - 내가 쓴 돈 = 수익
                     </p>
@@ -1201,6 +1171,7 @@ export default function ScheduleModal({
                         <p className="text-[12px] text-neutral-500">구매비용을 페이백 받기로 한 의뢰가 있는 경우 체크하세요.</p>
                       </div>
                     </label>
+                    
                     {formData.paybackExpected && (
                       <label className="flex items-center gap-3 pl-8">
                         <Checkbox
@@ -1211,7 +1182,7 @@ export default function ScheduleModal({
                         <span className="text-[13px] font-semibold text-neutral-900 translate-y-[1px]">입금 확인 (정산 완료)</span>
                       </label>
                     )}
-                  </div>
+                       </div>
                 </div>
 
                  <div>
@@ -1241,8 +1212,8 @@ export default function ScheduleModal({
                           </button>
                         )}
                       </div>
-                    </div>
                   </div>
+                </div>
                 </div>
 
                 </div>
@@ -1500,7 +1471,7 @@ export default function ScheduleModal({
         </>
       )}
       </div>
-
+      
       <AlertDialog open={platformToDelete !== null} onOpenChange={(open) => {
         if (!open) {
           setPlatformToDelete(null)
