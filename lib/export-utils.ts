@@ -11,8 +11,6 @@ export function exportSchedulesToExcel(schedules: Schedule[]) {
     '유형': schedule.reviewType,
     '채널': schedule.channel.join(', '),
     '카테고리': schedule.category,
-    '위치': schedule.region || '-',
-    '전화번호': schedule.phone || '-',
     '방문일': schedule.visit || '-',
     '방문시간': schedule.visitTime || '-',
     '마감일': schedule.dead || '-',
@@ -41,8 +39,6 @@ export function exportSchedulesToExcel(schedules: Schedule[]) {
     { wch: 15 }, // 유형
     { wch: 15 }, // 채널
     { wch: 12 }, // 카테고리
-    { wch: 20 }, // 위치
-    { wch: 18 }, // 전화번호
     { wch: 12 }, // 방문일
     { wch: 12 }, // 방문시간
     { wch: 12 }, // 마감일
@@ -113,8 +109,6 @@ export function exportAllDataToExcel(schedules: Schedule[], extraIncomes: ExtraI
     '유형': schedule.reviewType,
     '채널': schedule.channel.join(', '),
     '카테고리': schedule.category,
-    '위치': schedule.region || '-',
-    '전화번호': schedule.phone || '-',
     '방문일': schedule.visit || '-',
     '방문시간': schedule.visitTime || '-',
     '마감일': schedule.dead || '-',
@@ -144,7 +138,7 @@ export function exportAllDataToExcel(schedules: Schedule[], extraIncomes: ExtraI
   const ws1 = XLSX.utils.json_to_sheet(scheduleData)
   ws1['!cols'] = [
     { wch: 8 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 15 },
-    { wch: 15 }, { wch: 12 }, { wch: 20 }, { wch: 18 }, { wch: 12 },
+    { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
     { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 35 },
     { wch: 35 }, { wch: 35 }, { wch: 30 },
   ]

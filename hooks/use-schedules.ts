@@ -38,9 +38,6 @@ function mapDbToSchedule(db: DbSchedule): Schedule {
     channel: parseStoredChannels(db.channel),
     category: (db.category || '기타') as Schedule['category'],
     region: db.region || '',
-    regionDetail: db.region_detail || '',
-    lat: db.lat ?? undefined,
-    lng: db.lng ?? undefined,
     visit: db.visit_date || '',
     visitTime: db.visit_time || '',
     dead: db.deadline || '',
@@ -55,8 +52,6 @@ function mapDbToSchedule(db: DbSchedule): Schedule {
     visitReviewChecklist: db.visit_review_checklist || undefined,
     paybackExpected: db.payback_expected,
     paybackConfirmed: db.payback_confirmed,
-    phone: db.phone || '',
-    ownerPhone: db.owner_phone || '',
   }
 }
 
@@ -71,7 +66,6 @@ function mapScheduleToDb(schedule: Omit<Schedule, 'id'>, userId: string) {
     channel: stringifyChannels(schedule.channel),
     category: schedule.category,
     region: schedule.region || null,
-    region_detail: schedule.regionDetail || null,
     visit_date: schedule.visit || null,
     visit_time: schedule.visitTime || null,
     deadline: schedule.dead || null,
@@ -86,10 +80,6 @@ function mapScheduleToDb(schedule: Omit<Schedule, 'id'>, userId: string) {
     visit_review_checklist: schedule.visitReviewChecklist || null,
     payback_expected: schedule.paybackExpected || false,
     payback_confirmed: schedule.paybackConfirmed || false,
-    phone: schedule.phone || null,
-    owner_phone: schedule.ownerPhone || null,
-    lat: schedule.lat ?? null,
-    lng: schedule.lng ?? null,
   }
 }
 
@@ -118,13 +108,7 @@ function mapScheduleUpdatesToDb(updates: Partial<Schedule>) {
   if (updates.visitReviewChecklist !== undefined) dbUpdates.visit_review_checklist = updates.visitReviewChecklist
   if (updates.paybackExpected !== undefined) dbUpdates.payback_expected = updates.paybackExpected
   if (updates.paybackConfirmed !== undefined) dbUpdates.payback_confirmed = updates.paybackConfirmed
-  if (updates.phone !== undefined) dbUpdates.phone = updates.phone
-  if (updates.ownerPhone !== undefined) dbUpdates.owner_phone = updates.ownerPhone
-
-  if (updates.regionDetail !== undefined) dbUpdates.region_detail = updates.regionDetail
-  if (updates.lat !== undefined) dbUpdates.lat = updates.lat
-  if (updates.lng !== undefined) dbUpdates.lng = updates.lng
-
+  
   return dbUpdates
 }
 
