@@ -1281,149 +1281,149 @@ export default function ScheduleModal({
                     </div>
                   </div>
 
-                  {!schedule && statusFields}
-                  
-                  <div className="flex items-center">
-                    <label className="mt-0.5 mr-2 text-[15px] font-bold text-neutral-500">자산 관리</label>
-                    <p className="text-[13px] text-neutral-400">
-                      제공(물품) + 수익(현금) - 내가 쓴 돈 = 수익
-                    </p>
-                  </div>
+                  {!schedule && statusFields}    
+              </div>
 
-                  <div className="bg-neutral-50 border border-neutral-200 rounded-2xl px-2 py-3 flex gap-2.5 mt-1">
-                    <div className="flex-1 text-center">
-                      <span className="block text-[13px] text-neutral-500 font-semibold mb-1">📦 제공(물품)</span>
-                      <span className="block text-[12px] text-neutral-400 mb-2">제품/서비스 가격</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={formatNumber(formData.benefit || 0)}
-                        onChange={(e) => handleNumberChange("benefit", e.target.value)}
-                        className="w-full h-9 px-3 py-2 bg-neutral-100 border border-neutral-200 rounded-xl text-center font-bold text-[16px] text-neutral-700"
-                        placeholder="+ 0"
-                      />
-                    </div>
-                    <div className="flex-1 text-center">
-                      <span className="block text-[13px] text-neutral-500 font-semibold mb-1">💸 수익(현금)</span>
-                      <span className="block text-[12px] text-neutral-400 mb-2">입금된 현금</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={formatNumber(formData.income || 0)}
-                        onChange={(e) => handleNumberChange("income", e.target.value)}
-                        className="w-full h-9 px-3 py-2 bg-neutral-100 border border-neutral-200 rounded-xl text-center font-bold text-[16px] text-neutral-700"
-                        placeholder="+ 0"
-                      />
-                    </div>
-                    <div className="flex-1 text-center">
-                      <span className="block text-[13px] text-red-600 font-semibold mb-1">⬇️ 내가 쓴 돈</span>
-                      <span className="block text-[12px] text-neutral-400 mb-2">내가 결제한 금액</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={formatNumber(formData.cost || 0)}
-                        onChange={(e) => handleNumberChange("cost", e.target.value)}
-                        className="w-full h-9 px-3 py-2 bg-rose-50 border border-rose-100 rounded-xl text-center font-bold text-red-600 text-[16px]"
-                        placeholder="- 0"
-                      />
-                    </div>
+              <div className="flex items-center">
+                  <label className="mt-0.5 mr-2 text-[15px] font-bold text-neutral-500">자산 관리</label>
+                  <p className="text-[13px] text-neutral-400">
+                    제공(물품) + 수익(현금) - 내가 쓴 돈 = 수익
+                  </p>
+                </div>
+                <div className="bg-neutral-50 border border-neutral-200 rounded-2xl px-2 py-3 flex gap-2.5 mt-1">
+                  <div className="flex-1 text-center">
+                    <span className="block text-[13px] text-neutral-500 font-semibold mb-1">📦 제공(물품)</span>
+                    <span className="block text-[12px] text-neutral-400 mb-2">제품/서비스 가격</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={formatNumber(formData.benefit || 0)}
+                      onChange={(e) => handleNumberChange("benefit", e.target.value)}
+                      className="w-full h-9 px-3 py-2 bg-neutral-100 border border-neutral-200 rounded-xl text-center font-bold text-[16px] text-neutral-700"
+                      placeholder="+ 0"
+                    />
                   </div>
-
-                   <div className="mt-2.5 space-y-1">
-                    <label className="flex items-start gap-3">
-                      <Checkbox
-                        checked={formData.paybackExpected || false}
-                        onCheckedChange={(checked) => handlePaybackExpectedChange(Boolean(checked))}
-                        className="mt-[5px]"
-                      />
-                      <div className="min-w-0">
-                        <span className="text-[14px] font-semibold text-neutral-900">광고주에게 돌려받아야 할 돈이 있나요?</span>
-                        <p className="text-[12px] text-neutral-500">구매비용을 페이백 받기로 한 의뢰가 있는 경우 체크하세요.</p>
-                      </div>
-                    </label>
-                    
-                    {formData.paybackExpected && (
-                      <label className="flex items-center gap-3 pl-8">
-                        <Checkbox
-                          checked={formData.paybackConfirmed || false}
-                          onCheckedChange={(checked) => handlePaybackConfirmedChange(Boolean(checked))}
-                          className="mt-[2px]"
-                        />
-                        <span className="text-[13px] font-semibold text-neutral-900 translate-y-[1px]">입금 확인 (정산 완료)</span>
-                      </label>
-                    )}
+                  <div className="flex-1 text-center">
+                    <span className="block text-[13px] text-neutral-500 font-semibold mb-1">💸 수익(현금)</span>
+                    <span className="block text-[12px] text-neutral-400 mb-2">입금된 현금</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={formatNumber(formData.income || 0)}
+                      onChange={(e) => handleNumberChange("income", e.target.value)}
+                      className="w-full h-9 px-3 py-2 bg-neutral-100 border border-neutral-200 rounded-xl text-center font-bold text-[16px] text-neutral-700"
+                      placeholder="+ 0"
+                    />
+                  </div>
+                  <div className="flex-1 text-center">
+                    <span className="block text-[13px] text-red-600 font-semibold mb-1">⬇️ 내가 쓴 돈</span>
+                    <span className="block text-[12px] text-neutral-400 mb-2">내가 결제한 금액</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={formatNumber(formData.cost || 0)}
+                      onChange={(e) => handleNumberChange("cost", e.target.value)}
+                      className="w-full h-9 px-3 py-2 bg-rose-50 border border-rose-100 rounded-xl text-center font-bold text-red-600 text-[16px]"
+                      placeholder="- 0"
+                    />
                   </div>
                 </div>
 
-                <div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-[15px] font-bold text-neutral-500 mb-2">메모장</label>
-                      <div className="relative">
-                        <textarea
-                          value={formData.memo || ""}
-                          onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
-                          className="w-full px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px] resize-none h-60 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                          rows={3}
-                          placeholder="가이드라인 복사 붙여넣기..."
-                        />
-                        {formData.memo && (
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(formData.memo || "")
-                              toast({
-                                title: "메모 내용이 복사되었습니다.",
-                                duration: 2000,
-                              })
-                            }}
-                            className="absolute right-2 top-2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
-                          >
-                            <Copy className="w-4 h-4 cursor-pointer" />
-                          </button>
-                        )}
-                      </div>
+                  <div className="mt-2.5 space-y-1">
+                  <label className="flex items-start gap-3">
+                    <Checkbox
+                      checked={formData.paybackExpected || false}
+                      onCheckedChange={(checked) => handlePaybackExpectedChange(Boolean(checked))}
+                      className="mt-[5px]"
+                    />
+                    <div className="min-w-0">
+                      <span className="text-[14px] font-semibold text-neutral-900">광고주에게 돌려받아야 할 돈이 있나요?</span>
+                      <p className="text-[12px] text-neutral-500">구매비용을 페이백 받기로 한 의뢰가 있는 경우 체크하세요.</p>
                     </div>
-                      {!visitMode && (
-                        <div className="space-y-2">
-                          <label className="block text-[15px] font-semibold text-neutral-500 mb-2">
-                            사장님(광고주) 전화번호
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="tel"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={formData.ownerPhone || ""}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  ownerPhone: formatPhoneInput(e.target.value),
-                                })
-                              }
-                              placeholder="예: 010-9876-5432"
-                              className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
-                            />
-                            {formData.ownerPhone && (
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(formData.ownerPhone || "")
-                                  toast({
-                                    title: "사장님 전화번호가 복사되었습니다.",
-                                    duration: 2000,
-                                  })
-                                }}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
-                              >
-                                <Copy className="w-4 h-4 cursor-pointer" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
+                  </label>
+                  
+                  {formData.paybackExpected && (
+                    <label className="flex items-center gap-3 pl-8">
+                      <Checkbox
+                        checked={formData.paybackConfirmed || false}
+                        onCheckedChange={(checked) => handlePaybackConfirmedChange(Boolean(checked))}
+                        className="mt-[2px]"
+                      />
+                      <span className="text-[13px] font-semibold text-neutral-900 translate-y-[1px]">입금 확인 (정산 완료)</span>
+                    </label>
+                  )}
+                </div>
+
+              </div>
+
+              <div >
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[15px] font-bold text-neutral-500 mb-2">메모장</label>
+                    <div className="relative">
+                      <textarea
+                        value={formData.memo || ""}
+                        onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
+                        className="w-full px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px] resize-none h-60 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        rows={3}
+                        placeholder="가이드라인 복사 붙여넣기..."
+                      />
+                      {formData.memo && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(formData.memo || "")
+                            toast({
+                              title: "메모 내용이 복사되었습니다.",
+                              duration: 2000,
+                            })
+                          }}
+                          className="absolute right-2 top-2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                        >
+                          <Copy className="w-4 h-4 cursor-pointer" />
+                        </button>
                       )}
+                    </div>
                   </div>
+                    {!visitMode && (
+                      <div className="space-y-2">
+                        <label className="block text-[15px] font-semibold text-neutral-500 mb-2">
+                          사장님(광고주) 전화번호
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="tel"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={formData.ownerPhone || ""}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                ownerPhone: formatPhoneInput(e.target.value),
+                              })
+                            }
+                            placeholder="예: 010-9876-5432"
+                            className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
+                          />
+                          {formData.ownerPhone && (
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(formData.ownerPhone || "")
+                                toast({
+                                  title: "사장님 전화번호가 복사되었습니다.",
+                                  duration: 2000,
+                                })
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                            >
+                              <Copy className="w-4 h-4 cursor-pointer" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                 </div>
               </div>
             </div>
