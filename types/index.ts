@@ -27,11 +27,6 @@ export interface Schedule {
     | "문구/오피스"
     | "기타"
   region?: string
-  regionDetail?: string
-  phone?: string
-  lat?: number
-  lng?: number
-  ownerPhone?: string
   visit: string
   visitTime: string
   dead: string

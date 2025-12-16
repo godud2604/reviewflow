@@ -12,11 +12,6 @@ export interface DbSchedule {
   channel: string | null
   category: string | null
   region: string | null
-  region_detail: string | null
-  phone: string | null
-  owner_phone: string | null
-  lat: number | null
-  lng: number | null
   visit_date: string | null
   visit_time: string | null
   deadline: string | null
