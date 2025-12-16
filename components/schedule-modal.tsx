@@ -132,7 +132,6 @@ export default function ScheduleModal({
     top: "0px"
   })
 
-  const [customPlatforms, setCustomPlatforms] = useState<string[]>([])
   const [newPlatform, setNewPlatform] = useState("")
   const [platformToDelete, setPlatformToDelete] = useState<string | null>(null)
   const [duplicatePlatformAlert, setDuplicatePlatformAlert] = useState(false)
@@ -751,7 +750,7 @@ export default function ScheduleModal({
   )
 
   return (
-    <div>
+    <>
       <div 
         className="fixed left-0 w-full z-40 flex flex-col justify-end"
         style={{
@@ -1282,11 +1281,8 @@ export default function ScheduleModal({
                     </div>
                   </div>
 
-               
-
                   {!schedule && statusFields}
                   
-                   <div>
                   <div className="flex items-center">
                     <label className="mt-0.5 mr-2 text-[15px] font-bold text-neutral-500">자산 관리</label>
                     <p className="text-[13px] text-neutral-400">
@@ -1335,6 +1331,7 @@ export default function ScheduleModal({
                       />
                     </div>
                   </div>
+
                    <div className="mt-2.5 space-y-1">
                     <label className="flex items-start gap-3">
                       <Checkbox
@@ -1358,7 +1355,7 @@ export default function ScheduleModal({
                         <span className="text-[13px] font-semibold text-neutral-900 translate-y-[1px]">입금 확인 (정산 완료)</span>
                       </label>
                     )}
-                       </div>
+                  </div>
                 </div>
 
                 <div>
@@ -1557,73 +1554,73 @@ export default function ScheduleModal({
         <>
             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" onClick={() => setShowChannelManagement(false)} />
             <div className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
-                <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
-              <span className="font-bold text-[16px]">작성할 채널 관리</span>
-              <button
-                onClick={() => setShowChannelManagement(false)}
-                className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
-                aria-label="닫기"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+              <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
+                <span className="font-bold text-[16px]">작성할 채널 관리</span>
+                <button
+                  onClick={() => setShowChannelManagement(false)}
+                  className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
+                  aria-label="닫기"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-              <div className="mb-6">
-                <label className="block text-[15px] font-bold text-neutral-500 mb-2">작성할 채널 추가</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newChannel}
-                    onChange={(e) => setNewChannel(e.target.value)}
-                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
-                    placeholder="작성할 채널 이름"
-                    onKeyPress={(e) => e.key === "Enter" && addCustomChannel()}
-                  />
-                  <button
-                    onClick={addCustomChannel}
-                    disabled={profileLoading}
-                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
-                  >
-                    추가
-                  </button>
+              <div className="flex-1 overflow-y-auto px-6 py-6">
+                <div className="mb-6">
+                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">작성할 채널 추가</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newChannel}
+                      onChange={(e) => setNewChannel(e.target.value)}
+                      className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
+                      placeholder="작성할 채널 이름"
+                      onKeyPress={(e) => e.key === "Enter" && addCustomChannel()}
+                    />
+                    <button
+                      onClick={addCustomChannel}
+                      disabled={profileLoading}
+                      className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
+                    >
+                      추가
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[15px] font-bold text-neutral-500 mb-2">등록된 작성할 채널</label>
+                  {profileLoading ? (
+                    <div className="text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
+                      <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+                      불러오는 중...
+                    </div>
+                  ) : allChannels.length === 0 ? (
+                    <div className="text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
+                      등록된 작성할 채널이 없습니다
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {allChannels.map((channel) => (
+                        <div
+                          key={channel}
+                          className="flex items-center justify-between px-4 py-3 bg-neutral-50 rounded-xl"
+                        >
+                          <span className="text-[15px] font-medium truncate">{channel}</span>
+                          <button
+                            onClick={() => {
+                              setChannelToDelete(channel)
+                              setShowChannelManagement(false)
+                            }}
+                            className="text-red-600 hover:text-red-700 font-semibold text-[15px] cursor-pointer"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-
-              <div>
-                <label className="block text-[15px] font-bold text-neutral-500 mb-2">등록된 작성할 채널</label>
-                {profileLoading ? (
-                  <div className="text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
-                    <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                    불러오는 중...
-                  </div>
-                ) : allChannels.length === 0 ? (
-                  <div className="text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
-                    등록된 작성할 채널이 없습니다
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {allChannels.map((channel) => (
-                      <div
-                        key={channel}
-                        className="flex items-center justify-between px-4 py-3 bg-neutral-50 rounded-xl"
-                      >
-                        <span className="text-[15px] font-medium truncate">{channel}</span>
-                        <button
-                          onClick={() => {
-                            setChannelToDelete(channel)
-                            setShowChannelManagement(false)
-                          }}
-                          className="text-red-600 hover:text-red-700 font-semibold text-[15px] cursor-pointer"
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
             </div>
         </>
       )}
@@ -1632,52 +1629,52 @@ export default function ScheduleModal({
         <>
             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" onClick={() => setShowCategoryManagement(false)} />
             <div className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
-                 <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
-              <span className="font-bold text-base">카테고리 선택</span>
-              <button
-                onClick={() => setShowCategoryManagement(false)}
-                className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
-                aria-label="닫기"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-              <div className="grid grid-cols-2 gap-2">
-                {CATEGORY_OPTIONS.map((option) => {
-                  const isActive = selectedCategories.includes(option.value)
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleToggleCategory(option.value)}
-                      className={`w-full flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
-                        isActive
-                          ? "bg-orange-50"
-                          : "border-neutral-200 bg-white hover:border-neutral-300"
-                      }`}
-                    >
-                      <span className="text-xl">{option.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[12px] font-bold text-neutral-900 truncate">{option.label}</div>
-                        <div className="text-[11px] text-neutral-500 truncate">{option.description}</div>
-                      </div>
-                      <div
-                        className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-black ${
-                          isActive
-                            ? "bg-[#FF5722] text-white"
-                            : "border border-neutral-300 text-transparent"
-                        }`}
-                        aria-hidden
-                      >
-                        ✓
-                      </div>
-                    </button>
-                  )
-                })}
+              <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
+                <span className="font-bold text-base">카테고리 선택</span>
+                <button
+                  onClick={() => setShowCategoryManagement(false)}
+                  className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
+                  aria-label="닫기"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-            </div>
+
+              <div className="flex-1 overflow-y-auto px-6 py-6">
+                <div className="grid grid-cols-2 gap-2">
+                  {CATEGORY_OPTIONS.map((option) => {
+                    const isActive = selectedCategories.includes(option.value)
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => handleToggleCategory(option.value)}
+                        className={`w-full flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
+                          isActive
+                            ? "bg-orange-50"
+                            : "border-neutral-200 bg-white hover:border-neutral-300"
+                        }`}
+                      >
+                        <span className="text-xl">{option.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[12px] font-bold text-neutral-900 truncate">{option.label}</div>
+                          <div className="text-[11px] text-neutral-500 truncate">{option.description}</div>
+                        </div>
+                        <div
+                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-black ${
+                            isActive
+                              ? "bg-[#FF5722] text-white"
+                              : "border border-neutral-300 text-transparent"
+                          }`}
+                          aria-hidden
+                        >
+                          ✓
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
         </>
       )}
@@ -1902,8 +1899,7 @@ export default function ScheduleModal({
         onClose={() => setShowMapSearchModal(false)}
         onSelectPlace={handleMapPlaceSelection}
       />
-    </div>
-    </div>
-    </div>
+      </div>
+    </>
   )
 }
