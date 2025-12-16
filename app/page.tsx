@@ -114,16 +114,22 @@ function PageContent() {
   }
 
   const handleSaveSchedule = async (schedule: Schedule) => {
+    let success = true
+
     if (editingScheduleId) {
-      // 기존 스케줄 업데이트
       const { id, ...updates } = schedule
-      await updateSchedule(editingScheduleId, updates)
+      success = await updateSchedule(editingScheduleId, updates)
     } else {
-      // 새 스케줄 생성
       const { id, ...newSchedule } = schedule
-      await createSchedule(newSchedule)
+      const created = await createSchedule(newSchedule)
+      success = Boolean(created)
     }
-    handleCloseScheduleModal()
+
+    if (success) {
+      handleCloseScheduleModal()
+    }
+
+    return success
   }
 
   const handleDeleteSchedule = async (id: number) => {

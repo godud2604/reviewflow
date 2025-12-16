@@ -16,6 +16,7 @@ import { DEFAULT_SCHEDULE_CHANNEL_OPTIONS, sanitizeChannels } from "@/lib/schedu
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { X, Copy, Loader2 } from "lucide-react"
+import NaverMapSearchModal, { MapPlaceSelection } from "@/components/naver-map-search-modal"
 
 const getTodayInKST = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date())
 
@@ -101,6 +102,12 @@ const createEmptyFormData = (): Partial<Schedule> => ({
   visitReviewChecklist: { ...DEFAULT_VISIT_REVIEW_CHECKLIST },
   paybackExpected: false,
   paybackConfirmed: false,
+  region: "",
+  regionDetail: "",
+  phone: "",
+  ownerPhone: "",
+  lat: undefined,
+  lng: undefined,
 })
 
 export default function ScheduleModal({
@@ -113,7 +120,7 @@ export default function ScheduleModal({
 }: {
   isOpen: boolean
   onClose: () => void
-  onSave: (schedule: Schedule) => void
+  onSave: (schedule: Schedule) => Promise<boolean>
   onDelete: (id: number) => void
   onUpdateFiles?: (id: number, files: GuideFile[]) => Promise<void>
   schedule?: Schedule
@@ -144,6 +151,7 @@ export default function ScheduleModal({
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [fileToDelete, setFileToDelete] = useState<{ file: GuideFile; index: number } | null>(null)
   const [showCategoryManagement, setShowCategoryManagement] = useState(false)
+  const [showMapSearchModal, setShowMapSearchModal] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState<Schedule["category"][]>([])
   const [visitMode, setVisitMode] = useState(false)
   const [nonVisitReviewType, setNonVisitReviewType] = useState<Schedule["reviewType"]>("제공형")
@@ -396,18 +404,19 @@ export default function ScheduleModal({
         (updatedFormData.reviewType as Schedule["reviewType"]) || "제공형",
       )
 
-      await Promise.resolve(
-        onSave({
-          ...updatedFormData,
-          status: sanitizedStatus,
-          channel: selectedChannels,
-          guideFiles: finalGuideFiles,
-        } as Schedule),
-      )
-      toast({
-        title: schedule ? "체험단 정보가 수정되었습니다." : "체험단이 등록되었습니다.",
-        duration: 2000,
-      })
+      const savedSuccessfully = await onSave({
+        ...updatedFormData,
+        status: sanitizedStatus,
+        channel: selectedChannels,
+        guideFiles: finalGuideFiles,
+      } as Schedule)
+
+      if (savedSuccessfully) {
+        toast({
+          title: schedule ? "체험단 정보가 수정되었습니다." : "체험단이 등록되었습니다.",
+          duration: 2000,
+        })
+      }
     } finally {
       isSubmittingRef.current = false
       if (isMountedRef.current) {
@@ -482,6 +491,15 @@ export default function ScheduleModal({
     return Number(value.replace(/,/g, ""))
   }
 
+  const formatPhoneInput = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 11)
+    if (digits.length <= 3) return digits
+    if (digits.length <= 7) {
+      return `${digits.slice(0, 3)}-${digits.slice(3)}`
+    }
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+  }
+
   const handleToggleCategory = async (value: Schedule["category"]) => {
     const wasSelected = selectedCategories.includes(value)
     const prev = selectedCategories
@@ -545,10 +563,22 @@ export default function ScheduleModal({
         ...prev,
         reviewType: nextReviewType,
         status: nextStatus,
-        visitReviewChecklist: nextChecklist,
-        ...(enabled ? {} : { visit: "", visitTime: "" }),
-      }
-    })
+      visitReviewChecklist: nextChecklist,
+      ...(enabled ? {} : { visit: "", visitTime: "" }),
+    }
+  })
+}
+
+  const handleMapPlaceSelection = (place: MapPlaceSelection) => {
+    setFormData((prev) => ({
+      ...prev,
+      region: place.region,
+      regionDetail: place.address,
+      phone: place.phone || prev.phone,
+      lat: place.latitude,
+      lng: place.longitude,
+    }))
+    setShowMapSearchModal(false)
   }
 
   const updateVisitChecklist = (partial: Partial<NonNullable<Schedule["visitReviewChecklist"]>>) => {
@@ -657,6 +687,7 @@ export default function ScheduleModal({
 
   const { period, hour, minute } = parseVisitTime(formData.visitTime || "")
   const displayVisitTime = formData.visitTime ? `${period} ${hour}:${minute}` : "시간 선택"
+  const hasLocation = Boolean(formData.region || formData.regionDetail)
 
   const updateVisitTime = (next: { period?: string; hour?: string; minute?: string }) => {
     const finalPeriod = next.period || period
@@ -720,7 +751,7 @@ export default function ScheduleModal({
   )
 
   return (
-    <>
+    <div>
       <div 
         className="fixed left-0 w-full z-40 flex flex-col justify-end"
         style={{
@@ -895,7 +926,7 @@ export default function ScheduleModal({
                     <div className="flex">
                       <label className="mr-2 block text-[15px] font-bold text-neutral-500 mb-2">체험 진행 정보</label>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[13px] text-neutral-400">리뷰 채널과 방문 여부를 설정하세요</span>
+                        <span className="text-[13px] text-neutral-400"><strong className="text-orange-300">리뷰 채널</strong>과 <strong className="text-orange-300">방문 정보</strong> 설정</span>
                       </div>
                     </div>
                     <div className="rounded-2xl border border-neutral-100 bg-neutral-50/70 px-3.5 py-3.5">
@@ -943,165 +974,310 @@ export default function ScheduleModal({
                         </label>
                       </div>
                       {visitMode && (
-                        <div className="pt-2 border-t border-neutral-200/80">
-                           <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[14px] font-bold text-neutral-500">방문 후 추가 리뷰</span>
-                          <span className="text-[13px] text-neutral-400">현장 방문 뒤 남길 추가 리뷰 채널</span>
-                        </div>
-                        <div className="space-y-2.5">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <Checkbox
-                              checked={formData.visitReviewChecklist?.naverReservation || false}
-                              onCheckedChange={(checked) =>
-                                updateVisitChecklist({ naverReservation: checked as boolean })
-                              }
-                            />
-                            <span className="text-[14px] font-semibold text-neutral-500">네이버 예약 리뷰</span>
-                          </label>
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <Checkbox
-                              checked={formData.visitReviewChecklist?.platformAppReview || false}
-                              onCheckedChange={(checked) =>
-                                updateVisitChecklist({ platformAppReview: checked as boolean })
-                              }
-                            />
-                            <span className="text-[14px] font-semibold text-neutral-500">타플랫폼 어플 리뷰</span>
-                          </label>
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <Checkbox
-                              checked={formData.visitReviewChecklist?.googleReview || false}
-                              onCheckedChange={(checked) =>
-                                updateVisitChecklist({ googleReview: checked as boolean })
-                              }
-                            />
-                            <span className="text-[14px] font-semibold text-neutral-500">구글 리뷰</span>
-                          </label>
-                          <div className="space-y-1">
-                            <label className="flex items-center gap-3 cursor-pointer">
-                              <Checkbox
-                                checked={formData.visitReviewChecklist?.other || false}
-                                onCheckedChange={(checked) =>
-                                  updateVisitChecklist({
-                                    other: checked as boolean,
-                                    otherText: checked ? formData.visitReviewChecklist?.otherText || "" : "",
-                                  })
-                                }
-                              />
-                              <span className="text-[14px] font-semibold text-neutral-500">기타</span>
-                            </label>
-                            {formData.visitReviewChecklist?.other && (
-                              <input
-                                type="text"
-                                value={formData.visitReviewChecklist?.otherText || ""}
-                                onChange={(e) =>
-                                  updateVisitChecklist({
-                                    other: true,
-                                    otherText: e.target.value,
-                                  })
-                                }
-                                className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
-                                placeholder="추가 리뷰를 입력하세요"
-                              />
-                            )}
+                        <div className="space-y-4">
+                          <div className="pt-2 border-t border-neutral-200/80">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-[14px] font-bold text-neutral-500">방문 후 추가 리뷰</span>
+                              <span className="text-[13px] text-neutral-400">현장 방문 뒤 남길 추가 리뷰 채널</span>
+                            </div>
+                            <div className="space-y-2.5">
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <Checkbox
+                                  checked={formData.visitReviewChecklist?.naverReservation || false}
+                                  onCheckedChange={(checked) =>
+                                    updateVisitChecklist({ naverReservation: checked as boolean })
+                                  }
+                                />
+                                <span className="text-[14px] font-semibold text-neutral-500">네이버 예약 리뷰</span>
+                              </label>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <Checkbox
+                                  checked={formData.visitReviewChecklist?.platformAppReview || false}
+                                  onCheckedChange={(checked) =>
+                                    updateVisitChecklist({ platformAppReview: checked as boolean })
+                                  }
+                                />
+                                <span className="text-[14px] font-semibold text-neutral-500">타플랫폼 어플 리뷰</span>
+                              </label>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <Checkbox
+                                  checked={formData.visitReviewChecklist?.googleReview || false}
+                                  onCheckedChange={(checked) =>
+                                    updateVisitChecklist({ googleReview: checked as boolean })
+                                  }
+                                />
+                                <span className="text-[14px] font-semibold text-neutral-500">구글 리뷰</span>
+                              </label>
+                              <div className="space-y-1">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                  <Checkbox
+                                    checked={formData.visitReviewChecklist?.other || false}
+                                    onCheckedChange={(checked) =>
+                                      updateVisitChecklist({
+                                        other: checked as boolean,
+                                        otherText: checked ? formData.visitReviewChecklist?.otherText || "" : "",
+                                      })
+                                    }
+                                  />
+                                  <span className="text-[14px] font-semibold text-neutral-500">기타</span>
+                                </label>
+                                {formData.visitReviewChecklist?.other && (
+                                  <input
+                                    type="text"
+                                    value={formData.visitReviewChecklist?.otherText || ""}
+                                    onChange={(e) =>
+                                      updateVisitChecklist({
+                                        other: true,
+                                        otherText: e.target.value,
+                                      })
+                                    }
+                                    className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
+                                    placeholder="추가 리뷰를 입력하세요"
+                                  />
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        </div>
+                         </div>
                       )}
 
-                             {visitMode && (
-                        <div className="flex gap-2.5 flex-wrap mt-4">
-                          <div className="flex-1 min-w-[180px]">
-                            <label className="block text-[15px] font-bold text-neutral-500 mb-2">방문일</label>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[16px] text-left cursor-pointer">
-                                  {formData.visit ? format(new Date(formData.visit), "PPP", { locale: ko }) : "날짜 선택"}
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={formData.visit ? new Date(formData.visit) : undefined}
-                                  onSelect={(date) =>
-                                    setFormData({
-                                      ...formData,
-                                      visit: date ? format(date, "yyyy-MM-dd") : "",
-                                    })
-                                  }
-                                  locale={ko}
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                          <div className="flex-1 min-w-[180px]">
-                            <label className="block text-[15px] font-bold text-neutral-500 mb-2">방문시간</label>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
-                                  {displayVisitTime}
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[280px] p-3" align="start">
-                                <div className="grid grid-cols-3 gap-2">
+                      {visitMode && (
+                        <>
+                          <div className="flex gap-2.5 flex-wrap mt-4">
+                            <div className="flex-1 min-w-[180px]">
+                              <label className="block text-[15px] font-bold text-neutral-500 mb-2">방문일</label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[16px] text-left cursor-pointer">
+                                    {formData.visit ? format(new Date(formData.visit), "PPP", { locale: ko }) : "날짜 선택"}
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={formData.visit ? new Date(formData.visit) : undefined}
+                                    onSelect={(date) =>
+                                      setFormData({
+                                        ...formData,
+                                        visit: date ? format(date, "yyyy-MM-dd") : "",
+                                      })
+                                    }
+                                    locale={ko}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                            <div className="flex-1 min-w-[180px]">
+                              <label className="block text-[15px] font-bold text-neutral-500 mb-2">방문시간</label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="w-full h-8 px-3 bg-[#F7F7F8] border-none rounded-xl text-[15px] text-left cursor-pointer">
+                                    {displayVisitTime}
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[280px] p-3" align="start">
+                                  <div className="grid grid-cols-3 gap-2">
+                                      <div className="space-y-1">
+                                      <span className="text-xs font-semibold text-neutral-500">오전/오후</span>
+                                      <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
+                                        <div className="p-1 space-y-1">
+                                          {timeOptions.periods.map((p) => (
+                                            <button
+                                              key={p}
+                                              className={`w-full rounded-md px-3 py-2 text-sm font-semibold text-left cursor-pointer transition-colors ${
+                                                p === period ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
+                                              }`}
+                                              onClick={() => updateVisitTime({ period: p })}
+                                            >
+                                              {p}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </ScrollArea>
+                                    </div>
                                     <div className="space-y-1">
-                                    <span className="text-xs font-semibold text-neutral-500">오전/오후</span>
-                                    <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
-                                      <div className="p-1 space-y-1">
-                                        {timeOptions.periods.map((p) => (
-                                          <button
-                                            key={p}
-                                            className={`w-full rounded-md px-3 py-2 text-sm font-semibold text-left cursor-pointer transition-colors ${
-                                              p === period ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
-                                            }`}
-                                            onClick={() => updateVisitTime({ period: p })}
-                                          >
-                                            {p}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </ScrollArea>
+                                      <span className="text-xs font-semibold text-neutral-500">시</span>
+                                      <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
+                                        <div className="p-1 grid grid-cols-2 gap-1">
+                                          {timeOptions.hours.map((h) => (
+                                            <button
+                                              key={h}
+                                              className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
+                                                h === hour ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
+                                              }`}
+                                              onClick={() => updateVisitTime({ hour: h })}
+                                            >
+                                              {h}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </ScrollArea>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <span className="text-xs font-semibold text-neutral-500">분</span>
+                                      <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
+                                        <div className="p-1 grid grid-cols-2 gap-1">
+                                          {timeOptions.minutes.map((m) => (
+                                            <button
+                                              key={m}
+                                              className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
+                                                m === minute ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
+                                              }`}
+                                              onClick={() => updateVisitTime({ minute: m })}
+                                            >
+                                              {m}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </ScrollArea>
+                                    </div>
                                   </div>
-                                  <div className="space-y-1">
-                                    <span className="text-xs font-semibold text-neutral-500">시</span>
-                                    <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
-                                      <div className="p-1 grid grid-cols-2 gap-1">
-                                        {timeOptions.hours.map((h) => (
-                                          <button
-                                            key={h}
-                                            className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
-                                              h === hour ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
-                                            }`}
-                                            onClick={() => updateVisitTime({ hour: h })}
-                                          >
-                                            {h}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </ScrollArea>
+                                </PopoverContent>
+                              </Popover>
+                          </div>
+                          </div>
+                          <div className="mt-4">
+                            {hasLocation ? (
+                              <>
+                                <div className="space-y-3 mt-2">
+                                  <div>
+                                    <div className="flex items-center justify-between">
+                                      <label className="block text-[15px] font-bold text-neutral-500 mb-2.5">위치</label>
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowMapSearchModal(true)}
+                                        className="text-[12px] font-semibold text-[#FF5722] mb-2.5"
+                                        >
+                                        지도에서 선택
+                                      </button>
+                                    </div>
+                                    <div className="relative">
+                                      <input
+                                        type="text"
+                                        value={formData.region || ""}
+                                        onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                                        placeholder="지도에서 위치를 찾거나 직접 입력하세요"
+                                        className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
+                                      />
+                                      {formData.region && (
+                                        <button
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(formData.region || "")
+                                            toast({
+                                              title: "위치가 복사되었습니다.",
+                                              duration: 2000,
+                                            })
+                                          }}
+                                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                                        >
+                                          <Copy className="w-4 h-4 cursor-pointer" />
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="space-y-1">
-                                    <span className="text-xs font-semibold text-neutral-500">분</span>
-                                    <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
-                                      <div className="p-1 grid grid-cols-2 gap-1">
-                                        {timeOptions.minutes.map((m) => (
-                                          <button
-                                            key={m}
-                                            className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
-                                              m === minute ? "bg-blue-500 text-white" : "hover:bg-neutral-100 text-neutral-800"
-                                            }`}
-                                            onClick={() => updateVisitTime({ minute: m })}
-                                          >
-                                            {m}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </ScrollArea>
+                                  <div>
+                                    <label className="block text-[15px] font-bold text-neutral-500 mb-2.5">위치 상세</label>
+                                    <div className="relative">
+                                      <input
+                                        type="text"
+                                        value={formData.regionDetail || ""}
+                                        onChange={(e) => setFormData({ ...formData, regionDetail: e.target.value })}
+                                        placeholder="예: 4층 스튜디오 / 사무실 앞 벤치"
+                                        className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
+                                      />
+                                      {formData.regionDetail && (
+                                        <button
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(formData.regionDetail || "")
+                                            toast({
+                                              title: "위치 상세가 복사되었습니다.",
+                                              duration: 2000,
+                                            })
+                                          }}
+                                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                                        >
+                                          <Copy className="w-4 h-4 cursor-pointer" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-[15px] font-bold text-neutral-500 mb-2.5">가게 전화번호</label>
+                                    <div className="relative">
+                                      <input
+                                        type="tel"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={formData.phone || ""}
+                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                        placeholder="예: 010-1234-5678"
+                                        className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
+                                      />
+                                      {formData.phone && (
+                                        <button
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(formData.phone || "")
+                                            toast({
+                                              title: "가게 전화번호가 복사되었습니다.",
+                                              duration: 2000,
+                                            })
+                                          }}
+                                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                                        >
+                                          <Copy className="w-4 h-4 cursor-pointer" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-[15px] font-bold text-neutral-500 mb-2.5">사장님 전화번호</label>
+                                    <div className="relative">
+                                      <input
+                                        type="tel"
+                                        inputMode="numeric"
+                                pattern="[0-9]*"
+                                        value={formData.ownerPhone || ""}
+                                        onChange={(e) =>
+                                          setFormData({
+                                            ...formData,
+                                            ownerPhone: formatPhoneInput(e.target.value),
+                                          })
+                                        }
+                                        placeholder="예: 010-9876-5432"
+                                        className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
+                                      />
+                                      {formData.ownerPhone && (
+                                        <button
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(formData.ownerPhone || "")
+                                            toast({
+                                              title: "사장님 전화번호가 복사되었습니다.",
+                                              duration: 2000,
+                                            })
+                                          }}
+                                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                                        >
+                                          <Copy className="w-4 h-4 cursor-pointer" />
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </PopoverContent>
-                            </Popover>
+                              </>
+                            ) : (
+                              <div className="space-y-2 rounded-2xl border border-dashed border-neutral-200 bg-white/80 p-4 text-center shadow-sm">
+                                <p className="text-[13px] font-semibold text-neutral-500">방문 위치를 지정해주세요</p>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowMapSearchModal(true)}
+                                  className="w-full rounded-2xl border border-[#FF5722] bg-gradient-to-r from-[#FF9A3C] to-[#FF5722] px-4 py-3 text-[14px] font-semibold text-white shadow-lg transition hover:-translate-y-0.5 active:translate-y-0.5"
+                                >
+                                  지도에서 방문 위치 선택하기
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        </div>
+                        </>
                       )}
                     </div>
                   </div>
@@ -1121,7 +1297,7 @@ export default function ScheduleModal({
                   <div className="bg-neutral-50 border border-neutral-200 rounded-2xl px-2 py-3 flex gap-2.5 mt-1">
                     <div className="flex-1 text-center">
                       <span className="block text-[13px] text-neutral-500 font-semibold mb-1">📦 제공(물품)</span>
-                      <span className="block text-[12px] text-neutral-400 mb-2">받은 제품/서비스 값</span>
+                      <span className="block text-[12px] text-neutral-400 mb-2">제품/서비스 가격</span>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -1185,8 +1361,8 @@ export default function ScheduleModal({
                        </div>
                 </div>
 
-                 <div>
-                  <div className="space-y-6">
+                <div>
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-[15px] font-bold text-neutral-500 mb-2">메모장</label>
                       <div className="relative">
@@ -1212,10 +1388,45 @@ export default function ScheduleModal({
                           </button>
                         )}
                       </div>
+                    </div>
+                      {!visitMode && (
+                        <div className="space-y-2">
+                          <label className="block text-[15px] font-semibold text-neutral-500 mb-2">
+                            사장님(광고주) 전화번호
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="tel"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={formData.ownerPhone || ""}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  ownerPhone: formatPhoneInput(e.target.value),
+                                })
+                              }
+                              placeholder="예: 010-9876-5432"
+                              className="w-full h-8.5 px-3 py-2 pr-10 bg-[#F7F7F8] border-none rounded-xl text-[16px]"
+                            />
+                            {formData.ownerPhone && (
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(formData.ownerPhone || "")
+                                  toast({
+                                    title: "사장님 전화번호가 복사되었습니다.",
+                                    duration: 2000,
+                                  })
+                                }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                              >
+                                <Copy className="w-4 h-4 cursor-pointer" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                   </div>
-                </div>
-                </div>
-
                 </div>
               </div>
             </div>
@@ -1470,7 +1681,6 @@ export default function ScheduleModal({
             </div>
         </>
       )}
-      </div>
       
       <AlertDialog open={platformToDelete !== null} onOpenChange={(open) => {
         if (!open) {
@@ -1687,6 +1897,13 @@ export default function ScheduleModal({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+      <NaverMapSearchModal
+        isOpen={showMapSearchModal}
+        onClose={() => setShowMapSearchModal(false)}
+        onSelectPlace={handleMapPlaceSelection}
+      />
+    </div>
+    </div>
+    </div>
   )
 }
