@@ -32,6 +32,8 @@ export default function KakaoMapSearchModal({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markerInstance = useRef<any>(null);
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  const listViewportRef = useRef<HTMLDivElement | null>(null);
   
   const [searchKeyword, setSearchKeyword] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -91,6 +93,29 @@ export default function KakaoMapSearchModal({
     setSearchKeyword("");
   }, [isOpen, initMap]);
 
+  useEffect(() => {
+    if (listContainerRef.current) {
+      listViewportRef.current = listContainerRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLDivElement | null;
+    }
+
+    const viewport = listViewportRef.current;
+    if (!viewport || searchResults.length < 3) return;
+
+    viewport.scrollTop = 0;
+    const peekTimeout = setTimeout(() => {
+      viewport.scrollTo({ top: 12, behavior: "smooth" });
+    }, 80);
+
+    const resetTimeout = setTimeout(() => {
+      viewport.scrollTo({ top: 0, behavior: "smooth" });
+    }, 500);
+
+    return () => {
+      clearTimeout(peekTimeout);
+      clearTimeout(resetTimeout);
+    };
+  }, [searchResults.length]);
+
   // 2. 장소 검색 (카카오 로컬 API 활용)
   const fetchPlaces = useCallback(async (query: string) => {
     if (!query.trim()) return;
@@ -145,11 +170,11 @@ export default function KakaoMapSearchModal({
             onChange={(e) => setSearchKeyword(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && fetchPlaces(searchKeyword)}
             placeholder="장소명을 입력하세요 (예: 강남역 서브웨이)"
-            className="flex-9 h-12 px-4 bg-neutral-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 transition-all text-base"
+            className="flex-1 h-12 px-4 bg-neutral-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 transition-all text-base"
           />
           <button
             onClick={() => fetchPlaces(searchKeyword)}
-            className="w-12 h-12 bg-orange-400 rounded-xl flex-2 flex items-center justify-center hover:bg-orange-500 transition-colors active:scale-95 shadow-lg shadow-orange-400/20"
+            className="w-12 h-12 bg-orange-400 rounded-xl flex-1.5 flex items-center justify-center hover:bg-orange-500 transition-colors active:scale-95 shadow-lg shadow-orange-400/20 shrink-0"
           >
             {isLoading ? <Loader2 className="animate-spin text-neutral-800" /> : <Search className="text-neutral-800" />}
           </button>
@@ -158,10 +183,14 @@ export default function KakaoMapSearchModal({
       <div className="flex-1 flex flex-col md:flex-row min-h-0">
         {/* 리스트 영역 */}
         <div
-          className={`${
+          ref={listContainerRef}
+          className={`relative ${
             searchResults.length > 0 ? "h-2/5 md:h-full" : "md:h-full"
-          } md:w-1/3 border-r bg-white flex flex-col min-h-0`}
+          } md:w-1/3 border-r bg-white flex flex-col min-h-0 shadow-lg shadow-black/5`}
         >
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 h-1.5 w-14 rounded-full bg-neutral-200/80" />
+          {/* 스크롤 UI 표시용 shadow */}
+          <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 z-10 bg-gradient-to-b from-white/90 to-transparent" />
           <ScrollArea className="flex-1 min-h-0">
             {searchResults.length === 0 && !isLoading && (
               <div className="flex flex-1 items-center justify-center p-10 text-center text-neutral-400 text-sm">
@@ -182,6 +211,16 @@ export default function KakaoMapSearchModal({
               </div>
             ))}
           </ScrollArea>
+          {searchResults.length > 2 && (
+            <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-white/95 px-3 py-1 text-[11px] font-medium text-neutral-500 shadow-sm animate-pulse">
+              <svg className="w-3 h-3 text-orange-400" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 16l-6-6h12l-6 6z" fill="currentColor" />
+              </svg>
+              <span>스크롤하여 더보기</span>
+            </div>
+          )}
+          {/* 스크롤 UI 표시용 shadow */}
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-4 z-10 bg-gradient-to-t from-white/90 to-transparent" />
         </div>
 
         {/* 지도 영역 */}
@@ -206,7 +245,7 @@ export default function KakaoMapSearchModal({
         <button
           onClick={() => selectedPlace && onSelectPlace(selectedPlace)}
           disabled={!selectedPlace}
-        className="w-full h-14 bg-orange-400 text-neutral-900 font-bold text-base rounded-2xl disabled:bg-neutral-100 disabled:text-neutral-400 hover:bg-orange-500 transition-all active:scale-[0.98] shadow-lg shadow-orange-400/20"
+        className="w-full h-14 bg-orange-400 text-neutral-900 font-bold text-base rounded-2xl disabled:bg-neutral-100 disabled:text-neutral-400 hover:bg-orange-500 transition-all active:scale-[0.98] shadow-lg"
         >
           {selectedPlace ? `${selectedPlace.region} 선택 완료` : "장소를 선택해주세요"}
         </button>
