@@ -176,7 +176,7 @@ export default function KakaoMapSearchModal({
             onClick={() => fetchPlaces(searchKeyword)}
             className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
           >
-            검색
+            {isLoading ? <span className="text-[11px]">검색 중...</span> : "검색"}
           </button>
       </div>
 
