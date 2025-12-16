@@ -216,7 +216,7 @@ export default function KakaoMapSearchModal({
               <svg className="w-3 h-3 text-orange-400" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 16l-6-6h12l-6 6z" fill="currentColor" />
               </svg>
-              <span>스크롤하여 더보기</span>
+              <span className="text-orange-900">스크롤하여 더보기</span>
             </div>
           )}
           {/* 스크롤 UI 표시용 shadow */}
