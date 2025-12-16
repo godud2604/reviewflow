@@ -156,8 +156,8 @@ export default function KakaoMapSearchModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-white overflow-hidden shadow-2xl">
-      <div className="px-6 py-4 border-b flex justify-between items-center bg-white shrink-0">
-        <span className="font-bold text-lg text-neutral-800">장소 검색</span>
+      <div className="px-1 py-4 border-b flex justify-between items-center bg-white shrink-0">
+        <span className="pl-4 font-bold text-lg text-neutral-800">장소 검색</span>
         <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-full transition-colors">
           <X className="w-6 h-6" />
         </button>
@@ -170,13 +170,13 @@ export default function KakaoMapSearchModal({
             onChange={(e) => setSearchKeyword(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && fetchPlaces(searchKeyword)}
             placeholder="장소명을 입력하세요 (예: 강남역 서브웨이)"
-            className="flex-1 h-12 px-4 bg-neutral-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 transition-all text-base"
+            className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
           />
           <button
             onClick={() => fetchPlaces(searchKeyword)}
-            className="w-12 h-12 bg-orange-400 rounded-xl flex-1.5 flex items-center justify-center hover:bg-orange-500 transition-colors active:scale-95 shadow-lg shadow-orange-400/20 shrink-0"
+            className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
           >
-            {isLoading ? <Loader2 className="animate-spin text-neutral-800" /> : <Search className="text-neutral-800" />}
+            검색
           </button>
       </div>
 
@@ -245,7 +245,7 @@ export default function KakaoMapSearchModal({
         <button
           onClick={() => selectedPlace && onSelectPlace(selectedPlace)}
           disabled={!selectedPlace}
-        className="w-full h-14 bg-orange-400 text-neutral-900 font-bold text-base rounded-2xl disabled:bg-neutral-100 disabled:text-neutral-400 hover:bg-orange-500 transition-all active:scale-[0.98] shadow-lg"
+        className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl disabled:bg-neutral-100 disabled:text-neutral-400 hover:bg-orange-500 transition-all active:scale-[0.98] shadow-lg"
         >
           {selectedPlace ? `${selectedPlace.region} 선택 완료` : "장소를 선택해주세요"}
         </button>
