@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/toaster"
 import { PostHogProvider } from "@/components/posthog-provider"
 import "./globals.css"
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "리뷰플로우 | 블로거 체험단 관리 앱",
@@ -73,6 +74,10 @@ export default function RootLayout({
         />
       </head>
       <body className={`font-sans antialiased`}>
+        <Script
+          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY}&libraries=services&autoload=false`}
+          strategy="beforeInteractive"
+        />
         <PostHogProvider>
           {children}
           <Toaster />

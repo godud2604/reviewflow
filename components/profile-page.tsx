@@ -92,7 +92,7 @@ export default function ProfilePage({
   const menuItems = [
     // { id: "portfolio", icon: "📋", label: "포트폴리오 보기", onClick: onShowPortfolio },
     { id: "backup", icon: "📂", label: "활동 내역 다운로드", isPro: true, onClick: handleBackup, disabled: true },
-    { id: "notification", icon: "🔔", label: "알림 설정", isPro: true, disabled: true },
+    { id: "notification", icon: "🔔", label: "알림 설정", isPro: true, onClick: () => router.push("/notifications"), disabled: true },
     { id: "report", icon: "📊", label: "월간 레포트", isPro: true, disabled: true },
     // { id: "feedback", icon: "💬", label: "개발자에게 피드백 주기", onClick: () => setIsFeedbackModalOpen(true) },
     // { id: "support", icon: "📞", label: "고객센터" },

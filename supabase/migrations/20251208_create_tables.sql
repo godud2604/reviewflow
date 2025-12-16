@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS schedules (
   channel TEXT,
   category TEXT,
   region TEXT,
+  region_detail TEXT,
+  phone TEXT,
   visit_date TEXT,
   visit_time TEXT,
   deadline TEXT,
