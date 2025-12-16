@@ -145,11 +145,11 @@ export default function KakaoMapSearchModal({
             onChange={(e) => setSearchKeyword(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && fetchPlaces(searchKeyword)}
             placeholder="장소명을 입력하세요 (예: 강남역 서브웨이)"
-            className="flex-1 h-12 px-4 bg-neutral-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 transition-all text-base"
+            className="flex-9 h-12 px-4 bg-neutral-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 transition-all text-base"
           />
           <button
             onClick={() => fetchPlaces(searchKeyword)}
-            className="w-12 h-12 bg-orange-400 rounded-xl flex items-center justify-center hover:bg-orange-500 transition-colors active:scale-95 shadow-lg shadow-orange-400/20"
+            className="w-12 h-12 bg-orange-400 rounded-xl flex-2 flex items-center justify-center hover:bg-orange-500 transition-colors active:scale-95 shadow-lg shadow-orange-400/20"
           >
             {isLoading ? <Loader2 className="animate-spin text-neutral-800" /> : <Search className="text-neutral-800" />}
           </button>
