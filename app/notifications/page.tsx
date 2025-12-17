@@ -43,6 +43,19 @@ const hasVisitReviewChecklist = (schedule: Schedule) => {
   const textProvided = Boolean(checklist.otherText?.trim())
   return hasFlag || textProvided
 }
+const formatVisitTimeLabel = (value?: string) => {
+  const trimmed = value?.trim()
+  if (!trimmed) return "방문 시간 미지정"
+  const [hourPart, minutePart = "00"] = trimmed.split(":")
+  const hour = Number(hourPart)
+  if (Number.isNaN(hour)) return trimmed
+  const minute = minutePart.padStart(2, "0")
+  const period = hour < 12 ? "오전" : "오후"
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12
+  return `${period} ${displayHour}:${minute}`
+}
+const truncateTitle = (value: string, maxLength = 38) =>
+  value.length > maxLength ? `${value.slice(0, maxLength)}...` : value
 
 export default function NotificationsPage() {
   const { user } = useAuth()
@@ -156,7 +169,7 @@ export default function NotificationsPage() {
               총 <span className="text-[#5c3dff]">{todaysVisits.length + todaysDeadlines.length}건</span>입니다.
             </h1>
 
-            <p className="mt-2 text-sm font-semibold text-[#cbd0de]">
+            <p className="mt-2 text-[12.5px] font-semibold text-[#cbd0de]">
               오늘 마감을 모두 지키면 총{" "}
               <span className="text-[#5c3dff]">{formatCurrency(totalDeadlineNetImpact)}원</span>의 수익을 지킬 수 있어요! 💰
             </p>
@@ -178,30 +191,30 @@ export default function NotificationsPage() {
               📍 오늘 방문 일정 <span className="text-sm font-normal text-[#A1A1AA]">{todaysVisits.length}건</span>
             </h2>
 
-            {todaysVisits.map((s) => {
-              const locationLabel = [s.region, s.regionDetail].filter(Boolean).join(" · ")
-              const mapQuery = encodeURIComponent([s.region, s.regionDetail].filter(Boolean).join(" "))
-              const canCaptureReceipt = hasVisitReviewChecklist(s)
-              const isUploadingThisSchedule = uploadingReceiptId === s.id
-              return (
-                <div key={s.id} className="bg-[#1E2028] rounded-[32px] p-5 border border-[#2D2F39] space-y-5">
+        {todaysVisits.map((s) => {
+          const locationLabel = [s.region, s.regionDetail].filter(Boolean).join(" · ")
+          const mapQuery = encodeURIComponent([s.region, s.regionDetail].filter(Boolean).join(" "))
+          const isUploadingThisSchedule = uploadingReceiptId === s.id
+          const visitTimeLabel = formatVisitTimeLabel(s.visitTime)
+          return (
+            <div key={s.id} className="bg-[#1E2028] rounded-[32px] p-5 border border-[#2D2F39] space-y-5">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-full bg-[#2D2F39] flex items-center justify-center border border-[#3D3F49]">
                       <CheckCircle2 className="w-6 h-6 text-[#5c3dff]" />
                     </div>
-                    <div className="flex-1 min-w-0" onClick={() => handleOpenModal(s.id)}>
+                    <div className="flex-1 min-w-0">
                       <h3 className="mb-0.5 font-bold text-white truncate">{s.title}</h3>
                       <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-[#A1A1AA]">
                         <span className="flex items-center gap-1">
                           <span aria-hidden="true">🕒</span>
-                          <span>{s.visitTime || "17:00"}</span>
+                          <span className="ml-1">{visitTimeLabel}</span>
                         </span>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleOpenModal(s.id)}
-                      className="flex items-center gap-1.5 rounded-2xl border border-[#3D3F49] bg-[#252833] px-3 py-1 text-[11px] font-semibold text-[#D1D1D6] hover:bg-[#2D3140] transition-colors"
+                      className="flex items-center rounded-2xl border border-[#3D3F49] bg-[#252833] px-3 py-1 text-[11px] font-semibold text-[#D1D1D6] hover:bg-[#2D3140] transition-colors"
                     >
                       체험단 상세보기
                     </button>
@@ -220,7 +233,7 @@ export default function NotificationsPage() {
                             className="text-[12px] hover:underline"
                             aria-label="네이버 지도에서 위치 검색"
                           >
-                            📍 네이버 지도
+                            📍
                           </a>
                         </p>
                       )}
@@ -314,9 +327,9 @@ export default function NotificationsPage() {
 
                     {/* 페이백 체크 */}
                     {s.paybackExpected && (
-                      <div className="flex items-center justify-between p-4 bg-[#252833]/50 rounded-2xl border border-[#2D2F39]">
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#252833]/50 rounded-2xl border border-[#2D2F39]">
                         <div className="flex items-center gap-3">
-                          <span className="text-xs font-bold text-[#D1D1D6]">광고주에게 돌려받을 환급금이 있어요</span>
+                          <span className="text-[11px] font-bold text-[#D1D1D6]">광고주에게 돌려받을 환급금이 있어요</span>
                         </div>
                       </div>
                     )}
@@ -338,14 +351,18 @@ export default function NotificationsPage() {
               const ownerPhoneDigits = s.ownerPhone?.replace(/[^0-9+]/g, "")
               const isDelayButtonDisabled = !ownerPhoneDigits
               const netLoss = (s.benefit ?? 0) + (s.income ?? 0) - (s.cost ?? 0)
+              const trimmedTitle = truncateTitle(s.title)
               return (
                 <div key={s.id} className="bg-[#1E2028] rounded-[32px] p-6 border-l-4 border-l-[#ff4d4d] border border-[#2D2F39] space-y-4">
                   <div className="">
-                    <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="flex items-start justify-between gap-3 mb-2">
                       <div className="space-y-1">
                         <span className="text-[13px] font-black text-red-500 tracking-tighter">D-DAY</span>
+                        <h3 className="text-base font-bold text-white leading-snug max-w-[16rem] truncate" title={s.title}>
+                          {trimmedTitle}
+                        </h3>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="mt-1 flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => handleOpenModal(s.id)}
@@ -353,21 +370,12 @@ export default function NotificationsPage() {
                         >
                           체험단 상세보기
                         </button>
-                      <Link
-                        href={`https://www.google.com/search?q=${encodeURIComponent(s.platform ?? "체험단")}`}
-                        target="_blank"
-                      >
-                        <Button size="sm" className="bg-[#5c3dff] hover:bg-[#4a30cc] text-white font-bold rounded-xl text-[11px] px-3 h-6">
-                          {s.platform} 방문하기 
-                        </Button>
-                      </Link>
                       </div>
                     </div>
-                    <h3 className="text-base font-bold text-white leading-snug">{s.title}</h3>
                   </div>
                   <div className="flex items-center gap-2 text-[11px] font-semibold text-red-400 bg-red-500/10 p-2.5 rounded-xl border border-red-500/20">
                     <AlertCircle className="w-3.5 h-3.5" />
-                    미작성 시 총 {formatCurrency(netLoss)}원 상당의 혜택을 놓치게 돼요! 💸
+                    미작성 시 {formatCurrency(netLoss)}원 상당의 혜택을 놓치게 돼요!
                   </div>
 
                   {s.memo?.trim() && (
@@ -378,9 +386,9 @@ export default function NotificationsPage() {
                   )}
 
                   {s.paybackExpected && (
-                    <div className="flex items-center justify-between p-4 bg-[#252833]/50 rounded-2xl border border-[#2D2F39]">
+                    <div className="flex items-center justify-between px-4 py-3 bg-[#252833]/50 rounded-2xl border border-[#2D2F39]">
                       <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-[#D1D1D6]">광고주에게 돌려받을 환급금이 있어요</span>
+                        <span className="text-[11px] font-bold text-[#D1D1D6]">광고주에게 돌려받을 환급금이 있어요</span>
                       </div>
                     </div>
                   )}
@@ -393,7 +401,7 @@ export default function NotificationsPage() {
                     <MessageSquare className="w-3.5 h-3.5" />
                     {ownerPhoneDigits || s.ownerPhone ? (
                       <>
-                        <span className="text-[12px]">일정 연장이 필요한가요? 광고주와 조율하기</span>
+                        <span className="text-[11px]">일정 연장이 필요한가요? 광고주와 조율하기</span>
                         <p className="flex flex-wrap items-center gap-2 text-sm text-[#D1D1D6]">
                           <a
                             href={`tel:${ownerPhoneDigits || s.ownerPhone}`}
@@ -412,7 +420,7 @@ export default function NotificationsPage() {
                         </p>
                       </>
                     ) : (
-                      <span className="text-[12px]">일정 연장이 필요한가요? 늦지 않게 광고주님과 조율해보세요.</span>
+                      <span className="text-[11px]">일정 연장이 필요한가요? 늦지 않게 광고주님과 조율해보세요.</span>
                     )}
                   </button>
                 </div>
