@@ -140,13 +140,6 @@ function ScheduleItem({ schedule, onClick, today }: { schedule: Schedule; onClic
           <span className={`px-1.5 py-0.5 rounded font-semibold text-[11px] ${status.class}`}>{status.text}</span>
           <span className="font-medium text-neutral-600">{dDate}</span>
         </div>
-        {(schedule.region || schedule.regionDetail || schedule.phone) && (
-          <div className="mt-2 flex flex-wrap gap-3 text-[12px] text-neutral-500">
-            {schedule.region && <span className="flex items-center gap-1">📍 {schedule.region}</span>}
-            {schedule.regionDetail && <span className="flex items-center gap-1">📌 {schedule.regionDetail}</span>}
-            {schedule.phone && <span className="flex items-center gap-1">📞 {schedule.phone}</span>}
-          </div>
-        )}
       </div>
     </div>
   )
