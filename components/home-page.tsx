@@ -702,6 +702,14 @@ function ScheduleItem({
         </div>
         <div className="flex mt-2">
           <p className={`text-[10.5px] font-semibold text-neutral-500 rounded-[10px] px-2 py-[2px] w-fit ${status.class}`}>{status.text}</p>
+           {schedule.reviewType === "방문형" && schedule.regionDetail && (
+            <span className="text-[11px] font-semibold text-sky-700 ml-2 bg-sky-50 rounded px-2 py-0.5 border border-sky-100">
+              {(() => {
+                const parts = schedule.regionDetail.split(" ");
+                return parts.slice(0, 2).join(" ");
+              })()}
+            </span>
+          )}
           {platformLabel && (
             <p className="text-[10.5px] font-semibold text-neutral-500 rounded-[10px] border border-neutral-200 bg-white/80 px-2 py-[2px] w-fit ml-2">
               {platformLabel}
@@ -712,6 +720,8 @@ function ScheduleItem({
               📝
             </span>
           )}
+         
+          {/*  */}
         </div>
       </div>
     </div>

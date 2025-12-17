@@ -66,8 +66,14 @@ export default function NotificationsPage() {
     schedules.filter((s) => parseDateValue(s.dead) && diffDaysFrom(parseDateValue(s.dead)!, today) === 0)
   , [schedules, today])
 
-  const totalDeadlineIncome = useMemo(
-    () => todaysDeadlines.reduce((sum, schedule) => sum + (schedule.income ?? 0), 0),
+  const totalDeadlineNetImpact = useMemo(
+    () =>
+      todaysDeadlines.reduce(
+        (sum, schedule) =>
+          sum +
+          ((schedule.benefit ?? 0) + (schedule.income ?? 0) - (schedule.cost ?? 0)),
+        0,
+      ),
     [todaysDeadlines],
   )
 
@@ -152,15 +158,17 @@ export default function NotificationsPage() {
 
             <p className="mt-2 text-sm font-semibold text-[#cbd0de]">
               오늘 마감을 모두 지키면 총{" "}
-              <span className="text-[#5c3dff]">{formatCurrency(totalDeadlineIncome)}원</span>의 수익을 지킬 수 있어요! 💰
+              <span className="text-[#5c3dff]">{formatCurrency(totalDeadlineNetImpact)}원</span>의 수익을 지킬 수 있어요! 💰
             </p>
           </div>
-          <div className="relative bg-[#1E2028] p-3 rounded-2xl border border-[#2D2F39]">
+          {/* TODO: 이거 누르면 알림 시간 설정하도록 */}
+          {/* <div className="relative bg-[#1E2028] p-3 rounded-2xl border border-[#2D2F39]">
             <Bell className="w-5 h-5 text-[#FFD700]" fill="#FFD700" />
             <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center font-bold">
               {todaysDeadlines.length}
             </span>
-          </div>
+          </div> */}
+          {/* 이메일이 아니라, pwa 로 알림 설정하면 되잖아 ?... 나 천재인듯 */}
         </header>
 
         {/* 2. 오늘 방문 일정 섹션 */}
@@ -177,7 +185,7 @@ export default function NotificationsPage() {
               const isUploadingThisSchedule = uploadingReceiptId === s.id
               return (
                 <div key={s.id} className="bg-[#1E2028] rounded-[32px] p-5 border border-[#2D2F39] space-y-5">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-full bg-[#2D2F39] flex items-center justify-center border border-[#3D3F49]">
                       <CheckCircle2 className="w-6 h-6 text-[#5c3dff]" />
                     </div>
@@ -188,12 +196,15 @@ export default function NotificationsPage() {
                           <span aria-hidden="true">🕒</span>
                           <span>{s.visitTime || "17:00"}</span>
                         </span>
-                        <span className="px-3 py-1 rounded-full border border-[#3D3F49] text-[11px] tracking-wide">
-                          체험단 상세보기
-                        </span>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-[#3D3F49]" />
+                    <button
+                      type="button"
+                      onClick={() => handleOpenModal(s.id)}
+                      className="flex items-center gap-1.5 rounded-2xl border border-[#3D3F49] bg-[#252833] px-3 py-1 text-[11px] font-semibold text-[#D1D1D6] hover:bg-[#2D3140] transition-colors"
+                    >
+                      체험단 상세보기
+                    </button>
                   </div>
 
                   {(locationLabel || s.phone || s.ownerPhone) && (
@@ -206,10 +217,10 @@ export default function NotificationsPage() {
                             href={`https://map.naver.com/v5/search/${mapQuery}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[14px] hover:underline"
+                            className="text-[12px] hover:underline"
                             aria-label="네이버 지도에서 위치 검색"
                           >
-                            🗺️
+                            📍 네이버 지도
                           </a>
                         </p>
                       )}
@@ -266,49 +277,50 @@ export default function NotificationsPage() {
                     </div>
                   )}
 
-                  {s.memo?.trim() && (
-                    <div className="bg-[#252833] px-4 py-3 rounded-2xl border border-[#2D2F39]/80 text-sm text-[#D1D1D6]">
-                      <p className="text-xs font-semibold text-[#f8fafc] mb-1">메모</p>
-                      <p className="text-[13px] leading-relaxed">{s.memo}</p>
-                    </div>
-                  )}
-
-                  {/* 기능 액션 그리드 */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <a
-                      href={`https://www.google.com/search?q=날씨+${s.region || '내위치'}`}
-                      target="_blank"
-                      className="flex items-center justify-center gap-2 p-3.5 bg-[#252833] rounded-2xl border border-[#313545] hover:bg-[#2D3140] transition-colors"
-                    >
-                      <CloudRain className="w-4 h-4 text-blue-400" />
-                      <span className="text-[11px] font-bold text-[#D1D1D6]">오늘 우산 챙겨야할까?</span>
-                    </a>
-                    <button
-                      onClick={() => handleReceiptButtonClick(s)}
-                      className={`flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-[#313545] transition-colors bg-[#252833] hover:bg-[#2D3140]`}
-                    >
-                      {isUploadingThisSchedule ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-                          <span className="text-[11px] font-bold text-[#D1D1D6]">업로드 중...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Camera className="w-4 h-4 text-amber-500" />
-                          <span className="text-[11px] font-bold text-[#D1D1D6]">영수증 촬영</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* 페이백 체크 */}
-                  {s.paybackExpected && (
-                    <div className="flex items-center justify-between p-4 bg-[#252833]/50 rounded-2xl border border-[#2D2F39]">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-[#D1D1D6]">광고주에게 돌려받을 환급금이 있어요</span>
+                  <div className="">
+                    {s.memo?.trim() && (
+                      <div className="mb-3.5 bg-[#252833] px-4 py-3 rounded-2xl border border-[#2D2F39]/80 text-sm text-[#D1D1D6]">
+                        <p className="text-xs font-semibold text-[#f8fafc] mb-1">메모</p>
+                        <p className="text-[13px] leading-relaxed">{s.memo}</p>
                       </div>
+                    )}
+
+                    <div className="mb-3.5 grid grid-cols-2 gap-3">
+                      <a
+                        href={`https://www.google.com/search?q=날씨+${s.region || '내위치'}`}
+                        target="_blank"
+                        className="flex items-center justify-center gap-2 py-3.5 bg-[#252833] rounded-2xl border border-[#313545] hover:bg-[#2D3140] transition-colors"
+                      >
+                        <CloudRain className="w-4 h-4 text-blue-400" />
+                        <span className="text-[11px] font-bold text-[#D1D1D6]">오늘 우산 챙겨야할까?</span>
+                      </a>
+                      <button
+                        onClick={() => handleReceiptButtonClick(s)}
+                        className={`flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-[#313545] transition-colors bg-[#252833] hover:bg-[#2D3140]`}
+                      >
+                        {isUploadingThisSchedule ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                            <span className="text-[11px] font-bold text-[#D1D1D6]">업로드 중...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="w-4 h-4 text-amber-500" />
+                            <span className="text-[11px] font-bold text-[#D1D1D6]">영수증 촬영</span>
+                          </>
+                        )}
+                      </button>
                     </div>
-                  )}
+
+                    {/* 페이백 체크 */}
+                    {s.paybackExpected && (
+                      <div className="flex items-center justify-between p-4 bg-[#252833]/50 rounded-2xl border border-[#2D2F39]">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold text-[#D1D1D6]">광고주에게 돌려받을 환급금이 있어요</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
             })}
@@ -325,23 +337,34 @@ export default function NotificationsPage() {
             {todaysDeadlines.map((s) => {
               const ownerPhoneDigits = s.ownerPhone?.replace(/[^0-9+]/g, "")
               const isDelayButtonDisabled = !ownerPhoneDigits
+              const netLoss = (s.benefit ?? 0) + (s.income ?? 0) - (s.cost ?? 0)
               return (
                 <div key={s.id} className="bg-[#1E2028] rounded-[32px] p-6 border-l-4 border-l-[#ff4d4d] border border-[#2D2F39] space-y-4">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <span className="text-[13px] font-black text-red-500 tracking-tighter">D-DAY</span>
-                      <h3 className="text-base font-bold text-white leading-snug">{s.title}</h3>
+                  <div className="">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="space-y-1">
+                        <span className="text-[13px] font-black text-red-500 tracking-tighter">D-DAY</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenModal(s.id)}
+                          className="flex items-center gap-1.5 rounded-2xl border border-[#3D3F49] bg-[#252833] px-3 py-1 text-[11px] font-semibold text-[#D1D1D6] hover:bg-[#2D3140] transition-colors"
+                        >
+                          체험단 상세보기
+                        </button>
+                        <Link href="https://stylec.co.kr" target="_blank">
+                          <Button size="sm" className="bg-[#5c3dff] hover:bg-[#4a30cc] text-white font-bold rounded-xl text-[11px] px-3 h-6">
+                            {s.platform} 방문하기 
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
-                    <Link href="https://stylec.co.kr" target="_blank">
-                      <Button size="sm" className="bg-[#5c3dff] hover:bg-[#4a30cc] text-white font-bold rounded-xl text-[11px] px-3 h-8">
-                        {s.platform} 방문하기 <ExternalLink className="w-3 h-3 ml-0.5" />
-                      </Button>
-                    </Link>
+                    <h3 className="text-base font-bold text-white leading-snug">{s.title}</h3>
                   </div>
-
                   <div className="flex items-center gap-2 text-[11px] font-semibold text-red-400 bg-red-500/10 p-2.5 rounded-xl border border-red-500/20">
                     <AlertCircle className="w-3.5 h-3.5" />
-                    미작성 시 소중한 수익 {formatCurrency(s.income ?? 0)}원이 사라져요! 💸
+                    미작성 시 총 {formatCurrency(netLoss)}원 상당의 혜택을 놓치게 돼요! 💸
                   </div>
 
                   {s.memo?.trim() && (
