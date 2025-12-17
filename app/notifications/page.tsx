@@ -353,11 +353,14 @@ export default function NotificationsPage() {
                         >
                           체험단 상세보기
                         </button>
-                        <Link href="https://stylec.co.kr" target="_blank">
-                          <Button size="sm" className="bg-[#5c3dff] hover:bg-[#4a30cc] text-white font-bold rounded-xl text-[11px] px-3 h-6">
-                            {s.platform} 방문하기 
-                          </Button>
-                        </Link>
+                      <Link
+                        href={`https://www.google.com/search?q=${encodeURIComponent(s.platform ?? "체험단")}`}
+                        target="_blank"
+                      >
+                        <Button size="sm" className="bg-[#5c3dff] hover:bg-[#4a30cc] text-white font-bold rounded-xl text-[11px] px-3 h-6">
+                          {s.platform} 방문하기 
+                        </Button>
+                      </Link>
                       </div>
                     </div>
                     <h3 className="text-base font-bold text-white leading-snug">{s.title}</h3>
