@@ -116,7 +116,7 @@ export default function NotificationsPage() {
       let nextFiles = targetSchedule ? [...targetSchedule.guideFiles, uploadedFile] : [uploadedFile]
       nextFiles = nextFiles.filter((f): f is NonNullable<typeof f> => f !== null)
       await updateSchedule(scheduleId, { guideFiles: nextFiles })
-      toast({ title: "영수증이 저장되었습니다." })
+      toast({ title: "체험단 상세보기 안에 영수증이 저장되었어요." })
     } catch (error) {
       toast({ title: "업로드 실패", variant: "destructive" })
     } finally {
@@ -262,7 +262,7 @@ export default function NotificationsPage() {
                       <a href={`https://www.google.com/search?q=날씨+${s.region || '내위치'}`} target="_blank" className="flex items-center justify-center gap-2 py-3.5 bg-[#252833] rounded-2xl border border-[#313545]"><CloudRain className="w-4 h-4 text-blue-400" /><span className="text-[11px] font-bold text-[#D1D1D6]">오늘의 날씨</span></a>
                       <button onClick={() => handleReceiptButtonClick(s)} className="flex items-center justify-center gap-2 py-3.5 bg-[#252833] rounded-2xl border border-[#313545]">
                         {uploadingReceiptId === s.id ? <Loader2 className="w-4 h-4 animate-spin text-amber-500" /> : <Camera className="w-4 h-4 text-amber-500" />}
-                        <span className="text-[11px] font-bold text-[#D1D1D6]">{uploadingReceiptId === s.id ? "업로드 중..." : "영수증 촬영"}</span>
+                        <span className="text-[11px] font-bold text-[#D1D1D6]">{uploadingReceiptId === s.id ? "업로드 중..." : "영수증 저장하기"}</span>
                       </button>
                     </div>
                     {s.paybackExpected && (
@@ -350,7 +350,7 @@ export default function NotificationsPage() {
           schedule={editingSchedule}
         />
       )}
-      <input ref={receiptFileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleReceiptFileChange} />
+      <input ref={receiptFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleReceiptFileChange} />
     </div>
   )
 }
