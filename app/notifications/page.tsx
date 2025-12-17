@@ -1,585 +1,426 @@
 "use client"
 
+import { useMemo, useRef, useState, type ChangeEvent } from "react"
 import Link from "next/link"
-import { Checkbox } from "@/components/ui/checkbox"
-import { useMemo, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useSchedules } from "@/hooks/use-schedules"
-import { useTodos } from "@/hooks/use-todos"
 import type { Schedule } from "@/types"
+import { 
+  Bell, 
+  CheckCircle2, 
+  ChevronRight, 
+  ExternalLink, 
+  Camera, 
+  MessageSquare, 
+  CloudRain, 
+  AlertCircle,
+  Loader2,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
 import ScheduleModal from "@/components/schedule-modal"
+import { useToast } from "@/hooks/use-toast"
+import { uploadGuideFile } from "@/lib/storage"
 
-type DailyPreview = {
-  key: string
-  label: string
-  events: Array<{
-    key: string
-    type: "visit" | "deadline"
-    title: string
-    badge?: string
-    timeLabel: string
-  }>
-}
-
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"]
-
+// --- Utils ---
 const getKstNow = () => {
   const now = new Date()
   const utc = now.getTime() + now.getTimezoneOffset() * 60000
   return new Date(utc + 9 * 60 * 60000)
 }
-
-const startOfDay = (date: Date) =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate())
-
-const parseDateValue = (value?: string) => {
-  if (!value) return null
-  return new Date(`${value}T00:00:00+09:00`)
+const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
+const parseDateValue = (value?: string) => value ? new Date(`${value}T00:00:00+09:00`) : null
+const diffDaysFrom = (target: Date, base: Date) => Math.floor((target.getTime() - base.getTime()) / (1000 * 60 * 60 * 24))
+const formatCurrency = (value: number) => new Intl.NumberFormat("ko-KR").format(value)
+const hasVisitReviewChecklist = (schedule: Schedule) => {
+  const checklist = schedule.visitReviewChecklist
+  if (!checklist) return false
+  const hasFlag =
+    checklist.naverReservation ||
+    checklist.platformAppReview ||
+    checklist.cafeReview ||
+    checklist.googleReview ||
+    checklist.other
+  const textProvided = Boolean(checklist.otherText?.trim())
+  return hasFlag || textProvided
 }
 
-const diffDaysFrom = (target: Date, base: Date) => {
-  const diff = target.getTime() - base.getTime()
-  return Math.floor(diff / (1000 * 60 * 60 * 24))
-}
-
-const formatHeaderDate = (date: Date) => {
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  const weekday = WEEKDAYS[date.getDay()]
-  return `${year}년 ${month}월 ${day}일 ${weekday}요일`
-}
-
-const formatWeekLabel = (index: number, date: Date) => {
-  const shortDate = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(
-    date.getDate(),
-  ).padStart(2, "0")}`
-  if (index === 0) return `오늘 (${shortDate} ${WEEKDAYS[date.getDay()]})`
-  if (index === 1) return `내일 (${shortDate} ${WEEKDAYS[date.getDay()]})`
-  return `${shortDate} (${WEEKDAYS[date.getDay()]})`
-}
-
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("ko-KR").format(value)
-}
-
-const buildBadgeLabel = (schedule: Schedule) => {
-  if (schedule.platform) return schedule.platform
-  if (schedule.channel?.length) return schedule.channel[0]
-  if (schedule.reviewType) return schedule.reviewType
-  return "체험단"
-}
-
-const buildTaskLabel = (schedule: Schedule, timeLabel?: string) => {
-  const timeText = timeLabel ?? schedule.visitTime ?? "시간 미정"
-  return `[${timeText}] ${schedule.title}`
-}
-
-const formatDdayLabel = (schedule: Schedule, today: Date) => {
-  const deadline = parseDateValue(schedule.dead)
-  if (!deadline) return schedule.title
-  const diff = diffDaysFrom(deadline, today)
-  if (diff === 0) return `[D-Day] ${schedule.title}`
-  if (diff > 0) return `D-${diff} ${schedule.title}`
-  return `마감 초과 ${schedule.title}`
-}
-
-const formatRangeLabel = (from: Date, to: Date) => {
-  const f = `${from.getMonth() + 1}.${from.getDate()}`
-  const t = `${to.getMonth() + 1}.${to.getDate()}`
-  return `${f} ~ ${t}`
-}
-
-const PHONE_REGEX = /0\d{1,2}[-‐—–]?\d{3,4}[-‐—–]?\d{4}/
-
-const extractPhoneNumber = (memo?: string) => {
-  if (!memo) return null
-  const match = memo.match(PHONE_REGEX)
-  return match ? match[0] : null
-}
-
-const extractLocationFromMemo = (memo?: string) => {
-  if (!memo) return null
-  const lines = memo
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-
-  const keywordLine = lines.find((line) => /(주소|위치|장소)/.test(line))
-  if (keywordLine) {
-    const cleaned = keywordLine.replace(/.*(?:주소|위치|장소)\s*[:：]?\s*/, "").trim()
-    return cleaned.length > 0 ? cleaned : keywordLine
-  }
-
-  return lines[0] ?? null
-}
-
-const buildWeatherSearchUrl = (schedule: Schedule) => {
-  const location = schedule.region || extractLocationFromMemo(schedule.memo) || schedule.title
-  const query = encodeURIComponent(`날씨 ${location}`)
-  return `https://www.google.com/search?q=${query}`
-}
-
-const VISIT_CHECKLIST_KEYS = ["naverReservation", "platformAppReview", "googleReview"] as const
-type VisitChecklistKey = (typeof VISIT_CHECKLIST_KEYS)[number]
-const VISIT_CHECKLIST_LABELS: Record<VisitChecklistKey, string> = {
-  naverReservation: "네이버 예약 리뷰",
-  platformAppReview: "타플랫폼 앱 리뷰",
-  googleReview: "구글 리뷰",
-}
-
-export default function NotificationSettingsPage() {
+export default function NotificationsPage() {
   const { user } = useAuth()
-  const { schedules, loading: schedulesLoading, updateSchedule, deleteSchedule } = useSchedules({ enabled: !!user })
-  const { todos, loading: todosLoading } = useTodos({ enabled: !!user })
-
+  const { schedules, updateSchedule, deleteSchedule } = useSchedules({ enabled: !!user })
+  const { toast } = useToast()
   const today = useMemo(() => startOfDay(getKstNow()), [])
-
-  const userName = useMemo(() => {
-    if (!user) return "체험단러"
-    const metadataName = (user.user_metadata as { full_name?: string } | undefined)?.full_name
-    if (metadataName) return metadataName
-    return user.email ? user.email.split("@")[0] : "체험단러"
-  }, [user])
-
-  const todaysVisits = useMemo(() => {
-    return schedules.filter((schedule) => {
-      const visit = parseDateValue(schedule.visit)
-      return visit && diffDaysFrom(visit, today) === 0
-    })
-  }, [schedules, today])
-
-  const todaysDeadlines = useMemo(() => {
-    return schedules.filter((schedule) => {
-      const deadline = parseDateValue(schedule.dead)
-      return deadline && diffDaysFrom(deadline, today) === 0
-    })
-  }, [schedules, today])
-
-  const paybackSchedules = useMemo(() => schedules.filter((schedule) => !!schedule.paybackExpected), [schedules])
-
+  const receiptFileInputRef = useRef<HTMLInputElement | null>(null)
+  const receiptTargetRef = useRef<number | null>(null)
+  const [uploadingReceiptId, setUploadingReceiptId] = useState<number | null>(null)
+  
   const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null)
   const [isModalVisible, setIsModalVisible] = useState(false)
-  const [memoVisibility, setMemoVisibility] = useState<Record<number, boolean>>({})
+  const isReceiptUploading = uploadingReceiptId !== null
 
-  const editingSchedule = useMemo(
-    () => schedules.find((schedule) => schedule.id === editingScheduleId),
-    [schedules, editingScheduleId],
+  // --- 데이터 필터링 ---
+  const todaysVisits = useMemo(() => 
+    schedules.filter((s) => parseDateValue(s.visit) && diffDaysFrom(parseDateValue(s.visit)!, today) === 0)
+  , [schedules, today])
+
+  const todaysDeadlines = useMemo(() => 
+    schedules.filter((s) => parseDateValue(s.dead) && diffDaysFrom(parseDateValue(s.dead)!, today) === 0)
+  , [schedules, today])
+
+  const totalDeadlineIncome = useMemo(
+    () => todaysDeadlines.reduce((sum, schedule) => sum + (schedule.income ?? 0), 0),
+    [todaysDeadlines],
   )
-  const [updatingPayback, setUpdatingPayback] = useState<Record<number, boolean>>({})
 
-  const ddayGroups = useMemo(() => {
-    return [1, 2, 3].map((offset) => {
-      const groupSchedules = schedules.filter((schedule) => {
-        const deadline = parseDateValue(schedule.dead)
-        return deadline && diffDaysFrom(deadline, today) === offset
-      })
-      const loss = groupSchedules.reduce((total, schedule) => total + (schedule.income ?? 0), 0)
-      return { offset, schedules: groupSchedules, loss }
-    })
-  }, [schedules, today])
+  const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "체험단러"
 
-  const handleOpenScheduleModal = (scheduleId: number) => {
-    setEditingScheduleId(scheduleId)
+  // --- 핸들러 ---
+  const handleOpenModal = (id: number) => {
+    setEditingScheduleId(id)
     setIsModalVisible(true)
   }
 
-  const handleCloseScheduleModal = () => {
-    setEditingScheduleId(null)
-    setIsModalVisible(false)
+  const sendDelaySms = (schedule: Schedule) => {
+    console.log('ownerPhone', schedule.ownerPhone)
+    const body = `안녕하세요 광고주님, '${schedule.title}' 진행중인 ${userName}입니다. 부득이하게 리뷰 마감 기한 연장이 가능할지 여쭤봅니다.`
+    window.location.href = `sms:${schedule.ownerPhone}?body=${encodeURIComponent(body)}`
   }
 
-  const handleSaveScheduleFromModal = async (schedule: Schedule) => {
-    const success = await updateSchedule(schedule.id, schedule)
-    if (success) {
-      handleCloseScheduleModal()
+  const handleReceiptButtonClick = (schedule: Schedule) => {
+    if (isReceiptUploading || !hasVisitReviewChecklist(schedule)) return
+    receiptTargetRef.current = schedule.id
+    receiptFileInputRef.current?.click()
+  }
+
+  const handleReceiptFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    const scheduleId = receiptTargetRef.current
+    if (!file || !scheduleId || !user) {
+      receiptTargetRef.current = null
+      event.target.value = ""
+      return
     }
-    return success
-  }
 
-  const handleDeleteScheduleFromModal = async (id: number) => {
-    await deleteSchedule(id)
-    handleCloseScheduleModal()
-  }
-
-  const handleTogglePaybackConfirmation = async (schedule: Schedule) => {
-    if (!schedule.paybackExpected) return
-    setUpdatingPayback((prev) => ({ ...prev, [schedule.id]: true }))
-    await updateSchedule(schedule.id, { paybackConfirmed: !schedule.paybackConfirmed })
-    setUpdatingPayback((prev) => ({ ...prev, [schedule.id]: false }))
-  }
-
-  const handleToggleMemoVisibility = (scheduleId: number) => {
-    setMemoVisibility((prev) => ({ ...prev, [scheduleId]: !prev[scheduleId] }))
-  }
-
-  const weeklyPreview = useMemo<DailyPreview[]>(() => {
-    return Array.from({ length: 7 }).map((_, index) => {
-      const date = new Date(today)
-      date.setDate(today.getDate() + index)
-      const label = `${formatWeekLabel(index, date)}`
-
-      const events: DailyPreview[0]["events"] = []
-      schedules.forEach((schedule) => {
-        const visitDate = parseDateValue(schedule.visit)
-        if (visitDate && diffDaysFrom(visitDate, today) === index) {
-          events.push({
-            key: `visit-${schedule.id}-${index}`,
-            type: "visit",
-            title: buildTaskLabel(schedule, schedule.visitTime),
-            badge: buildBadgeLabel(schedule),
-            timeLabel: schedule.visitTime || "시간 미정",
-          })
-        }
-        const deadline = parseDateValue(schedule.dead)
-        if (deadline && diffDaysFrom(deadline, today) === index) {
-          events.push({
-            key: `deadline-${schedule.id}-${index}`,
-            type: "deadline",
-            title: schedule.title,
-            badge: buildBadgeLabel(schedule),
-            timeLabel: index === 0 ? "D-Day" : `D-${index}`,
-          })
-        }
+    setUploadingReceiptId(scheduleId)
+    try {
+      const uploadedFile = await uploadGuideFile(user.id, scheduleId, file)
+      const targetSchedule = schedules.find((s) => s.id === scheduleId)
+      let nextFiles = targetSchedule ? [...targetSchedule.guideFiles, uploadedFile] : [uploadedFile]
+      // Filter out nulls to satisfy GuideFile[] type
+      nextFiles = nextFiles.filter((f): f is NonNullable<typeof f> => f !== null)
+      const updateSuccess = await updateSchedule(scheduleId, { guideFiles: nextFiles })
+      if (updateSuccess) {
+        toast({
+          title: "영수증이 저장되었습니다.",
+          duration: 2500,
+        })
+      } else {
+        toast({
+          title: "영수증 정보를 업데이트하지 못했습니다.",
+          variant: "destructive",
+          duration: 3000,
+        })
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "알 수 없는 오류"
+      toast({
+        title: "영수증 업로드 실패",
+        description: message,
+        variant: "destructive",
+        duration: 3000,
       })
+    } finally {
+      setUploadingReceiptId(null)
+      receiptTargetRef.current = null
+      event.target.value = ""
+    }
+  }
 
-      // 마감 먼저 보이게 정렬(손해 방지 포커스)
-      events.sort((a, b) => (a.type === b.type ? 0 : a.type === "deadline" ? -1 : 1))
-
-      return { key: `${label}-${index}`, label, events }
-    })
-  }, [schedules, today])
-
-  const isLoading = schedulesLoading || todosLoading
-  const hasTodayHighlights =
-    todaysVisits.length > 0 ||
-    todaysDeadlines.length > 0 ||
-    ddayGroups.some((group) => group.schedules.length > 0) ||
-    paybackSchedules.length > 0
-
-  const weekStart = useMemo(() => {
-    const d = new Date(today)
-    return d
-  }, [today])
-
-  const weekEnd = useMemo(() => {
-    const d = new Date(today)
-    d.setDate(today.getDate() + 6)
-    return d
-  }, [today])
-
-  const todayIso = useMemo(() => {
-    const y = today.getFullYear()
-    const m = String(today.getMonth() + 1).padStart(2, "0")
-    const d = String(today.getDate()).padStart(2, "0")
-    return `${y}-${m}-${d}`
-  }, [today])
+  const editingSchedule = schedules.find(s => s.id === editingScheduleId)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f5f2ff] via-[#fef3ff] to-[#fdf2ff] p-4">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4">
-        {/* 헤더 */}
-        <section className="rounded-[32px] bg-white/80 p-5 backdrop-blur-lg">
-          <div className="text-sm font-semibold text-[#5c3dff]">
-            좋은 아침입니다, {userName} ☀️
-          </div>
-          <p className="mt-2 text-2xl font-bold text-[#1b1464]">모닝 브리핑</p>
-          <p className="text-xs text-neutral-500">{formatHeaderDate(today)}</p>
-        </section>
+    <div className="min-h-screen bg-[#0F1117] text-white p-6 pb-32">
+      <div className="max-w-md mx-auto space-y-8">
+        
+        {/* 1. 헤더: 오늘 챙겨야 할 총 건수 알림 */}
+        <header className="flex justify-between items-start pt-4 mb-10">
+          <div>
+            <p className="text-[#A1A1AA] text-sm font-medium mb-1 uppercase tracking-wider">Daily Brief</p>
+            <h1 className="text-2xl font-bold leading-tight">
+              오늘 챙겨야 할 체험단은<br/>
+              총 <span className="text-[#5c3dff]">{todaysVisits.length + todaysDeadlines.length}건</span>입니다.
+            </h1>
 
-        {/* 오늘의 할 일 */}
-        <section className="rounded-[32px] bg-white/90 p-5 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-[#0f172a]">오늘의 할 일</h2>
-            </div>
-            <span className="text-[11px] font-semibold uppercase text-neutral-400">
-              {today.toLocaleDateString("ko-KR")}
+            <p className="mt-2 text-sm font-semibold text-[#cbd0de]">
+              오늘 마감을 모두 지키면 총{" "}
+              <span className="text-[#5c3dff]">{formatCurrency(totalDeadlineIncome)}원</span>의 수익을 지킬 수 있어요! 💰
+            </p>
+          </div>
+          <div className="relative bg-[#1E2028] p-3 rounded-2xl border border-[#2D2F39]">
+            <Bell className="w-5 h-5 text-[#FFD700]" fill="#FFD700" />
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center font-bold">
+              {todaysDeadlines.length}
             </span>
           </div>
+        </header>
 
-          {isLoading ? (
-            <div className="mt-4 rounded-3xl border border-dashed border-neutral-200 bg-neutral-50/60 p-4 text-sm text-neutral-400 text-center">
-              오늘의 일정을 불러오는 중이에요…
-            </div>
-          ) : (
-            <div className="mt-4 space-y-4">
-              {/* 오늘 방문 */}
-              <div className="rounded-3xl border border-neutral-100 bg-[#fdfbff] p-4 shadow-sm">
-                <h3 className="text-base font-semibold text-neutral-900">
-                  📍 오늘 방문 일정
-                </h3>
+        {/* 2. 오늘 방문 일정 섹션 */}
+        {todaysVisits.length > 0 && (
+          <section className="space-y-4">
+            <h2 className="text-lg font-bold px-2 flex items-center gap-2">
+              📍 오늘 방문 일정 <span className="text-sm font-normal text-[#A1A1AA]">{todaysVisits.length}건</span>
+            </h2>
 
-                <div className="mt-3 space-y-3">
-                  {todaysVisits.length === 0 ? (
-                    <p className="text-sm text-neutral-500">
-                      오늘 예정된 방문 일정이 없습니다.
-                    </p>
-                  ) : (
-                    todaysVisits.map((schedule) => {
-                      const checklist = schedule.visitReviewChecklist
-                      const checkedChecklistItems = VISIT_CHECKLIST_KEYS.reduce<
-                        Array<{ key: string; label: string }>
-                      >((list, key) => {
-                        if (checklist?.[key]) {
-                          list.push({ key, label: VISIT_CHECKLIST_LABELS[key] })
-                        }
-                        return list
-                      }, [])
-
-                      if (checklist?.other && checklist.otherText?.trim()) {
-                        checkedChecklistItems.push({
-                          key: "other",
-                          label: `기타: ${checklist.otherText} 리뷰`,
-                        })
-                      }
-
-                      const platformLabel = schedule.platform.trim()
-                      const weatherUrl = buildWeatherSearchUrl(schedule)
-                      const writingChannels = (schedule.channel || []).filter(
-                        (channel) => channel.trim().length > 0,
-                      )
-
-                      return (
-                        <div
-                          key={`visit-${schedule.id}`}
-                          className="rounded-2xl border border-neutral-100 bg-white p-4 shadow-sm space-y-4"
-                        >
-                          {/* 🔥 이벤트 헤더 */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-neutral-900 break-words">
-                                {schedule.title}
-                              </p>
-                              <p className="mt-1 text-xs text-neutral-500">
-                                🕔 {schedule.visitTime
-                                  ? (() => {
-                                      const [h, m] = schedule.visitTime.split(":").map(Number)
-                                      const period = h < 12 ? "오전" : "오후"
-                                      const hour12 = h % 12 === 0 ? 12 : h % 12
-                                      return `${period} ${hour12}시${m ? ` ${m}분` : ""}`
-                                    })()
-                                  : "시간 미정"}
-                              </p>
-                            </div>
-
-                            {/* 보조 액션 */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleOpenScheduleModal(schedule.id)
-                              }}
-                              className="text-[11px] font-semibold text-[#5c3dff] hover:underline"
-                            >
-                              상세보기 →
-                            </button>
-                          </div>
-
-                          {/* 🧩 미션 / 플랫폼 */}
-                          {(platformLabel || checkedChecklistItems.length > 0) && (
-                            <div className="flex flex-wrap gap-2 text-[11px] text-neutral-600">
-                              {platformLabel && (
-                                <span className="rounded-full border border-[#d7c8ff] bg-[#f5f0ff] px-3 py-1 text-[#5c3dff]">
-                                  {platformLabel}
-                                </span>
-                              )}
-                              {writingChannels.map((channel, index) => (
-                                <span
-                                  key={`${schedule.id}-channel-${channel}-${index}`}
-                                  className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1"
-                                >
-                                  {channel}
-                                </span>
-                              ))}
-                              {checkedChecklistItems.map((item) => (
-                                <span
-                                  key={`${schedule.id}-${item.key}`}
-                                  className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1"
-                                >
-                                  {item.label}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* ⚠️ 페이백 */}
-                          {schedule.paybackExpected && (
-                            <div className="flex items-start gap-2 rounded-xl bg-orange-50 px-3 py-2 text-[12px] text-orange-700">
-                              <Checkbox
-                                checked={!!schedule.paybackConfirmed}
-                                disabled={!!updatingPayback[schedule.id]}
-                                onCheckedChange={() => handleTogglePaybackConfirmation(schedule)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="mt-0.5 h-4 w-4"
-                              />
-                              <span>
-                                광고주에게 받을 금액 있음
-                                <span className="block text-[11px] text-orange-500">
-                                  {schedule.paybackConfirmed ? "이미 받았어요" : "아직 받지 않았어요"}
-                                </span>
-                              </span>
-                            </div>
-                          )}
-
-                          {/* 🔗 하단 액션 */}
-                          <div className="flex items-center gap-4 text-[11px]">
-                            {schedule.memo?.trim() && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleToggleMemoVisibility(schedule.id)
-                                }}
-                                className="font-semibold text-[#5c3dff] hover:underline"
-                              >
-                                📝 {memoVisibility[schedule.id] ? "메모 접기" : "메모 보기"}
-                              </button>
-                            )}
-
-                            <a
-                              href={weatherUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="font-semibold text-neutral-500 hover:underline"
-                            >
-                              ☀️ 오늘 방문, 우산 필요할까?
-                            </a>
-                          </div>
-
-                          {memoVisibility[schedule.id] && schedule.memo && (
-                            <p className="text-xs text-neutral-500 whitespace-pre-line rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-                              {schedule.memo}
-                            </p>
-                          )}
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* 오늘 마감 */}
-              <div className="rounded-3xl border border-neutral-100 bg-[#fdfbff] p-4 shadow-sm">
-                <h3 className="text-base font-semibold text-neutral-900">
-                  ⏰ 오늘 마감 포스팅
-                </h3>
-
-                <div className="mt-3 space-y-3">
-                  {todaysDeadlines.length === 0 ? (
-                    <p className="text-sm text-neutral-500">
-                      오늘 마감 일정은 없어요.
-                    </p>
-                  ) : (
-                    todaysDeadlines.map((schedule) => (
-                      <div
-                        key={`deadline-${schedule.id}`}
-                        className="rounded-2xl border border-neutral-100 bg-white p-3"
-                      >
-                        <p className="text-sm font-semibold text-neutral-900">
-                          {formatDdayLabel(schedule, today)}
-                        </p>
-                        <p className="text-xs text-neutral-500">
-                          {buildBadgeLabel(schedule)}
-                        </p>
-                        <p className="text-xs text-[#b42318]">
-                          미작성 시 예상 손실 {formatCurrency(schedule.income ?? 0)}원
-                        </p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-
-          {!hasTodayHighlights && !isLoading && (
-            <div className="mt-4 rounded-3xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500 text-center">
-              오늘은 예정된 일정이 없어요. 여유로운 하루 보내세요!
-            </div>
-          )}
-        </section>
-
-        {/* 이번 주 미리보기 */}
-        <section className="rounded-[32px] bg-white/90 p-5 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-[#0f172a]">이번 주 미리보기</h2>
-              <p className="text-[11px] text-neutral-400">
-                이번 주 주요 일정 ({formatRangeLabel(weekStart, weekEnd)})
-              </p>
-            </div>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-neutral-400">
-              타임라인
-            </span>
-          </div>
-
-          <div className="mt-5 space-y-4">
-            {weeklyPreview.map((day) => (
-              <div key={day.key} className="rounded-3xl border border-neutral-100 bg-[#fdfbff] p-4">
-                <p className="text-sm font-semibold text-neutral-600">{day.label}</p>
-                {day.events.length === 0 ? (
-                  <p className="mt-2 text-sm text-neutral-400">일정 없음 (쉬는 날 푹 쉬세요! 🍵)</p>
-                ) : (
-                  <div className="mt-2 space-y-2 text-sm">
-                    {day.events.map((event) => (
-                      <div
-                        key={event.key}
-                        className="flex items-center gap-2 rounded-2xl border border-neutral-100 bg-white p-3"
-                      >
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs ${
-                            event.type === "deadline"
-                              ? "bg-[#fff2ef] text-[#b42318]"
-                              : "bg-neutral-50 text-neutral-500"
-                          }`}
-                        >
-                          {event.type === "visit" ? "[방문]" : "[마감]"}
+            {todaysVisits.map((s) => {
+              const locationLabel = [s.region, s.regionDetail].filter(Boolean).join(" · ")
+              const mapQuery = encodeURIComponent([s.region, s.regionDetail].filter(Boolean).join(" "))
+              const canCaptureReceipt = hasVisitReviewChecklist(s)
+              const isUploadingThisSchedule = uploadingReceiptId === s.id
+              return (
+                <div key={s.id} className="bg-[#1E2028] rounded-[32px] p-5 border border-[#2D2F39] space-y-5">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-[#2D2F39] flex items-center justify-center border border-[#3D3F49]">
+                      <CheckCircle2 className="w-6 h-6 text-[#5c3dff]" />
+                    </div>
+                    <div className="flex-1 min-w-0" onClick={() => handleOpenModal(s.id)}>
+                      <h3 className="mb-0.5 font-bold text-white truncate">{s.title}</h3>
+                      <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-[#A1A1AA]">
+                        <span className="flex items-center gap-1">
+                          <span aria-hidden="true">🕒</span>
+                          <span>{s.visitTime || "17:00"}</span>
                         </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-neutral-900 break-words">
-                            {event.title}
-                          </p>
-                          <p className="text-xs text-neutral-500">
-                            {event.badge ? `[${event.badge}] · ` : ""}
-                            {event.timeLabel}
-                          </p>
-                        </div>
+                        <span className="px-3 py-1 rounded-full border border-[#3D3F49] text-[11px] tracking-wide">
+                          체험단 상세보기
+                        </span>
                       </div>
-                    ))}
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-[#3D3F49]" />
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
 
-        {/* 하단 CTA */}
-        <section className="rounded-[32px] bg-white/85 p-5 shadow-[0_20px_60px_rgba(92,49,255,0.25)]">
-          <p className="text-sm font-semibold text-[#5c3dff]">오늘도 파이팅하세요!</p>
-          <p className="text-xs text-neutral-500">일정을 더 자세히 보고 싶다면 버튼을 눌러보세요.</p>
-          <div className="mt-4 flex items-center justify-between">
-            <Link
-              href="/?page=home"
-              className="rounded-2xl bg-[#5c3dff] px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:brightness-110"
-            >
-              오늘 일정 자세히 보기
-            </Link>
-            <span className="text-xs text-neutral-400">모바일 보기로 정리</span>
-          </div>
-        </section>
-        {isModalVisible && editingSchedule && (
-          <ScheduleModal
-            isOpen={isModalVisible}
-            onClose={handleCloseScheduleModal}
-            onSave={handleSaveScheduleFromModal}
-            onDelete={handleDeleteScheduleFromModal}
-            schedule={editingSchedule}
-            onUpdateFiles={async (id, files) => updateSchedule(id, { guideFiles: files })}
-          />
+                  {(locationLabel || s.phone || s.ownerPhone) && (
+                    <div className="space-y-1 text-[12px] text-[#cbd0de]">
+                      {locationLabel && (
+                        <p className="flex items-center gap-2">
+                          <span className="font-semibold text-[#f8fafc]">위치</span>
+                          {locationLabel}
+                          <a
+                            href={`https://map.naver.com/v5/search/${mapQuery}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[14px] hover:underline"
+                            aria-label="네이버 지도에서 위치 검색"
+                          >
+                            🗺️
+                          </a>
+                        </p>
+                      )}
+                      {s.phone && (
+                        <p className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-[#f8fafc]">가게 번호</span>
+                          <a
+                            href={`tel:${s.phone.replace(/[^0-9+]/g, "")}`}
+                            className="text-[#9fa3d9] hover:text-white"
+                          >
+                            {s.phone}
+                          </a>
+                          <a
+                            href={`tel:${s.phone.replace(/[^0-9+]/g, "")}`}
+                            className="text-[14px] hover:underline"
+                            aria-label="통화하기"
+                          >
+                            📞
+                          </a>
+                          <a
+                            href={`sms:${s.phone.replace(/[^0-9+]/g, "")}`}
+                            className="text-[14px] hover:underline"
+                            aria-label="문자 보내기"
+                          >
+                            💬
+                          </a>
+                        </p>
+                      )}
+                      {s.ownerPhone && (
+                        <p className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-[#f8fafc]">사장님 연락처</span>
+                          <a
+                            href={`tel:${s.ownerPhone.replace(/[^0-9+]/g, "")}`}
+                            className="text-[#9fa3d9] hover:text-white"
+                          >
+                            {s.ownerPhone}
+                          </a>
+                          <a
+                            href={`tel:${s.ownerPhone.replace(/[^0-9+]/g, "")}`}
+                            className="text-[14px] hover:underline"
+                            aria-label="통화하기"
+                          >
+                            📞
+                          </a>
+                          <a
+                            href={`sms:${s.ownerPhone.replace(/[^0-9+]/g, "")}`}
+                            className="text-[14px] hover:underline"
+                            aria-label="문자 보내기"
+                          >
+                            💬
+                          </a>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {s.memo?.trim() && (
+                    <div className="bg-[#252833] px-4 py-3 rounded-2xl border border-[#2D2F39]/80 text-sm text-[#D1D1D6]">
+                      <p className="text-xs font-semibold text-[#f8fafc] mb-1">메모</p>
+                      <p className="text-[13px] leading-relaxed">{s.memo}</p>
+                    </div>
+                  )}
+
+                  {/* 기능 액션 그리드 */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <a
+                      href={`https://www.google.com/search?q=날씨+${s.region || '내위치'}`}
+                      target="_blank"
+                      className="flex items-center justify-center gap-2 p-3.5 bg-[#252833] rounded-2xl border border-[#313545] hover:bg-[#2D3140] transition-colors"
+                    >
+                      <CloudRain className="w-4 h-4 text-blue-400" />
+                      <span className="text-[11px] font-bold text-[#D1D1D6]">오늘 우산 챙겨야할까?</span>
+                    </a>
+                    <button
+                      onClick={() => handleReceiptButtonClick(s)}
+                      className={`flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-[#313545] transition-colors bg-[#252833] hover:bg-[#2D3140]`}
+                    >
+                      {isUploadingThisSchedule ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                          <span className="text-[11px] font-bold text-[#D1D1D6]">업로드 중...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="w-4 h-4 text-amber-500" />
+                          <span className="text-[11px] font-bold text-[#D1D1D6]">영수증 촬영</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* 페이백 체크 */}
+                  {s.paybackExpected && (
+                    <div className="flex items-center justify-between p-4 bg-[#252833]/50 rounded-2xl border border-[#2D2F39]">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-[#D1D1D6]">광고주에게 돌려받을 환급금이 있어요</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </section>
+        )}
+
+        {/* 3. 마감 임박 (D-Day) 섹션 */}
+        {todaysDeadlines.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex justify-between items-center px-2">
+              <h2 className="text-lg font-bold">마감 임박 포스팅</h2>
+            </div>
+            
+            {todaysDeadlines.map((s) => {
+              const ownerPhoneDigits = s.ownerPhone?.replace(/[^0-9+]/g, "")
+              const isDelayButtonDisabled = !ownerPhoneDigits
+              return (
+                <div key={s.id} className="bg-[#1E2028] rounded-[32px] p-6 border-l-4 border-l-[#ff4d4d] border border-[#2D2F39] space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <span className="text-[13px] font-black text-red-500 tracking-tighter">D-DAY</span>
+                      <h3 className="text-base font-bold text-white leading-snug">{s.title}</h3>
+                    </div>
+                    <Link href="https://stylec.co.kr" target="_blank">
+                      <Button size="sm" className="bg-[#5c3dff] hover:bg-[#4a30cc] text-white font-bold rounded-xl text-[11px] px-3 h-8">
+                        {s.platform} 방문하기 <ExternalLink className="w-3 h-3 ml-0.5" />
+                      </Button>
+                    </Link>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-[11px] font-semibold text-red-400 bg-red-500/10 p-2.5 rounded-xl border border-red-500/20">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    미작성 시 소중한 수익 {formatCurrency(s.income ?? 0)}원이 사라져요! 💸
+                  </div>
+
+                  {s.memo?.trim() && (
+                    <div className="bg-[#252833] px-4 py-3 rounded-2xl border border-[#2D2F39]/80 text-sm text-[#D1D1D6]">
+                      <p className="text-xs font-semibold text-[#f8fafc] mb-1">메모</p>
+                      <p className="text-[13px] leading-relaxed">{s.memo}</p>
+                    </div>
+                  )}
+
+                  {s.paybackExpected && (
+                    <div className="flex items-center justify-between p-4 bg-[#252833]/50 rounded-2xl border border-[#2D2F39]">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-[#D1D1D6]">광고주에게 돌려받을 환급금이 있어요</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={isDelayButtonDisabled ? undefined : () => sendDelaySms(s)}
+                    className={`w-full flex items-center justify-center gap-2 py-1 text-[11px] text-[#A1A1AA] transition-colors ${isDelayButtonDisabled ? '' : 'hover:text-white'}`}
+                    tabIndex={isDelayButtonDisabled ? -1 : 0}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    {ownerPhoneDigits || s.ownerPhone ? (
+                      <>
+                        <span className="text-[12px]">일정 연장이 필요한가요? 광고주와 조율하기</span>
+                        <p className="flex flex-wrap items-center gap-2 text-sm text-[#D1D1D6]">
+                          <a
+                            href={`tel:${ownerPhoneDigits || s.ownerPhone}`}
+                            className="text-[14px] hover:underline"
+                            aria-label="통화하기"
+                          >
+                            📞
+                          </a>
+                          <a
+                            href={`sms:${ownerPhoneDigits || s.ownerPhone}`}
+                            className="text-[14px] hover:underline"
+                            aria-label="문자 보내기"
+                          >
+                            💬
+                          </a>
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-[12px]">일정 연장이 필요한가요? 늦지 않게 광고주님과 조율해보세요.</span>
+                    )}
+                  </button>
+                </div>
+              )
+            })}
+          </section>
         )}
       </div>
+
+      {/* 모달 */}
+      {isModalVisible && editingSchedule && (
+        <ScheduleModal
+          isOpen={isModalVisible}
+          onClose={() => setIsModalVisible(false)}
+          onSave={async (s) => {
+            await updateSchedule(s.id, s)
+            setIsModalVisible(false)
+            return true
+          }}
+          onDelete={async (id) => {
+            await deleteSchedule(id)
+            setIsModalVisible(false)
+          }}
+          schedule={editingSchedule}
+        />
+      )}
+      <input
+        ref={receiptFileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleReceiptFileChange}
+      />
     </div>
   )
 }

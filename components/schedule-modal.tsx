@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { useUserProfile } from "@/hooks/use-user-profile"
-import { uploadGuideFiles, downloadGuideFile, deleteGuideFile } from "@/lib/storage"
+import { uploadGuideFiles, downloadGuideFile, deleteGuideFile, getGuideFileUrl } from "@/lib/storage"
 import { DEFAULT_SCHEDULE_CHANNEL_OPTIONS, sanitizeChannels } from "@/lib/schedule-channels"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
@@ -149,6 +149,7 @@ export default function ScheduleModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [fileToDelete, setFileToDelete] = useState<{ file: GuideFile; index: number } | null>(null)
+  const [guideFilePreviews, setGuideFilePreviews] = useState<Record<string, string>>({})
   const [showCategoryManagement, setShowCategoryManagement] = useState(false)
   const [showMapSearchModal, setShowMapSearchModal] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState<Schedule["category"][]>([])
@@ -293,6 +294,49 @@ export default function ScheduleModal({
       setNonVisitReviewType("제공형")
     }
   }, [schedule, isOpen, hasVisitData])
+
+  useEffect(() => {
+    let isActive = true
+    const files = formData.guideFiles || []
+
+    if (files.length === 0) {
+      setGuideFilePreviews({})
+      return () => {
+        isActive = false
+      }
+    }
+
+    const fetchPreviews = async () => {
+      const entries = await Promise.all(
+        files.map(async (file) => {
+          try {
+            const url = await getGuideFileUrl(file.path)
+            return url ? { path: file.path, url } : null
+          } catch (error) {
+            console.error("가이드 파일 미리보기 로드 실패:", error)
+            return null
+          }
+        }),
+      )
+
+      if (!isActive) return
+
+      setGuideFilePreviews(
+        entries.reduce<Record<string, string>>((acc, entry) => {
+          if (entry) {
+            acc[entry.path] = entry.url
+          }
+          return acc
+        }, {}),
+      )
+    }
+
+    fetchPreviews()
+
+    return () => {
+      isActive = false
+    }
+  }, [formData.guideFiles])
 
   useEffect(() => {
     const sanitized = sanitizeCategories(userCategories)
@@ -752,7 +796,7 @@ export default function ScheduleModal({
   return (
     <>
       <div 
-        className="fixed left-0 w-full z-40 flex flex-col justify-end"
+        className="fixed left-0 w-full z-40 flex flex-col justify-end text-neutral-900"
         style={{
           height: viewportStyle.height,
           top: viewportStyle.top,
@@ -765,7 +809,7 @@ export default function ScheduleModal({
         />
         
         <div 
-          className="relative w-full bg-white rounded-t-[30px] flex flex-col shadow-2xl overflow-hidden animate-slide-up"
+          className="relative w-full bg-white rounded-t-[30px] flex flex-col shadow-2xl overflow-hidden animate-slide-up text-neutral-900"
           style={{ maxHeight: '85%' }}
         >
           <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-none">
@@ -1428,6 +1472,48 @@ export default function ScheduleModal({
               </div>
             </div>
             
+            {formData.guideFiles && formData.guideFiles.length > 0 && (
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[15px] font-bold text-neutral-500">영수증</span>
+                  <span className="text-xs text-neutral-400">{formData.guideFiles.length}개</span>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {formData.guideFiles.map((file) => {
+                    const previewUrl = guideFilePreviews[file.path]
+                    const isImage = file.type.startsWith("image/")
+                    return (
+                      <div key={file.path} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+                        <div className="h-28 w-full overflow-hidden rounded-xl bg-neutral-200">
+                          {isImage && previewUrl ? (
+                            <img
+                              src={previewUrl}
+                              alt={file.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full flex-col items-center justify-center text-[11px] font-semibold text-neutral-500">
+                              <span className="tracking-tight">미리보기 없음</span>
+                              <span className="mt-1 text-[10px] uppercase">{file.type.split("/")[1] || "파일"}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <span className="text-[13px] font-semibold text-neutral-700 truncate">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadFile(file)}
+                            className="text-[11px] font-semibold text-[#FF5722] hover:text-[#d14500] shrink-0"
+                          >
+                            다운로드
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
             <div className="h-10"></div>
           </div>
 
