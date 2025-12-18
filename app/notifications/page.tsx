@@ -193,7 +193,7 @@ const ScheduleChannelBadges = ({ channels }: { channels?: ScheduleChannel[] | nu
         {channels.map((channel, index) => (
           <span
             key={`${channel}-${index}`}
-            className="text-[9px] font-semibold text-white/80 bg-white/5 border border-white/10 rounded-full px-2 py-1 whitespace-nowrap"
+            className="text-[14px] font-semibold text-white/80 bg-white/5 border border-white/10 rounded-full px-2 py-1 whitespace-nowrap"
           >
             {channel}
           </span>
@@ -496,7 +496,7 @@ export default function NotificationsPage() {
         <header className="pt-8 px-1 space-y-3">
           <div className="flex flex-wrap items-start gap-4">
             <div className="space-y-2">
-              <p className="text-[#A1A1AA] text-xs font-bold uppercase tracking-[0.2em]">Daily Brief</p>
+              <p className="text-[#A1A1AA] text-sm font-bold uppercase tracking-[0.2em]">Daily Brief</p>
               <h1 className="text-4xl font-bold leading-tight tracking-tight text-white">
                 <span className="block">{timeframeTitle}</span>
                 <span className="inline-block text-[2.8rem] font-black tracking-tight text-transparent bg-gradient-to-br from-[#6c63ff] to-[#aa4bf8] bg-clip-text animated-count">
@@ -508,7 +508,7 @@ export default function NotificationsPage() {
         </header>
         <div className="fixed top-10 z-20 px-1 right-5">
           <div className="flex w-full justify-end">
-            <div className="flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white/60">
+            <div className="flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-1 text-[14px] font-bold uppercase tracking-[0.1em] text-white/60">
               {timeframeConfigs.map((option) => (
                 <button
                   key={option.id}
@@ -537,8 +537,8 @@ export default function NotificationsPage() {
             {hasVisitItems && (
               <section className="space-y-4">
                 <div className="flex items-center justify-between px-1">
-                  <h2 className="text-[11px] font-black text-white/20 uppercase tracking-[0.1em]"><span className="text-white/60">방문일 {filteredVisits.length}건</span></h2>
-                  {filteredVisits.length > 1 && <span className="text-[10.5px] text-white/60 font-bold tracking-tighter animate-pulse">옆으로 밀어보기</span>}
+                  <h2 className="text-[14px] font-black text-white/20 uppercase tracking-[0.1em]"><span className="text-white/60">방문일 {filteredVisits.length}건</span></h2>
+                  {filteredVisits.length > 1 && <span className="text-[14px] text-white/60 font-bold tracking-tighter animate-pulse">옆으로 밀어보기</span>}
                 </div>
 
                 <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2">
@@ -568,15 +568,15 @@ export default function NotificationsPage() {
                           <div className="space-y-1 mb-4">
                             <div className="flex justify-between">
                               <div className="flex flex-wrap items-center gap-2">
-                                <div className="text-[10px] font-black bg-blue-500 text-white px-2.5 py-1 rounded-full uppercase tracking-[0.03em]">
+                                <div className="text-[14px] font-black bg-blue-500 text-white px-2.5 py-1 rounded-full uppercase tracking-[0.03em]">
                                   {visitLabel && (
                                     <span className="mr-1">{visitLabel} /</span>
                                   )}
                                   {formatVisitTimeLabel(s.visitTime)}
                                 </div>
-                                <span className="text-[10.5px] font-bold text-white/60 uppercase">{s.platform}</span>
+                                <span className="text-[14px] font-bold text-white/60 uppercase">{s.platform}</span>
                                 {s.paybackExpected && (
-                                  <span className="text-[10.5px] font-bold text-[#8a72ff] flex items-center gap-1">
+                                  <span className="text-[14px] font-bold text-[#8a72ff] flex items-center gap-1">
                                     <AlertCircle className="w-3 h-3 translate-y-[-1px]" /> 환급금
                                   </span>
                                 )}
@@ -588,7 +588,7 @@ export default function NotificationsPage() {
                             <div className="flex flex-wrap gap-2 mt-2">
                               <ScheduleChannelBadges channels={s.channel} />
                               {additionalReviews.map((rev, idx) => (
-                                <span key={idx} className="text-[9px] font-bold text-blue-400/50 bg-blue-400/5 px-1.5 py-1 rounded-md border border-blue-400/10">
+                                <span key={idx} className="text-[14px] font-bold text-blue-400/50 bg-blue-400/5 px-1.5 py-1 rounded-md border border-blue-400/10">
                                   + {rev}
                                 </span>
                               ))}
@@ -602,7 +602,7 @@ export default function NotificationsPage() {
                           <div className="flex items-center justify-between gap-3 px-3 py-1.5 bg-white/[0.02] rounded-2xl border border-white/5">
                             <div className="flex items-center gap-2 min-w-0">
                               <MapPin className="w-4 h-4 text-white/20 shrink-0" />
-                              <span className={`text-[13px] truncate font-medium ${hasLocation ? 'text-white/50' : 'text-white/20'}`}>
+                              <span className={`text-[14px] truncate font-medium ${hasLocation ? 'text-white/50' : 'text-white/20'}`}>
                                 {hasLocation ? locationLabel : "위치 정보 없음"}
                               </span>
                             </div>
@@ -630,7 +630,7 @@ export default function NotificationsPage() {
                             type="button"
                             onClick={() => handleReceiptButtonClick(s)}
                             disabled={uploadingReceiptFor === s.id}
-                            className="flex-1 py-2 bg-white text-black rounded-2xl font-bold text-[12px] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-wait"
+                            className="flex-1 py-2 bg-white text-black rounded-2xl font-bold text-[14px] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-wait"
                           >
                             <Camera className="w-4 h-4" /> {uploadingReceiptFor === s.id ? "저장 중..." : "영수증 저장"}
                           </button>
@@ -659,9 +659,9 @@ export default function NotificationsPage() {
                                         key={`${option.type}-${s.id}`}
                                         type="button"
                                         onClick={() => handleCallSelection(s, option.type)}
-                                        className="w-full rounded-xl px-3 py-2 text-left text-[12px] font-semibold text-white/70 transition hover:text-white"
+                                        className="w-full rounded-xl px-3 py-2 text-left text-[14px] font-semibold text-white/70 transition hover:text-white"
                                       >
-                                        <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">{option.label}</span>
+                                        <span className="text-[14px] uppercase tracking-[0.2em] text-white/40">{option.label}</span>
                                         <span className="block text-sm font-bold text-white">{option.display}</span>
                                       </button>
                                     ))}
@@ -689,7 +689,7 @@ export default function NotificationsPage() {
                 {/* 2. 마감 임박 (압축형 리스트) */}
                 <section className="space-y-4">
                   <div className="flex items-center justify-between px-1">
-                    <h2 className="text-[11px] font-black text-red-500/30 uppercase tracking-[0.1em]"><span className="text-white/60">마감일 {filteredDeadlines.length}건</span></h2>
+                    <h2 className="text-[14px] font-black text-red-500/30 uppercase tracking-[0.1em]"><span className="text-white/60">마감일 {filteredDeadlines.length}건</span></h2>
                   </div>
 
                   <div className="bg-[#121214] rounded-[2.5rem] border border-white/[0.05] divide-y divide-white/5 overflow-hidden">
@@ -704,13 +704,13 @@ export default function NotificationsPage() {
                               <div className="min-w-0 flex-1 space-y-1">
                                 <div className="flex items-center flex-wrap gap-2">
                                   {deadlineLabel && (
-                                    <span className="rounded-full text-[9px] font-bold bg-red-900 text-white px-2.5 py-0.5 rounded">
+                                    <span className="rounded-full text-[14px] font-bold bg-red-900 text-white px-2.5 py-0.5 rounded">
                                       {deadlineLabel}
                                     </span>
                                   )}
-                                  <span className="text-[10.5px] font-bold text-white/60 uppercase">{s.platform}</span>
+                                  <span className="text-[14px] font-bold text-white/60 uppercase">{s.platform}</span>
                                   {s.paybackExpected && (
-                                    <span className="text-[10.5px] font-bold text-[#8a72ff] flex items-center gap-1">
+                                    <span className="text-[14px] font-bold text-[#8a72ff] flex items-center gap-1">
                                       <AlertCircle className="w-2.5 h-2.5 translate-y-[-1px]" /> 환급금
                                     </span>
                                   )}
@@ -727,11 +727,11 @@ export default function NotificationsPage() {
                             <div className="flex flex-wrap gap-2 min-w-0">
                               <ScheduleChannelBadges channels={s.channel} />
                               {additionalReviews.map((rev, idx) => (
-                                <span key={idx} className="text-[9px] font-bold text-blue-400/50 bg-blue-400/5 px-1.5 py-1 rounded-md border border-blue-400/10">+ {rev}</span>
+                                <span key={idx} className="text-[14px] font-bold text-blue-400/50 bg-blue-400/5 px-1.5 py-1 rounded-md border border-blue-400/10">+ {rev}</span>
                               ))}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="shrink-0 text-[12px] font-bold text-red-1000">{formatCurrency(netLoss)}원</span>
+                              <span className="shrink-0 text-[14px] font-bold text-red-1000">{formatCurrency(netLoss)}원</span>
                               <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
                                 <button onClick={() => handleOpenSmsModal(s, 'deadline')} className="p-2 active:bg-white/5">
                                   <MessageCircle className="w-4 h-4 text-white/30" />
@@ -772,10 +772,10 @@ export default function NotificationsPage() {
           <div className="space-y-6">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-black uppercase tracking-[0.35em] text-white/50">
+                <p className="text-[14px] font-black uppercase tracking-[0.35em] text-white/50">
                   {smsType === 'visit' ? "방문형 메시지" : "마감형 메시지"}
                 </p>
-                <span className="text-[10px] text-white/40">{templates.length}개 템플릿</span>
+                <span className="text-[14px] text-white/40">{templates.length}개 템플릿</span>
               </div>
 
               {templates.length > 0 && activeTemplate ? (
@@ -789,7 +789,7 @@ export default function NotificationsPage() {
                           key={template.id}
                           type="button"
                           onClick={() => setSelectedTemplateId(template.id)}
-                          className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-bold uppercase transition ${
+                          className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[14px] font-bold uppercase transition ${
                             isActive
                               ? "bg-white text-black shadow-lg"
                               : "bg-white/10 text-white/70 hover:bg-white/20"
