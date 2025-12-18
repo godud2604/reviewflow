@@ -14,21 +14,20 @@ const parseDateString = (dateStr: string) => {
 }
 
 const CALENDAR_RING_COLORS: Record<string, string> = {
-  선정됨: "#FF8C42",
-  예약완료: "#1E88E5",
-  "방문일 예약 완료": "#1E88E5",
-  방문: "#16A34A",
-  "제품 배송 완료": "#8B5CF6",
-  "배송 완료": "#8B5CF6",
-  배송완료: "#8B5CF6",
-  완료: "#4D1F00",
+  선정됨: "#f1a0b6",
+  예약완료: "#61cedb",
+  "방문일 예약 완료": "#61cedb",
+  방문: "#5ba768",
+  "제품 배송 완료": "#f3c742",
+  "배송 완료": "#f3c742",
+  배송완료: "#f3c742",
 }
 
 const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[] = [
-  { status: "선정됨", color: "#FF8C42", label: "선정됨" },
-  { status: "방문일 예약 완료", color: "#1E88E5", label: "방문 예약" },
-  { status: "방문", color: "#16A34A", label: "방문" },
-  { status: "제품 배송 완료", color: "#8B5CF6", label: "배송 완료" },
+  { status: "선정됨", color: "#f1a0b6", label: "선정됨" },
+  { status: "방문일 예약 완료", color: "#61cedb", label: "방문 예약" },
+  { status: "방문", color: "#5ba768", label: "방문" },
+  { status: "제품 배송 완료", color: "#f3c742", label: "배송 완료" },
 ]
 
 const toRgba = (hex: string, alpha = 0.15) => {
@@ -572,7 +571,7 @@ function CalendarSection({
               : "text-neutral-800 bg-white"
           const hoverable = !isSelected && !isTodayDate && hasSchedule
           const todayHighlightClass = isTodayDate
-            ? "bg-gradient-to-br from-orange-500 to-orange-200 text-white shadow-[0_15px_40px_rgba(249,115,22,0.35)] ring-orange-300"
+            ? "bg-gradient-to-br from-orange-400 to-orange-300 text-white shadow-[0_15px_40px_rgba(249,115,22,0.35)] ring-orange-300"
             : ""
           const selectedHighlightClass = isSelected
             ? "bg-gradient-to-br from-orange-200 via-orange-200 to-white text-orange-900 shadow-[0_18px_45px_rgba(249,115,22,0.25)] ring-orange-200"
@@ -699,11 +698,11 @@ function ScheduleItem({
     Schedule["status"],
     { class?: string; text: string; highlightColor?: string }
   > = {
-    선정됨: { text: "선정됨", highlightColor: "#FF8C42" },
-    "방문일 예약 완료": { text: "예약 완료", highlightColor: "#1E88E5" },
-    방문: { text: "방문", highlightColor: "#16A34A" },
+    선정됨: { text: "선정됨", highlightColor: "#f1a0b6" },
+    "방문일 예약 완료": { text: "예약 완료", highlightColor: "#61cedb" },
+    방문: { text: "방문", highlightColor: "#5ba768" },
     "구매 완료": { class: "bg-indigo-100 text-indigo-900 border border-indigo-200", text: "구매 완료" },
-    "제품 배송 완료": { text: "배송 완료", highlightColor: "#8B5CF6" },
+    "제품 배송 완료": { text: "배송 완료", highlightColor: "#f3c742" },
     완료: { class: "bg-neutral-100 text-neutral-700 border border-neutral-200", text: "완료" },
     재확인: { class: "bg-amber-100 text-amber-900 border border-amber-200", text: "재확인" },
   }
@@ -727,8 +726,6 @@ function ScheduleItem({
   const badgeStyle = status.highlightColor
     ? {
         backgroundColor: toRgba(status.highlightColor, 0.15),
-        color: status.highlightColor,
-        borderColor: status.highlightColor,
       }
     : undefined
   const isOverdue = schedule.dead && schedule.dead < today && schedule.status !== "완료"
@@ -789,15 +786,15 @@ function ScheduleItem({
         </div>
         <div className="flex mt-2">
           <p
-            className={`text-[10.5px] font-semibold rounded-[10px] px-2 py-[2px] w-fit ml-2 border ${
-              status.class ?? "border-neutral-200 text-neutral-500 bg-white/80"
+            className={`text-[10.5px] font-semibold rounded-[10px] px-2 py-[2px] w-fit ml-2 ${
+              status.class ?? "border border-neutral-100 text-neutral-500 bg-white/80"
             }`}
             style={badgeStyle}
           >
             {status.text}
           </p>
            {schedule.reviewType === "방문형" && schedule.regionDetail && (
-            <span className="text-[11px] font-semibold text-sky-700 ml-2 bg-sky-50 rounded px-2 py-0.5 border border-sky-100">
+            <span className="text-[11px] font-semibold text-neutral-500 ml-2 bg-sky-50 rounded-[10px] px-2 py-0.5 border border-sky-100">
               {(() => {
                 const parts = schedule.regionDetail.split(" ");
                 return parts.slice(0, 2).join(" ");
