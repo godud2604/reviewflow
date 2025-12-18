@@ -18,7 +18,7 @@ const CALENDAR_RING_COLORS: Record<string, string> = {
   예약완료: "#61cedb",
   "방문일 예약 완료": "#61cedb",
   방문: "#5ba768",
-  "제품 배송 완료": "#f3c742",
+  "제품 배송 완료": "rgba(240, 221, 73, 1)",
   "배송 완료": "#f3c742",
   배송완료: "#f3c742",
 }
@@ -562,24 +562,22 @@ function CalendarSection({
               : undefined
           const baseStyle =
             indicatorType === "overdue"
-              ? "text-orange-800 bg-white shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.65)]"
+              ? "text-orange-800 shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.65)]"
               : indicatorType === "deadline"
-              ? "text-orange-700 bg-white shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.6)]"
-              : "text-neutral-800 bg-white"
+              ? "text-orange-700 shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.6)]"
+              : "text-neutral-800"
           const hoverable = !isSelected && !isTodayDate && hasSchedule
           const todayHighlightClass = isTodayDate
-            ? "bg-gradient-to-br from-orange-400 to-orange-300 text-white shadow-[0_15px_40px_rgba(249,115,22,0.35)] ring-orange-300"
+            ? "bg-orange-300 text-orange-900"
             : ""
           const selectedHighlightClass = isSelected
-            ? "bg-gradient-to-br from-orange-200 via-orange-200 to-white text-orange-900 shadow-[0_18px_45px_rgba(249,115,22,0.25)] ring-orange-200"
+            ? "bg-orange-100 text-orange-900"
             : ""
-          const selectedTodayClass = isSelected && isTodayDate && "ring-1"
           return (
             <button
               key={day}
               onClick={() => (hasSchedule || dateStr === today) && onDateClick(dateStr)}
               disabled={!hasSchedule && dateStr !== today}
-              style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
               className={`relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-colors ${
             hasSchedule || dateStr === today ? "cursor-pointer" : "cursor-default"
           } ${baseStyle}
@@ -699,7 +697,7 @@ function ScheduleItem({
     "방문일 예약 완료": { text: "예약 완료", highlightColor: "#61cedb" },
     방문: { text: "방문", highlightColor: "#5ba768" },
     "구매 완료": { class: "bg-indigo-100 text-indigo-900 border border-indigo-200", text: "구매 완료" },
-    "제품 배송 완료": { text: "배송 완료", highlightColor: "#f3c742" },
+    "제품 배송 완료": { text: "배송 완료", highlightColor: "#c09410ff" },
     완료: { class: "bg-neutral-100 text-neutral-700 border border-neutral-200", text: "완료" },
     재확인: { class: "bg-amber-100 text-amber-900 border border-amber-200", text: "재확인" },
   }
