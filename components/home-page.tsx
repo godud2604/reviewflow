@@ -455,9 +455,6 @@ function CalendarSection({
       if (isCompleted && !schedule.dead) {
         info.hasCompleted = true
       }
-      if (statusColor) {
-        info.ringStatusColors.push(statusColor)
-      }
     }
 
     return acc
