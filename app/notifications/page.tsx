@@ -662,27 +662,27 @@ export default function NotificationsPage() {
                             </div>
                           )}
 
-                          <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
-                            <button onClick={() => handleOpenSmsModal(s, 'visit')} className="p-2 active:bg-white/5">
-                              <MessageCircle className="w-4 h-4 text-white/30 stroke-[1.5]" />
+                          <div className="flex">
+                            <button onClick={() => handleOpenSmsModal(s, 'visit')} className="h-[34px] flex items-center justify-center rounded-2xl border border-white/5 bg-[#1e1e20] p-2 text-white/70 transition hover:text-white/90">
+                              <MessageCircle className="w-4 h-4 stroke-[1.5]" />
                             </button>
                           </div>
-                          <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
+                          <div className="flex">
                             <button
                               disabled={!hasLocation}
                               onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(weatherQuery)}`, "_blank")}
-                              className="p-2 rounded-2xl bg-white/5 text-white/40 transition hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                              className="h-[34px] flex items-center justify-center rounded-2xl border border-white/5 bg-[#1e1e20] p-2 text-white/70 transition hover:text-white/90"
                             >
-                              <CloudRain className="w-4 h-4" />
+                              <CloudRain className="w-4 h-4 stroke-[1.5]" />
                             </button>
                           </div>
-                          <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
+                          <div className="flex">
                             <button
                               disabled={!hasLocation}
                               onClick={() => window.open(`https://map.naver.com/v5/search/${mapQuery}`, "_blank")}
-                              className="p-2 rounded-xl bg-white/5 text-white/40 transition hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                              className="h-[34px] flex items-center justify-center rounded-2xl border border-white/5 bg-[#1e1e20] p-2 text-white/70 transition hover:text-white/90"
                             >
-                              <Map className="w-4 h-4" />
+                              <Map className="w-4 h-4 stroke-[1.5]" />
                             </button>
                           </div>
                         </div>
@@ -736,7 +736,7 @@ export default function NotificationsPage() {
                             <span className="shrink-0 text-[14px] font-bold text-red-1000">{formatCurrency(netLoss)}원</span>
                             <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
                               <button onClick={() => handleOpenSmsModal(s, 'deadline')} className="p-2 active:bg-white/5">
-                                <MessageCircle className="w-4 h-4 text-white/30 stroke-[1.5]" />
+                                <MessageCircle className="w-4 h-4 stroke-[1.5]" />
                               </button>
                             </div>
                           </div>
