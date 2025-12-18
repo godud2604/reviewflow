@@ -525,14 +525,14 @@ function CalendarSection({
               key={day}
               onClick={() => (hasSchedule || dateStr === today) && onDateClick(dateStr)}
               disabled={!hasSchedule && dateStr !== today}
-              className={`relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-all ${
-                hasSchedule || dateStr === today ? "cursor-pointer" : "cursor-default"
-              } ${baseStyle}
-                ${!isSelected && todayHighlightClass}
-                ${selectedHighlightClass}
-                ${hoverable ? "hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(0,0,0,0.08)]" : ""}
-                ${!isSelected && !isToday(day) && dayOfWeek === 0 ? "text-red-500" : ""}
-                ${!isSelected && !isToday(day) && dayOfWeek === 6 ? "text-blue-500" : ""}`}
+          className={`relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-colors ${
+            hasSchedule || dateStr === today ? "cursor-pointer" : "cursor-default"
+          } ${baseStyle}
+            ${!isSelected && todayHighlightClass}
+            ${selectedHighlightClass}
+            ${hoverable ? "hover:shadow-[0_10px_20px_rgba(0,0,0,0.08)]" : ""}
+            ${!isSelected && !isToday(day) && dayOfWeek === 0 ? "text-red-500" : ""}
+            ${!isSelected && !isToday(day) && dayOfWeek === 6 ? "text-blue-500" : ""}`}
             >
               <span className="leading-none text-current">{day}</span>
               {hasSchedule && dayInfo?.hasDeadline && (

@@ -23,7 +23,7 @@ export default function NavigationBar({
         borderRadius: "32px 32px 0 0",
         maxWidth: 480,
         margin: "0 auto",
-        paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)",
+        paddingBottom: "calc(max(env(safe-area-inset-bottom), constant(safe-area-inset-bottom)) + 0.75rem)",
       }}
     >
       <button

@@ -562,7 +562,7 @@ export default function NotificationsPage() {
                     return (
                       <div
                         key={s.id}
-                        className={`${visitCardMinWidthClass} snap-center bg-[#121214] rounded-[2.5rem] p-7 border border-white/[0.05] shadow-2xl space-y-6`}
+                        className={`${visitCardMinWidthClass} snap-center bg-[#121214] rounded-[2.5rem] px-6 py-4 border border-white/[0.05] shadow-2xl space-y-6`}
                       >
                         <div className="space-y-3">
                           <div className="space-y-1 mb-4">
@@ -704,7 +704,7 @@ export default function NotificationsPage() {
                               <div className="min-w-0 flex-1 space-y-1">
                                 <div className="flex items-center flex-wrap gap-2">
                                   {deadlineLabel && (
-                                    <span className="text-[9px] font-bold bg-red-900 text-white px-2.5 py-0.5 rounded">
+                                    <span className="rounded-full text-[9px] font-bold bg-red-900 text-white px-2.5 py-0.5 rounded">
                                       {deadlineLabel}
                                     </span>
                                   )}
@@ -731,13 +731,12 @@ export default function NotificationsPage() {
                               ))}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="shrink-0 text-[11px] font-black text-red-800">{formatCurrency(netLoss)}원</span>
-                              <button 
-                                onClick={() => handleOpenSmsModal(s, 'deadline')}
-                                className="p-2 bg-white/5 rounded-lg border border-white/5 text-white/40 active:scale-95 transition-all"
-                              >
-                                <MessageSquare className="w-3.5 h-3.5" />
-                              </button>
+                              <span className="shrink-0 text-[12px] font-bold text-red-1000">{formatCurrency(netLoss)}원</span>
+                              <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
+                                <button onClick={() => handleOpenSmsModal(s, 'deadline')} className="p-2 active:bg-white/5">
+                                  <MessageCircle className="w-4 h-4 text-white/30" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
