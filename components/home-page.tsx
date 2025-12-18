@@ -13,6 +13,34 @@ const parseDateString = (dateStr: string) => {
   return new Date(y, (m || 1) - 1, d || 1)
 }
 
+const CALENDAR_RING_COLORS: Record<string, string> = {
+  선정됨: "#FF8C42",
+  예약완료: "#1E88E5",
+  "방문일 예약 완료": "#1E88E5",
+  방문: "#16A34A",
+  "제품 배송 완료": "#8B5CF6",
+  "배송 완료": "#8B5CF6",
+  배송완료: "#8B5CF6",
+  완료: "#4D1F00",
+}
+
+const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[] = [
+  { status: "선정됨", color: "#FF8C42", label: "선정됨" },
+  { status: "방문일 예약 완료", color: "#1E88E5", label: "방문 예약" },
+  { status: "방문", color: "#16A34A", label: "방문" },
+  { status: "제품 배송 완료", color: "#8B5CF6", label: "배송 완료" },
+]
+
+const toRgba = (hex: string, alpha = 0.15) => {
+  const normalized = hex.replace("#", "")
+  const r = parseInt(normalized.slice(0, 2), 16)
+  const g = parseInt(normalized.slice(2, 4), 16)
+  const b = parseInt(normalized.slice(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+const getScheduleRingColor = (status: string): string | undefined => CALENDAR_RING_COLORS[status]
+
 export default function HomePage({
   schedules,
   onScheduleClick,
@@ -380,6 +408,7 @@ function CalendarSection({
         hasVisit: boolean
         overdue: boolean
         hasCompleted: boolean
+        ringStatusColors: string[]
       }
     >
   >((acc, schedule) => {
@@ -392,12 +421,14 @@ function CalendarSection({
           hasVisit: false,
           overdue: false,
           hasCompleted: false,
+          ringStatusColors: [],
         }
       }
       return acc[key]
     }
 
     const isCompleted = schedule.status === "완료"
+    const statusColor = isCompleted ? undefined : getScheduleRingColor(schedule.status)
 
     if (schedule.dead) {
       const info = ensureDayInfo(schedule.dead)
@@ -412,6 +443,9 @@ function CalendarSection({
           info.deadlineCount += 1
         }
       }
+      if (statusColor) {
+        info.ringStatusColors.push(statusColor)
+      }
     }
 
     if (schedule.visit) {
@@ -421,6 +455,9 @@ function CalendarSection({
       // Only mark completed on visit date when there's no separate deadline, to avoid showing the completed dot on visit days
       if (isCompleted && !schedule.dead) {
         info.hasCompleted = true
+      }
+      if (statusColor) {
+        info.ringStatusColors.push(statusColor)
       }
     }
 
@@ -506,6 +543,27 @@ function CalendarSection({
               : dayInfo?.hasCompleted
                 ? "completedOnly"
                 : "none"
+          const ringColors = dayInfo?.ringStatusColors ?? []
+          const ringGradientStops =
+            ringColors.length > 0
+              ? ringColors
+                  .map((color, idx) => {
+                    const start = (idx / ringColors.length) * 100
+                    const end = ((idx + 1) / ringColors.length) * 100
+                    return `${color} ${start}% ${end}%`
+                  })
+                  .join(", ")
+              : ""
+          const ringGradientStyle =
+            ringColors.length > 0
+              ? {
+                  backgroundImage: `conic-gradient(${ringGradientStops})`,
+                  WebkitMaskImage:
+                    "radial-gradient(circle, transparent 58%, black 60%, black 72%, transparent 72%)",
+                  maskImage:
+                    "radial-gradient(circle, transparent 58%, black 60%, black 72%, transparent 72%)",
+                }
+              : undefined
           const baseStyle =
             indicatorType === "overdue"
               ? "text-orange-800 bg-white shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.65)]"
@@ -535,6 +593,12 @@ function CalendarSection({
             ${!isSelected && !isToday(day) && dayOfWeek === 0 ? "text-red-500" : ""}
             ${!isSelected && !isToday(day) && dayOfWeek === 6 ? "text-blue-500" : ""}`}
             >
+              {ringGradientStyle && (
+                <span
+                  className="pointer-events-none absolute inset-0 rounded-full"
+                  style={ringGradientStyle}
+                />
+              )}
               <span className="leading-none text-current">{day}</span>
               {hasSchedule && dayInfo?.hasDeadline && (
                 <>
@@ -568,6 +632,17 @@ function CalendarSection({
             </button>
           )
         })}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-neutral-600">
+        {CALENDAR_STATUS_LEGEND.map((item) => (
+          <div key={item.status} className="flex items-center gap-1.5">
+            <span
+              className="h-2.5 w-2.5 rounded-full border border-neutral-200"
+              style={{ backgroundColor: `${item.color}` }}
+            />
+            <span className="font-semibold text-neutral-700">{item.label}</span>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -620,14 +695,17 @@ function ScheduleItem({
   onCompleteClick?: () => void
   today: string
 }) {
-  const statusConfig: Record<Schedule["status"], { class: string; text: string }> = {
-    선정됨: { class: "bg-emerald-50 text-emerald-700 border border-emerald-100", text: "선정됨" },
-    "방문일 예약 완료": { class: "bg-blue-50 text-blue-700 border border-blue-100", text: "예약 완료" },
-    방문: { class: "bg-sky-50 text-sky-700 border border-sky-100", text: "방문" },
-    "구매 완료": { class: "bg-indigo-50 text-indigo-700 border border-indigo-100", text: "구매 완료" },
-    "제품 배송 완료": { class: "bg-indigo-50 text-indigo-700 border border-indigo-100", text: "배송 완료" },
+  const statusConfig: Record<
+    Schedule["status"],
+    { class?: string; text: string; highlightColor?: string }
+  > = {
+    선정됨: { text: "선정됨", highlightColor: "#FF8C42" },
+    "방문일 예약 완료": { text: "예약 완료", highlightColor: "#1E88E5" },
+    방문: { text: "방문", highlightColor: "#16A34A" },
+    "구매 완료": { class: "bg-indigo-100 text-indigo-900 border border-indigo-200", text: "구매 완료" },
+    "제품 배송 완료": { text: "배송 완료", highlightColor: "#8B5CF6" },
     완료: { class: "bg-neutral-100 text-neutral-700 border border-neutral-200", text: "완료" },
-    재확인: { class: "bg-amber-50 text-amber-700 border border-amber-200", text: "재확인" },
+    재확인: { class: "bg-amber-100 text-amber-900 border border-amber-200", text: "재확인" },
   }
 
   const visitLabel = schedule.visit
@@ -644,7 +722,15 @@ function ScheduleItem({
           : "미정"
 
   const total = schedule.benefit + schedule.income - schedule.cost
-  const status = statusConfig[schedule.status] || { class: "bg-neutral-100 text-neutral-600", text: "미정" }
+  const fallbackStatus = { class: "bg-neutral-100 text-neutral-600 border border-neutral-200", text: "미정" }
+  const status = statusConfig[schedule.status] ?? fallbackStatus
+  const badgeStyle = status.highlightColor
+    ? {
+        backgroundColor: toRgba(status.highlightColor, 0.15),
+        color: status.highlightColor,
+        borderColor: status.highlightColor,
+      }
+    : undefined
   const isOverdue = schedule.dead && schedule.dead < today && schedule.status !== "완료"
   const isReconfirm = schedule.status === "재확인"
   const isCompleted = schedule.status === "완료"
@@ -702,7 +788,14 @@ function ScheduleItem({
           <span className="font-medium text-neutral-600">{dDate}</span>
         </div>
         <div className="flex mt-2">
-          <p className={`text-[10.5px] font-semibold text-neutral-500 rounded-[10px] px-2 py-[2px] w-fit ${status.class}`}>{status.text}</p>
+          <p
+            className={`text-[10.5px] font-semibold rounded-[10px] px-2 py-[2px] w-fit ml-2 border ${
+              status.class ?? "border-neutral-200 text-neutral-500 bg-white/80"
+            }`}
+            style={badgeStyle}
+          >
+            {status.text}
+          </p>
            {schedule.reviewType === "방문형" && schedule.regionDetail && (
             <span className="text-[11px] font-semibold text-sky-700 ml-2 bg-sky-50 rounded px-2 py-0.5 border border-sky-100">
               {(() => {
