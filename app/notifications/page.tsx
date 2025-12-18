@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useMemo, useRef, useState, useEffect, useCallback, type ChangeEvent } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useSchedules } from "@/hooks/use-schedules"
-import type { Schedule, ScheduleChannel } from "@/types"
+import type { Schedule, ScheduleChannel, GuideFile } from "@/types"
 import { uploadGuideFile } from "@/lib/storage"
 import { 
   Camera, 
@@ -63,8 +63,8 @@ const formatDeadlineLabel = (deadline?: string, referenceDate?: Date) => {
   if (!target) return null
   const base = referenceDate ?? startOfDay(getKstNow())
   const diff = diffDaysFrom(target, base)
-  if (diff === 0) return "D-DAY"
-  return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`
+  if (diff === 0) return "D - DAY"
+  return diff > 0 ? `D - ${diff}` : `D + ${Math.abs(diff)}`
 }
 const formatCurrency = (value: number) => new Intl.NumberFormat("ko-KR").format(value)
 const cleanPhoneNumber = (phone?: string) => phone?.replace(/[^0-9]/g, "") || ""
@@ -78,6 +78,12 @@ const formatVisitTimeLabel = (value?: string) => {
   const period = hour < 12 ? "오전" : "오후"
   const displayHour = hour % 12 === 0 ? 12 : hour % 12
   return `${period} ${displayHour}:${minute}`
+}
+
+const formatVisitDateForWeatherSearch = (visit?: string) => {
+  const target = parseDateValue(visit)
+  if (!target) return null
+  return `${target.getMonth() + 1}월 ${target.getDate()}일`
 }
 
 const getAdditionalReviews = (schedule: Schedule) => {
@@ -97,7 +103,7 @@ const formatScheduleTitle = (schedule: Schedule) =>
 const timeframeConfigs = [
   { id: "today", label: "오늘", minDiff: 0, maxDiff: 0 },
   { id: "tomorrow", label: "내일", minDiff: 1, maxDiff: 1 },
-  { id: "week", label: "이번 주", minDiff: 0, maxDiff: 6 },
+  { id: "week", label: "일주일", minDiff: 0, maxDiff: 6 },
 ] as const
 
 type TimeframeId = (typeof timeframeConfigs)[number]["id"]
@@ -220,6 +226,12 @@ export default function NotificationsPage() {
   const [isModalVisible, setIsModalVisible] = useState(false)
   const [receiptTarget, setReceiptTarget] = useState<Schedule | null>(null)
   const [uploadingReceiptFor, setUploadingReceiptFor] = useState<number | null>(null)
+
+  const [callMenuTarget, setCallMenuTarget] = useState<number | null>(null)
+  const [receiptFocusScheduleId, setReceiptFocusScheduleId] = useState<number | null>(null)
+  const clearReceiptFocus = useCallback(() => {
+    setReceiptFocusScheduleId(null)
+  }, [])
   
   const [smsTarget, setSmsTarget] = useState<Schedule | null>(null)
   const [isSmsModalOpen, setIsSmsModalOpen] = useState(false)
@@ -282,6 +294,19 @@ export default function NotificationsPage() {
     return () => cancelAnimationFrame(frame)
   }, [totalTasksCount])
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element | null
+      if (target?.closest("[data-call-menu]")) {
+        return
+      }
+      setCallMenuTarget(null)
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "체험단러"
 
   const templates = useMemo(() => {
@@ -326,7 +351,31 @@ export default function NotificationsPage() {
     window.location.href = `sms:${cleaned}${isIOS ? '&' : '?'}body=${encodeURIComponent(body)}`
   }
 
+  const handleCallSelection = (schedule: Schedule, target: "store" | "owner") => {
+    const rawNumber = target === "store" ? schedule.phone : schedule.ownerPhone
+    const cleaned = cleanPhoneNumber(rawNumber)
+    const label = target === "store" ? "가게번호" : "사장님번호"
+    if (!cleaned) {
+      toast({
+        title: `${label}가 없습니다.`,
+        variant: "destructive",
+      })
+      setCallMenuTarget(null)
+      return
+    }
+    setCallMenuTarget(null)
+    window.location.href = `tel:${cleaned}`
+  }
+
   const handleReceiptButtonClick = (schedule: Schedule) => {
+    const existingCount = schedule.guideFiles?.length ?? 0
+    if (existingCount >= 2) {
+      toast({
+        title: "영수증은 최대 2개까지 저장할 수 있습니다.",
+        variant: "destructive",
+      })
+      return
+    }
     setReceiptTarget(schedule)
     if (receiptFileInputRef.current) {
       receiptFileInputRef.current.value = ""
@@ -342,12 +391,35 @@ export default function NotificationsPage() {
       return
     }
 
+    const existingCount = targetSchedule.guideFiles?.length ?? 0
+    if (existingCount >= 2) {
+      toast({
+        title: "영수증은 최대 2개까지 저장할 수 있습니다.",
+        variant: "destructive",
+      })
+      event.target.value = ""
+      setReceiptTarget(null)
+      return
+    }
+
     if (!user?.id) {
       toast({
         title: "로그인 필요",
         description: "영수증 저장은 로그인한 계정으로만 이용할 수 있습니다.",
         variant: "destructive",
       })
+      event.target.value = ""
+      return
+    }
+
+    if (!file.type.startsWith("image/")) {
+      const alertMessage = "사진만 업로드할 수 있습니다."
+      alert(alertMessage)
+      toast({
+        title: alertMessage,
+        variant: "destructive",
+      })
+      setReceiptTarget(null)
       event.target.value = ""
       return
     }
@@ -367,6 +439,9 @@ export default function NotificationsPage() {
       }
 
       toast({ title: "영수증 저장 완료" })
+      setEditingScheduleId(targetSchedule.id)
+      setIsModalVisible(true)
+      setReceiptFocusScheduleId(targetSchedule.id)
     } catch (error) {
       toast({
         title: "영수증 저장 실패",
@@ -379,6 +454,13 @@ export default function NotificationsPage() {
       event.target.value = ""
     }
   }
+
+  const handleUpdateScheduleFiles = useCallback(
+    async (id: number, files: GuideFile[]) => {
+      await updateSchedule(id, { guideFiles: files })
+    },
+    [updateSchedule]
+  )
 
   const editingSchedule = schedules.find(s => s.id === editingScheduleId)
   const visitCardMinWidthClass = filteredVisits.length > 1 ? "min-w-[82%]" : "min-w-full"
@@ -426,31 +508,22 @@ export default function NotificationsPage() {
         </header>
         <div className="fixed top-10 z-20 px-1 right-5">
           <div className="flex w-full justify-end">
-            <div className="flex flex-col items-end gap-2">
-              <div className="flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white/60">
-                {timeframeConfigs.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setTimeframe(option.id)}
-                    className={`rounded-full px-3 py-1 transition-all ${
-                      timeframe === option.id
-                        ? "bg-white text-black shadow-lg"
-                        : "text-white/70 hover:text-white"
-                    }`}
-                    aria-pressed={timeframe === option.id}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-              <Link
-                href="/?page=home"
-                className="group inline-flex items-center gap-2 rounded-2xl border border-transparent px-4 py-1.5 text-[11px] font-black uppercase text-white shadow-[0_10px_45px_rgba(108,99,255,0.35)] bg-gradient-to-r from-[#6c63ff] to-[#aa4bf8]/90 transition hover:shadow-[0_15px_60px_rgba(108,99,255,0.45)]"
-              >
-                <span>모든 일정 보러가기</span>
-                <ChevronRight className="w-4 h-4 text-white/90 transition-colors group-hover:text-white" />
-              </Link>
+            <div className="flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white/60">
+              {timeframeConfigs.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setTimeframe(option.id)}
+                  className={`rounded-full px-3 py-1 transition-all ${
+                    timeframe === option.id
+                      ? "bg-white text-black shadow-lg"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                  aria-pressed={timeframe === option.id}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -473,9 +546,18 @@ export default function NotificationsPage() {
                     const locationLabel = [s.region, s.regionDetail].filter(Boolean).join(" · ")
                     const mapQuery = encodeURIComponent([s.region, s.regionDetail].filter(Boolean).join(" "))
                     const additionalReviews = getAdditionalReviews(s)
-                    const hasPhone = cleanPhoneNumber(s.phone).length > 0
-                    const hasLocation = locationLabel.length > 0
                     const visitLabel = formatVisitDateLabel(s.visit, today)
+                    const hasLocation = locationLabel.length > 0
+                    const weatherDateLabel = formatVisitDateForWeatherSearch(s.visit)
+                    const weatherLocation = [s.region, s.regionDetail].filter(Boolean).join(" ")
+                    const weatherQuery = `${weatherDateLabel ? `${weatherDateLabel} 날씨` : "날씨"} ${weatherLocation || "내 위치"}`
+                    const storePhoneNumber = cleanPhoneNumber(s.phone)
+                    const ownerPhoneNumber = cleanPhoneNumber(s.ownerPhone)
+                    const contactOptions = [
+                      { type: "store" as const, label: "가게번호", value: storePhoneNumber, display: s.phone || storePhoneNumber },
+                      { type: "owner" as const, label: "사장님번호", value: ownerPhoneNumber, display: s.ownerPhone || ownerPhoneNumber },
+                    ].filter((option) => option.value)
+                    const hasContactOptions = contactOptions.length > 0
                     
                     return (
                       <div
@@ -527,7 +609,7 @@ export default function NotificationsPage() {
                             <div className="flex gap-2 shrink-0">
                               <button 
                                 disabled={!hasLocation}
-                                onClick={() => window.open(`https://www.google.com/search?q=날씨+${s.region || '내위치'}`, '_blank')}
+                                onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(weatherQuery)}`, '_blank')}
                                 className="p-2.5 bg-white/5 rounded-xl text-white/30 transition-colors hover:text-white disabled:opacity-20 disabled:cursor-not-allowed"
                               >
                                 <CloudRain className="w-4 h-4" />
@@ -552,12 +634,43 @@ export default function NotificationsPage() {
                           >
                             <Camera className="w-4 h-4" /> {uploadingReceiptFor === s.id ? "저장 중..." : "영수증 저장"}
                           </button>
-                            
-                          {hasPhone && (
-                            <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
-                              <a href={`tel:${cleanPhoneNumber(s.phone)}`} className="p-2 border-r border-white/5 active:bg-white/5"><Phone className="w-4 h-4 text-white/30" /></a>
+
+                          {hasContactOptions && (
+                            <div className="relative">
+                              <button
+                                type="button"
+                                data-call-menu="true"
+                                aria-expanded={callMenuTarget === s.id}
+                                onClick={() =>
+                                  setCallMenuTarget(callMenuTarget === s.id ? null : s.id)
+                                }
+                                className="flex items-center justify-center rounded-2xl border border-white/5 bg-[#1e1e20] p-2 text-white/70 transition hover:text-white/90"
+                              >
+                                <Phone className="w-4 h-4" />
+                              </button>
+                              {callMenuTarget === s.id && (
+                                <div
+                                  data-call-menu="true"
+                                  className="absolute bottom-full right-0 z-50 w-44 -translate-y-2 rounded-2xl border border-white/10 bg-[#0d0d11] p-2 shadow-2xl"
+                                >
+                                  <div className="flex flex-col gap-1">
+                                    {contactOptions.map((option) => (
+                                      <button
+                                        key={`${option.type}-${s.id}`}
+                                        type="button"
+                                        onClick={() => handleCallSelection(s, option.type)}
+                                        className="w-full rounded-xl px-3 py-2 text-left text-[12px] font-semibold text-white/70 transition hover:text-white"
+                                      >
+                                        <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">{option.label}</span>
+                                        <span className="block text-sm font-bold text-white">{option.display}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
+
                           <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
                             <button onClick={() => handleOpenSmsModal(s, 'visit')} className="p-2 active:bg-white/5">
                               <MessageCircle className="w-4 h-4 text-white/30" />
@@ -637,6 +750,15 @@ export default function NotificationsPage() {
           </>
         )}
       </div>
+      <div className="fixed bottom-6 left-1/2 z-20 w-full max-w-md px-4 -translate-x-1/2">
+        <Link
+          href="/?page=home"
+          className="flex items-center justify-center gap-2 rounded-[2rem] bg-gradient-to-r from-[#6c63ff] to-[#aa4bf8]/90 px-6 py-4 text-base font-black text-white shadow-[0_15px_45px_rgba(49,114,255,0.35)] transition hover:shadow-[0_20px_50px_rgba(33,91,255,0.45)]"
+        >
+          <span>모든 일정 보러가기</span>
+          <ChevronRight className="w-4 h-4 text-white/90" />
+        </Link>
+      </div>
 
       {/* 통합 메시지 모달 생략 (이전과 동일) */}
       <Dialog open={isSmsModalOpen} onOpenChange={setIsSmsModalOpen}>
@@ -713,9 +835,9 @@ export default function NotificationsPage() {
                 sendSms(smsTarget?.ownerPhone || smsTarget?.phone || "", customSmsBody);
                 setIsSmsModalOpen(false);
               }}
-              className="w-full py-7 bg-white text-black rounded-2xl font-black text-base shadow-xl active:scale-95 disabled:bg-white/10 disabled:text-white/30 transition-all"
+              className="w-full py-7 bg-white text-black rounded-2xl font-black shadow-xl active:scale-95 disabled:bg-white/10 disabled:text-white/30 transition-all"
             >
-              {cleanPhoneNumber(smsTarget?.ownerPhone || smsTarget?.phone) ? <><Send className="w-5 h-5" /> 문자 발송하기</> : "연락처 등록 후 발송"}
+              {cleanPhoneNumber(smsTarget?.ownerPhone || smsTarget?.phone) ? <><Send className="w-5 h-5" /> 문자 발송하러 가기</> : "연락처 등록 후 발송"}
             </Button>
           </div>
         </DialogContent>
@@ -724,10 +846,16 @@ export default function NotificationsPage() {
       {isModalVisible && editingSchedule && (
         <ScheduleModal
           isOpen={isModalVisible}
-          onClose={() => setIsModalVisible(false)}
+          onClose={() => {
+            setIsModalVisible(false)
+            clearReceiptFocus()
+          }}
           onSave={async (s) => { await updateSchedule(s.id, s); setIsModalVisible(false); return true; }}
           onDelete={async (id) => { await deleteSchedule(id); setIsModalVisible(false); }}
           schedule={editingSchedule}
+          onUpdateFiles={handleUpdateScheduleFiles}
+          focusGuideFiles={receiptFocusScheduleId === editingSchedule.id}
+          onGuideFilesFocusDone={clearReceiptFocus}
         />
       )}
       <input

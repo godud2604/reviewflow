@@ -117,6 +117,8 @@ export default function ScheduleModal({
   onDelete,
   onUpdateFiles,
   schedule,
+  focusGuideFiles,
+  onGuideFilesFocusDone,
 }: {
   isOpen: boolean
   onClose: () => void
@@ -124,6 +126,8 @@ export default function ScheduleModal({
   onDelete: (id: number) => void
   onUpdateFiles?: (id: number, files: GuideFile[]) => Promise<void>
   schedule?: Schedule
+  focusGuideFiles?: boolean
+  onGuideFilesFocusDone?: () => void
 }) {
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData())
 
@@ -172,6 +176,7 @@ export default function ScheduleModal({
   } = useUserProfile()
   const isSubmittingRef = useRef(false)
   const isMountedRef = useRef(false)
+  const guideFilesSectionRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!isOpen) return;
@@ -344,6 +349,18 @@ export default function ScheduleModal({
       setSelectedCategories(sanitized)
     }
   }, [userCategories, sanitizeCategories, selectedCategories])
+
+  const guideFilesCount = formData.guideFiles?.length ?? 0
+
+  useEffect(() => {
+    if (!focusGuideFiles || !isOpen) return
+    const section = guideFilesSectionRef.current
+    if (!section) {
+      return
+    }
+    section.scrollIntoView({ behavior: "smooth", block: "start" })
+    onGuideFilesFocusDone?.()
+  }, [focusGuideFiles, isOpen, guideFilesCount, onGuideFilesFocusDone])
 
   useEffect(() => {
     const allowed = new Set(categoryValues)
@@ -1473,13 +1490,13 @@ export default function ScheduleModal({
             </div>
             
             {formData.guideFiles && formData.guideFiles.length > 0 && (
-              <div className="mt-6 space-y-3">
+              <div ref={guideFilesSectionRef} className="mt-6 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[15px] font-bold text-neutral-500">영수증</span>
                   <span className="text-xs text-neutral-400">{formData.guideFiles.length}개</span>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {formData.guideFiles.map((file) => {
+                  {formData.guideFiles.map((file, index) => {
                     const previewUrl = guideFilePreviews[file.path]
                     const isImage = file.type.startsWith("image/")
                     return (
@@ -1500,13 +1517,22 @@ export default function ScheduleModal({
                         </div>
                         <div className="mt-2 flex items-center justify-between gap-2">
                           <span className="text-[13px] font-semibold text-neutral-700 truncate">{file.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleDownloadFile(file)}
-                            className="text-[11px] font-semibold text-[#FF5722] hover:text-[#d14500] shrink-0"
-                          >
-                            다운로드
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadFile(file)}
+                              className="text-[11px] font-semibold text-[#FF5722] hover:text-[#d14500] shrink-0"
+                            >
+                              다운로드
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFileToDelete({ file, index })}
+                              className="text-[11px] font-semibold text-red-600 hover:text-red-800 shrink-0"
+                            >
+                              삭제
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )
@@ -1956,7 +1982,7 @@ export default function ScheduleModal({
       </AlertDialog>
 
       <AlertDialog open={fileToDelete !== null} onOpenChange={(open) => !open && setFileToDelete(null)}>
-        <AlertDialogContent className="w-[280px] rounded-2xl p-6 gap-4">
+        <AlertDialogContent className="w-[340px] max-w-[90vw] rounded-2xl p-6 gap-4">
           <AlertDialogHeader className="space-y-2 text-center">
             <AlertDialogTitle className="text-base font-bold text-neutral-900">파일 삭제</AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">

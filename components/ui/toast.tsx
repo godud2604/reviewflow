@@ -25,7 +25,7 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  'group pointer-events-auto relative flex w-auto items-center justify-center space-x-2 overflow-hidden rounded-2xl border border-orange-100 px-5 py-3 shadow-lg backdrop-blur-sm transition-all data-[swipe=cancel]:translate-y-0 data-[swipe=end]:translate-y-[var(--radix-toast-swipe-end-y)] data-[swipe=move]:translate-y-[var(--radix-toast-swipe-move-y)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-full data-[state=open]:duration-300 data-[state=closed]:duration-300',
+  'group pointer-events-auto relative flex w-auto items-center justify-center space-x-2 overflow-hidden rounded-2xl border border-orange-100 px-5 py-3 shadow-lg backdrop-blur-sm transition-all data-[swipe=cancel]:translate-y-0 data-[swipe=end]:translate-y-[var(--radix-toast-swipe-end-y)] data-[swipe=move]:translate-y-[var(--radix-toast-swipe-move-y)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-full data-[state=open]:duration-300 data-[state=closed]:duration-300 whitespace-nowrap max-w-[90vw]',
   {
     variants: {
       variant: {
