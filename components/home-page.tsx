@@ -599,7 +599,7 @@ function CalendarSection({
               {hasSchedule && dayInfo?.hasDeadline && (
                 <>
                   <span
-                    className={`absolute -bottom-0.5 -right-0.5 flex h-4 text-[10px] min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] font-extrabold leading-none ${
+                    className={`absolute bottom-[1.5px] -right-0.5 flex h-4 text-[10px] min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] font-extrabold leading-none ${
                       dayInfo.deadlineCount > 0
                         ? "shadow-[0_4px_10px_rgba(0,0,0,0.12)] bg-white text-orange-600"
                         : "shadow-none bg-transparent text-orange-600"
@@ -616,7 +616,7 @@ function CalendarSection({
               )}
               {hasSchedule && dayInfo?.hasVisit && (
                 <span
-                  className={`absolute ${dayInfo?.overdue ? "top-0 left-0" : "-bottom-0.5 -left-0.5"} flex h-4 min-w-[16px] items-center justify-center gap-0.5 rounded-full px-1 text-[9px] font-extrabold leading-none shadow-[0_4px_10px_rgba(0,0,0,0.12)] bg-sky-50 text-sky-700`}
+                  className={`absolute ${dayInfo?.overdue ? "top-0 left-0" : "-bottom-1 -left-1"} flex h-4 min-w-[16px] items-center justify-center gap-0.5 rounded-full px-1 text-[9px] font-extrabold leading-none shadow-[0_4px_10px_rgba(0,0,0,0.12)] bg-sky-50 text-sky-700`}
                 >
                   📍
                   {dayInfo.visitCount > 1 ? dayInfo.visitCount : ""}
