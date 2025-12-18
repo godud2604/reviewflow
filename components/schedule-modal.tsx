@@ -500,7 +500,7 @@ export default function ScheduleModal({
   const handleDownloadFile = async (file: GuideFile) => {
     toast({
       title: "다운로드 시작",
-      description: "파일을 준비하고 있습니다. 잠시만 기다려 주세요.",
+      description: "잠시만 기다려 주세요.",
       duration: 2000,
     });
     

@@ -128,7 +128,7 @@ const visitTemplateDefinitions: TemplateDefinition[] = [
     description: "약속한 시간에 맞춰 방문한다는 예의 있는 확인",
     icon: Loader2,
     body: ({ schedule, userName }) =>
-      `안녕하세요 사장님, 오늘 ${formatVisitTimeLabel(schedule.visitTime)}에 ${formatScheduleTitle(schedule)} 방문 예정인 체험단 ${userName}입니다. 약속한 시간에 맞춰 꼭 찾아뵙겠습니다.`,
+      `안녕하세요 사장님! 오늘 ${formatVisitTimeLabel(schedule.visitTime)}에 방문 예정인 체험단 ${userName}입니다. 약속한 시간에 맞춰 늦지 않게 방문하겠습니다. 잠시 후 뵙겠습니다!`,
   },
   {
     id: "visit-change",
@@ -136,7 +136,7 @@ const visitTemplateDefinitions: TemplateDefinition[] = [
     description: "불가피한 일정 조정을 부탁할 때",
     icon: MessageCircle,
     body: ({ schedule, userName }) =>
-      `안녕하세요 사장님, ${userName}입니다. 오늘 방문 일정에 변동이 생겨 혹시 다시 맞출 수 있는 시간대가 있을지 여쭤보고 싶습니다. 편하신 시간 알려주시면 다시 일정 잡도록 하겠습니다.`,
+      `안녕하세요 사장님, 체험단 ${userName}입니다. 오늘 방문 일정에 갑작스러운 변동이 생겨 실례를 무릅쓰고 연락드렸습니다. 혹시 오늘 중 다른 편하신 시간대가 있으실지, 아니면 다른 날로 다시 일정을 잡는 것이 좋을지 여쭤보고 싶습니다. 번거롭게 해드려 정말 죄송합니다.`,
   },
   {
     id: "visit-deadline",
@@ -144,18 +144,30 @@ const visitTemplateDefinitions: TemplateDefinition[] = [
     description: "방문 후 리뷰 마감을 부드럽게 끌고 갈 때",
     icon: AlertCircle,
     body: ({ schedule, userName }) =>
-      `안녕하세요! ${formatScheduleTitle(schedule)} 방문을 준비 중인 체험단 ${userName}입니다. 오늘 방문 후에도 자료 정리 시간이 필요해 리뷰 마감을 조금 조율할 수 있을지 여쭤봅니다.`,
+      `안녕하세요 사장님! 오늘 방문 예정인 체험단 ${userName}입니다. 다름이 아니라, 방문 후 현장 사진과 내용을 더 꼼꼼히 정리하여 퀄리티 높은 리뷰를 작성해 드리고 싶어 마감 기한을 조금 여유 있게 조율할 수 있을지 여쭤봅니다. 정성스러운 포스팅으로 보답하겠습니다!`,
   },
 ]
 
 const deadlineTemplateDefinitions: TemplateDefinition[] = [
+  {
+    id: "deadline-delay",
+    label: "지연 안내",
+    description: "예상보다 늦어지는 이유를 설명",
+    icon: AlertCircle,
+    body: ({ schedule, userName }) =>
+      `광고주님 안녕하세요. 현재 진행 중인 ${formatScheduleTitle(
+        schedule
+      )} 포스팅의 완성도를 높이는 과정에서 예상보다 시간이 조금 더 소요되고 있습니다. 기다려 주시는 만큼 꼼꼼하게 마무리하여 내일 중으로 반드시 업로드/전달드리겠습니다. 불편을 끼쳐드려 죄송합니다.`,
+  },
   {
     id: "deadline-extension",
     label: "기한 연장",
     description: "마감이 닥친 상태에서 여유를 요청",
     icon: Check,
     body: ({ schedule, userName }) =>
-      `안녕하세요 광고주님, ${formatScheduleTitle(schedule)} 리뷰를 보다 꼼꼼하게 마무리하려다 보니 조금 더 시간이 필요할 것 같습니다. 내일까지 연장해주실 수 있을까요?`,
+      `안녕하세요 광고주님, ${formatScheduleTitle(
+        schedule
+      )} 리뷰를 정리하는 과정에서 조금 더 세밀한 검토가 필요할 것 같습니다. 정성스러운 리뷰를 위해 부득이하게 기한 연장을 부탁드리고자 합니다. 혹시 내일 오전 중까지로 검토 기한을 조정해 주실 수 있을까요? 너그러운 양해 부탁드립니다.`,
   },
   {
     id: "deadline-status",
@@ -163,15 +175,9 @@ const deadlineTemplateDefinitions: TemplateDefinition[] = [
     description: "지금까지의 진행 상황을 간단히",
     icon: MessageSquare,
     body: ({ schedule, userName }) =>
-      `체험단 ${userName}입니다. ${formatScheduleTitle(schedule)} 리뷰 자료 수집과 수정 작업을 마무리하는 중이며 오늘 중으로 초안을 공유드릴게요.`,
-  },
-  {
-    id: "deadline-delay",
-    label: "지연 안내",
-    description: "예상보다 늦어지는 이유를 설명",
-    icon: AlertCircle,
-    body: ({ schedule, userName }) =>
-      `광고주님 안녕하세요. 개인 사정으로 인해 ${formatScheduleTitle(schedule)} 포스팅이 조금 더 지연되고 있습니다. 최대한 빠르게 마무리해서 내일까지는 꼭 전달드릴게요.`,
+      `체험단 ${userName}입니다. 현재 ${formatScheduleTitle(
+        schedule
+      )} 리뷰 자료 수집을 마치고 최종 원고를 편집 중입니다. 오늘 중으로 초안 정리를 완료하여 공유드릴 예정이니, 잠시만 기다려 주시면 감사하겠습니다. 만족하실만한 결과물로 찾아뵙겠습니다!`,
   },
 ]
 
@@ -193,7 +199,7 @@ const ScheduleChannelBadges = ({ channels }: { channels?: ScheduleChannel[] | nu
         {channels.map((channel, index) => (
           <span
             key={`${channel}-${index}`}
-            className="text-[14px] font-semibold text-white/80 bg-white/5 border border-white/10 rounded-full px-2 py-1 whitespace-nowrap"
+            className="text-[12.5px] font-semibold text-white/80 bg-white/5 border border-white/10 rounded-full px-2 py-1 whitespace-nowrap"
           >
             {channel}
           </span>
@@ -506,7 +512,7 @@ export default function NotificationsPage() {
             </div>
           </div>
         </header>
-        <div className="fixed top-10 z-20 px-1 right-5">
+        <div className="fixed top-3 z-20 px-1 right-3">
           <div className="flex w-full justify-end">
             <div className="flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-1 text-[14px] font-bold uppercase tracking-[0.1em] text-white/60">
               {timeframeConfigs.map((option) => (
@@ -530,7 +536,7 @@ export default function NotificationsPage() {
 
         {showEmptyState ? (
           <div className="py-24 text-center border border-dashed border-white/10 rounded-[2.5rem] text-white/40 space-y-2">
-            <p className="text-xl font-bold text-white/80">방문이나 마감 일정이 아직 없어요.</p>
+            <p className="text-base font-bold text-white/80">방문이나 마감 일정이 아직 없어요.</p>
           </div>
         ) : (
           <>
@@ -568,30 +574,34 @@ export default function NotificationsPage() {
                           <div className="space-y-1 mb-4">
                             <div className="flex justify-between">
                               <div className="flex flex-wrap items-center gap-2">
-                                <div className="text-[14px] font-black bg-blue-500 text-white px-2.5 py-1 rounded-full uppercase tracking-[0.03em]">
-                                  {visitLabel && (
-                                    <span className="mr-1">{visitLabel} /</span>
-                                  )}
-                                  {formatVisitTimeLabel(s.visitTime)}
-                                </div>
-                                <span className="text-[14px] font-bold text-white/60 uppercase">{s.platform}</span>
-                                {s.paybackExpected && (
-                                  <span className="text-[14px] font-bold text-[#8a72ff] flex items-center gap-1">
-                                    <AlertCircle className="w-3 h-3 translate-y-[-1px]" /> 환급금
+                              <div className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#6c63ff]/20 via-[#aa4bf8]/10 to-[#ff7ae0]/10 px-3 py-1 text-[13px] font-semibold tracking-tight text-white ring-1 ring-white/10">
+                                {visitLabel && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-white/[0.08] px-2 py-0.5 text-[11px] font-bold tracking-tight text-white/80">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-[#ff7ae0]" aria-hidden="true" />
+                                    {visitLabel}
                                   </span>
                                 )}
+                                <span className="text-[13px] font-semibold text-white">{formatVisitTimeLabel(s.visitTime)}</span>
                               </div>
+                              <span className="text-[14px] font-bold text-white/60 uppercase">{s.platform}</span>
+                              {s.paybackExpected && (
+                                <span className="text-[14px] font-bold text-[#8a72ff] flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3 translate-y-[-1px]" /> 환급금
+                                </span>
+                              )}
+                            </div>
                               <button onClick={() => { setEditingScheduleId(s.id); setIsModalVisible(true); }} className="p-1.5 text-white/20 hover:text-white transition-colors">
                                 <MoreVertical className="w-5 h-5" />
                               </button>
                             </div>
                             <div className="flex flex-wrap gap-2 mt-2">
                               <ScheduleChannelBadges channels={s.channel} />
-                              {additionalReviews.map((rev, idx) => (
-                                <span key={idx} className="text-[14px] font-bold text-blue-400/50 bg-blue-400/5 px-1.5 py-1 rounded-md border border-blue-400/10">
-                                  + {rev}
-                                </span>
-                              ))}
+                              {additionalReviews.length > 0 && (
+                                <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12.5px] font-bold text-white/80">
+                                  <span aria-hidden>🧾</span>
+                                  <span className="text-white/60">추가리뷰</span>
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -723,20 +733,12 @@ export default function NotificationsPage() {
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between">
-                            <div className="flex flex-wrap gap-2 min-w-0">
-                              <ScheduleChannelBadges channels={s.channel} />
-                              {additionalReviews.map((rev, idx) => (
-                                <span key={idx} className="text-[14px] font-bold text-blue-400/50 bg-blue-400/5 px-1.5 py-1 rounded-md border border-blue-400/10">+ {rev}</span>
-                              ))}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="shrink-0 text-[14px] font-bold text-red-1000">{formatCurrency(netLoss)}원</span>
-                              <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
-                                <button onClick={() => handleOpenSmsModal(s, 'deadline')} className="p-2 active:bg-white/5">
-                                  <MessageCircle className="w-4 h-4 text-white/30" />
-                                </button>
-                              </div>
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="shrink-0 text-[14px] font-bold text-red-1000">{formatCurrency(netLoss)}원</span>
+                            <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
+                              <button onClick={() => handleOpenSmsModal(s, 'deadline')} className="p-2 active:bg-white/5">
+                                <MessageCircle className="w-4 h-4 text-white/30" />
+                              </button>
                             </div>
                           </div>
                         </div>
