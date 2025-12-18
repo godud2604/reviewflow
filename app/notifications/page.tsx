@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useEffect, type ChangeEvent } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useSchedules } from "@/hooks/use-schedules"
-import type { Schedule } from "@/types"
+import type { Schedule, ScheduleChannel } from "@/types"
 import { uploadGuideFile } from "@/lib/storage"
 import { 
   Camera, 
@@ -62,9 +62,8 @@ const getAdditionalReviews = (schedule: Schedule) => {
   const reviews = []
   if (checklist.naverReservation) reviews.push("네이버")
   if (checklist.platformAppReview) reviews.push("앱")
-  if (checklist.cafeReview) reviews.push("카페")
   if (checklist.googleReview) reviews.push("구글")
-  if (checklist.other && checklist.otherText) reviews.push(checklist.otherText.slice(0, 3))
+  if (checklist.other && checklist.otherText) reviews.push(checklist.otherText)
   return reviews
 }
 
@@ -146,6 +145,26 @@ const buildTemplates = (type: "visit" | "deadline", schedule: Schedule, userName
   }))
 }
 
+const ScheduleChannelBadges = ({ channels }: { channels?: ScheduleChannel[] | null }) => {
+  if (!channels || channels.length === 0) {
+    return null
+  }
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap gap-2">
+        {channels.map((channel, index) => (
+          <span
+            key={`${channel}-${index}`}
+            className="text-[9px] font-semibold text-white/80 bg-white/5 border border-white/10 rounded-full px-2 py-1 whitespace-nowrap"
+          >
+            {channel}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function NotificationsPage() {
   const { user } = useAuth()
   const { schedules, updateSchedule, deleteSchedule } = useSchedules({ enabled: !!user })
@@ -169,6 +188,43 @@ export default function NotificationsPage() {
   const todaysDeadlines = useMemo(() => schedules.filter((s) => parseDateValue(s.dead) && diffDaysFrom(parseDateValue(s.dead)!, today) === 0), [schedules, today])
   const totalDeadlineNetImpact = useMemo(() => todaysDeadlines.reduce((sum, s) => sum + ((s.benefit ?? 0) + (s.income ?? 0) - (s.cost ?? 0)), 0), [todaysDeadlines])
   const totalTasksCount = todaysVisits.length + todaysDeadlines.length
+  const [animatedTaskCount, setAnimatedTaskCount] = useState(0)
+
+  useEffect(() => {
+    const target = totalTasksCount
+    if (target === 0) {
+      setAnimatedTaskCount(0)
+      return
+    }
+
+    const startValue = target > 0 ? 1 : 0
+    setAnimatedTaskCount(startValue)
+
+    const diff = target - startValue
+    if (diff <= 0) {
+      return
+    }
+
+    let frame: number
+    let startTime: number | null = null
+    const duration = 600
+
+    const animate = (timestamp: number) => {
+      if (!startTime) {
+        startTime = timestamp
+      }
+      const progress = Math.min((timestamp - startTime) / duration, 1)
+      const nextValue = startValue + Math.round(progress * diff)
+      setAnimatedTaskCount(Math.min(nextValue, target))
+
+      if (progress < 1) {
+        frame = requestAnimationFrame(animate)
+      }
+    }
+
+    frame = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(frame)
+  }, [totalTasksCount])
 
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "체험단러"
 
@@ -273,7 +329,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-[#09090B] text-white p-6 pb-40 font-sans tracking-tight">
-      {/* 가로 스크롤바 디자인 제거 스타일 */}
+      {/* 가로 스크롤바 제거 및 애니메이션 스타일 */}
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar {
           display: none;
@@ -282,25 +338,40 @@ export default function NotificationsPage() {
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
+        .animated-count {
+          animation: fadeInCount 0.55s ease;
+        }
+        @keyframes fadeInCount {
+          from {
+            opacity: 0;
+            transform: translateY(-6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
       `}</style>
 
       <div className="max-w-md mx-auto space-y-10">
         
-        <header className="pt-8 px-1">
-          <p className="text-[#A1A1AA] text-xs font-bold uppercase tracking-widest mb-2">Daily Brief</p>
-          <h1 className="text-3xl font-bold leading-tight tracking-tighter mb-4">
-            오늘 할 일 <span className="text-[#5c3dff]">{totalTasksCount}건</span>
-            <span className="ml-2 text-sm font-semibold text-white/40">
-              (방문일 {todaysVisits.length}건 / 마감일 {todaysDeadlines.length}건)
-            </span>
-          </h1>
+        <header className="pt-8 px-1 space-y-2">
+          <p className="text-[#A1A1AA] text-xs font-bold uppercase tracking-[0.2em]">Daily Brief</p>
+          <div className="flex flex-col gap-2">
+            <h1 className="text-4xl font-bold leading-tight tracking-tight text-white">
+              <span className="block">오늘의 할 일</span>
+              <span className="inline-block text-[2.8rem] font-black tracking-tight text-transparent bg-gradient-to-br from-[#6c63ff] to-[#aa4bf8] bg-clip-text animated-count">
+                {animatedTaskCount}건
+              </span>
+            </h1>
+          </div>
         </header>
 
         {/* 1. 오늘 방문 일정 (가로 스와이프 재활성화 + 스크롤바 제거) */}
         <section className="space-y-4">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-[11px] font-black text-white/20 uppercase tracking-[0.25em]">Visit Tasks</h2>
-            {todaysVisits.length > 1 && <span className="text-[10px] text-white/10 font-bold tracking-tighter animate-pulse">옆으로 밀어보기</span>}
+            <h2 className="text-[11px] font-black text-white/20 uppercase tracking-[0.1em]"><span className="text-white/60">방문일 {todaysVisits.length}건</span></h2>
+            {todaysVisits.length > 1 && <span className="text-[10.5px] text-white/60 font-bold tracking-tighter animate-pulse">옆으로 밀어보기</span>}
           </div>
 
           <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2">
@@ -317,30 +388,40 @@ export default function NotificationsPage() {
                     key={s.id}
                     className={`${visitCardMinWidthClass} snap-center bg-[#121214] rounded-[2.5rem] p-7 border border-white/[0.05] shadow-2xl space-y-6`}
                   >
-                    <div className="space-y-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[10px] font-black bg-blue-500 text-white px-2.5 py-1 rounded-full uppercase">
-                          {formatVisitTimeLabel(s.visitTime)}
-                        </span>
-                        <span className="text-[10px] font-bold text-white/30 uppercase">{s.platform}</span>
-                        {s.paybackExpected && (
-                          <span className="text-[10px] font-bold text-[#8a72ff] bg-[#5c3dff]/10 px-2 py-1 rounded-md border border-[#5c3dff]/20 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" /> 환급금
-                          </span>
-                        )}
-                        {additionalReviews.map((rev, idx) => <span key={idx} className="text-[9px] font-bold text-blue-400/50 bg-blue-400/5 px-2 py-1 rounded-md border border-blue-400/10">+{rev}</span>)}
+                    <div className="space-y-3">
+                      <div className="space-y-1 mb-4">
+                        <div className="flex justify-between">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-black bg-blue-500 text-white px-2.5 py-1 rounded-full uppercase tracking-[0.03em]">
+                              {formatVisitTimeLabel(s.visitTime)}
+                            </span>
+                            <span className="text-[10.5px] font-bold text-white/60 uppercase">{s.platform}</span>
+                            {s.paybackExpected && (
+                              <span className="text-[10.5px] font-bold text-[#8a72ff] flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3 translate-y-[-1px]" /> 환급금
+                              </span>
+                            )}
+                          </div>
+                          <button onClick={() => { setEditingScheduleId(s.id); setIsModalVisible(true); }} className="p-1.5 text-white/20 hover:text-white transition-colors">
+                            <MoreVertical className="w-5 h-5" />
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <ScheduleChannelBadges channels={s.channel} />
+                          {additionalReviews.map((rev, idx) => (
+                            <span key={idx} className="text-[9px] font-bold text-blue-400/50 bg-blue-400/5 px-1.5 py-1 rounded-md border border-blue-400/10">
+                              + {rev}
+                            </span>
+                          ))}
+                        </div>
                       </div>
 
                       <div className="flex justify-between items-start gap-2">
                         <h3 className="text-2xl font-bold leading-tight tracking-tight truncate">{s.title}</h3>
-                        <button onClick={() => { setEditingScheduleId(s.id); setIsModalVisible(true); }} className="p-1.5 text-white/20 hover:text-white transition-colors">
-                          <MoreVertical className="w-5 h-5" />
-                        </button>
                       </div>
 
-                      {/* 위치 정보 레이아웃 유지 (없으면 액션 비활성화) */}
-                      <div className="flex items-center justify-between gap-3 p-4 bg-white/[0.02] rounded-2xl border border-white/5">
-                        <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center justify-between gap-3 px-3 py-2 bg-white/[0.02] rounded-2xl border border-white/5">
+                        <div className="flex items-center gap-2 min-w-0">
                           <MapPin className="w-4 h-4 text-white/20 shrink-0" />
                           <span className={`text-[13px] truncate font-medium ${hasLocation ? 'text-white/50' : 'text-white/20'}`}>
                             {hasLocation ? locationLabel : "위치 정보 없음"}
@@ -365,16 +446,16 @@ export default function NotificationsPage() {
                       </div>
                     </div>
 
-                    <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleReceiptButtonClick(s)}
-                      disabled={uploadingReceiptFor === s.id}
-                      className="flex-1 py-2.5 bg-white text-black rounded-2xl font-bold text-[12px] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-wait"
-                    >
-                      <Camera className="w-4 h-4" /> {uploadingReceiptFor === s.id ? "저장 중..." : "영수증 저장"}
-                    </button>
-                      
+                    <div className="flex gap-3 mt-[-6px]">
+                      <button
+                        type="button"
+                        onClick={() => handleReceiptButtonClick(s)}
+                        disabled={uploadingReceiptFor === s.id}
+                        className="flex-1 py-2.5 bg-white text-black rounded-2xl font-bold text-[12px] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-wait"
+                      >
+                        <Camera className="w-4 h-4" /> {uploadingReceiptFor === s.id ? "저장 중..." : "영수증 저장"}
+                      </button>
+                        
                       {hasPhone && (
                         <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
                           <a href={`tel:${cleanPhoneNumber(s.phone)}`} className="p-2.5 border-r border-white/5 active:bg-white/5"><Phone className="w-5 h-5 text-white/30" /></a>
@@ -398,7 +479,7 @@ export default function NotificationsPage() {
         {/* 2. 마감 임박 (압축형 리스트) */}
         <section className="space-y-4">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-[11px] font-black text-red-500/30 uppercase tracking-[0.25em]">Urgent Deadlines</h2>
+            <h2 className="text-[11px] font-black text-red-500/30 uppercase tracking-[0.1em]"><span className="text-white/60">마감일 {todaysDeadlines.length}건</span></h2>
           </div>
 
           {todaysDeadlines.length > 0 ? (
@@ -408,30 +489,35 @@ export default function NotificationsPage() {
                 const additionalReviews = getAdditionalReviews(s)
                 return (
                   <div key={s.id} className="p-5 flex flex-col gap-3 active:bg-white/[0.02] transition-all">
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-center flex-wrap gap-2">
-                          <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded leading-none tracking-tighter">D-DAY</span>
-                          <span className="text-[10px] font-bold text-white/30 uppercase">{s.platform}</span>
-                          {s.paybackExpected && (
-                            <span className="text-[9px] font-bold text-blue-400/80 bg-blue-400/5 px-1.5 py-0.5 rounded border border-blue-400/20 flex items-center gap-1">
-                              <AlertCircle className="w-2.5 h-2.5" /> 환급금
-                            </span>
-                          )}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex items-center flex-wrap gap-2">
+                            <span className="text-[9px] font-bold bg-red-900 text-white px-2.5 py-0.5 rounded">D-DAY</span>
+                            <span className="text-[10.5px] font-bold text-white/60 uppercase">{s.platform}</span>
+                            {s.paybackExpected && (
+                              <span className="text-[10.5px] font-bold text-[#8a72ff] flex items-center gap-1">
+                                <AlertCircle className="w-2.5 h-2.5 translate-y-[-1px]" /> 환급금
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="text-base font-bold text-white/90 truncate pr-6">{s.title}</h3>
                         </div>
-                        <h3 className="text-base font-bold text-white/90 truncate pr-6">{s.title}</h3>
+                        <button onClick={() => { setEditingScheduleId(s.id); setIsModalVisible(true); }} className="p-1 text-white/20 hover:text-white shrink-0">
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
                       </div>
-                      <button onClick={() => { setEditingScheduleId(s.id); setIsModalVisible(true); }} className="p-1 text-white/20 hover:text-white shrink-0"><MoreVertical className="w-4 h-4" /></button>
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-1 min-w-0">
+                        <ScheduleChannelBadges channels={s.channel} />
                         {additionalReviews.map((rev, idx) => (
-                          <span key={idx} className="text-[9px] font-bold text-red-400/40 bg-red-400/5 px-1.5 py-0.5 rounded border border-red-400/10">+{rev}</span>
+                          <span key={idx} className="text-[10.5px] font-bold text-red-400/40 bg-red-400/5 px-1.5 py-0.5 rounded border border-red-400/10">+ {rev}</span>
                         ))}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-black text-red-500">-{formatCurrency(netLoss)}원</span>
+                        <span className="text-[13px] font-black text-red-500">{formatCurrency(netLoss)}원</span>
                         <button 
                           onClick={() => handleOpenSmsModal(s, 'deadline')}
                           className="p-2 bg-white/5 rounded-lg border border-white/5 text-white/40 active:scale-95 transition-all"
@@ -546,7 +632,6 @@ export default function NotificationsPage() {
         ref={receiptFileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={handleReceiptFileSelected}
       />
