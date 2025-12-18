@@ -24,7 +24,7 @@ function PageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // URL 기반 상태 관리 (먼저 계산)
+  // URL 기반 상태 관리
   const page = searchParams.get("page") || "landing"
   const view = searchParams.get("view")
   const isLandingPage = page === "landing"
@@ -34,12 +34,6 @@ function PageContent() {
   // Auth Hook
   const { user, loading: authLoading } = useAuth()
   
-  // 페이지별 필요한 데이터만 fetch하도록 enabled 옵션 설정
-  // - schedules: home, stats, profile, portfolio 모두 필요
-  // - todos: home에서만 필요
-  // - channels: portfolio에서만 필요
-  // - featuredPosts: portfolio에서만 필요
-  // - extraIncomes: profile에서만 필요
   const isLoggedIn = !!user && !isLandingPage
   
   const { 
@@ -70,20 +64,11 @@ function PageContent() {
     enabled: isLoggedIn && currentPage === "profile" 
   })
   
-  // 현재 페이지에 필요한 데이터만 로딩 체크
   const getIsDataLoading = () => {
-    // 스케줄은 항상 필요
     if (schedulesLoading) return true
-    
-    // home 페이지: todos 필요
     if (currentPage === "home" && todosLoading) return true
-    
-    // portfolio 뷰: channels, featuredPosts 필요
     if (showPortfolio && (channelsLoading || featuredPostsLoading)) return true
-    
-    // profile 페이지: extraIncomes 필요
     if (currentPage === "profile" && extraIncomesLoading) return true
-    
     return false
   }
   
@@ -115,7 +100,6 @@ function PageContent() {
 
   const handleSaveSchedule = async (schedule: Schedule) => {
     let success = true
-
     if (editingScheduleId) {
       const { id, ...updates } = schedule
       success = await updateSchedule(editingScheduleId, updates)
@@ -124,11 +108,9 @@ function PageContent() {
       const created = await createSchedule(newSchedule)
       success = Boolean(created)
     }
-
     if (success) {
       handleCloseScheduleModal()
     }
-
     return success
   }
 
@@ -201,20 +183,6 @@ function PageContent() {
     router.push(`?${params.toString()}`)
   }
 
-  const getPageTitle = () => {
-    if (showPortfolio) return "내 포트폴리오"
-    if (showAllSchedules) return "전체 체험단 리스트"
-    switch (currentPage) {
-      case "home":
-        return "나의 일정"
-      case "stats":
-        return "수익 리포트"
-      case "profile":
-        return "내 프로필"
-    }
-  }
-
-  // 인증 로딩 중
   if (authLoading) {
     return (
       <div className="min-h-screen bg-neutral-200 flex items-center justify-center">
@@ -226,12 +194,10 @@ function PageContent() {
     )
   }
 
-  // 랜딩 페이지 표시 (비로그인 상태 또는 landing 페이지)
   if (isLandingPage || !user) {
     return <LandingPage />
   }
 
-  // 데이터 로딩 중
   if (isDataLoading) {
     return (
       <div className="min-h-screen bg-neutral-200 md:flex md:items-center md:justify-center md:p-4">
@@ -244,52 +210,56 @@ function PageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-200 md:flex md:items-center md:justify-center md:p-4">
+    // 1. 최상단 컨테이너를 fixed로 고정하여 사파리 바운스(튕김)를 방지
+    <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
       <div className="w-full md:max-w-[390px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
         <Header />
 
-        {showPortfolio ? (
-          <PortfolioPage
-            schedules={schedules}
-            channels={channels}
-            featuredPosts={featuredPosts}
-            onBack={handleBackFromPortfolio}
-          />
-        ) : showAllSchedules ? (
-          <AllSchedulesPage
-            schedules={schedules}
-            onScheduleClick={handleOpenScheduleModal}
-            onBack={handleBackFromAll}
-          />
-        ) : (
-          <>
-            {currentPage === "home" && (
-              <HomePage
-                schedules={schedules}
-                onScheduleClick={handleOpenScheduleModal}
-                onShowAllClick={handleShowAllSchedules}
-                onCompleteClick={handleCompleteSchedule}
-                onAddClick={() => handleOpenScheduleModal()}
-              />
-            )}
+        {/* 2. 컨텐츠 영역에만 스크롤을 부여 (flex-1 overflow-y-auto) */}
+        <main className="flex-1 overflow-y-auto outline-none">
+          {showPortfolio ? (
+            <PortfolioPage
+              schedules={schedules}
+              channels={channels}
+              featuredPosts={featuredPosts}
+              onBack={handleBackFromPortfolio}
+            />
+          ) : showAllSchedules ? (
+            <AllSchedulesPage
+              schedules={schedules}
+              onScheduleClick={handleOpenScheduleModal}
+              onBack={handleBackFromAll}
+            />
+          ) : (
+            <>
+              {currentPage === "home" && (
+                <HomePage
+                  schedules={schedules}
+                  onScheduleClick={handleOpenScheduleModal}
+                  onShowAllClick={handleShowAllSchedules}
+                  onCompleteClick={handleCompleteSchedule}
+                  onAddClick={() => handleOpenScheduleModal()}
+                />
+              )}
 
-            {currentPage === "stats" && (
-              <StatsPage
-                schedules={schedules}
-                onScheduleItemClick={(schedule) => handleOpenScheduleModal(schedule.id)}
-                isScheduleModalOpen={isScheduleModalOpen}
-              />
-            )}
+              {currentPage === "stats" && (
+                <StatsPage
+                  schedules={schedules}
+                  onScheduleItemClick={(schedule) => handleOpenScheduleModal(schedule.id)}
+                  isScheduleModalOpen={isScheduleModalOpen}
+                />
+              )}
 
-            {currentPage === "profile" && (
-              <ProfilePage 
-                onShowPortfolio={handleShowPortfolio} 
-                schedules={schedules}
-                extraIncomes={extraIncomes}
-              />
-            )}
-          </>
-        )}
+              {currentPage === "profile" && (
+                <ProfilePage 
+                  onShowPortfolio={handleShowPortfolio} 
+                  schedules={schedules}
+                  extraIncomes={extraIncomes}
+                />
+              )}
+            </>
+          )}
+        </main>
 
         <NavigationBar
           currentPage={currentPage}

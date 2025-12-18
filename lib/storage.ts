@@ -124,46 +124,42 @@ export async function deleteGuideFiles(filePaths: string[]): Promise<boolean> {
  * 파일 다운로드
  */
 export async function downloadGuideFile(filePath: string, fileName: string): Promise<void> {
-  const supabase = getSupabaseClient()
+  const supabase = getSupabaseClient();
 
-  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : ""
-  const isIOS = /iPhone|iPad|iPod/i.test(userAgent)
-  const isSafari =
-    /^(?:(?!chrome|android).)*safari/i.test(userAgent) && !/crios/i.test(userAgent)
+  try {
+    // 1. Supabase에서 파일을 직접 다운로드 (data는 Blob 객체)
+    const { data, error } = await supabase.storage
+      .from('guide-files')
+      .download(filePath);
 
-  if (isIOS) {
-    const signedUrl = await getGuideFileUrl(filePath, true)
-    if (!signedUrl) return
-    window.open(signedUrl, "_blank", "noopener,noreferrer")
-    return
-  }
+    if (error || !data) {
+      throw new Error(error?.message || '파일을 불러오지 못했습니다.');
+    }
 
-  if (isSafari) {
-    const signedUrl = await getGuideFileUrl(filePath, true)
-    if (!signedUrl) return
-    window.open(signedUrl, "_blank", "noopener,noreferrer")
-    return
+    // 2. Blob을 URL로 변환
+    const blobUrl = window.URL.createObjectURL(data);
+    
+    // 3. 임시 <a> 태그 생성
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.setAttribute('download', fileName); // 다운로드 파일명 지정
+    
+    // iOS/Safari 대응: target을 _blank로 설정하지 않고 현재 창에서 처리하거나, 
+    // 직접 click()이 작동하지 않을 경우를 대비해 body에 추가
+    document.body.appendChild(link);
+    
+    // 4. 실행
+    link.click();
+    
+    // 5. 정리 (약간의 지연을 주어 사파리가 파일을 처리할 시간을 줌)
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    }, 100);
+
+  } catch (err) {
+    console.error('다운로드 오류:', err);
+    // 모바일 사용자를 위해 alert나 toast로 에러 알림 필요
+    alert('파일을 다운로드할 수 없습니다. 사파리 설정에서 팝업 차단 해제가 되어있는지 확인해주세요.');
   }
-  
-  // Supabase Storage의 download 메서드 사용
-  const { data, error } = await supabase.storage
-    .from('guide-files')
-    .download(filePath)
-  
-  if (error || !data) {
-    console.error('다운로드 실패:', error)
-    return
-  }
-  
-  // Blob을 다운로드 링크로 변환
-  const url = URL.createObjectURL(data)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  
-  // 메모리 해제
-  URL.revokeObjectURL(url)
 }

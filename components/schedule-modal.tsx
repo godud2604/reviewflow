@@ -499,11 +499,21 @@ export default function ScheduleModal({
 
   const handleDownloadFile = async (file: GuideFile) => {
     toast({
-      title: "다운로드 준비 중...",
-      duration: 1000,
-    })
-    await downloadGuideFile(file.path, file.name)
-  }
+      title: "다운로드 시작",
+      description: "파일을 준비하고 있습니다. 잠시만 기다려 주세요.",
+      duration: 2000,
+    });
+    
+    try {
+      await downloadGuideFile(file.path, file.name);
+    } catch (error) {
+      toast({
+        title: "다운로드 실패",
+        description: "인앱 브라우저라면 '다른 브라우저로 열기'를 시도해 보세요.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleDeleteUploadedFile = async (file: GuideFile, index: number) => {
     if (schedule) {
