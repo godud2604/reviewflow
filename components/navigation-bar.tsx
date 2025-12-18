@@ -18,8 +18,13 @@ export default function NavigationBar({
 
   return (
     <nav
-      className="w-full bg-white border-t border-neutral-200 flex justify-around items-center py-2"
-      style={{ borderRadius: "32px 32px 0 0", maxWidth: 480, margin: "0 auto" }}
+      className="w-full bg-white border-t border-neutral-200 flex justify-around items-center pt-2"
+      style={{
+        borderRadius: "32px 32px 0 0",
+        maxWidth: 480,
+        margin: "0 auto",
+        paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)",
+      }}
     >
       <button
         onClick={onHomeClick}

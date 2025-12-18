@@ -721,7 +721,6 @@ function ScheduleItem({
             </span>
           )}
          
-          {/*  */}
         </div>
       </div>
     </div>
