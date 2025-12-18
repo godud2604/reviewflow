@@ -126,40 +126,31 @@ export async function deleteGuideFiles(filePaths: string[]): Promise<boolean> {
 export async function downloadGuideFile(filePath: string, fileName: string): Promise<void> {
   const supabase = getSupabaseClient();
 
-  try {
-    // 1. Supabase에서 파일을 직접 다운로드 (data는 Blob 객체)
-    const { data, error } = await supabase.storage
-      .from('guide-files')
-      .download(filePath);
+  // 1. 서명된 URL 가져오기 (이미지를 브라우저에서 직접 열기 위함)
+  const { data: urlData, error: urlError } = await supabase.storage
+    .from('guide-files')
+    .createSignedUrl(filePath, 60); // 60초간 유효한 URL
 
-    if (error || !data) {
-      throw new Error(error?.message || '파일을 불러오지 못했습니다.');
-    }
+  if (urlError || !urlData) {
+    alert("파일 주소를 가져오지 못했습니다.");
+    return;
+  }
 
-    // 2. Blob을 URL로 변환
-    const blobUrl = window.URL.createObjectURL(data);
-    
-    // 3. 임시 <a> 태그 생성
+  // 2. 확장자 확인
+  const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(filePath);
+
+  if (isImage) {
+    // 이미지라면 새 탭에서 열기 -> 사용자가 꾹 눌러서 '사진 저장' 유도
+    window.open(urlData.signedUrl, '_blank');
+  } else {
+    // 이미지가 아니라면(PDF 등) 기존처럼 파일 다운로드 실행
+    const res = await fetch(urlData.signedUrl);
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = blobUrl;
-    link.setAttribute('download', fileName); // 다운로드 파일명 지정
-    
-    // iOS/Safari 대응: target을 _blank로 설정하지 않고 현재 창에서 처리하거나, 
-    // 직접 click()이 작동하지 않을 경우를 대비해 body에 추가
-    document.body.appendChild(link);
-    
-    // 4. 실행
+    link.download = fileName;
     link.click();
-    
-    // 5. 정리 (약간의 지연을 주어 사파리가 파일을 처리할 시간을 줌)
-    setTimeout(() => {
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-    }, 100);
-
-  } catch (err) {
-    console.error('다운로드 오류:', err);
-    // 모바일 사용자를 위해 alert나 toast로 에러 알림 필요
-    alert('파일을 다운로드할 수 없습니다. 사파리 설정에서 팝업 차단 해제가 되어있는지 확인해주세요.');
+    window.URL.revokeObjectURL(blobUrl);
   }
 }
