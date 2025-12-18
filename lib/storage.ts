@@ -125,47 +125,57 @@ export async function deleteGuideFiles(filePaths: string[]): Promise<boolean> {
  */
 export async function downloadGuideFile(filePath: string, fileName: string): Promise<void> {
   const supabase = getSupabaseClient();
-  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
-  const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
-  const isAndroid = /Android/i.test(userAgent);
-  const isKakao = /KAKAOTALK/i.test(userAgent);
-
-  // 1. 안드로이드 카톡 대응 (안내 문구)
-  if (isAndroid && isKakao) {
-    alert("카카오톡에서는 파일 저장이 제한될 수 있습니다. 다운로드가 안 된다면 '다른 브라우저로 열기'를 이용해 주세요.");
-    // 이 뒤에 return을 하지 않고 share 시도를 한 번 더 해봅니다.
+  
+  // 1. 우선 파일 데이터를 가져옵니다.
+  const { data, error } = await supabase.storage.from('guide-files').download(filePath);
+  if (error || !data) {
+    alert("파일을 불러오지 못했습니다.");
+    return;
   }
 
-  try {
-    const { data, error } = await supabase.storage.from('guide-files').download(filePath);
-    if (error || !data) throw error;
+  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
 
-    // 2. 모바일(iOS/Android) 공통: 공유 시트 시도 (가장 호환성 좋음)
+  // --- [A] 모바일 환경 (iOS, 안드로이드) ---
+  if (isMobile) {
+    // 1. 공유 메뉴(Share Sheet) 시도
     if (navigator.share && navigator.canShare) {
-      const file = new File([data], fileName, { type: data.type });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: fileName,
-        });
-        return; 
+      try {
+        const file = new File([data], fileName, { type: data.type });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: fileName,
+          });
+          return; // 성공 시 여기서 함수 종료 (새 창 안 뜸)
+        }
+      } catch (err) {
+        console.log("공유 취소 또는 실패", err);
+        // 사용자가 공유를 취소한 경우나 실패 시에만 아래(새 창)로 넘어감
       }
     }
 
-    // 3. PC 및 공유 시트 미지원 브라우저 (기본 다운로드)
-    const url = URL.createObjectURL(data);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-  } catch (err) {
-    console.error('Download error:', err);
-    // 마지막 수단: 서명된 URL을 새 창으로 열기 (꾹 눌러서 저장 유도)
-    const { data: urlData } = await supabase.storage.from('guide-files').createSignedUrl(filePath, 60);
-    if (urlData) window.open(urlData.signedUrl, '_blank');
+    // 2. 공유 메뉴 실패 시 마지막 수단: 새 창에 이미지 띄우기 (꾹 눌러 저장)
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const b64 = reader.result;
+      const newWin = window.open();
+      if (newWin) {
+        newWin.document.write(`<img src="${b64}" style="width:100%;" />`);
+      }
+    };
+    reader.readAsDataURL(data);
+    return;
   }
+
+  // --- [B] 노트북/데스크탑 환경 (PC) ---
+  // PC는 공유 메뉴 없이 바로 '클릭' 이벤트를 통해 즉시 다운로드합니다.
+  const url = URL.createObjectURL(data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
