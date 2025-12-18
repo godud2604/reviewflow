@@ -1,9 +1,10 @@
 "use client"
 
-import { useMemo, useRef, useState, useEffect } from "react"
+import { useMemo, useRef, useState, useEffect, type ChangeEvent } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useSchedules } from "@/hooks/use-schedules"
 import type { Schedule } from "@/types"
+import { uploadGuideFile } from "@/lib/storage"
 import { 
   Camera, 
   MessageSquare, 
@@ -154,6 +155,8 @@ export default function NotificationsPage() {
   const receiptFileInputRef = useRef<HTMLInputElement | null>(null)
   const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null)
   const [isModalVisible, setIsModalVisible] = useState(false)
+  const [receiptTarget, setReceiptTarget] = useState<Schedule | null>(null)
+  const [uploadingReceiptFor, setUploadingReceiptFor] = useState<number | null>(null)
   
   const [smsTarget, setSmsTarget] = useState<Schedule | null>(null)
   const [isSmsModalOpen, setIsSmsModalOpen] = useState(false)
@@ -165,6 +168,7 @@ export default function NotificationsPage() {
   const todaysVisits = useMemo(() => schedules.filter((s) => parseDateValue(s.visit) && diffDaysFrom(parseDateValue(s.visit)!, today) === 0), [schedules, today])
   const todaysDeadlines = useMemo(() => schedules.filter((s) => parseDateValue(s.dead) && diffDaysFrom(parseDateValue(s.dead)!, today) === 0), [schedules, today])
   const totalDeadlineNetImpact = useMemo(() => todaysDeadlines.reduce((sum, s) => sum + ((s.benefit ?? 0) + (s.income ?? 0) - (s.cost ?? 0)), 0), [todaysDeadlines])
+  const totalTasksCount = todaysVisits.length + todaysDeadlines.length
 
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "체험단러"
 
@@ -210,7 +214,62 @@ export default function NotificationsPage() {
     window.location.href = `sms:${cleaned}${isIOS ? '&' : '?'}body=${encodeURIComponent(body)}`
   }
 
+  const handleReceiptButtonClick = (schedule: Schedule) => {
+    setReceiptTarget(schedule)
+    if (receiptFileInputRef.current) {
+      receiptFileInputRef.current.value = ""
+      receiptFileInputRef.current.click()
+    }
+  }
+
+  const handleReceiptFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    const targetSchedule = receiptTarget
+    if (!file || !targetSchedule) {
+      event.target.value = ""
+      return
+    }
+
+    if (!user?.id) {
+      toast({
+        title: "로그인 필요",
+        description: "영수증 저장은 로그인한 계정으로만 이용할 수 있습니다.",
+        variant: "destructive",
+      })
+      event.target.value = ""
+      return
+    }
+
+    setUploadingReceiptFor(targetSchedule.id)
+
+    try {
+      const uploadedFile = await uploadGuideFile(user.id, targetSchedule.id, file)
+      if (!uploadedFile) {
+        throw new Error("업로드된 파일 정보를 가져올 수 없습니다.")
+      }
+
+      const updatedFiles = [...(targetSchedule.guideFiles || []), uploadedFile]
+      const updated = await updateSchedule(targetSchedule.id, { guideFiles: updatedFiles })
+      if (!updated) {
+        throw new Error("일정 정보를 저장하는 데 실패했습니다.")
+      }
+
+      toast({ title: "영수증 저장 완료" })
+    } catch (error) {
+      toast({
+        title: "영수증 저장 실패",
+        description: error instanceof Error ? error.message : "파일 업로드 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setUploadingReceiptFor(null)
+      setReceiptTarget(null)
+      event.target.value = ""
+    }
+  }
+
   const editingSchedule = schedules.find(s => s.id === editingScheduleId)
+  const visitCardMinWidthClass = todaysVisits.length > 1 ? "min-w-[82%]" : "min-w-full"
 
   return (
     <div className="min-h-screen bg-[#09090B] text-white p-6 pb-40 font-sans tracking-tight">
@@ -230,12 +289,11 @@ export default function NotificationsPage() {
         <header className="pt-8 px-1">
           <p className="text-[#A1A1AA] text-xs font-bold uppercase tracking-widest mb-2">Daily Brief</p>
           <h1 className="text-3xl font-bold leading-tight tracking-tighter mb-4">
-            오늘 할 일 <span className="text-[#5c3dff]">{todaysVisits.length + todaysDeadlines.length}건</span>
+            오늘 할 일 <span className="text-[#5c3dff]">{totalTasksCount}건</span>
+            <span className="ml-2 text-sm font-semibold text-white/40">
+              (방문일 {todaysVisits.length}건 / 마감일 {todaysDeadlines.length}건)
+            </span>
           </h1>
-          <div className="inline-flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl border border-white/5 text-[14px]">
-            <span className="text-[#cbd0de]">수익 방어</span>
-            <span className="text-[#5c3dff] font-bold">{formatCurrency(totalDeadlineNetImpact)}원</span>
-          </div>
         </header>
 
         {/* 1. 오늘 방문 일정 (가로 스와이프 재활성화 + 스크롤바 제거) */}
@@ -255,11 +313,14 @@ export default function NotificationsPage() {
                 const hasLocation = locationLabel.length > 0
                 
                 return (
-                  <div key={s.id} className="min-w-[90%] snap-center bg-[#121214] rounded-[2.5rem] p-7 border border-white/[0.05] shadow-2xl space-y-6">
+                  <div
+                    key={s.id}
+                    className={`${visitCardMinWidthClass} snap-center bg-[#121214] rounded-[2.5rem] p-7 border border-white/[0.05] shadow-2xl space-y-6`}
+                  >
                     <div className="space-y-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[10px] font-black bg-blue-500 text-white px-2.5 py-1 rounded-full uppercase">
-                          {formatVisitTimeLabel(s.visit_time)}
+                          {formatVisitTimeLabel(s.visitTime)}
                         </span>
                         <span className="text-[10px] font-bold text-white/30 uppercase">{s.platform}</span>
                         {s.paybackExpected && (
@@ -305,18 +366,25 @@ export default function NotificationsPage() {
                     </div>
 
                     <div className="flex gap-3">
-                      <button className="flex-1 py-2.5 bg-white text-black rounded-2xl font-black text-[12px] active:scale-95 transition-all flex items-center justify-center gap-3">
-                        <Camera className="w-5 h-5" /> 영수증 저장
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => handleReceiptButtonClick(s)}
+                      disabled={uploadingReceiptFor === s.id}
+                      className="flex-1 py-2.5 bg-white text-black rounded-2xl font-bold text-[12px] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-wait"
+                    >
+                      <Camera className="w-4 h-4" /> {uploadingReceiptFor === s.id ? "저장 중..." : "영수증 저장"}
+                    </button>
                       
                       {hasPhone && (
                         <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
-                          <a href={`tel:${cleanPhoneNumber(s.phone)}`} className="p-4.5 border-r border-white/5 active:bg-white/5"><Phone className="w-5 h-5 text-white/30" /></a>
-                          <button onClick={() => handleOpenSmsModal(s, 'visit')} className="p-2.5 active:bg-white/5">
-                            <MessageCircle className="w-5 h-5 text-white/30" />
-                          </button>
+                          <a href={`tel:${cleanPhoneNumber(s.phone)}`} className="p-2.5 border-r border-white/5 active:bg-white/5"><Phone className="w-5 h-5 text-white/30" /></a>
                         </div>
                       )}
+                      <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
+                        <button onClick={() => handleOpenSmsModal(s, 'visit')} className="p-2.5 active:bg-white/5">
+                          <MessageCircle className="w-5 h-5 text-white/30" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )
@@ -384,7 +452,7 @@ export default function NotificationsPage() {
 
       {/* 통합 메시지 모달 생략 (이전과 동일) */}
       <Dialog open={isSmsModalOpen} onOpenChange={setIsSmsModalOpen}>
-        <DialogContent className="bg-[#121214] border-white/10 text-white max-w-sm rounded-[2.5rem] p-6 outline-none shadow-2xl">
+        <DialogContent showCloseButton={false} className="bg-[#121214] border-white/10 text-white max-w-sm rounded-[2.5rem] p-6 outline-none shadow-2xl">
           <DialogHeader className="space-y-2">
             <div className="flex justify-between items-center w-full">
               <DialogTitle className="text-xl font-bold tracking-tight">메시지 작성</DialogTitle>
@@ -392,7 +460,7 @@ export default function NotificationsPage() {
             </div>
           </DialogHeader>
 
-          <div className="mt-4 space-y-6">
+          <div className="space-y-6">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-black uppercase tracking-[0.35em] text-white/50">
@@ -474,7 +542,14 @@ export default function NotificationsPage() {
           schedule={editingSchedule}
         />
       )}
-      <input ref={receiptFileInputRef} type="file" accept="image/*" capture="environment" className="hidden" />
+      <input
+        ref={receiptFileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleReceiptFileSelected}
+      />
     </div>
   )
 }
