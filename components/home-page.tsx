@@ -194,7 +194,7 @@ export default function HomePage({
         <div className="flex items-center gap-2">
           <button
             onClick={onShowAllClick}
-            className="text-[12px] font-semibold text-orange-600 hover:text-orange-700 transition-colors cursor-pointer"
+            className="mt-1 text-[12px] font-semibold text-neutral-900 hover:text-neutral-600 transition-colors cursor-pointer"
           >
             전체보기 ({schedules.length})
           </button>
@@ -508,7 +508,7 @@ function CalendarSection({
         </div>
         <button
           onClick={goToToday}
-          className="absolute right-[-6px] top-1/2 -translate-y-1/2 px-2 py-1.5 text-[12px] font-semibold text-[#c24b30] rounded-lg hover:bg-orange-100"
+          className="absolute right-[-6px] top-1/2 -translate-y-1/2 px-2 py-1.5 text-[12px] font-semibold text-neutral-900 rounded-lg hover:bg-neutral-200 transition-colors"
         >
           오늘로 이동
         </button>
@@ -629,9 +629,9 @@ function CalendarSection({
           )
         })}
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-neutral-600">
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-3 text-[11px] text-neutral-600">
         {CALENDAR_STATUS_LEGEND.map((item) => (
-          <div key={item.status} className="flex items-center gap-1.5">
+          <div key={item.status} className="flex items-center gap-1">
             <span
               className="h-2.5 w-2.5 rounded-full border border-neutral-200"
               style={{ backgroundColor: `${item.color}` }}
