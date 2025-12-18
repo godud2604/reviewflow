@@ -125,43 +125,47 @@ export async function deleteGuideFiles(filePaths: string[]): Promise<boolean> {
  */
 export async function downloadGuideFile(filePath: string, fileName: string): Promise<void> {
   const supabase = getSupabaseClient();
-
-  // 1. 파일 다운로드 (Blob 생성)
-  const { data, error } = await supabase.storage
-    .from('guide-files')
-    .download(filePath);
-
-  if (error || !data) return;
-
   const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
   const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+  const isAndroid = /Android/i.test(userAgent);
+  const isKakao = /KAKAOTALK/i.test(userAgent);
 
-  // 2. iOS(사파리 포함) 대응: Web Share API 사용
-  if (isIOS && navigator.share) {
-    try {
+  // 1. 안드로이드 카톡 대응 (안내 문구)
+  if (isAndroid && isKakao) {
+    alert("카카오톡에서는 파일 저장이 제한될 수 있습니다. 다운로드가 안 된다면 '다른 브라우저로 열기'를 이용해 주세요.");
+    // 이 뒤에 return을 하지 않고 share 시도를 한 번 더 해봅니다.
+  }
+
+  try {
+    const { data, error } = await supabase.storage.from('guide-files').download(filePath);
+    if (error || !data) throw error;
+
+    // 2. 모바일(iOS/Android) 공통: 공유 시트 시도 (가장 호환성 좋음)
+    if (navigator.share && navigator.canShare) {
       const file = new File([data], fileName, { type: data.type });
-      
-      // 공유 시트(Share Sheet) 띄우기
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      if (navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: fileName,
         });
-        return; // 공유 시트가 성공적으로 뜨면 여기서 종료
+        return; 
       }
-    } catch (err) {
-      console.log("공유 실패 혹은 취소됨", err);
-      // 공유 실패 시 아래의 기본 방식으로 폴백(fallback)
     }
-  }
 
-  // 3. 안드로이드 / PC / 혹은 Web Share 미지원 시 (기존 방식)
-  const url = URL.createObjectURL(data);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+    // 3. PC 및 공유 시트 미지원 브라우저 (기본 다운로드)
+    const url = URL.createObjectURL(data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+  } catch (err) {
+    console.error('Download error:', err);
+    // 마지막 수단: 서명된 URL을 새 창으로 열기 (꾹 눌러서 저장 유도)
+    const { data: urlData } = await supabase.storage.from('guide-files').createSignedUrl(filePath, 60);
+    if (urlData) window.open(urlData.signedUrl, '_blank');
+  }
 }
