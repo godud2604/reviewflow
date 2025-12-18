@@ -126,31 +126,42 @@ export async function deleteGuideFiles(filePaths: string[]): Promise<boolean> {
 export async function downloadGuideFile(filePath: string, fileName: string): Promise<void> {
   const supabase = getSupabaseClient();
 
-  // 1. 서명된 URL 가져오기 (이미지를 브라우저에서 직접 열기 위함)
-  const { data: urlData, error: urlError } = await supabase.storage
+  // 1. 파일 다운로드 (Blob 생성)
+  const { data, error } = await supabase.storage
     .from('guide-files')
-    .createSignedUrl(filePath, 60); // 60초간 유효한 URL
+    .download(filePath);
 
-  if (urlError || !urlData) {
-    alert("파일 주소를 가져오지 못했습니다.");
-    return;
+  if (error || !data) return;
+
+  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+
+  // 2. iOS(사파리 포함) 대응: Web Share API 사용
+  if (isIOS && navigator.share) {
+    try {
+      const file = new File([data], fileName, { type: data.type });
+      
+      // 공유 시트(Share Sheet) 띄우기
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: fileName,
+        });
+        return; // 공유 시트가 성공적으로 뜨면 여기서 종료
+      }
+    } catch (err) {
+      console.log("공유 실패 혹은 취소됨", err);
+      // 공유 실패 시 아래의 기본 방식으로 폴백(fallback)
+    }
   }
 
-  // 2. 확장자 확인
-  const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(filePath);
-
-  if (isImage) {
-    // 이미지라면 새 탭에서 열기 -> 사용자가 꾹 눌러서 '사진 저장' 유도
-    window.open(urlData.signedUrl, '_blank');
-  } else {
-    // 이미지가 아니라면(PDF 등) 기존처럼 파일 다운로드 실행
-    const res = await fetch(urlData.signedUrl);
-    const blob = await res.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = fileName;
-    link.click();
-    window.URL.revokeObjectURL(blobUrl);
-  }
+  // 3. 안드로이드 / PC / 혹은 Web Share 미지원 시 (기존 방식)
+  const url = URL.createObjectURL(data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
