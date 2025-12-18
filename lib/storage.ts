@@ -126,11 +126,19 @@ export async function deleteGuideFiles(filePaths: string[]): Promise<boolean> {
 export async function downloadGuideFile(filePath: string, fileName: string): Promise<void> {
   const supabase = getSupabaseClient()
 
-  const isIOS =
-    typeof navigator !== "undefined" &&
-    /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : ""
+  const isIOS = /iPhone|iPad|iPod/i.test(userAgent)
+  const isSafari =
+    /^(?:(?!chrome|android).)*safari/i.test(userAgent) && !/crios/i.test(userAgent)
 
   if (isIOS) {
+    const signedUrl = await getGuideFileUrl(filePath, true)
+    if (!signedUrl) return
+    window.open(signedUrl, "_blank", "noopener,noreferrer")
+    return
+  }
+
+  if (isSafari) {
     const signedUrl = await getGuideFileUrl(filePath, true)
     if (!signedUrl) return
     window.open(signedUrl, "_blank", "noopener,noreferrer")

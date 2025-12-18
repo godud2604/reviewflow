@@ -525,7 +525,8 @@ function CalendarSection({
               key={day}
               onClick={() => (hasSchedule || dateStr === today) && onDateClick(dateStr)}
               disabled={!hasSchedule && dateStr !== today}
-          className={`relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-colors ${
+              style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
+              className={`relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-colors ${
             hasSchedule || dateStr === today ? "cursor-pointer" : "cursor-default"
           } ${baseStyle}
             ${!isSelected && todayHighlightClass}
