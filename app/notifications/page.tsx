@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useMemo, useRef, useState, useEffect, useCallback, type ChangeEvent } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useSchedules } from "@/hooks/use-schedules"
@@ -19,7 +20,8 @@ import {
   Check,
   Send,
   X,
-  Copy
+  Copy,
+  ChevronRight,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import ScheduleModal from "@/components/schedule-modal"
@@ -410,7 +412,7 @@ export default function NotificationsPage() {
       <div className="max-w-md mx-auto space-y-10">
         
         <header className="pt-8 px-1 space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-wrap items-start gap-4">
             <div className="space-y-2">
               <p className="text-[#A1A1AA] text-xs font-bold uppercase tracking-[0.2em]">Daily Brief</p>
               <h1 className="text-4xl font-bold leading-tight tracking-tight text-white">
@@ -420,30 +422,42 @@ export default function NotificationsPage() {
                 </span>
               </h1>
             </div>
-            <div className="flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white/60">
-              {timeframeConfigs.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setTimeframe(option.id)}
-                  className={`rounded-full px-3 py-1 transition-all ${
-                    timeframe === option.id
-                      ? "bg-white text-black shadow-lg"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                  aria-pressed={timeframe === option.id}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
           </div>
         </header>
+        <div className="fixed top-10 z-20 px-1 right-5">
+          <div className="flex w-full justify-end">
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white/60">
+                {timeframeConfigs.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setTimeframe(option.id)}
+                    className={`rounded-full px-3 py-1 transition-all ${
+                      timeframe === option.id
+                        ? "bg-white text-black shadow-lg"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                    aria-pressed={timeframe === option.id}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <Link
+                href="/?page=home"
+                className="group inline-flex items-center gap-2 rounded-2xl border border-transparent px-4 py-1.5 text-[11px] font-black uppercase text-white shadow-[0_10px_45px_rgba(108,99,255,0.35)] bg-gradient-to-r from-[#6c63ff] to-[#aa4bf8]/90 transition hover:shadow-[0_15px_60px_rgba(108,99,255,0.45)]"
+              >
+                <span>모든 일정 보러가기</span>
+                <ChevronRight className="w-4 h-4 text-white/90 transition-colors group-hover:text-white" />
+              </Link>
+            </div>
+          </div>
+        </div>
 
         {showEmptyState ? (
           <div className="py-24 text-center border border-dashed border-white/10 rounded-[2.5rem] text-white/40 space-y-2">
-            <p className="text-xl font-bold text-white/80">오늘 일정이 없어요</p>
-            <p className="text-sm">등록한 방문이나 마감 일정이 없습니다. 새로운 일정을 추가해보세요.</p>
+            <p className="text-xl font-bold text-white/80">방문이나 마감 일정이 아직 없어요.</p>
           </div>
         ) : (
           <>
@@ -604,7 +618,7 @@ export default function NotificationsPage() {
                               ))}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-black text-red-600">{formatCurrency(netLoss)}원</span>
+                              <span className="shrink-0 text-[11px] font-black text-red-800">{formatCurrency(netLoss)}원</span>
                               <button 
                                 onClick={() => handleOpenSmsModal(s, 'deadline')}
                                 className="p-2 bg-white/5 rounded-lg border border-white/5 text-white/40 active:scale-95 transition-all"
