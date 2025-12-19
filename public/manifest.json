@@ -1,0 +1,24 @@
+{
+  "short_name": "ReviewFlow",
+  "name": "리뷰플로우",
+  "start_url": "/?page=home",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff7f1",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "/logo-white-2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "256x256",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
