@@ -176,7 +176,24 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
     ? `${downloadScopeLabel} 기준 ${filteredSchedules.length}건을 준비합니다.`
     : "활동 기록을 추가하면 다운로드를 사용할 수 있습니다."
 
+  const isKakaoBrowserWithTightDownloadSupport = () => {
+    if (typeof window === "undefined") return false
+    const ua = window.navigator.userAgent.toLowerCase()
+    const isIos = /iphone|ipad|ipod/.test(ua)
+    const isAndroid = ua.includes("android")
+    const isKakao = ua.includes("kakaotalk") || ua.includes("kakaobrowser")
+    return (isIos || isAndroid) && isKakao
+  }
+
   const handleDownloadActivity = () => {
+    if (isKakaoBrowserWithTightDownloadSupport()) {
+      toast({
+        title: "카카오 브라우저에서는 다운로드가 제한돼요",
+        description: "모바일 카카오 브라우저 환경에서는 다른 브라우저 또는 웹에서 엑셀을 내려받아 주세요.",
+      })
+      return
+    }
+
     if (!filteredSchedules.length) {
       toast({ title: "선택한 기간의 활동 내역이 없습니다.", variant: "destructive" })
       return
@@ -331,14 +348,14 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const proFeatures = [
     {
       label: "활동 내역 다운로드",
-      description: "캠페인 기록을 엑셀로 추출합니다",
+      description: "캠페인 기록을 엑셀로 저장하며, 모바일에서 어려우면 웹에서 내려받아 주세요",
       icon: "📂",
       isPro: true,
       onClick: openDownloadDialog,
     },
     {
       label: "할일 요약",
-      description: "선정 소식을 놓치지 않도록 관리",
+      description: "하단 네비게이션 바 첫 번째 탭에서도 빠르게 확인할 수 있습니다",
       icon: "🔔",
       isPro: true,
       onClick: handleGotoNotifications,
@@ -457,19 +474,24 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
                     ${isFeatureLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-neutral-50"}
                   `}
                 >
-                <div className="flex-1 flex items-center justify-between gap-4">
-                  <div className="flex">
-                    <div className="text-xl mr-3">
-                      {feature.icon}
+                <div className="flex-1 flex items-start justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-3">
+                      <div className="text-xl">
+                        {feature.icon}
+                      </div>
+                      <p className="text-[15px] font-semibold text-neutral-900 flex items-center gap-2">
+                        {feature.label}
+                        {feature.isPro && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded">
+                            PRO
+                          </span>
+                        )}
+                      </p>
                     </div>
-                    <span className="flex-1 text-[15px] flex items-center gap-2">
-                      {feature.label}
-                      {feature.isPro && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded">
-                          PRO
-                        </span>
-                      )}
-                    </span>
+                    {feature.description && (
+                      <p className="text-[12px] text-neutral-500">{feature.description}</p>
+                    )}
                   </div>
                   <svg
                     width="20"
@@ -498,7 +520,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
           {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
         </button>
         <Dialog open={isDownloadDialogOpen} onOpenChange={setIsDownloadDialogOpen}>
-          <DialogContent className="max-w-[480px]">
+          <DialogContent className="max-w-[380px]">
             <DialogHeader className="space-y-1 text-left">
               <DialogTitle>활동 내역 다운로드</DialogTitle>
               <DialogDescription>월별 또는 전체 활동을 엑셀로 저장합니다.</DialogDescription>
