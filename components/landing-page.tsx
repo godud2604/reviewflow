@@ -17,6 +17,12 @@ export default function LandingPage() {
 
   const isProd = process.env.NODE_ENV === 'production';
 
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.replace("/?page=home")
+    }
+  }, [authLoading, isAuthenticated, router])
+
   const handleSignOut = async () => {
     try {
       await signOut()
