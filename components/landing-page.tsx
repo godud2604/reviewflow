@@ -865,7 +865,7 @@ export default function LandingPage() {
                 <li>✔ 할 일 관리</li>
                 <li>✔ 이번 달 수익/통계 페이지 제공</li>
                 <li>✔ 수익 자랑하기</li>
-                <li className="pl-6 mt-[-4px] text-xs">( 수익 자랑하기는 12월 20일에 찾아올게요. 조금만 기다려주세요 ! )</li>
+                <li className="pl-6 mt-[-4px] text-xs">( 수익 자랑하기는 12월 중으로 찾아올게요. 조금만 기다려주세요 ! )</li>
               </ul>
               <div className="w-full pt-6 border-t border-gray-200">
                 <div className="text-3xl font-bold mb-6 text-[#191F28]">₩0</div>
@@ -889,7 +889,7 @@ export default function LandingPage() {
                 <li>✨ 하루 1번 요약 알림 제공 </li>
                 <li className="pl-6 mt-[-4px] text-xs">( 당일 아침, 오늘 해야 할 방문/작성/발행 일정 등, 요약 내용을 깔끔하게 알려드려요. )</li>
                 <li>✨ 활동 내역 엑셀 다운로드</li>
-                <li>✨ 월별 요약 리포트 제공</li>
+                <li>✨ 실시간 랭킹 리포트 제공</li>
                 <li>✨ 월별 수익 내용 전체 조회 가능</li>
                 <li className="pl-6 mt-[-4px] text-xs">( 월별 성장 변화도 한눈에 확인 )</li>
               </ul>
