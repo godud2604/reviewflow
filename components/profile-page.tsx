@@ -1,254 +1,542 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
-import type { Schedule, ExtraIncome } from "@/types"
-import { exportAllDataToExcel } from "@/lib/export-utils"
-import { useToast } from "@/hooks/use-toast"
-import FeedbackModal from "./feedback-modal"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/hooks/use-auth"
+import * as XLSX from "xlsx"
 
-export default function ProfilePage({ 
-  schedules,
-  extraIncomes
-}: { 
-  onShowPortfolio: () => void
-  schedules: Schedule[]
-  extraIncomes: ExtraIncome[]
-}) {
-  const [activeMenu, setActiveMenu] = useState<string | null>(null)
-  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
-  const [isSigningOut, setIsSigningOut] = useState(false)
-  const [isWaitlistOpen, setIsWaitlistOpen] = useState(false)
-  const [waitlistEmail, setWaitlistEmail] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
-  const { toast } = useToast()
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/hooks/use-auth"
+import { useSchedules } from "@/hooks/use-schedules"
+import type { UserProfile } from "@/hooks/use-user-profile"
+import { getProfileImageUrl } from "@/lib/storage"
+import { getSupabaseClient } from "@/lib/supabase"
+import { resolveTier } from "@/lib/tier"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+const formatMonthLabel = (monthKey: string) => {
+  const [year, month] = monthKey.split("-")
+  return `${year}년 ${month}월`
+}
+
+const getMonthKeyFromDate = (raw?: string) => {
+  if (!raw) return null
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+
+  const hyphenMatch = trimmed.match(/^(\d{4})-(\d{1,2})/)
+  if (hyphenMatch) {
+    return `${hyphenMatch[1]}-${hyphenMatch[2].padStart(2, "0")}`
+  }
+
+  const dotMatch = trimmed.match(/^(\d{4})\.(\d{1,2})/)
+  if (dotMatch) {
+    return `${dotMatch[1]}-${dotMatch[2].padStart(2, "0")}`
+  }
+
+  const parts = trimmed.split(/[^\d]/).filter(Boolean)
+  if (parts.length >= 2 && parts[0].length === 4) {
+    return `${parts[0]}-${parts[1].padStart(2, "0")}`
+  }
+
+  const parsed = new Date(trimmed)
+  if (!Number.isNaN(parsed.getTime())) {
+    const year = parsed.getFullYear().toString()
+    const month = (parsed.getMonth() + 1).toString().padStart(2, "0")
+    return `${year}-${month}`
+  }
+
+  return null
+}
+
+const PRO_TIER_DURATION_MONTHS = 3
+
+const formatExpiryLabel = (value?: string | null) => {
+  if (!value) return null
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return null
+  return `${parsed.getFullYear()}년 ${parsed.getMonth() + 1}월 ${parsed.getDate()}일`
+}
+
+const getDeadlineTimestamp = (schedule: { dead?: string; visit?: string }) => {
+  const target = schedule.dead || schedule.visit
+  if (!target) return Number.POSITIVE_INFINITY
+  const parsed = new Date(target)
+  return Number.isNaN(parsed.getTime()) ? Number.POSITIVE_INFINITY : parsed.getTime()
+}
+
+type ProfilePageProps = {
+  profile: UserProfile | null
+  refetchUserProfile: () => Promise<void>
+}
+
+export default function ProfilePage({ profile, refetchUserProfile }: ProfilePageProps) {
   const router = useRouter()
-  const { user, signOut } = useAuth()
+  const { toast } = useToast()
+  const { user: authUser, signOut } = useAuth()
+  const { schedules } = useSchedules()
+
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [downloadScope, setDownloadScope] = useState("all")
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false)
+  const [couponCode, setCouponCode] = useState("")
+  const [isRedeemingCoupon, setIsRedeemingCoupon] = useState(false)
+
+  useEffect(() => {
+    if (!profile?.profileImagePath) {
+      setProfileImageUrl(null)
+      return
+    }
+
+    let isCurrent = true
+
+    getProfileImageUrl(profile.profileImagePath)
+      .then((url) => {
+        if (isCurrent) {
+          setProfileImageUrl(url)
+        }
+      })
+      .catch(() => {
+        if (isCurrent) {
+          setProfileImageUrl(null)
+        }
+      })
+
+    return () => {
+      isCurrent = false
+    }
+  }, [profile?.profileImagePath])
+
+  const metadata = (authUser?.user_metadata ?? {}) as Record<string, unknown>
+  const { tier, isPro } = resolveTier({
+    profileTier: profile?.tier ?? undefined,
+    metadata,
+  })
+  const tierDurationMonths = profile?.tierDurationMonths ?? 0
+  const displayTierDuration = tierDurationMonths > 0 ? tierDurationMonths : PRO_TIER_DURATION_MONTHS
+  const tierExpiryLabel = formatExpiryLabel(profile?.tierExpiresAt)
+
+  const displayName = profile?.nickname ?? ""
+  const emailLabel = authUser?.email ?? "등록된 이메일이 없습니다"
+  const displayedImage = profileImageUrl
+
+  const scheduleMonthOptions = useMemo(() => {
+    const monthMap = new Map<string, string>()
+    schedules.forEach((schedule) => {
+      const monthKey = getMonthKeyFromDate(schedule.visit) ?? getMonthKeyFromDate(schedule.dead)
+      if (monthKey) {
+        monthMap.set(monthKey, formatMonthLabel(monthKey))
+      }
+    })
+
+    return Array.from(monthMap.entries())
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([value, label]) => ({ value, label }))
+  }, [schedules])
+
+  useEffect(() => {
+    if (downloadScope !== "all" && !scheduleMonthOptions.some((option) => option.value === downloadScope)) {
+      setDownloadScope("all")
+    }
+  }, [downloadScope, scheduleMonthOptions])
+
+  const filteredSchedules = useMemo(() => {
+    if (downloadScope === "all") {
+      return schedules
+    }
+
+    return schedules.filter((schedule) => {
+      const visitKey = getMonthKeyFromDate(schedule.visit)
+      const deadKey = getMonthKeyFromDate(schedule.dead)
+      return visitKey === downloadScope || deadKey === downloadScope
+    })
+  }, [schedules, downloadScope])
+
+  const schedulesSortedByDeadline = useMemo(() => {
+    return [...filteredSchedules].sort((a, b) => getDeadlineTimestamp(a) - getDeadlineTimestamp(b))
+  }, [filteredSchedules])
+
+  const downloadScopeLabel = downloadScope === "all" ? "전체 활동" : formatMonthLabel(downloadScope)
+  const downloadSummaryMessage = filteredSchedules.length
+    ? `${downloadScopeLabel} 기준 ${filteredSchedules.length}건을 준비합니다.`
+    : "활동 기록을 추가하면 다운로드를 사용할 수 있습니다."
+
+  const handleDownloadActivity = () => {
+    if (!filteredSchedules.length) {
+      toast({ title: "선택한 기간의 활동 내역이 없습니다.", variant: "destructive" })
+      return
+    }
+
+    const scopeLabel = downloadScope === "all" ? "전체" : formatMonthLabel(downloadScope)
+    const rows = schedulesSortedByDeadline.map((schedule, index) => ({
+      번호: index + 1,
+      플랫폼: schedule.platform || "-",
+      제목: schedule.title,
+      상태: schedule.status,
+      방문일: schedule.visit || "-",
+      마감일: schedule.dead || "-",
+      채널: schedule.channel.join(", "),
+      혜택: schedule.benefit,
+      수익: schedule.income,
+      비용: schedule.cost,
+      "순수익": schedule.benefit + schedule.income - schedule.cost,
+    }))
+
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "활동 내역")
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    })
+
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    const fileSuffix = scopeLabel.replace(/\s+/g, "_")
+    link.download = `활동내역_${fileSuffix}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+
+    toast({ title: "엑셀 다운로드가 준비되었습니다." })
+  }
+
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim()
+
+    if (!code) {
+      toast({ title: "쿠폰 코드를 입력해 주세요.", variant: "destructive" })
+      return
+    }
+
+    if (isPro) {
+      toast({
+        title: "이미 PRO 등급입니다.",
+        description: "현재 프로 등급이기 때문에 쿠폰이 필요 없습니다.",
+      })
+      return
+    }
+
+    if (code.toUpperCase() !== "HELLO_EARLY") {
+      toast({ title: "유효하지 않은 쿠폰입니다.", variant: "destructive" })
+      return
+    }
+
+    if (!authUser?.id) {
+      toast({ title: "로그인이 필요합니다.", variant: "destructive" })
+      return
+    }
+
+    setIsRedeemingCoupon(true)
+
+    try {
+      const supabase = getSupabaseClient()
+      const expiresAt = new Date()
+      expiresAt.setMonth(expiresAt.getMonth() + PRO_TIER_DURATION_MONTHS)
+      const expiresAtIso = expiresAt.toISOString()
+
+      const { error: profileError } = await supabase
+        .from("user_profiles")
+        .update({
+          tier: "pro",
+          tier_duration_months: PRO_TIER_DURATION_MONTHS,
+          tier_expires_at: expiresAtIso,
+        })
+        .eq("id", authUser.id)
+
+      if (profileError) {
+        throw profileError
+      }
+
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: {
+          tier: "pro",
+        },
+      })
+
+      if (metadataError) {
+        throw metadataError
+      }
+
+      await refetchUserProfile()
+      toast({
+        title: "쿠폰이 적용되었습니다.",
+        description: `${PRO_TIER_DURATION_MONTHS}개월 동안 PRO 기능을 이용할 수 있습니다.`,
+      })
+      setCouponCode("")
+    } catch (err) {
+      toast({
+        title: "쿠폰 적용에 실패했습니다.",
+        description: err instanceof Error ? err.message : "다시 시도해 주세요.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsRedeemingCoupon(false)
+    }
+  }
+
+  const handleGotoNotifications = () => router.push("/notifications")
+  const handleGotoMonthlyReport = () => router.push("/monthlyReport")
+  const handleGotoPortfolio = () => router.push("/portfolio-management")
+  const handleGotoPortfolioPreview = () => router.push("/portfolio")
 
   const handleLogout = async () => {
+    setIsLoggingOut(true)
     try {
-      setIsSigningOut(true)
       await signOut()
-      toast({
-        title: "로그아웃 되었습니다.",
-        duration: 1800,
-      })
       router.push("/")
-    } catch (error) {
-      console.error("로그아웃 실패:", error)
-      toast({
-        title: "로그아웃에 실패했습니다.",
-        variant: "destructive",
-        duration: 2000,
-      })
+    } catch {
+      toast({ title: "로그아웃에 실패했습니다.", variant: "destructive" })
     } finally {
-      setIsSigningOut(false)
+      setIsLoggingOut(false)
     }
   }
 
-  const handleBackup = () => {
-    try {
-      exportAllDataToExcel(schedules, extraIncomes)
+  const openDownloadDialog = () => {
+    if (!filteredSchedules.length) return
+    setIsDownloadDialogOpen(true)
+  }
+
+  const handleFeatureClick = (feature: { onClick: () => void; isPro?: boolean }) => {
+    if (feature.isPro && !isPro) {
       toast({
-        title: "활동 내역 다운로드를 완료하였습니다.",
-        duration: 2000,
-      })
-    } catch (error) {
-      console.error("Export error:", error)
-      toast({
-        title: "활동 내역 다운로드를 실패하였습니다",
+        title: "PRO 전용 기능입니다.",
         variant: "destructive",
-        duration: 2000,
       })
+      return
     }
+
+    feature.onClick()
   }
 
-  const handleSubmitWaitlist = async (e: FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setMessage(null)
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: waitlistEmail }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setMessage({ type: "success", text: data.message })
-        setWaitlistEmail("")
-      } else {
-        setMessage({ type: "error", text: data.error || "등록에 실패했습니다." })
-      }
-    } catch (error) {
-      setMessage({ type: "error", text: "등록 중 오류가 발생했습니다. 다시 시도해주세요." })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const menuItems = [
-    // { id: "portfolio", icon: "📋", label: "포트폴리오 보기", onClick: onShowPortfolio },
-    { id: "backup", icon: "📂", label: "활동 내역 다운로드", isPro: true, onClick: handleBackup, disabled: true },
-    { id: "notification", icon: "🔔", label: "알림 설정", isPro: true, onClick: () => router.push("/notifications"), disabled: true },
-    { id: "report", icon: "📊", label: "월간 레포트", isPro: true, disabled: true },
-    // { id: "feedback", icon: "💬", label: "개발자에게 피드백 주기", onClick: () => setIsFeedbackModalOpen(true) },
-    // { id: "support", icon: "📞", label: "고객센터" },
+  const proFeatures = [
+    {
+      label: "활동 내역 다운로드",
+      description: "캠페인 기록을 엑셀로 추출합니다",
+      icon: "📂",
+      isPro: true,
+      onClick: openDownloadDialog,
+    },
+    {
+      label: "알림 설정",
+      description: "선정 소식을 놓치지 않도록 관리",
+      icon: "🔔",
+      isPro: true,
+      onClick: handleGotoNotifications,
+    },
+    {
+      label: "실시간 랭킹 리포트",
+      description: "오늘의 실시간 성장 지표",
+      icon: "📊",
+      isPro: true,
+      onClick: handleGotoMonthlyReport,
+    },
+    // {
+    //   label: "포트폴리오 보기",
+    //   description: "외부에 공개된 영향력 페이지를 미리 확인해 보세요",
+    //   icon: "🧾",
+    //   onClick: handleGotoPortfolioPreview,
+    // },
   ]
 
   return (
-    <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y mt-1">
-      {isWaitlistOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center px-5"
-          onClick={() => {
-            setIsWaitlistOpen(false)
-            setMessage(null)
-          }}
-        >
-          <div
-            className="w-90 max-w-sm bg-white rounded-2xl p-5 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-bold text-orange-600 mb-1">사전신청</p>
-                <h3 className="text-xl font-bold text-neutral-900 leading-tight">PRO 3개월 무료 혜택</h3>
-                <p className="text-sm text-neutral-600 mt-1">12월 20일 PRO 오픈 소식을 가장 먼저 받아보세요.</p>
-              </div>
-              <button
-                onClick={() => {
-                  setIsWaitlistOpen(false)
-                  setMessage(null)
-                }}
-                className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-neutral-100 transition cursor-pointer"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <form className="mt-4 space-y-3" onSubmit={handleSubmitWaitlist}>
-              <input
-                type="email"
-                required
-                placeholder="example@email.com"
-                className="w-full px-4 py-3 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff5c39]"
-                value={waitlistEmail}
-                onChange={(e) => setWaitlistEmail(e.target.value)}
-                disabled={isSubmitting}
-              />
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-[#ff5c39] text-white py-3 rounded-xl text-sm font-semibold shadow-lg shadow-orange-400/30 hover:bg-[#ff734f] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {isSubmitting ? "등록 중..." : "사전신청 완료하기"}
-              </button>
-            </form>
-            {message && (
-              <div
-                className={`mt-3 px-3 py-2 rounded-lg text-xs ${
-                  message.type === "success"
-                    ? "bg-green-50 text-green-700 border border-green-200"
-                    : "bg-red-50 text-red-700 border border-red-200"
-                }`}
-              >
-                {message.text}
-              </div>
-            )}
-            <p className="text-[11px] text-neutral-400 mt-3">
-              입력하신 이메일은 출시 알림 외 다른 목적으로 사용하지 않아요.
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-gradient-to-r from-[#fff3ea] via-[#ffe4d2] to-[#ffd2b3] rounded-3xl p-4 mb-3.5 shadow-sm border border-[#ffd6be]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold text-[#ff734f] uppercase">현재 등급</p>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className="px-2.5 py-1 bg-white/80 text-[#ff5c39] text-[12px] font-bold rounded-lg border border-white/60 shadow-sm">
-                FREE
-              </span>
-            </div>
-            <p className="text-[12px] text-neutral-700 mt-2 leading-relaxed">
-              지금 사전신청하면 PRO 버전을 3개월 동안 무료로 이용할 수 있어요. 출시 알림도 가장 먼저 받아보세요.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-3xl p-4 mb-3.5 shadow-sm">
-        <div className="flex items-center justify-between bg-neutral-50 rounded-2xl px-4 py-3">
-          <span className="text-[13px] text-neutral-600">이메일</span>
-          <span className="text-sm font-semibold text-neutral-800 truncate max-w-[200px] text-right">
-            {user?.email || "알 수 없음"}
-          </span>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-3xl p-4 mb-3.5 shadow-sm">
-        {menuItems.map((item, idx) => (
-          <div
-            key={item.id}
-            onClick={() => {
-              if (item.disabled) return
-              setActiveMenu(item.id)
-              if (item.onClick) item.onClick()
-            }}
-            className={`
-              py-3.5 px-3 font-semibold rounded-xl
-              flex items-center gap-3
-              transition-all duration-200
-              ${idx !== menuItems.length - 1 ? "border-b border-neutral-100" : ""}
-              ${activeMenu === item.id ? "bg-neutral-50" : ""}
-              ${item.disabled 
-                ? "opacity-50 cursor-not-allowed" 
-                : "cursor-pointer hover:bg-neutral-50 active:scale-[0.98]"
-              }
-            `}
-          >
-            <span className="text-xl">{item.icon}</span>
-            <span className="flex-1 text-[15px] flex items-center gap-2">
-              {item.label}
-              {item.isPro && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded">
-                  PRO
-                </span>
+    <div className="min-h-screen bg-gradient-to-b from-[#FFF5F0] via-[#FBFBFD] to-[#F7F7F8] pb-20 font-sans tracking-tight">
+      <div className="mx-auto px-6 pt-6">
+        <section className="relative mb-6 rounded-[44px] bg-white px-8 py-6 text-center shadow-[0_40px_80px_-20px_rgba(255,92,39,0.05)] border border-white">
+          {/* <div className="relative mx-auto mb-6 h-28 w-28">
+            <div className={`h-full w-full rounded-full p-1 ${profileImageUrl ? "bg-white shadow-inner" : "bg-gradient-to-tr from-orange-100 to-orange-50"}`}>
+              {profileImageUrl ? (
+                <img
+                  src={displayedImage}
+                  alt="Profile"
+                  className="h-full w-full rounded-full object-cover shadow-sm"
+                />
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center rounded-full text-[13px] font-semibold text-neutral-400">
+                  <span className="text-[11px] uppercase tracking-[0.25em] text-[11px]">Profile</span>
+                </div>
               )}
-            </span>
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="text-neutral-400"
-            >
-              <path d="M9 18l6-6-6-6" />
-            </svg>
+            </div>
+          </div> */}
+          {/* <button
+            type="button"
+            onClick={handleGotoPortfolio}
+            className="absolute right-6 top-6 flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg shadow-sm transition hover:-translate-y-0.5"
+            aria-label="포트폴리오 정보 수정"
+          >
+            <span className="text-[12px]">✏️</span>
+          </button> */}
+
+          <div className="space-y-1">
+            {/* <h2 className="text-[14px] font-black text-neutral-900 tracking-tighter">{displayName}</h2> */}
+            <p className="text-[13px] font-medium text-neutral-400">{emailLabel}</p>
           </div>
-        ))}
+
+
+          <div className="mt-4 flex justify-center">
+            <span
+              className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-tight ${
+                isPro
+                  ? "border-amber-200 bg-amber-50 text-amber-700"
+                  : "border-neutral-200 bg-neutral-100 text-neutral-600"
+              }`}
+            >
+              {isPro ? "PRO MEMBER" : "FREE MEMBER"}
+            </span>
+          </div>
+          {isPro && (
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[12px] text-neutral-500">
+              <span className="text-neutral-900 font-semibold">PRO</span>
+              <span className="text-neutral-400">·</span>
+              <span>{`${displayTierDuration}개월`}</span>
+              <span className="text-neutral-400">·</span>
+              <span>{tierExpiryLabel ? `만료 ${tierExpiryLabel}` : "만료 정보 없음"}</span>
+            </div>
+          )}
+        </section>
+
+        {!isPro && (
+          <section className="relative mb-6 rounded-[30px] border border-amber-100/80 bg-gradient-to-br from-white to-[#fff4ed] p-6 shadow-sm text-left">
+            <p className="text-xs font-semibold text-neutral-500">쿠폰 등록</p>
+            <p className="text-[12px] font-semibold text-neutral-900 mt-1">
+              사전신청 시 입력된 이메일로 발송된 쿠폰을 입력하면 등급이 PRO로 전환됩니다.
+            </p>
+            <div className="mt-3 flex gap-3">
+            <input
+              value={couponCode}
+              onChange={(event) => setCouponCode(event.target.value)}
+              placeholder="쿠폰 코드를 입력하세요"
+              className="flex-1 rounded-2xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-900 shadow-sm transition focus:border-amber-400 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleApplyCoupon}
+              disabled={isRedeemingCoupon}
+              className="flex-shrink-0 rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isRedeemingCoupon ? "적용 중..." : "쿠폰 적용"}
+            </button>
+          </div>
+          </section>
+        )}
+
+        <div className="space-y-2">
+          <div className="bg-white rounded-3xl p-4 shadow-sm">
+            {proFeatures.map((feature, idx) => {
+              const isFeatureLocked = feature.isPro && !isPro
+              return (
+                <div
+                  key={feature.label}
+                  role="button"
+                  aria-disabled={isFeatureLocked}
+                  onClick={() => handleFeatureClick(feature)}
+                  className={`
+                    py-3.5 px-3 font-semibold rounded-xl
+                    flex items-center gap-3
+                    transition-all duration-200
+                    ${idx !== proFeatures.length - 1 ? "border-b border-neutral-100" : ""}
+                    ${isFeatureLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-neutral-50"}
+                  `}
+                >
+                <div className="flex-1 flex items-center justify-between gap-4">
+                  <div className="flex">
+                    <div className="text-xl mr-3">
+                      {feature.icon}
+                    </div>
+                    <span className="flex-1 text-[15px] flex items-center gap-2">
+                      {feature.label}
+                      {feature.isPro && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded">
+                          PRO
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="text-neutral-400"
+                  >
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </div>
+              </div>
+            )
+          })}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="mt-12 w-full py-4 text-sm font-bold text-neutral-300 transition-colors hover:text-neutral-500 active:scale-95"
+        >
+          {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
+        </button>
+        <Dialog open={isDownloadDialogOpen} onOpenChange={setIsDownloadDialogOpen}>
+          <DialogContent className="max-w-[480px]">
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle>활동 내역 다운로드</DialogTitle>
+              <DialogDescription>월별 또는 전체 활동을 엑셀로 저장합니다.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-neutral-600">조회할 활동 기간</p>
+                <Select value={downloadScope} onValueChange={setDownloadScope}>
+                  <SelectTrigger
+                    className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 shadow-sm"
+                    aria-label="조회할 활동 기간"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border border-neutral-200 bg-white shadow-lg">
+                    <SelectItem value="all" className="text-sm text-neutral-900">
+                      전체 활동 내역
+                    </SelectItem>
+                    {scheduleMonthOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value} className="text-sm text-neutral-900">
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-neutral-500">{downloadSummaryMessage}</p>
+            </div>
+            <DialogFooter className="pt-2">
+              <button
+                type="button"
+                onClick={handleDownloadActivity}
+                disabled={!filteredSchedules.length}
+                className="w-full rounded-2xl bg-neutral-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neutral-900"
+              >
+                엑셀 다운로드
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      <button
-        onClick={handleLogout}
-        disabled={isSigningOut}
-        className="text-[13px] w-full p-4 bg-neutral-200 text-[#333] border-none rounded-2xl font-bold cursor-pointer
-          transition-all duration-200 hover:bg-neutral-300 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-      >
-        {isSigningOut ? "로그아웃 중..." : "로그아웃"}
-      </button>
-
-      <FeedbackModal
-        isOpen={isFeedbackModalOpen}
-        onClose={() => setIsFeedbackModalOpen(false)}
-      />
     </div>
   )
 }

@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useMemo, useRef, useState, useEffect, useCallback, type ChangeEvent } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useSchedules } from "@/hooks/use-schedules"
-import type { Schedule, ScheduleChannel, GuideFile } from "@/types"
+import type { Schedule, ScheduleChannel, GuideFile, NotificationSettings } from "@/types"
 import { uploadGuideFile } from "@/lib/storage"
 import { 
   Camera, 
@@ -23,6 +23,7 @@ import {
   X,
   Copy,
   ChevronRight,
+  ChevronLeft,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import ScheduleModal from "@/components/schedule-modal"
@@ -35,6 +36,13 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import {
+  readNotificationSettings,
+  writeNotificationSettings,
+  SETTINGS_CHANGE_EVENT,
+} from "@/lib/notification-settings"
+import { triggerDailySummaryNotification } from "@/components/weekly-summary-reminder"
 
 // --- Utils ---
 const getKstNow = () => {
@@ -86,6 +94,9 @@ const formatVisitDateForWeatherSearch = (visit?: string) => {
   if (!target) return null
   return `${target.getMonth() + 1}월 ${target.getDate()}일`
 }
+
+const formatTimeInputValue = (hour: number, minute: number) =>
+  `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
 
 const getAdditionalReviews = (schedule: Schedule) => {
   const checklist = schedule.visitReviewChecklist
@@ -192,12 +203,99 @@ const buildTemplates = (type: "visit" | "deadline", schedule: Schedule, userName
 
 export default function NotificationsPage() {
   const { user } = useAuth()
+  const router = useRouter()
   const { schedules, updateSchedule, deleteSchedule } = useSchedules({ enabled: !!user })
   const { toast } = useToast()
   const today = useMemo(() => startOfDay(getKstNow()), [])
   const [timeframe, setTimeframe] = useState<TimeframeId>("today")
   const activeTimeframe = timeframeConfigs.find((config) => config.id === timeframe) ?? timeframeConfigs[0]
   const timeframeTitle = `${activeTimeframe.label} 할 일`
+  const [notificationSettings, setNotificationSettingsState] = useState<NotificationSettings>(() =>
+    readNotificationSettings()
+  )
+  const [permissionStatus, setPermissionStatus] = useState<NotificationPermission | "unsupported">(() => {
+    if (typeof window === "undefined") {
+      return "unsupported"
+    }
+    if (typeof Notification === "undefined") {
+      return "unsupported"
+    }
+    return Notification.permission
+  })
+  const syncPermissionStatus = () => {
+    if (typeof window === "undefined" || typeof Notification === "undefined") {
+      setPermissionStatus("unsupported")
+      return
+    }
+    setPermissionStatus(Notification.permission)
+  }
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    const handleSettingsEvent = () => {
+      setNotificationSettingsState(readNotificationSettings())
+    }
+
+    window.addEventListener(SETTINGS_CHANGE_EVENT, handleSettingsEvent)
+    return () => {
+      window.removeEventListener(SETTINGS_CHANGE_EVENT, handleSettingsEvent)
+    }
+  }, [])
+
+  const updateNotificationSettings = (next: NotificationSettings) => {
+    writeNotificationSettings(next)
+    setNotificationSettingsState(next)
+    syncPermissionStatus()
+  }
+
+  const handleToggleNotifications = () => {
+    updateNotificationSettings({
+      ...notificationSettings,
+      enabled: !notificationSettings.enabled,
+    })
+  }
+
+  const handleNotificationTimeChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const [hourString, minuteString = "0"] = event.target.value.split(":")
+    if (!hourString) {
+      return
+    }
+    const nextSettings = {
+      ...notificationSettings,
+      hour: Number(hourString),
+      minute: Number(minuteString),
+    }
+    updateNotificationSettings(nextSettings)
+  }
+
+  const permissionDescription =
+    permissionStatus === "unsupported"
+      ? "알림을 지원하지 않는 브라우저입니다."
+      : permissionStatus === "granted"
+      ? "알림 허용됨"
+      : permissionStatus === "denied"
+      ? "브라우저 설정에서 알림을 허용해 주세요."
+      : "알림 권한을 요청하면 사용 중인 디바이스에서 알림이 울립니다."
+
+  const notificationTimeValue = formatTimeInputValue(
+    notificationSettings.hour,
+    notificationSettings.minute
+  )
+  const isNotificationSupported = permissionStatus !== "unsupported"
+  const handleSendTestNotification = async () => {
+    const result = await triggerDailySummaryNotification()
+    if (result) {
+      toast({ title: "테스트 알림을 보냈어요" })
+      return
+    }
+    toast({
+      title: "알림 발송 실패",
+      description: "알림 권한 혹은 지원 여부를 확인해 주세요.",
+      variant: "destructive",
+    })
+  }
   const filterSchedulesByTimeframe = useCallback(
     (value?: string) => {
       const date = parseDateValue(value)
@@ -453,8 +551,7 @@ export default function NotificationsPage() {
   const visitCardMinWidthClass = filteredVisits.length > 1 ? "min-w-[82%]" : "min-w-full"
 
   return (
-    <div className="min-h-screen bg-[#09090B] text-white p-6 pb-40 font-sans tracking-tight">
-      {/* 가로 스크롤바 제거 및 애니메이션 스타일 */}
+    <div className="min-h-screen bg-[#101012] text-white font-sans tracking-tight px-2">
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar {
           display: none;
@@ -478,33 +575,93 @@ export default function NotificationsPage() {
         }
       `}</style>
 
-      <div className="max-w-md mx-auto space-y-10">
-        
-        <header className="pt-8 px-1 space-y-3">
-          <div className="flex flex-wrap items-start gap-4">
-            <div className="space-y-2">
-              <p className="text-[#A1A1AA] text-sm font-bold uppercase tracking-[0.2em]">Daily Brief</p>
-              <h1 className="text-4xl font-bold leading-tight tracking-tight text-white">
-                <span className="block">{timeframeTitle}</span>
-                <span className="inline-block text-[2.8rem] font-black tracking-tight text-transparent bg-gradient-to-br from-[#6c63ff] to-[#aa4bf8] bg-clip-text animated-count">
-                  {animatedTaskCount}건
-                </span>
-              </h1>
+      <div className="mx-auto flex max-w-xl flex-col gap-5 px-4 py-8">
+        <button
+          type="button"
+          onClick={() => router.push("/?page=home")}
+          className="mb-2 flex items-center gap-2 text-sm font-bold text-white"
+        >
+          <ChevronLeft size={16} />
+          모든 일정 보러가기
+        </button>
+        <header className="space-y-1">
+          <p className="text-[11px] uppercase tracking-[0.4em] text-white/40">daily brief</p>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[14px] text-white">놓쳐서는 안 될 일정과 마감 알림을 모아볼까요?</p>
             </div>
           </div>
         </header>
-        <div className="fixed top-3 z-20 px-1 right-3">
-          <div className="flex w-full justify-end">
-            <div className="flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-1 text-[14px] font-bold uppercase tracking-[0.1em] text-white/60">
+
+        <section className="rounded-[28px] border border-white/10 bg-[#0b0b12] p-4 shadow-[0_20px_30px_rgba(0,0,0,0.4)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-[0.4em] text-white/40">알림 설정</p>
+              <p className="text-sm text-white/70">
+                매일 설정한 시간에 일주일 요약을 알려드려요.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleToggleNotifications}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                notificationSettings.enabled
+                  ? "bg-white text-black shadow-lg"
+                  : "border border-white/30 text-white/70 hover:border-white/50"
+              }`}
+            >
+              {notificationSettings.enabled ? "끄기" : "켜기"}
+            </button>
+          </div>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+              <label
+                htmlFor="daily-summary-time"
+                className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/40"
+              >
+              알림 시간
+            </label>
+            <input
+              id="daily-summary-time"
+              type="time"
+              value={notificationTimeValue}
+              onChange={handleNotificationTimeChange}
+              disabled={!notificationSettings.enabled}
+              className="min-w-[150px] rounded-2xl bg-white/[0.05] px-3 py-2 text-sm font-bold text-white outline-none transition focus:ring-2 focus:ring-[#6c63ff] disabled:cursor-not-allowed disabled:opacity-40"
+            />
+              <p className="text-[12px] text-white/60">{permissionDescription}</p>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleSendTestNotification}
+                disabled={!notificationSettings.enabled || !isNotificationSupported}
+                className="rounded-2xl border border-white/30 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/70 disabled:border-white/20 disabled:text-white/40 disabled:opacity-60"
+              >
+                테스트 알림 보내기
+              </button>
+              <p className="text-[12px] text-white/50">
+                알림이 뜨지 않으면 브라우저 알림 권한과 앱 상태를 확인해 주세요.
+              </p>
+            </div>
+          </section>
+
+        <section className="mb-4 rounded-[28px] border border-white/10 bg-gradient-to-br from-[#111116] via-[#14141a] to-[#0c0c0f] p-3 shadow-[0_20px_30px_rgba(0,0,0,0.45)]">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <p className="ml-2 text-3xl font-black leading-tight tracking-tight bg-gradient-to-br from-[#6c63ff] to-[#aa4bf8] bg-clip-text text-transparent animated-count">
+                {animatedTaskCount}건
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 rounded-full bg-white/10 p-1 text-[11px] uppercase tracking-[0.25em] text-white/70">
               {timeframeConfigs.map((option) => (
                 <button
                   key={option.id}
                   type="button"
                   onClick={() => setTimeframe(option.id)}
-                  className={`rounded-full px-3 py-1 transition-all ${
+                  className={`rounded-full px-3 py-1 transition ${
                     timeframe === option.id
                       ? "bg-white text-black shadow-lg"
-                      : "text-white/70 hover:text-white"
+                      : "text-white/60 hover:text-white"
                   }`}
                   aria-pressed={timeframe === option.id}
                 >
@@ -513,176 +670,234 @@ export default function NotificationsPage() {
               ))}
             </div>
           </div>
-        </div>
+        </section>
 
         {showEmptyState ? (
-          <div className="py-24 text-center border border-dashed border-white/10 rounded-[2.5rem] text-white/40 space-y-2">
-            <p className="text-base font-bold text-white/80">방문이나 마감 일정이 아직 없어요.</p>
-          </div>
+          <section className="rounded-[32px] border border-dashed border-white/10 bg-[#111116] p-10 text-center text-white/50">
+            <p className="text-lg font-bold text-white/80">방문이나 마감 일정이 아직 없어요.</p>
+            <p className="mt-3 text-sm text-white/50">일정이 추가되면 여기에 알림이 나타납니다.</p>
+          </section>
         ) : (
-          <>
+          <div className="space-y-8">
             {hasVisitItems && (
               <section className="space-y-4">
-                <div className="flex items-center justify-between px-1">
-                  <h2 className="text-[14px] font-black text-white/20 uppercase tracking-[0.1em]"><span className="text-white/60">방문일 {filteredVisits.length}건</span></h2>
-                  {filteredVisits.length > 1 && <span className="text-[14px] text-white/60 font-bold tracking-tighter animate-pulse">옆으로 밀어보기</span>}
+                <div className="flex items-center justify-between">
+                  <h2 className="text-[14px] font-bold uppercase tracking-[0.1em] text-white/40">
+                    방문일 {filteredVisits.length}건
+                  </h2>
+                  {filteredVisits.length > 1 && (
+                    <span className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/60 animate-pulse">
+                      옆으로 밀어보기
+                    </span>
+                  )}
                 </div>
 
-                <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2">
-                  {filteredVisits.map((s) => {
-                    const locationLabel = [s.region, s.regionDetail].filter(Boolean).join(" · ")
-                    const mapQuery = encodeURIComponent([s.region, s.regionDetail].filter(Boolean).join(" "))
-                    const additionalReviews = getAdditionalReviews(s)
-                    const visitLabel = formatVisitDateLabel(s.visit, today)
-                    const hasLocation = locationLabel.length > 0
-                    const weatherDateLabel = formatVisitDateForWeatherSearch(s.visit)
-                    const weatherLocation = [s.region, s.regionDetail].filter(Boolean).join(" ")
-                    const weatherQuery = `${weatherDateLabel ? `${weatherDateLabel} 날씨` : "날씨"} ${weatherLocation || "내 위치"}`
-                    const storePhoneNumber = cleanPhoneNumber(s.phone)
-                    const ownerPhoneNumber = cleanPhoneNumber(s.ownerPhone)
-                    const contactOptions = [
-                      { type: "store" as const, label: "가게번호", value: storePhoneNumber, display: s.phone || storePhoneNumber },
-                      { type: "owner" as const, label: "사장님번호", value: ownerPhoneNumber, display: s.ownerPhone || ownerPhoneNumber },
-                    ].filter((option) => option.value)
-                    const hasContactOptions = contactOptions.length > 0
-                    const channelLabel = s.channel?.filter(Boolean).join(" · ")
-                    const additionalReviewLabel = additionalReviews.length > 0 ? additionalReviews.join(", ") : null
-                    return (
-                      <div
-                        key={s.id}
-                        className={`${visitCardMinWidthClass} snap-center bg-[#04050a] rounded-[2rem] px-5 py-5 border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.6)] space-y-5`}
-                      >
-                        <div className="flex justify-between gap-4">
-                          <div className="space-y-1 w-full">
-                            <div className="flex justify-between">
-                              <div>
-                                {visitLabel && (
-                                  <p className="ml-1 text-[11px] uppercase tracking-[0.15em] text-white/50">{visitLabel}</p>
-                                )}
-                                <p className="text-2xl font-semibold leading-tight text-white">{formatVisitTimeLabel(s.visitTime)}</p>
-                              </div>
-
-                              <div className="flex flex-col items-end gap-2 text-right">
-                                <div className="flex">
-                                  <p className="text-[11px] uppercase tracking-[0.35em] text-white/50">{s.platform}</p>
+                <div className="rounded-[32px] border border-white/5 bg-[#0b0b0f] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+                  <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2">
+                    {filteredVisits.map((s) => {
+                      const locationLabel = [s.region, s.regionDetail].filter(Boolean).join(" · ")
+                      const mapQuery = encodeURIComponent([s.region, s.regionDetail].filter(Boolean).join(" "))
+                      const additionalReviews = getAdditionalReviews(s)
+                      const visitLabel = formatVisitDateLabel(s.visit, today)
+                      const hasLocation = locationLabel.length > 0
+                      const weatherDateLabel = formatVisitDateForWeatherSearch(s.visit)
+                      const weatherLocation = [s.region, s.regionDetail].filter(Boolean).join(" ")
+                      const weatherQuery = `${weatherDateLabel ? `${weatherDateLabel} 날씨` : "날씨"} ${weatherLocation || "내 위치"}`
+                      const storePhoneNumber = cleanPhoneNumber(s.phone)
+                      const ownerPhoneNumber = cleanPhoneNumber(s.ownerPhone)
+                      const contactOptions = [
+                        { type: "store" as const, label: "가게번호", value: storePhoneNumber, display: s.phone || storePhoneNumber },
+                        { type: "owner" as const, label: "사장님번호", value: ownerPhoneNumber, display: s.ownerPhone || ownerPhoneNumber },
+                      ].filter((option) => option.value)
+                      const hasContactOptions = contactOptions.length > 0
+                      const channelLabel = s.channel?.filter(Boolean).join(" · ")
+                      const additionalReviewLabel = additionalReviews.length > 0 ? additionalReviews.join(", ") : null
+                      return (
+                        <div
+                          key={s.id}
+                          className={`${visitCardMinWidthClass} snap-center rounded-[28px] border border-white/10 bg-[#04050a] px-5 py-5 shadow-[0_20px_70px_rgba(0,0,0,0.65)] space-y-5`}
+                        >
+                          <div className="flex justify-between gap-4">
+                            <div className="space-y-1 w-full">
+                              <div className="flex justify-between">
+                                <div>
+                                  {visitLabel && (
+                                    <p className="ml-1 text-[11px] uppercase tracking-[0.15em] text-white/50">{visitLabel}</p>
+                                  )}
+                                  <p className="text-2xl font-semibold leading-tight text-white">{formatVisitTimeLabel(s.visitTime)}</p>
                                 </div>
-                                <button
-                                  onClick={() => {
-                                    setEditingScheduleId(s.id)
-                                    setIsModalVisible(true)
-                                  }}
-                                  className="p-1 text-white/30 transition hover:text-white"
-                                >
-                                  <MoreVertical className="w-5 h-5" />
-                                </button>
-                              </div>
-                            </div>
-                            
-                            {(s.channel || additionalReviews.length > 0) && (
-                              <div className="flex flex-wrap gap-2">
-                                {s.channel?.filter(Boolean).map((channel) => (
-                                  <span
-                                    key={`channel-${channel}-${s.id}`}
-                                    className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-white/70"
-                                  >
-                                    {channel}
-                                  </span>
-                                ))}
-                                {additionalReviews.length > 0 && (
-                                  <span
-                                    className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white/70"
-                                  >
-                                    <span className="text-[10px]" aria-hidden="true">📰</span>
-                                    추가리뷰
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                         
 
-                        <div className="space-y-2">
-                          <h3 className="text-xl font-bold leading-tight text-white">{s.title}</h3>
-                        </div>
-
-                        <div className="mt-[-8px] flex gap-1 text-[12.5px] text-white/60">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-white/30 shrink-0" />
-                            <span className={`truncate font-medium ${hasLocation ? "text-white/60" : "text-white/30"}`}>
-                              {hasLocation ? locationLabel : "위치 정보 없음"}
-                            </span>
-                          </div>
-                          
-                        </div>
-
-                        <div className="flex gap-3">
-                          <button
-                            type="button"
-                            onClick={() => handleReceiptButtonClick(s)}
-                            disabled={uploadingReceiptFor === s.id}
-                            className="flex-1 py-2 bg-white text-black rounded-2xl font-bold text-[14px] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-wait"
-                          >
-                            <Camera className="w-4 h-4 stroke-[1.5]" /> {uploadingReceiptFor === s.id ? "저장 중..." : "영수증 저장"}
-                          </button>
-
-                          {hasContactOptions && (
-                            <div className="relative">
-                              <button
-                                type="button"
-                                data-call-menu="true"
-                                aria-expanded={callMenuTarget === s.id}
-                                onClick={() =>
-                                  setCallMenuTarget(callMenuTarget === s.id ? null : s.id)
-                                }
-                                className="flex items-center justify-center rounded-2xl border border-white/5 bg-[#1e1e20] p-2 text-white/70 transition hover:text-white/90"
-                              >
-                                <Phone className="w-4 h-4 stroke-[1.5]" />
-                              </button>
-                              {callMenuTarget === s.id && (
-                                <div
-                                  data-call-menu="true"
-                                  className="absolute bottom-full right-0 z-50 w-44 -translate-y-2 rounded-2xl border border-white/10 bg-[#0d0d11] p-2 shadow-2xl"
-                                >
-                                  <div className="flex flex-col gap-1">
-                                    {contactOptions.map((option) => (
-                                      <button
-                                        key={`${option.type}-${s.id}`}
-                                        type="button"
-                                        onClick={() => handleCallSelection(s, option.type)}
-                                        className="w-full rounded-xl px-3 py-2 text-left text-[14px] font-semibold text-white/70 transition hover:text-white"
-                                      >
-                                        <span className="text-[14px] uppercase tracking-[0.2em] text-white/40">{option.label}</span>
-                                        <span className="block text-sm font-bold text-white">{option.display}</span>
-                                      </button>
-                                    ))}
+                                <div className="flex flex-col items-end gap-2 text-right">
+                                  <div className="flex">
+                                    <p className="text-[11px] uppercase tracking-[0.35em] text-white/50">{s.platform}</p>
                                   </div>
+                                  <button
+                                    onClick={() => {
+                                      setEditingScheduleId(s.id)
+                                      setIsModalVisible(true)
+                                    }}
+                                    className="p-1 text-white/30 transition hover:text-white"
+                                  >
+                                    <MoreVertical className="w-5 h-5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {(s.channel || additionalReviews.length > 0) && (
+                                <div className="flex flex-wrap gap-2">
+                                  {s.channel?.filter(Boolean).map((channel) => (
+                                    <span
+                                      key={`channel-${channel}-${s.id}`}
+                                      className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-white/70"
+                                    >
+                                      {channel}
+                                    </span>
+                                  ))}
+                                  {additionalReviews.length > 0 && (
+                                    <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white/70">
+                                      <span className="text-[10px]" aria-hidden="true">📰</span>
+                                      추가리뷰
+                                    </span>
+                                  )}
                                 </div>
                               )}
                             </div>
-                          )}
+                          </div>
 
-                          <div className="flex">
-                            <button onClick={() => handleOpenSmsModal(s, 'visit')} className="h-[34px] flex items-center justify-center rounded-2xl border border-white/5 bg-[#1e1e20] p-2 text-white/70 transition hover:text-white/90">
+                          <div className="space-y-2">
+                            <h3 className="text-xl font-bold leading-tight text-white">{s.title}</h3>
+                          </div>
+
+                          <div className="mt-1 text-[12.5px] text-white/60">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <MapPin className="w-4 h-4 text-white/30 shrink-0" />
+                              <span
+                                className={`min-w-0 break-words font-medium ${hasLocation ? "text-white/60" : "text-white/30"}`}
+                              >
+                                {hasLocation ? locationLabel : "위치 정보 없음"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap justify-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => handleReceiptButtonClick(s)}
+                              disabled={uploadingReceiptFor === s.id}
+                              className="flex-1 min-w-[120px] max-w-full py-2 bg-white text-black rounded-2xl font-bold text-[13px] active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-wait sm:flex-none"
+                            >
+                              <Camera className="w-4 h-4 stroke-[1.5]" /> {uploadingReceiptFor === s.id ? "저장 중..." : "영수증 저장"}
+                            </button>
+
+                            {hasContactOptions && (
+                              <div className="relative flex-shrink-0">
+                                <button
+                                  type="button"
+                                  data-call-menu="true"
+                                  aria-expanded={callMenuTarget === s.id}
+                                  onClick={() =>
+                                    setCallMenuTarget(callMenuTarget === s.id ? null : s.id)
+                                  }
+                                  className="flex items-center justify-center rounded-2xl border border-white/5 bg-[#1e1e20] p-2 text-white/70 transition hover:text-white/90"
+                                >
+                                  <Phone className="w-4 h-4 stroke-[1.5]" />
+                                </button>
+                                {callMenuTarget === s.id && (
+                                  <div
+                                    data-call-menu="true"
+                                    className="absolute bottom-full -right-10 z-50 w-44 -translate-y-2 rounded-2xl border border-white/30 bg-[#0d0d11] p-2 shadow-2xl"
+                                  >
+                                    <div className="flex flex-col gap-1">
+                                      {contactOptions.map((option) => (
+                                        <button
+                                          key={`${option.type}-${s.id}`}
+                                          type="button"
+                                          onClick={() => handleCallSelection(s, option.type)}
+                                          className="w-full rounded-xl px-3 py-2 text-left text-[14px] font-semibold text-white/70 transition hover:text-white"
+                                        >
+                                          <span className="text-[14px] uppercase tracking-[0.2em] text-white/40">{option.label}</span>
+                                          <span className="block text-sm font-bold text-white">{option.display}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <button
+                              onClick={() => handleOpenSmsModal(s, 'visit')}
+                              className="flex-shrink-0 h-[34px] flex items-center justify-center rounded-2xl border border-white/5 bg-[#1e1e20] p-2 text-white/70 transition hover:text-white/90"
+                            >
                               <MessageCircle className="w-4 h-4 stroke-[1.5]" />
                             </button>
-                          </div>
-                          <div className="flex">
                             <button
                               disabled={!hasLocation}
                               onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(weatherQuery)}`, "_blank")}
-                              className="h-[34px] flex items-center justify-center rounded-2xl border border-white/5 bg-[#1e1e20] p-2 text-white/70 transition hover:text-white/90"
+                              className="flex-shrink-0 h-[34px] flex items-center justify-center rounded-2xl border border-white/5 bg-[#1e1e20] p-2 text-white/70 transition hover:text-white/90"
                             >
                               <CloudRain className="w-4 h-4 stroke-[1.5]" />
                             </button>
-                          </div>
-                          <div className="flex">
                             <button
                               disabled={!hasLocation}
                               onClick={() => window.open(`https://map.naver.com/v5/search/${mapQuery}`, "_blank")}
-                              className="h-[34px] flex items-center justify-center rounded-2xl border border-white/5 bg-[#1e1e20] p-2 text-white/70 transition hover:text-white/90"
+                              className="flex-shrink-0 h-[34px] flex items-center justify-center rounded-2xl border border-white/5 bg-[#1e1e20] p-2 text-white/70 transition hover:text-white/90"
                             >
                               <Map className="w-4 h-4 stroke-[1.5]" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {hasDeadlineItems && (
+              <section className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-[14px] font-bold uppercase tracking-[0.1em] text-white/40">
+                    마감일 {filteredDeadlines.length}건
+                  </h2>
+                </div>
+
+                <div className="rounded-[32px] border border-white/5 bg-[#111116] shadow-[0_25px_60px_rgba(0,0,0,0.45)]">
+                  {filteredDeadlines.map((s) => {
+                    const netLoss = (s.benefit ?? 0) + (s.income ?? 0) - (s.cost ?? 0)
+                    const additionalReviews = getAdditionalReviews(s)
+                    const deadlineLabel = formatDeadlineLabel(s.dead, today)
+                    return (
+                      <div key={s.id} className="flex flex-col gap-3 border-b border-white/[0.05] px-5 py-5 last:border-none">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                {deadlineLabel && (
+                                  <span className="rounded-full bg-red-900 px-2.5 py-0.5 text-[13px] font-bold uppercase tracking-[0.2em] text-white">
+                                    {deadlineLabel}
+                                  </span>
+                                )}
+                                <span className="text-[14px] font-bold text-white/60 uppercase">{s.platform}</span>
+                                {s.paybackExpected && (
+                                  <span className="flex items-center gap-1 text-[14px] font-bold text-[#8a72ff]">
+                                    <AlertCircle className="w-2.5 h-2.5 translate-y-[-1px]" /> 환급금
+                                  </span>
+                                )}
+                              </div>
+                              <h3 className="mt-2 text-base font-bold text-white/90 truncate pr-6">{s.title}</h3>
+                            </div>
+                            <button onClick={() => { setEditingScheduleId(s.id); setIsModalVisible(true); }} className="p-1 text-white/20 hover:text-white shrink-0">
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[14px] font-bold text-white">{formatCurrency(netLoss)}원</span>
+                          <div className="flex rounded-2xl border border-white/10 bg-[#0f0f12]">
+                            <button onClick={() => handleOpenSmsModal(s, 'deadline')} className="p-2 text-white/70 transition hover:text-white">
+                              <MessageCircle className="w-4 h-4 stroke-[1.5]" />
                             </button>
                           </div>
                         </div>
@@ -692,80 +907,26 @@ export default function NotificationsPage() {
                 </div>
               </section>
             )}
-
-            {hasDeadlineItems && (
-              <>
-                {/* 2. 마감 임박 (압축형 리스트) */}
-                <section className="space-y-4">
-                  <div className="flex items-center justify-between px-1">
-                    <h2 className="text-[14px] font-black text-red-500/30 uppercase tracking-[0.1em]"><span className="text-white/60">마감일 {filteredDeadlines.length}건</span></h2>
-                  </div>
-
-                  <div className="bg-[#121214] rounded-[2.5rem] border border-white/[0.05] divide-y divide-white/5 overflow-hidden">
-                    {filteredDeadlines.map((s) => {
-                      const netLoss = (s.benefit ?? 0) + (s.income ?? 0) - (s.cost ?? 0)
-                      const additionalReviews = getAdditionalReviews(s)
-                      const deadlineLabel = formatDeadlineLabel(s.dead, today)
-                      return (
-                        <div key={s.id} className="p-5 flex flex-col gap-3 active:bg-white/[0.02] transition-all">
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-start gap-4">
-                              <div className="min-w-0 flex-1 space-y-1">
-                                <div className="flex items-center flex-wrap gap-2">
-                                  {deadlineLabel && (
-                                    <span className="rounded-full text-[14px] font-bold bg-red-900 text-white px-2.5 py-0.5 rounded">
-                                      {deadlineLabel}
-                                    </span>
-                                  )}
-                                  <span className="text-[14px] font-bold text-white/60 uppercase">{s.platform}</span>
-                                  {s.paybackExpected && (
-                                    <span className="text-[14px] font-bold text-[#8a72ff] flex items-center gap-1">
-                                      <AlertCircle className="w-2.5 h-2.5 translate-y-[-1px]" /> 환급금
-                                    </span>
-                                  )}
-                                </div>
-                                <h3 className="mt-2 text-base font-bold text-white/90 truncate pr-6">{s.title}</h3>
-                              </div>
-                              <button onClick={() => { setEditingScheduleId(s.id); setIsModalVisible(true); }} className="p-1 text-white/20 hover:text-white shrink-0">
-                                <MoreVertical className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-end gap-2">
-                            <span className="shrink-0 text-[14px] font-bold text-red-1000">{formatCurrency(netLoss)}원</span>
-                            <div className="flex bg-[#1e1e20] rounded-2xl border border-white/5">
-                              <button onClick={() => handleOpenSmsModal(s, 'deadline')} className="p-2 active:bg-white/5">
-                                <MessageCircle className="w-4 h-4 stroke-[1.5]" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </section>
-              </>
-            )}
-          </>
+          </div>
         )}
-      </div>
-      <div className="fixed bottom-6 left-1/2 z-20 w-full max-w-md px-4 -translate-x-1/2">
-        <Link
-          href="/?page=home"
-          className="flex items-center justify-center gap-2 rounded-[2rem] bg-gradient-to-r from-[#6c63ff] to-[#aa4bf8]/90 px-6 py-4 text-base font-black text-white shadow-[0_15px_45px_rgba(49,114,255,0.35)] transition hover:shadow-[0_20px_50px_rgba(33,91,255,0.45)]"
-        >
-          <span>모든 일정 보러가기</span>
-          <ChevronRight className="w-4 h-4 text-white/90" />
-        </Link>
+
+        <div className="flex justify-center">
+          <Link
+            href="/?page=home"
+            className="inline-flex items-center gap-2 rounded-[28px] border border-white/20 bg-white/5 px-6 py-3 text-base font-black text-white transition hover:border-white/40 hover:bg-white/10"
+          >
+            모든 일정 보러가기
+            <ChevronRight className="w-4 h-4 text-white/90" />
+          </Link>
+        </div>
       </div>
 
       {/* 통합 메시지 모달 생략 (이전과 동일) */}
       <Dialog open={isSmsModalOpen} onOpenChange={setIsSmsModalOpen}>
-        <DialogContent showCloseButton={false} className="bg-[#121214] border-white/10 text-white max-w-sm rounded-[2.5rem] p-6 outline-none shadow-2xl">
+        <DialogContent showCloseButton={false} className="bg-[#121214] border-white/10 text-white rounded-[2.5rem] p-6 outline-none shadow-2xl">
           <DialogHeader className="space-y-2">
             <div className="flex justify-between items-center w-full">
-              <DialogTitle className="text-xl font-bold tracking-tight">메시지 작성</DialogTitle>
+              <DialogTitle className="text-xl font-bold tracking-tight"></DialogTitle>
               <button onClick={() => setIsSmsModalOpen(false)} className="p-2 bg-white/5 rounded-full text-white/40 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
             </div>
           </DialogHeader>
@@ -773,10 +934,9 @@ export default function NotificationsPage() {
           <div className="space-y-6">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-[14px] font-black uppercase tracking-[0.35em] text-white/50">
+                <p className="text-[14px] font-black uppercase tracking-[0.1em] text-white/50">
                   {smsType === 'visit' ? "방문형 메시지" : "마감형 메시지"}
                 </p>
-                <span className="text-[14px] text-white/40">{templates.length}개 템플릿</span>
               </div>
 
               {templates.length > 0 && activeTemplate ? (
@@ -790,13 +950,12 @@ export default function NotificationsPage() {
                           key={template.id}
                           type="button"
                           onClick={() => setSelectedTemplateId(template.id)}
-                          className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[14px] font-bold uppercase transition ${
+                          className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-bold uppercase transition ${
                             isActive
                               ? "bg-white text-black shadow-lg"
                               : "bg-white/10 text-white/70 hover:bg-white/20"
                           }`}
                         >
-                          <Icon className={`w-4 h-4 ${isActive ? "text-black" : "text-white/60"}`} />
                           {template.label}
                         </button>
                       )
@@ -835,7 +994,7 @@ export default function NotificationsPage() {
                 sendSms(smsTarget?.ownerPhone || smsTarget?.phone || "", customSmsBody);
                 setIsSmsModalOpen(false);
               }}
-              className="w-full py-7 bg-white text-black rounded-2xl font-black shadow-xl active:scale-95 disabled:bg-white/10 disabled:text-white/30 transition-all"
+              className="w-full py-5 bg-white text-black rounded-2xl font-bold shadow-xl active:scale-95 disabled:bg-white/10 disabled:text-white/30 transition-all"
             >
               {cleanPhoneNumber(smsTarget?.ownerPhone || smsTarget?.phone) ? <><Send className="w-5 h-5" /> 문자 발송하러 가기</> : "연락처 등록 후 발송"}
             </Button>

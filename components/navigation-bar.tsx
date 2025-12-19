@@ -1,5 +1,6 @@
 "use client"
 
+import { useToast } from "@/hooks/use-toast"
 import { Home, Plus, Wallet, CalendarCheck2, User } from "lucide-react"
 
 export default function NavigationBar({
@@ -7,14 +8,30 @@ export default function NavigationBar({
   onPageChange,
   onAddClick,
   onHomeClick,
+  isPro,
 }: {
   currentPage: "home" | "stats" | "profile"
   onPageChange: (page: "home" | "stats" | "profile") => void
   onAddClick: () => void
   onHomeClick: () => void
+  isPro: boolean
 }) {
   const baseBtn = "flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-2xl transition-all text-neutral-400 hover:text-neutral-600"
   const activeClasses = "text-[#ff5c39] bg-orange-50"
+  const { toast } = useToast()
+
+  const handleSummaryClick = () => {
+    if (!isPro) {
+      toast({
+        title: "요약 기능은 PRO 전용입니다.",
+        variant: "destructive",
+        duration: 1000,
+      })
+      return
+    }
+
+    onHomeClick()
+  }
 
   return (
     <nav
@@ -27,12 +44,12 @@ export default function NavigationBar({
       }}
     >
       <button
-        onClick={onHomeClick}
+        onClick={handleSummaryClick}
         className={baseBtn}
         aria-label="랜딩 페이지로 이동"
       >
         <Home className="w-6 h-6" />
-        <span className="text-xs font-semibold mt-0.5">홈</span>
+        <span className="text-xs font-semibold mt-0.5">요약</span>
       </button>
 
       <button

@@ -101,4 +101,33 @@ export interface MonthlyGrowth {
   econValue: number
 }
 
+export interface MonthlyRankingUser {
+  userId: string
+  econValue: number
+  rank: number
+}
+
+export interface MonthlyRankingNeighbor extends MonthlyRankingUser {
+  isCurrentUser: boolean
+}
+
+export interface MonthlyRankingResponse {
+  monthStart: string
+  totalUsers: number
+  rank: number | null
+  econValue: number
+  topPercent: number | null
+  amountToTopOnePercent: number
+  topOnePercentRank: number
+  topUsers: MonthlyRankingUser[]
+  surroundingUsers: MonthlyRankingNeighbor[]
+  hasRecord: boolean
+}
+
 export type HistoryView = "all" | "benefit" | "income" | "cost"
+
+export interface NotificationSettings {
+  enabled: boolean
+  hour: number
+  minute: number
+}

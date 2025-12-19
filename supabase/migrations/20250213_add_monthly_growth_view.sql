@@ -49,9 +49,11 @@ SELECT
   COALESCE(s.income_total, 0) AS income_total,
   COALESCE(s.cost_total, 0) AS cost_total,
   COALESCE(e.extra_income_total, 0) AS extra_income_total,
-  -- 경제적 가치: 방어한 생활비 + 부수입
+  -- 경제적 가치: 방어한 생활비 + 부수입 + 수익 - 지출
   COALESCE(s.benefit_total, 0)
-    + COALESCE(e.extra_income_total, 0) AS econ_value
+    + COALESCE(e.extra_income_total, 0)
+    + COALESCE(s.income_total, 0)
+    - COALESCE(s.cost_total, 0) AS econ_value
 FROM schedule_months s
 FULL OUTER JOIN extra_months e
   ON s.user_id = e.user_id

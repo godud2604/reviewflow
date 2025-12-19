@@ -7,6 +7,8 @@ export interface UploadedFile {
   type: string        // MIME type
 }
 
+const PROFILE_IMAGES_BUCKET = 'profile-images'
+
 /**
  * 파일을 Supabase Storage에 업로드
  */
@@ -178,4 +180,63 @@ export async function downloadGuideFile(filePath: string, fileName: string): Pro
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+export async function uploadProfileImage(userId: string, file: File): Promise<UploadedFile> {
+  const supabase = getSupabaseClient()
+  const timestamp = Date.now()
+  const safeName = file.name.replace(/[^a-zA-Z0-9가-힣._-]/g, '_')
+  const filePath = `${userId}/${timestamp}_${safeName}`
+
+  const { data, error } = await supabase.storage
+    .from(PROFILE_IMAGES_BUCKET)
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true,
+      contentType: file.type || 'application/octet-stream',
+    })
+
+  if (error) {
+    console.error('프로필 사진 업로드 오류:', error)
+    throw new Error(error.message || '프로필 사진을 업로드하지 못했습니다.')
+  }
+
+  return {
+    name: file.name,
+    path: data?.path ?? filePath,
+    size: file.size,
+    type: file.type,
+  }
+}
+
+export async function getProfileImageUrl(
+  filePath: string,
+  expiresInSeconds = 60 * 60,
+): Promise<string | null> {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase.storage
+    .from(PROFILE_IMAGES_BUCKET)
+    .createSignedUrl(filePath, expiresInSeconds)
+
+  if (error) {
+    console.error('프로필 사진 URL 생성 오류:', error)
+    return null
+  }
+
+  return data?.signedUrl ?? null
+}
+
+export async function deleteProfileImage(filePath: string): Promise<boolean> {
+  if (!filePath) return true
+  const supabase = getSupabaseClient()
+  const { error } = await supabase.storage
+    .from(PROFILE_IMAGES_BUCKET)
+    .remove([filePath])
+
+  if (error) {
+    console.error('프로필 사진 삭제 오류:', error)
+    return false
+  }
+
+  return true
 }

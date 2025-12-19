@@ -156,7 +156,7 @@ export default function HomePage({
     setSelectedFilter("all")
   }
 
-  const containerClassName = `flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3`
+  const containerClassName = `flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3`
   const handleGoToToday = () => {
     setSelectedDate(today)
     setSelectedFilter("all")

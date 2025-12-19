@@ -11,12 +11,14 @@ type StatsPageProps = {
   schedules: Schedule[]
   onScheduleItemClick: (schedule: Schedule) => void
   isScheduleModalOpen: boolean
+  isPro: boolean
 }
 
 export default function StatsPage({
   schedules,
   onScheduleItemClick,
   isScheduleModalOpen,
+  isPro,
 }: StatsPageProps) {
   const [showIncomeModal, setShowIncomeModal] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
@@ -38,6 +40,8 @@ export default function StatsPage({
   const today = new Date()
   const currentYear = today.getFullYear()
   const currentMonth = today.getMonth()
+  const currentMonthKey = `${currentYear}-${(currentMonth + 1).toString().padStart(2, "0")}-01`
+  const [selectedMonthKey, setSelectedMonthKey] = useState(currentMonthKey)
 
   const parseDate = (value?: string) => {
     if (!value) return null
@@ -45,10 +49,39 @@ export default function StatsPage({
     return Number.isNaN(date.getTime()) ? null : date
   }
 
-  const isCurrentMonthDate = (date: Date | null) => {
-    if (!date) return false
-    return date.getFullYear() === currentYear && date.getMonth() === currentMonth
+  const getMonthStartDate = (monthKey: string) => {
+    const date = new Date(monthKey)
+    return Number.isNaN(date.getTime()) ? null : date
   }
+
+  const selectedMonthDate = useMemo(() => getMonthStartDate(selectedMonthKey), [selectedMonthKey])
+  const isDateInSelectedMonth = (date: Date | null) => {
+    if (!date || !selectedMonthDate) return false
+    return date.getFullYear() === selectedMonthDate.getFullYear() && date.getMonth() === selectedMonthDate.getMonth()
+  }
+
+  const formatFullMonthLabel = (key: string) => {
+    const date = getMonthStartDate(key)
+    if (!date) return key
+    return `${date.getFullYear()}년 ${date.getMonth() + 1}월`
+  }
+
+  const formatMonthButtonLabel = (key: string) => {
+    const date = getMonthStartDate(key)
+    if (!date) return key
+    const month = (date.getMonth() + 1).toString().padStart(2, "0")
+    return `${date.getFullYear()}.${month}`
+  }
+
+  const formatShortMonthLabel = (key: string) => {
+    const date = getMonthStartDate(key)
+    if (!date) return ""
+    return `${date.getMonth() + 1}월`
+  }
+
+  const selectedMonthLabel = formatFullMonthLabel(selectedMonthKey)
+  const selectedMonthLabelShort = formatShortMonthLabel(selectedMonthKey)
+  const displaySelectedMonthLabel = selectedMonthLabel || "선택한 달"
 
   const getScheduleDate = (schedule: Schedule) => parseDate(schedule.visit) || parseDate(schedule.dead)
 
@@ -105,14 +138,14 @@ export default function StatsPage({
     handleOpenIncomeModal(income)
   }
 
-  const currentMonthSchedules = useMemo(
-    () => schedules.filter((schedule) => isCurrentMonthDate(getScheduleDate(schedule))),
-    [schedules, currentYear, currentMonth]
+  const selectedMonthSchedules = useMemo(
+    () => schedules.filter((schedule) => isDateInSelectedMonth(getScheduleDate(schedule))),
+    [schedules, selectedMonthKey, selectedMonthDate]
   )
 
-  const currentMonthExtraIncomes = useMemo(
-    () => extraIncomes.filter((income) => isCurrentMonthDate(parseDate(income.date))),
-    [extraIncomes, currentYear, currentMonth]
+  const selectedMonthExtraIncomes = useMemo(
+    () => extraIncomes.filter((income) => isDateInSelectedMonth(parseDate(income.date))),
+    [extraIncomes, selectedMonthKey, selectedMonthDate]
   )
 
   const { totalBen, totalInc, totalCost, benefitByCategory, incomeByCategory, costByCategory } = useMemo(() => {
@@ -123,7 +156,7 @@ export default function StatsPage({
     let incomeTotal = 0
     let costTotal = 0
 
-    currentMonthSchedules.forEach((s) => {
+    selectedMonthSchedules.forEach((s) => {
       const benefit = toNumber(s.benefit)
       const income = toNumber(s.income)
       const cost = toNumber(s.cost)
@@ -145,9 +178,9 @@ export default function StatsPage({
       incomeByCategory: incomeMap,
       costByCategory: costMap,
     }
-  }, [currentMonthSchedules])
+  }, [selectedMonthSchedules])
 
-  const totalExtraIncome = currentMonthExtraIncomes.reduce((sum, item) => sum + toNumber(item.amount), 0)
+  const totalExtraIncome = selectedMonthExtraIncomes.reduce((sum, item) => sum + toNumber(item.amount), 0)
   const scheduleValue = totalBen + totalInc - totalCost
   // 경제적 가치 = 스케줄(제공+수익-지출) + 부수입
   const econValue = scheduleValue + totalExtraIncome
@@ -276,16 +309,56 @@ export default function StatsPage({
     )
   }, [schedules, extraIncomes])
 
+  const monthOptions = useMemo(() => {
+    const keys = Array.from(
+      new Set([...monthlyGrowth.map((entry) => entry.monthStart), currentMonthKey])
+    )
+    const options = keys
+      .map((key) => {
+        const date = getMonthStartDate(key)
+        if (!date) return null
+        return { key, date, label: formatMonthButtonLabel(key) }
+      })
+      .filter((option): option is { key: string; date: Date; label: string } => option !== null)
+      .sort((a, b) => b.date.getTime() - a.date.getTime())
+
+    return options
+  }, [monthlyGrowth, currentMonthKey])
+
   return (
     <>
-      <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y relative">
+      <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y relative pt-4.5">
+        <div className="mb-4 space-y-2">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {monthOptions.map((option) => {
+              const isMonthLocked = !isPro && option.key !== currentMonthKey
+              return (
+                <button
+                  key={option.key}
+                  onClick={() => {
+                    if (isMonthLocked) return
+                    setSelectedMonthKey(option.key)
+                  }}
+                  disabled={isMonthLocked}
+                  className={`mt-1 flex-none rounded-full px-4 py-2 text-xs font-semibold transition ${
+                    selectedMonthKey === option.key
+                      ? "bg-[#0f172a] text-white"
+                      : "bg-white text-[#1f2937] border border-[#e5e7eb]"
+                  } ${isMonthLocked ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
         {/* Hero Card */}
         <div className="relative overflow-hidden rounded-[30px] p-6 mt-1 mb-5 bg-gradient-to-br from-[#ff9a3c] via-[#ff6a1f] to-[#ff3b0c]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.22),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.15),transparent_28%)]" />
           <div className="relative flex items-start justify-between mb-5">
             <div>
               <div className="text-[14px] font-semibold text-white uppercase flex items-center gap-1 mb-2">
-                이번 달 경제적 가치 <span role="img" aria-label="money bag">💰</span>
+                {displaySelectedMonthLabel} 경제적 가치 <span role="img" aria-label="money bag">💰</span>
               </div>
               <div className="text-[32px] font-black leading-[1.05] text-white drop-shadow-[0_14px_36px_rgba(255,120,64,0.28)] tracking-tight">
                 ₩ {animatedEconValue.toLocaleString()}
@@ -322,7 +395,7 @@ export default function StatsPage({
                 방어한 생활비 + 현금 수입 − 실제 지출 기준
               </div>
 
-              <div className="text-[18px] font-extrabold tracking-tight">
+              <div className="text-[16px] font-extrabold tracking-tight">
                 ₩ {scheduleValue.toLocaleString()}
               </div>
             </div>
@@ -331,10 +404,10 @@ export default function StatsPage({
             <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-sm shadow-sm text-white/90">
               <div className="flex flex-col h-full justify-between min-h-[80px]">
                 <div>
-                  <div className="text-[12px] font-semibold mb-2">
+                  <div className="text-[12px] font-semibold mb-1">
                     부수입
                   </div>
-                  <div className="text-[10.5px] text-white/80 mb-2 leading-snug">
+                  <div className="text-[10.5px] mb-1 text-white/80 leading-snug">
                     체험단 외의 부업/임시 수입
                   </div>
                 </div>
@@ -348,7 +421,7 @@ export default function StatsPage({
         </div>
 
         <div className="flex items-center justify-between mb-3.5">
-          <div className="ml-1.5 text-[16px] font-bold text-[#0f172a]">이번 달 재무 상세</div>
+          <div className="ml-1.5 text-[16px] font-bold text-[#0f172a]">{displaySelectedMonthLabel} 재무 상세</div>
           <button
             onClick={() => openHistoryModal("all")}
             className="text-[12px] text-[#6b7685] hover:text-[#111827] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
@@ -394,7 +467,7 @@ export default function StatsPage({
                   )
                 })}
                 {!benefitEntries.length && (
-                  <div className="text-xs text-[#9ca3af]">이번 달 방어된 생활비 내역이 아직 없어요.</div>
+                  <div className="text-xs text-[#9ca3af]">{displaySelectedMonthLabel} 방어된 생활비 내역이 아직 없어요.</div>
                 )}
               </div>
             </section>
@@ -450,8 +523,8 @@ export default function StatsPage({
                     <div className="text-xs text-[#6b7685]">{totalExtraIncome ? `₩ ${totalExtraIncome.toLocaleString()}` : "없음"}</div>
                   </div>
                   <div className="mt-3 space-y-3">
-                    {currentMonthExtraIncomes.length > 0 ? (
-                      currentMonthExtraIncomes
+                    {selectedMonthExtraIncomes.length > 0 ? (
+                      selectedMonthExtraIncomes
                         .slice()
                         .sort((a, b) => b.amount - a.amount)
                         .map((income) => {
@@ -500,7 +573,7 @@ export default function StatsPage({
                   전체 내역 보기
                 </button>
               </div>
-              <p className="text-xs text-[#6b7280] mt-1">이번 달에 나간 비용들을 카테고리 별로 정리합니다.</p>
+              <p className="text-xs text-[#6b7280] mt-1">{displaySelectedMonthLabel}에 나간 비용들을 카테고리 별로 정리합니다.</p>
               <div className="mt-4 space-y-3">
                 {costEntries.map(([category, amount]) => {
                   const percentage = totalCost ? Math.round((amount / totalCost) * 100) : 0
@@ -535,6 +608,8 @@ export default function StatsPage({
         <TrendChart
           currentMonthValue={econValue}
           monthlyGrowth={monthlyGrowth}
+          selectedMonthKey={selectedMonthKey}
+          selectedMonthLabel={selectedMonthLabelShort || displaySelectedMonthLabel}
         />
       </div>
       
@@ -552,8 +627,8 @@ export default function StatsPage({
       <IncomeHistoryModal
         isOpen={showHistoryModal}
         onClose={() => setShowHistoryModal(false)}
-        schedules={currentMonthSchedules}
-        extraIncomes={currentMonthExtraIncomes}
+        schedules={selectedMonthSchedules}
+        extraIncomes={selectedMonthExtraIncomes}
         viewType={historyView}
         onDeleteExtraIncome={deleteExtraIncome}
         onScheduleItemClick={handleHistoryScheduleClick}
@@ -567,24 +642,21 @@ export default function StatsPage({
 function TrendChart({
   currentMonthValue,
   monthlyGrowth,
+  selectedMonthKey,
+  selectedMonthLabel,
 }: {
   currentMonthValue: number
   monthlyGrowth: MonthlyGrowth[]
+  selectedMonthKey: string
+  selectedMonthLabel: string
 }) {
-  const now = new Date()
-  const currentMonthKey = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-01`
-
-  const isSameMonth = (monthStart: string) => {
-    const date = new Date(monthStart)
-    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
-  }
-
-  const addCurrentIfMissing = (data: MonthlyGrowth[]) => {
-    if (data.some((item) => isSameMonth(item.monthStart))) return data
+  const addSelectedIfMissing = (data: MonthlyGrowth[]) => {
+    if (!selectedMonthKey) return data
+    if (data.some((item) => item.monthStart === selectedMonthKey)) return data
     return [
       ...data,
       {
-        monthStart: currentMonthKey,
+        monthStart: selectedMonthKey,
         benefitTotal: 0,
         incomeTotal: 0,
         costTotal: 0,
@@ -594,29 +666,39 @@ function TrendChart({
     ]
   }
 
-  const sortedData = addCurrentIfMissing(monthlyGrowth)
+  const sortedData = addSelectedIfMissing(monthlyGrowth)
     .slice()
     .sort((a, b) => new Date(a.monthStart).getTime() - new Date(b.monthStart).getTime())
 
-  // Ensure unique months to avoid duplicate keys in the chart
   const uniqueSortedData = Array.from(
     sortedData.reduce((map, item) => map.set(item.monthStart, item), new Map<string, MonthlyGrowth>()).values()
   )
 
-  const chartData = uniqueSortedData.slice(-4)
+  const buildChartData = () => {
+    const latest = uniqueSortedData.slice(-4)
+    if (!selectedMonthKey) return latest
+    if (latest.some((item) => item.monthStart === selectedMonthKey)) return latest
+    const selectedItem = uniqueSortedData.find((item) => item.monthStart === selectedMonthKey)
+    if (!selectedItem) return latest
+    return [...latest.slice(1), selectedItem]
+  }
+
+  const chartData = buildChartData().slice().sort(
+    (a, b) => new Date(a.monthStart).getTime() - new Date(b.monthStart).getTime()
+  )
   const maxValue = Math.max(...chartData.map((item) => Math.abs(item.econValue)), 1)
 
   const bars = chartData.map((item) => {
     const monthDate = new Date(item.monthStart)
-    const isCurrent = isSameMonth(item.monthStart)
+    const isActive = item.monthStart === selectedMonthKey
     const height = Math.max(12, Math.round((Math.abs(item.econValue) / maxValue) * 90))
 
     return {
       key: item.monthStart,
-      label: isCurrent ? "이번달" : `${monthDate.getMonth() + 1}월`,
+      label: isActive ? selectedMonthLabel : `${monthDate.getMonth() + 1}월`,
       value: item.econValue,
       height,
-      active: isCurrent,
+      active: isActive,
     }
   })
 
@@ -637,20 +719,26 @@ function TrendChart({
         지난 4개월간의 활동입니다
       </div>
       <div className="flex justify-start items-end h-[150px] pt-6 pb-4 gap-4">
-        {bars.map((month) => (
-          <div
-            key={month.key}
-            className={`w-[50%] rounded-[14px] relative flex justify-center transition-all duration-500 ${
-              month.active ? "bg-gradient-to-t from-[#2b5cff] to-[#5f80ff]" : "bg-[#e7edf5]"
-            }`}
-            style={{ height: `${month.height}%` }}
-          >
-            <span className="absolute -top-6 text-xs font-bold text-[#0f172a]">
-              {formatMoneyShort(month.value)}
-            </span>
-            <span className="absolute -bottom-6 text-xs text-[#9ca3af] font-semibold">{month.label}</span>
-          </div>
-        ))}
+        {bars.map((month) => {
+          const labelClassNames = month.active
+            ? "bg-gradient-to-r from-[#2b5cff] to-[#5f80ff] text-white px-3 py-1 rounded-full shadow-[0_12px_30px_rgba(47,93,255,0.35)]"
+            : "text-[#9ca3af]"
+          const valueClassNames = month.active ? "text-white drop-shadow-[0_4px_18px_rgba(15,23,42,0.45)]" : "text-[#0f172a]"
+          return (
+            <div
+              key={month.key}
+              className={`w-[50%] rounded-[14px] relative flex justify-center transition-all duration-500 ${
+                month.active ? "bg-gradient-to-t from-[#2b5cff] to-[#5f80ff]" : "bg-[#e7edf5]"
+              }`}
+              style={{ height: `${month.height}%` }}
+            >
+              <span className={`absolute -top-6 text-xs font-bold ${valueClassNames}`}>
+                {formatMoneyShort(month.value)}
+              </span>
+              <span className="absolute -bottom-6 text-xs text-[#9ca3af] font-semibold">{month.label}</span>
+            </div>
+          )
+        })}
         {!bars.length && (
           <div className="text-sm text-[#9ca3af]">데이터가 없습니다. 스케줄을 추가해주세요.</div>
         )}

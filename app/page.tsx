@@ -2,7 +2,6 @@
 
 import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import Header from "@/components/header"
 import HomePage from "@/components/home-page"
 import AllSchedulesPage from "@/components/all-schedules-page"
 import StatsPage from "@/components/stats-page"
@@ -13,11 +12,13 @@ import ScheduleModal from "@/components/schedule-modal"
 import TodoModal from "@/components/todo-modal"
 import LandingPage from "@/components/landing-page"
 import { useAuth } from "@/hooks/use-auth"
+import { useUserProfile } from "@/hooks/use-user-profile"
 import { useSchedules } from "@/hooks/use-schedules"
 import { useTodos } from "@/hooks/use-todos"
 import { useChannels } from "@/hooks/use-channels"
 import { useFeaturedPosts } from "@/hooks/use-featured-posts"
 import { useExtraIncomes } from "@/hooks/use-extra-incomes"
+import { resolveTier } from "@/lib/tier"
 import type { Schedule } from "@/types"
 
 function PageContent() {
@@ -35,6 +36,12 @@ function PageContent() {
   const { user, loading: authLoading } = useAuth()
   
   const isLoggedIn = !!user && !isLandingPage
+  const { profile, refetch: refetchUserProfile } = useUserProfile({ enabled: isLoggedIn })
+  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>
+  const { isPro } = resolveTier({
+    profileTier: profile?.tier ?? undefined,
+    metadata,
+  })
   
   const { 
     schedules, 
@@ -144,7 +151,7 @@ function PageContent() {
   }
 
   const handleGoRoot = () => {
-    router.push("/")
+    router.push("/notifications")
   }
 
   const handleShowAllSchedules = () => {
@@ -213,9 +220,6 @@ function PageContent() {
     // 1. 최상단 컨테이너를 fixed로 고정하여 사파리 바운스(튕김)를 방지
     <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
       <div className="w-full md:max-w-[390px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
-        <Header />
-
-        {/* 2. 컨텐츠 영역에만 스크롤을 부여 (flex-1 overflow-y-auto) */}
         <main className="flex-1 overflow-y-auto outline-none">
           {showPortfolio ? (
             <PortfolioPage
@@ -247,15 +251,12 @@ function PageContent() {
                   schedules={schedules}
                   onScheduleItemClick={(schedule) => handleOpenScheduleModal(schedule.id)}
                   isScheduleModalOpen={isScheduleModalOpen}
+                  isPro={isPro}
                 />
               )}
 
               {currentPage === "profile" && (
-                <ProfilePage 
-                  onShowPortfolio={handleShowPortfolio} 
-                  schedules={schedules}
-                  extraIncomes={extraIncomes}
-                />
+                <ProfilePage profile={profile} refetchUserProfile={refetchUserProfile} />
               )}
             </>
           )}
@@ -266,6 +267,7 @@ function PageContent() {
           onPageChange={handlePageChange}
           onAddClick={() => handleOpenScheduleModal()}
           onHomeClick={handleGoRoot}
+          isPro={isPro}
         />
 
         {isScheduleModalOpen && (
