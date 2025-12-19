@@ -1,7 +1,7 @@
 "use client"
 
 import { useToast } from "@/hooks/use-toast"
-import { Home, Plus, Wallet, CalendarCheck2, User } from "lucide-react"
+import { Bell, Plus, Wallet, CalendarCheck2, User } from "lucide-react"
 
 export default function NavigationBar({
   currentPage,
@@ -48,7 +48,7 @@ export default function NavigationBar({
         className={baseBtn}
         aria-label="랜딩 페이지로 이동"
       >
-        <Home className="w-6 h-6" />
+        <Bell className="w-6 h-6" />
         <span className="text-xs font-semibold mt-0.5">요약</span>
       </button>
 
