@@ -334,25 +334,6 @@ export default function LandingPage() {
           </div>
         </div>
       </nav>
-
-      {/* Promo Banner */}
-      <div className="fixed top-16 left-0 right-0 z-50 bg-gradient-to-r from-blue-50 via-purple-50 to-orange-50 py-2.5 md:py-3 flex justify-center">
-        <button
-          onClick={handlePreRegister}
-          className="group relative flex items-center gap-2 bg-white px-4 py-3 md:px-6 md:py-2.5 rounded-full text-[13px] md:text-sm font-medium text-[#333D4B] hover:shadow-lg transition-all duration-300 cursor-pointer"
-          style={{
-            background: 'linear-gradient(white, white) padding-box, linear-gradient(90deg, #4285F4, #A855F7, #EC4899, #F97316) border-box',
-            border: '1.5px solid transparent',
-          }}
-        >
-          <span className="text-[#FF5722]">✦</span>
-          <span><span className="font-bold text-[#FF5722]">PRO 3개월 무료 혜택 받으러 가기</span></span>
-          <svg className="w-4 h-4 text-[#8B95A1] group-hover:translate-x-0.5 group-hover:text-[#FF5722] transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-
       {/* Hero Section */}
       <section className="min-h-screen flex flex-col justify-center items-center text-center pt-40 md:pt-44 pb-10 bg-gradient-to-b from-white via-orange-50/30 to-white relative overflow-hidden">
         {/* Background Animation Elements */}
@@ -390,6 +371,9 @@ export default function LandingPage() {
               </svg>
             </button>
           </div>
+          <p className="mt-4 text-sm font-semibold text-[#FF5722] animate-fade-in" style={{ animationDelay: '0.6s' }}>
+            회원가입 시 PRO 1개월 무료 혜택을 드려요.
+          </p>
         </div>
       </section>
 
@@ -951,56 +935,6 @@ export default function LandingPage() {
               </p>
             </details>
           </div>
-        </div>
-      </section>
-
-      {/* 끝맺음: CTA Section */}
-      <section id="waitlist-section" className="bg-[#F2F4F6] py-20 md:py-32 scroll-animate">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-5xl font-bold leading-tight mb-5 md:mb-6 text-[#191F28]">
-            출시 알림을 가장 먼저 받고 싶다면
-          </h2>
-          <p className="text-base md:text-lg text-[#6B7684] mb-8 md:mb-10 leading-relaxed">
-            사전 등록하고 <span className="text-[#FF5722] font-bold">PRO 버전 3개월 무료</span> 혜택 받으세요.
-            <br />
-            12월 20일 베타 오픈 예정 시 가장 먼저 연락드립니다.
-          </p>
-
-          <form
-            className="w-full flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3"
-            onSubmit={handleEmailSubmit}
-          >
-            <input
-              type="email"
-              placeholder="이메일 주소 입력"
-              className="w-full md:w-2/3 px-3 py-2.5 md:px-6 md:py-4 rounded-2xl border-none shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF5722] transition text-xs md:text-lg"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isSubmitting}
-            />
-            <button
-              type="submit"
-              className="w-full md:w-auto bg-[#FF5722] text-white px-5 py-2.5 md:px-8 md:py-4 rounded-2xl text-xs md:text-lg font-semibold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? '등록 중...' : '알림 받기'}
-            </button>
-          </form>
-
-          {message && (
-            <div className={`mt-4 p-4 rounded-xl ${
-              message.type === 'success' 
-                ? 'bg-green-50 text-green-700 border border-green-200' 
-                : 'bg-red-50 text-red-700 border border-red-200'
-            }`}>
-              {message.text}
-            </div>
-          )}
-
-          <p className="text-sm text-[#B0B8C1] mt-6">
-            입력하신 이메일은 출시 알림 외 다른 목적으로 사용되지 않습니다.
-          </p>
         </div>
       </section>
 
