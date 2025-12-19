@@ -428,9 +428,9 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
               type="button"
               onClick={handleApplyCoupon}
               disabled={isRedeemingCoupon}
-              className="flex-shrink-0 rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isRedeemingCoupon ? "적용 중..." : "쿠폰 적용"}
+              {isRedeemingCoupon ? "적용 중..." : "적용"}
             </button>
           </div>
           </section>
