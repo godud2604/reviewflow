@@ -63,6 +63,7 @@ const getMonthKeyFromDate = (raw?: string) => {
 }
 
 const PRO_TIER_DURATION_MONTHS = 3
+const COUPON_TIER_DURATION_MONTHS = 3
 
 const formatExpiryLabel = (value?: string | null) => {
   if (!value) return null
@@ -225,10 +226,12 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
       return
     }
 
-    if (isPro) {
+    const hasCouponDuration = isPro && tierDurationMonths === COUPON_TIER_DURATION_MONTHS
+
+    if (hasCouponDuration) {
       toast({
-        title: "이미 PRO 등급입니다.",
-        description: "현재 프로 등급이기 때문에 쿠폰이 필요 없습니다.",
+        title: "이미 쿠폰 프로 등급입니다.",
+        description: `${COUPON_TIER_DURATION_MONTHS}개월 프로가 이미 적용되어 있습니다.`,
       })
       return
     }
@@ -248,14 +251,14 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
     try {
       const supabase = getSupabaseClient()
       const expiresAt = new Date()
-      expiresAt.setMonth(expiresAt.getMonth() + PRO_TIER_DURATION_MONTHS)
+      expiresAt.setMonth(expiresAt.getMonth() + COUPON_TIER_DURATION_MONTHS)
       const expiresAtIso = expiresAt.toISOString()
 
       const { error: profileError } = await supabase
         .from("user_profiles")
         .update({
           tier: "pro",
-          tier_duration_months: PRO_TIER_DURATION_MONTHS,
+          tier_duration_months: COUPON_TIER_DURATION_MONTHS,
           tier_expires_at: expiresAtIso,
         })
         .eq("id", authUser.id)
@@ -277,7 +280,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
       await refetchUserProfile()
       toast({
         title: "쿠폰이 적용되었습니다.",
-        description: `${PRO_TIER_DURATION_MONTHS}개월 동안 PRO 기능을 이용할 수 있습니다.`,
+        description: `${COUPON_TIER_DURATION_MONTHS}개월 동안 PRO 기능을 이용할 수 있습니다.`,
       })
       setCouponCode("")
     } catch (err) {
@@ -411,7 +414,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
           )}
         </section>
 
-        {!isPro && (
+        {isPro && tierDurationMonths !== COUPON_TIER_DURATION_MONTHS && (
           <section className="relative mb-6 rounded-[30px] border border-amber-100/80 bg-gradient-to-br from-white to-[#fff4ed] p-6 shadow-sm text-left">
             <p className="text-xs font-semibold text-neutral-500">쿠폰 등록</p>
             <p className="text-[12px] font-semibold text-neutral-900 mt-1">
