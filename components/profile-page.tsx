@@ -334,7 +334,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
       onClick: openDownloadDialog,
     },
     {
-      label: "알림 설정",
+      label: "할일 요약",
       description: "선정 소식을 놓치지 않도록 관리",
       icon: "🔔",
       isPro: true,
