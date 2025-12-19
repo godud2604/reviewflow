@@ -422,7 +422,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
               value={couponCode}
               onChange={(event) => setCouponCode(event.target.value)}
               placeholder="쿠폰 코드를 입력하세요"
-              className="flex-1 rounded-2xl border border-neutral-200 bg-white px-3 py-3 text-sm text-neutral-900 shadow-sm transition focus:border-amber-400 focus:outline-none"
+              className="flex-1 rounded-2xl border border-neutral-200 bg-white px-3 py-3 text-[16px] text-neutral-900 shadow-sm transition focus:border-amber-400 focus:outline-none"
             />
             <button
               type="button"

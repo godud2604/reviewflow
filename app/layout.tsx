@@ -3,7 +3,6 @@ import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/toaster"
 import { PostHogProvider } from "@/components/posthog-provider"
-import WeeklySummaryReminder from "@/components/weekly-summary-reminder"
 import "./globals.css"
 import Script from "next/script";
 
@@ -80,7 +79,6 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
         <PostHogProvider>
-          <WeeklySummaryReminder />
           {children}
           <Toaster />
           <Analytics />

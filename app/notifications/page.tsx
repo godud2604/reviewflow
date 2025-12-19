@@ -593,58 +593,6 @@ export default function NotificationsPage() {
           </div>
         </header>
 
-        <section className="rounded-[28px] border border-white/10 bg-[#0b0b12] p-4 shadow-[0_20px_30px_rgba(0,0,0,0.4)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-[0.4em] text-white/40">알림 설정</p>
-              <p className="text-sm text-white/70">
-                매일 설정한 시간에 일주일 요약을 알려드려요.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleToggleNotifications}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                notificationSettings.enabled
-                  ? "bg-white text-black shadow-lg"
-                  : "border border-white/30 text-white/70 hover:border-white/50"
-              }`}
-            >
-              {notificationSettings.enabled ? "끄기" : "켜기"}
-            </button>
-          </div>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-              <label
-                htmlFor="daily-summary-time"
-                className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/40"
-              >
-              알림 시간
-            </label>
-            <input
-              id="daily-summary-time"
-              type="time"
-              value={notificationTimeValue}
-              onChange={handleNotificationTimeChange}
-              disabled={!notificationSettings.enabled}
-              className="min-w-[150px] rounded-2xl bg-white/[0.05] px-3 py-2 text-sm font-bold text-white outline-none transition focus:ring-2 focus:ring-[#6c63ff] disabled:cursor-not-allowed disabled:opacity-40"
-            />
-              <p className="text-[12px] text-white/60">{permissionDescription}</p>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={handleSendTestNotification}
-                disabled={!notificationSettings.enabled || !isNotificationSupported}
-                className="rounded-2xl border border-white/30 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/70 disabled:border-white/20 disabled:text-white/40 disabled:opacity-60"
-              >
-                테스트 알림 보내기
-              </button>
-              <p className="text-[12px] text-white/50">
-                알림이 뜨지 않으면 브라우저 알림 권한과 앱 상태를 확인해 주세요.
-              </p>
-            </div>
-          </section>
-
         <section className="mb-4 rounded-[28px] border border-white/10 bg-gradient-to-br from-[#111116] via-[#14141a] to-[#0c0c0f] p-3 shadow-[0_20px_30px_rgba(0,0,0,0.45)]">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-0.5">
@@ -784,7 +732,7 @@ export default function NotificationsPage() {
                               type="button"
                               onClick={() => handleReceiptButtonClick(s)}
                               disabled={uploadingReceiptFor === s.id}
-                              className="flex-1 min-w-[120px] max-w-full py-2 bg-white text-black rounded-2xl font-bold text-[13px] active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-wait sm:flex-none"
+                              className="flex-1 min-w-[100px] max-w-full py-2 bg-white text-black rounded-2xl font-bold text-[13px] active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-wait sm:flex-none"
                             >
                               <Camera className="w-4 h-4 stroke-[1.5]" /> {uploadingReceiptFor === s.id ? "저장 중..." : "영수증 저장"}
                             </button>
