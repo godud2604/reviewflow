@@ -430,7 +430,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
               disabled={isRedeemingCoupon}
               className="rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isRedeemingCoupon ? "적용 중..." : "적용"}
+              {isRedeemingCoupon ? "적용 중..." : "PRO 3개월 쿠폰 적용"}
             </button>
           </div>
           </section>
