@@ -98,11 +98,9 @@ const MonthlyReport = () => {
             
             <div className="flex items-center gap-4 mb-8">
               <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#3182f6] to-[#a0c4ff] flex items-center justify-center text-2xl font-black">
-                {rankLabel}
               </div>
               <div>
-                <p className="text-2xl font-extrabold tracking-tighter">{rankDescription}</p>
-                <p className="text-sm text-gray-500">{topPercentText}</p>
+                <p className="text-2xl font-extrabold tracking-tighter">{topPercentText}</p>
               </div>
             </div>
 
@@ -149,8 +147,7 @@ const MonthlyReport = () => {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <span className={`text-sm font-bold ${user.isCurrentUser ? 'text-[#3182f6]' : 'text-gray-500'}`}>{user.rank}</span>
-                      <span className={`text-[15px] ${user.isCurrentUser ? 'font-bold' : ''}`}>
+                      <span className={`ml-3 text-[15px] ${user.isCurrentUser ? 'font-bold' : ''}`}>
                         {user.isCurrentUser
                           ? '나 (본인)'
                           : `${getAnonymousAlias(user.rank)}`}
