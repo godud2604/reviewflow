@@ -23,6 +23,8 @@ export default function ForgotPasswordPage() {
         redirectTo: getRedirectUrl("/reset-password"),
       })
 
+      console.log("ddddd", getRedirectUrl("/reset-password"),)
+
       if (error) {
         setError("비밀번호 재설정 이메일 발송에 실패했습니다.")
         return
