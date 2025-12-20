@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense } from "react"
+import { Suspense, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import HomePage from "@/components/home-page"
 import AllSchedulesPage from "@/components/all-schedules-page"
@@ -24,6 +24,20 @@ import type { Schedule } from "@/types"
 function PageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const hash = window.location.hash.replace(/^#/, "")
+    const search = window.location.search.replace(/^\?/, "")
+    const hashParams = new URLSearchParams(hash)
+    const queryParams = new URLSearchParams(search)
+    const type = hashParams.get("type") || queryParams.get("type")
+
+    if (type === "recovery") {
+      const redirectPath = `/reset-password${window.location.search}${window.location.hash}`
+      router.replace(redirectPath)
+    }
+  }, [router])
 
   // URL 기반 상태 관리
   const page = searchParams.get("page") || "landing"
