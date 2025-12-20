@@ -19,15 +19,18 @@ export default function ResetPasswordPage() {
     const setupSessionFromHash = async () => {
       if (typeof window === "undefined") return
       const hash = window.location.hash.replace(/^#/, "")
-      if (!hash) {
+      const search = window.location.search.replace(/^\?/, "")
+
+      if (!hash && !search) {
         setSessionError("유효한 링크가 아닙니다. 다시 요청해주세요.")
         return
       }
 
-      const params = new URLSearchParams(hash)
-      const type = params.get("type")
-      const accessToken = params.get("access_token")
-      const refreshToken = params.get("refresh_token")
+      const hashParams = new URLSearchParams(hash)
+      const searchParams = new URLSearchParams(search)
+      const type = hashParams.get("type") || searchParams.get("type")
+      const accessToken = hashParams.get("access_token") || searchParams.get("access_token")
+      const refreshToken = hashParams.get("refresh_token") || searchParams.get("refresh_token")
 
       if (type !== "recovery" || !accessToken || !refreshToken) {
         setSessionError("링크가 만료되었거나 잘못된 요청입니다.")
