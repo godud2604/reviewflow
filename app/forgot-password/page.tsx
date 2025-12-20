@@ -20,8 +20,9 @@ export default function ForgotPasswordPage() {
     try {
       const supabase = getSupabaseClient()
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: getRedirectUrl("/reset-password"),
+        redirectTo: getRedirectUrl("/auth/callback?next=/reset-password"),
       })
+
 
       if (error) {
         setError("비밀번호 재설정 이메일 발송에 실패했습니다.")
@@ -57,6 +58,7 @@ export default function ForgotPasswordPage() {
           </div>
         )}
 
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#333D4B] mb-2">
               이메일
@@ -73,12 +75,12 @@ export default function ForgotPasswordPage() {
 
           <button
             type="submit"
-            onClick={handleSubmit}
             disabled={loading}
             className="w-full bg-[#FF5722] text-white py-3 rounded-xl font-semibold hover:bg-[#E64A19] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {loading ? "전송 중..." : "비밀번호 재설정 링크 받기"}
           </button>
+        </form>
 
         <p className="text-center mt-6 text-[#6B7684] text-sm">
           <Link href="/signin" className="text-[#FF5722] font-semibold hover:underline">
