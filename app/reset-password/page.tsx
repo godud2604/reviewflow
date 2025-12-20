@@ -80,6 +80,7 @@ export default function ResetPasswordPage() {
         return
       }
 
+      await supabase.auth.signOut()
       setMessage("비밀번호가 변경되었습니다. 로그인 페이지로 이동합니다.")
       setTimeout(() => {
         router.replace("/signin")
