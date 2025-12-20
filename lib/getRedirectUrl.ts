@@ -1,3 +1,4 @@
+// Builds the OAuth/email redirect URL, preferring an explicit site URL over window.origin.
 export const getRedirectUrl = (path = "/auth/callback") => {
   const envUrl =
     process.env.NEXT_PUBLIC_SITE_URL ||
