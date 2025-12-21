@@ -263,6 +263,7 @@ export default function ScheduleModal({
   const isSubmittingRef = useRef(false);
   const isMountedRef = useRef(false);
   const guideFilesSectionRef = useRef<HTMLDivElement | null>(null);
+  const showMapSearchModalRef = useRef(showMapSearchModal);
 
   // Keep the modal history entry so the mobile back button triggers the close confirmation dialog.
   useEffect(() => {
@@ -295,6 +296,10 @@ export default function ScheduleModal({
   }, []);
 
   useEffect(() => {
+    showMapSearchModalRef.current = showMapSearchModal;
+  }, [showMapSearchModal]);
+
+  useEffect(() => {
     if (!isOpen || typeof window === 'undefined') return;
 
     const getCurrentUrl = () =>
@@ -305,6 +310,12 @@ export default function ScheduleModal({
     };
 
     const handlePopState = () => {
+      if (showMapSearchModalRef.current) {
+        setShowMapSearchModal(false);
+        pushModalState();
+        return;
+      }
+
       setShowCloseConfirm(true);
       pushModalState();
     };
