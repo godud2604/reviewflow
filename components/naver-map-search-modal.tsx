@@ -36,6 +36,7 @@ export default function KakaoMapSearchModal({
   const markerInstance = useRef<any>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
   const listViewportRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -159,6 +160,35 @@ export default function KakaoMapSearchModal({
     [toast, handlePlaceSelect]
   );
 
+  const blurSearchInput = useCallback(() => {
+    searchInputRef.current?.blur();
+  }, []);
+
+  const handleSearchAction = () => {
+    blurSearchInput();
+    fetchPlaces(searchKeyword);
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const container = mapRef.current;
+    if (!container) return;
+
+    const handleInteraction = () => {
+      blurSearchInput();
+    };
+
+    container.addEventListener('touchstart', handleInteraction, { passive: true });
+    container.addEventListener('mousedown', handleInteraction);
+    container.addEventListener('wheel', handleInteraction);
+
+    return () => {
+      container.removeEventListener('touchstart', handleInteraction);
+      container.removeEventListener('mousedown', handleInteraction);
+      container.removeEventListener('wheel', handleInteraction);
+    };
+  }, [isOpen, blurSearchInput]);
+
   if (!isOpen) return null;
 
   return (
@@ -175,15 +205,21 @@ export default function KakaoMapSearchModal({
 
       <div className="p-4 border-b bg-white flex gap-2 shrink-0">
         <input
+          ref={searchInputRef}
           type="text"
           value={searchKeyword}
           onChange={(e) => setSearchKeyword(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && fetchPlaces(searchKeyword)}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleSearchAction();
+            }
+          }}
           placeholder="장소명을 입력하세요 (예: 강남역 서브웨이)"
           className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
         />
         <button
-          onClick={() => fetchPlaces(searchKeyword)}
+          onClick={handleSearchAction}
           className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
         >
           {isLoading ? <span className="text-[11px]">검색 중...</span> : '검색'}
