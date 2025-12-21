@@ -119,6 +119,7 @@ export default function ScheduleModal({
   schedule,
   focusGuideFiles,
   onGuideFilesFocusDone,
+  initialDeadline,
 }: {
   isOpen: boolean
   onClose: () => void
@@ -128,6 +129,7 @@ export default function ScheduleModal({
   schedule?: Schedule
   focusGuideFiles?: boolean
   onGuideFilesFocusDone?: () => void
+  initialDeadline?: string
 }) {
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData())
 
@@ -291,14 +293,18 @@ export default function ScheduleModal({
       }
       setVisitMode(hasVisitData(schedule))
     } else {
-      setFormData(createEmptyFormData())
+      const emptyForm = createEmptyFormData()
+      if (initialDeadline) {
+        emptyForm.dead = initialDeadline
+      }
+      setFormData(emptyForm)
       setReconfirmReason("")
       setCustomReconfirmReason("")
       setPendingFiles([])
       setVisitMode(false)
       setNonVisitReviewType("제공형")
     }
-  }, [schedule, isOpen, hasVisitData])
+  }, [schedule, isOpen, hasVisitData, initialDeadline])
 
   useEffect(() => {
     let isActive = true

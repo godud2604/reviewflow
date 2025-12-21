@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import type { MouseEvent } from "react"
 import { useRouter } from "next/navigation"
 import { usePostHog } from "posthog-js/react"
 import type { Schedule } from "@/types"
@@ -46,12 +47,14 @@ export default function HomePage({
   onShowAllClick,
   onCompleteClick,
   onAddClick,
+  onCreateSchedule,
 }: {
   schedules: Schedule[]
   onScheduleClick: (id: number) => void
   onShowAllClick: () => void
   onCompleteClick?: (id: number) => void
   onAddClick?: () => void
+  onCreateSchedule?: (dateStr: string) => void
 }) {
   const router = useRouter()
   const posthog = usePostHog()
@@ -156,6 +159,11 @@ export default function HomePage({
     setSelectedFilter("all")
   }
 
+  const handleCalendarDateAdd = (dateStr: string) => {
+    handleDateClick(dateStr)
+    onCreateSchedule?.(dateStr)
+  }
+
   const containerClassName = `flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3`
   const handleGoToToday = () => {
     setSelectedDate(today)
@@ -168,6 +176,7 @@ export default function HomePage({
       <CalendarSection
         schedules={schedules}
         onDateClick={handleDateClick}
+        onCreateSchedule={handleCalendarDateAdd}
         onGoToToday={handleGoToToday}
         selectedDate={selectedDate}
         today={today}
@@ -383,12 +392,14 @@ function CalendarSection({
   onGoToToday,
   selectedDate,
   today,
+  onCreateSchedule,
 }: {
   schedules: Schedule[]
   onDateClick: (dateStr: string) => void
   onGoToToday: () => void
   selectedDate: string | null
   today: string
+  onCreateSchedule?: (dateStr: string) => void
 }) {
   const weekDays = ["일", "월", "화", "수", "목", "금", "토"]
 
@@ -573,13 +584,26 @@ function CalendarSection({
           const selectedHighlightClass = isSelected
             ? "bg-orange-100 text-orange-900"
             : ""
+          const isInteractive = hasSchedule || Boolean(onCreateSchedule)
+          const handleDayClick = (event: MouseEvent<HTMLButtonElement>) => {
+            onDateClick(dateStr)
+            if (!hasSchedule && event.detail === 1) {
+              onCreateSchedule?.(dateStr)
+            }
+          }
+          const handleDayDoubleClick = () => {
+            if (hasSchedule) {
+              onCreateSchedule?.(dateStr)
+            }
+          }
+
           return (
             <button
               key={day}
-              onClick={() => (hasSchedule || dateStr === today) && onDateClick(dateStr)}
-              disabled={!hasSchedule && dateStr !== today}
+              onClick={handleDayClick}
+              onDoubleClick={handleDayDoubleClick}
               className={`relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-colors ${
-            hasSchedule || dateStr === today ? "cursor-pointer" : "cursor-default"
+            isInteractive ? "cursor-pointer" : "cursor-default"
           } ${baseStyle}
             ${!isSelected && todayHighlightClass}
             ${selectedHighlightClass}

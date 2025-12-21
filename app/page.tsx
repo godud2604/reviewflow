@@ -96,18 +96,30 @@ function PageContent() {
   const isDataLoading = getIsDataLoading()
   const scheduleId = searchParams.get("schedule")
   const isNewSchedule = searchParams.get("new") === "true"
+  const initialDeadline = searchParams.get("date") ?? undefined
   const isTodoModalOpen = searchParams.get("todo") === "true"
 
   const showAllSchedules = view === "all"
   const isScheduleModalOpen = scheduleId !== null || isNewSchedule
   const editingScheduleId = scheduleId ? parseInt(scheduleId) : null
 
-  const handleOpenScheduleModal = (scheduleId?: number) => {
+  const handleOpenScheduleModal = (
+    scheduleId?: number,
+    options?: { deadDate?: string },
+  ) => {
     const params = new URLSearchParams(searchParams.toString())
     if (scheduleId) {
       params.set("schedule", scheduleId.toString())
+      params.delete("new")
+      params.delete("date")
     } else {
+      params.delete("schedule")
       params.set("new", "true")
+      if (options?.deadDate) {
+        params.set("date", options.deadDate)
+      } else {
+        params.delete("date")
+      }
     }
     router.push(`?${params.toString()}`)
   }
@@ -116,6 +128,7 @@ function PageContent() {
     const params = new URLSearchParams(searchParams.toString())
     params.delete("schedule")
     params.delete("new")
+    params.delete("date")
     router.push(`?${params.toString()}`)
   }
 
@@ -251,13 +264,16 @@ function PageContent() {
           ) : (
             <>
               {currentPage === "home" && (
-                <HomePage
-                  schedules={schedules}
-                  onScheduleClick={handleOpenScheduleModal}
-                  onShowAllClick={handleShowAllSchedules}
-                  onCompleteClick={handleCompleteSchedule}
-                  onAddClick={() => handleOpenScheduleModal()}
-                />
+              <HomePage
+                schedules={schedules}
+                onScheduleClick={handleOpenScheduleModal}
+                onShowAllClick={handleShowAllSchedules}
+                onCompleteClick={handleCompleteSchedule}
+                onAddClick={() => handleOpenScheduleModal()}
+                onCreateSchedule={(dateStr) =>
+                  handleOpenScheduleModal(undefined, { deadDate: dateStr })
+                }
+              />
               )}
 
               {currentPage === "stats" && (
@@ -292,6 +308,7 @@ function PageContent() {
             onDelete={handleDeleteSchedule}
             onUpdateFiles={handleUpdateScheduleFiles}
             schedule={editingScheduleId ? schedules.find((s) => s.id === editingScheduleId) : undefined}
+            initialDeadline={initialDeadline}
           />
         )}
 
