@@ -163,6 +163,10 @@ function PageContent() {
     await updateSchedule(id, { status: '완료' });
   };
 
+  const handleConfirmPayback = async (id: number) => {
+    await updateSchedule(id, { paybackConfirmed: true });
+  };
+
   const handleAddTodo = async (text: string) => {
     await addTodo(text);
   };
@@ -271,6 +275,7 @@ function PageContent() {
                   onScheduleClick={handleOpenScheduleModal}
                   onShowAllClick={handleShowAllSchedules}
                   onCompleteClick={handleCompleteSchedule}
+                  onPaybackConfirm={handleConfirmPayback}
                   onAddClick={() => handleOpenScheduleModal()}
                   onCreateSchedule={(dateStr) =>
                     handleOpenScheduleModal(undefined, { deadDate: dateStr })

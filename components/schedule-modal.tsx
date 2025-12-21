@@ -265,8 +265,6 @@ export default function ScheduleModal({
   const isSubmittingRef = useRef(false);
   const isMountedRef = useRef(false);
   const guideFilesSectionRef = useRef<HTMLDivElement | null>(null);
-  const historyPushRef = useRef(false);
-  const ignorePopStateRef = useRef(false);
 
   // Keep the modal history entry so the mobile back button triggers the close confirmation dialog.
   useEffect(() => {
@@ -306,14 +304,9 @@ export default function ScheduleModal({
 
     const pushModalState = () => {
       window.history.pushState({ scheduleModal: true }, '', getCurrentUrl());
-      historyPushRef.current = true;
     };
 
     const handlePopState = () => {
-      if (ignorePopStateRef.current) {
-        ignorePopStateRef.current = false;
-        return;
-      }
       setShowCloseConfirm(true);
       pushModalState();
     };
@@ -323,11 +316,6 @@ export default function ScheduleModal({
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      if (historyPushRef.current) {
-        ignorePopStateRef.current = true;
-        window.history.back();
-        historyPushRef.current = false;
-      }
     };
   }, [isOpen]);
 

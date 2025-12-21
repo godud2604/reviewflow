@@ -46,6 +46,7 @@ export default function HomePage({
   onScheduleClick,
   onShowAllClick,
   onCompleteClick,
+  onPaybackConfirm,
   onAddClick,
   onCreateSchedule,
   focusDate,
@@ -55,6 +56,7 @@ export default function HomePage({
   onScheduleClick: (id: number) => void;
   onShowAllClick: () => void;
   onCompleteClick?: (id: number) => void;
+  onPaybackConfirm?: (id: number) => void;
   onAddClick?: () => void;
   onCreateSchedule?: (dateStr: string) => void;
   focusDate?: string | null;
@@ -320,6 +322,9 @@ export default function HomePage({
               schedule={schedule}
               onClick={() => onScheduleClick(schedule.id)}
               onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
+              onPaybackConfirm={
+                onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined
+              }
               today={today}
             />
           ))
@@ -410,6 +415,9 @@ export default function HomePage({
                     }}
                     onCompleteClick={
                       onCompleteClick ? () => onCompleteClick(schedule.id) : undefined
+                    }
+                    onPaybackConfirm={
+                      onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined
                     }
                     today={today}
                   />
@@ -778,11 +786,13 @@ function ScheduleItem({
   schedule,
   onClick,
   onCompleteClick,
+  onPaybackConfirm,
   today,
 }: {
   schedule: Schedule;
   onClick: () => void;
   onCompleteClick?: () => void;
+  onPaybackConfirm?: () => void;
   today: string;
 }) {
   const statusConfig: Record<
@@ -831,6 +841,7 @@ function ScheduleItem({
   const canComplete = !!onCompleteClick && !isCompleted;
   const platformLabel = schedule.platform ? getPlatformDisplayName(schedule.platform) : '';
   const hasPaybackPending = schedule.paybackExpected && !schedule.paybackConfirmed;
+  const canConfirmPayback = hasPaybackPending && !!onPaybackConfirm;
 
   return (
     <div
@@ -868,6 +879,19 @@ function ScheduleItem({
           <span className="mt-1 text-[10.5px] font-semibold leading-none text-orange-600">
             완료
           </span>
+        )}
+        {canConfirmPayback && (
+          <button
+            type="button"
+            aria-label="입금 확인"
+            className="mt-1 w-full rounded-full border border-sky-100 bg-white px-3 py-[2px] text-[11px] font-semibold text-sky-600 shadow-[0_1px_3px_rgba(15,23,42,0.1)] hover:bg-sky-50"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPaybackConfirm?.();
+            }}
+          >
+            입금확인
+          </button>
         )}
       </div>
 
