@@ -249,6 +249,7 @@ export default function ScheduleModal({
   const [nonVisitReviewType, setNonVisitReviewType] = useState<Schedule['reviewType']>('제공형');
   const [pendingStatus, setPendingStatus] = useState<Schedule['status'] | null>(null);
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
+  const [paybackAcknowledged, setPaybackAcknowledged] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const {
@@ -295,6 +296,12 @@ export default function ScheduleModal({
       isMountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!showStatusConfirm) {
+      setPaybackAcknowledged(false);
+    }
+  }, [showStatusConfirm]);
 
   useEffect(() => {
     if (!isOpen || typeof window === 'undefined') return;
@@ -2072,6 +2079,7 @@ export default function ScheduleModal({
           setShowStatusConfirm(open);
           if (!open) {
             setPendingStatus(null);
+            setPaybackAcknowledged(false);
           }
         }}
       >
@@ -2083,6 +2091,16 @@ export default function ScheduleModal({
             <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
               아직 입금 확인이 되지 않았습니다. 그래도 '완료' 처리하시겠어요?
             </AlertDialogDescription>
+            <label className="flex items-center gap-3 text-left">
+              <Checkbox
+                checked={paybackAcknowledged}
+                onCheckedChange={(checked) => setPaybackAcknowledged(Boolean(checked))}
+                className="mt-[1px]"
+              />
+              <span className="text-[13px] font-semibold text-neutral-900">
+                입금 확인 완료했어요
+              </span>
+            </label>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row justify-center gap-2">
             <AlertDialogCancel className="h-10 px-6 text-sm font-bold rounded-xl shadow-sm">
@@ -2091,12 +2109,16 @@ export default function ScheduleModal({
             <AlertDialogAction
               onClick={() => {
                 if (pendingStatus) {
+                  if (paybackAcknowledged && formData.paybackExpected) {
+                    setFormData((prev) => ({ ...prev, paybackConfirmed: true }));
+                  }
                   applyStatusChange(pendingStatus);
                 }
                 setShowStatusConfirm(false);
                 setPendingStatus(null);
               }}
-              className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
+              disabled={!paybackAcknowledged}
+              className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               완료 처리
             </AlertDialogAction>
