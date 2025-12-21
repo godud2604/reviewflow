@@ -970,6 +970,11 @@ function ScheduleItem({
               📝
             </span>
           )}
+          {hasPaybackExpected && (
+            <span className="text-sm shrink-0 ml-1 opacity-50" title="페이백 예정">
+              💸
+            </span>
+          )}
         </div>
       </div>
     </div>
