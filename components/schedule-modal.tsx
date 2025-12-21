@@ -213,7 +213,6 @@ export default function ScheduleModal({
   onGuideFilesFocusDone?: () => void;
   initialDeadline?: string;
 }) {
-  console.log('schedule', schedule);
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData());
 
   const [viewportStyle, setViewportStyle] = useState<{ height: string; top: string }>({

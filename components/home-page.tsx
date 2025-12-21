@@ -647,10 +647,14 @@ function CalendarSection({
           const wasAlreadySelected = selectedDate === dateStr;
           const handleDayClick = (event: MouseEvent<HTMLButtonElement>) => {
             onDateClick(dateStr);
-            if (!hasSchedule && event.detail === 1) {
+            const isClickInitiated = event.detail === 1;
+            const shouldReopenModal = wasAlreadySelected;
+
+            if (!hasSchedule && (isClickInitiated || shouldReopenModal)) {
               onCreateSchedule?.(dateStr);
             }
-            if (hasSchedule && wasAlreadySelected && event.detail === 1) {
+
+            if (hasSchedule && shouldReopenModal) {
               onCreateSchedule?.(dateStr);
             }
           };
