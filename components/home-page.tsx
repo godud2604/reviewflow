@@ -876,7 +876,28 @@ function ScheduleItem({
           }`}
         >
           {/* 체크 아이콘 */}
-          <span className="px-2.5 text-[10px] font-bold">{isCompleted ? '완료' : '완료'}</span>
+          <span className="flex items-center gap-1 px-2.5 text-[10px] font-bold">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="13"
+              height="13"
+              viewBox="0 0 20 20"
+              fill="none"
+              className="inline-block align-middle"
+            >
+              <circle cx="10" cy="10" r="9" stroke={isCompleted ? '#fb923c' : '#d1d5db'} strokeWidth="2" fill={isCompleted ? '#fb923c' : 'white'} />
+              {isCompleted && (
+                <path
+                  d="M6 10.5l2.5 2.5 5-5"
+                  stroke="#fff"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+            </svg>
+            <span>{isCompleted ? '완료' : '완료'}</span>
+          </span>
         </button>
 
         {/* 2. 입금 확인 토글 버튼 (페이백 예정이 있을 때만 표시) */}
