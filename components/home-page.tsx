@@ -918,7 +918,7 @@ function ScheduleItem({
             }}
             className={`px-2 py-1 rounded-full text-[10px] font-bold border transition-all active:scale-95 w-full text-center ${
               isPaid
-                ? 'bg-orange-600 text-white border-orange-600 shadow-sm' // 켜짐 (입금됨)
+                ? 'bg-orange-600/70 text-white border-orange-600 shadow-sm' // 켜짐 (입금됨)
                 : 'bg-white text-gray-400 border-gray-200 hover:text-orange-400 hover:border-orange-200' // 꺼짐 (미입금)
             }`}
           >
@@ -953,7 +953,7 @@ function ScheduleItem({
             {status.text}
           </p>
           {schedule.reviewType === '방문형' && schedule.regionDetail && (
-            <span className="text-[11px] font-semibold text-neutral-500 ml-2 bg-sky-50 rounded-[10px] px-2 py-0.5 border border-sky-100">
+            <span className="text-[11px] font-semibold text-neutral-500 ml-2 bg-white/80 rounded-[10px] px-2 py-0.5 border border-sky-100">
               {(() => {
                 const parts = schedule.regionDetail.split(' ');
                 return parts.slice(0, 2).join(' ');
