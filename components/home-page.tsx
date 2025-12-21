@@ -767,7 +767,7 @@ function CalendarSection({
           );
         })}
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-end gap-3 text-[11px] text-neutral-600">
+      <div className="mt-4.5 flex flex-wrap items-center justify-end gap-3 text-[11px] text-neutral-600">
         {CALENDAR_STATUS_LEGEND.map((item) => (
           <div key={item.status} className="flex items-center gap-1">
             <span
