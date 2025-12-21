@@ -162,7 +162,7 @@ export default function SignUpPage() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSignUp} className="space-y-4">
+        {/* <form onSubmit={handleSignUp} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#333D4B] mb-2">
               이메일
@@ -212,14 +212,14 @@ export default function SignUpPage() {
           >
             {loading ? "가입 중..." : "회원가입"}
           </button>
-        </form>
+        </form> */}
 
         {/* Divider */}
-        <div className="flex items-center my-6">
+        {/* <div className="flex items-center my-6">
           <div className="flex-1 border-t border-gray-200"></div>
           <span className="px-4 text-sm text-[#8B95A1]">또는</span>
           <div className="flex-1 border-t border-gray-200"></div>
-        </div>
+        </div> */}
 
         {/* Kakao Sign Up */}
         <button
@@ -230,7 +230,7 @@ export default function SignUpPage() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.636 1.712 4.969 4.326 6.333-.144.522-.926 3.363-.962 3.587 0 0-.019.158.084.218.103.06.224.013.224.013.296-.04 3.432-2.261 3.97-2.645.765.112 1.559.17 2.358.17 5.523 0 10-3.463 10-7.691S17.523 3 12 3z"/>
           </svg>
-          카카오로 시작하기
+          카카오로 3초 만에 시작하기
         </button>
 
         {/* Sign In Link */}

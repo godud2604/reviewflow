@@ -156,11 +156,11 @@ export default function SignInPage() {
           >
             {loading ? "로그인 중..." : "로그인"}
           </button>
-          <div className="text-right text-sm text-[#6B7684] mt-2">
+          {/* <div className="text-right text-sm text-[#6B7684] mt-2">
             <Link href="/forgot-password" className="text-[#FF5722] font-semibold hover:underline">
               비밀번호 찾기
             </Link>
-          </div>
+          </div> */}
         </form>
 
         {/* Divider */}
