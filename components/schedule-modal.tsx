@@ -245,6 +245,7 @@ export default function ScheduleModal({
   const [showMapSearchModal, setShowMapSearchModal] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<Schedule['category'][]>([]);
   const [visitMode, setVisitMode] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [locationDetailEnabled, setLocationDetailEnabled] = useState(false);
   const [nonVisitReviewType, setNonVisitReviewType] = useState<Schedule['reviewType']>('제공형');
   const [pendingStatus, setPendingStatus] = useState<Schedule['status'] | null>(null);
@@ -975,7 +976,7 @@ export default function ScheduleModal({
       >
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-          onClick={onClose}
+          onClick={() => setShowCloseConfirm(true)}
           style={{ touchAction: 'none' }}
         />
 
@@ -988,7 +989,7 @@ export default function ScheduleModal({
               {schedule ? '체험단 수정' : '체험단 등록'}
             </span>
             <button
-              onClick={onClose}
+              onClick={() => setShowCloseConfirm(true)}
               className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
               aria-label="닫기"
             >
@@ -2184,6 +2185,40 @@ export default function ScheduleModal({
               className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
             >
               확인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={showCloseConfirm}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowCloseConfirm(false);
+          }
+        }}
+      >
+        <AlertDialogContent className="w-[320px] rounded-2xl p-6 gap-4">
+          <AlertDialogHeader className="space-y-2 text-center">
+            <AlertDialogTitle className="text-base font-bold text-neutral-900">
+              작성 중인 체험단을 닫을까요?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
+              작성한 정보는 저장되지 않습니다. 계속해서 닫으시겠어요?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-center gap-2">
+            <AlertDialogCancel className="h-10 px-6 text-sm font-bold rounded-xl shadow-sm">
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowCloseConfirm(false);
+                onClose();
+              }}
+              className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
+            >
+              닫기
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
