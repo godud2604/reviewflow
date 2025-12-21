@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { usePostHog } from 'posthog-js/react';
 import type { Schedule } from '@/types';
 
+// --- 날짜/시간 유틸리티 ---
 const formatDateStringKST = (date: Date) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date);
 
@@ -14,6 +15,15 @@ const parseDateString = (dateStr: string) => {
   return new Date(y, (m || 1) - 1, d || 1);
 };
 
+const toRgba = (hex: string, alpha = 0.15) => {
+  const normalized = hex.replace('#', '');
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+// --- 상수 및 설정 ---
 const CALENDAR_RING_COLORS: Record<string, string> = {
   선정됨: '#f1a0b6',
   예약완료: '#61cedb',
@@ -31,16 +41,45 @@ const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[]
   { status: '제품 배송 완료', color: '#f3c742', label: '배송 완료' },
 ];
 
-const toRgba = (hex: string, alpha = 0.15) => {
-  const normalized = hex.replace('#', '');
-  const r = parseInt(normalized.slice(0, 2), 16);
-  const g = parseInt(normalized.slice(2, 4), 16);
-  const b = parseInt(normalized.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+const scheduleIcons: Record<Schedule['category'], string> = {
+  '맛집/식품': '🍽️',
+  뷰티: '💄',
+  '생활/리빙': '🏡',
+  '출산/육아': '🤱',
+  '주방/가전': '🧺',
+  반려동물: '🐶',
+  '여행/레저': '✈️',
+  '티켓/문화생활': '🎫',
+  '디지털/전자기기': '🎧',
+  '건강/헬스': '💪',
+  '자동차/모빌리티': '🚗',
+  '문구/오피스': '✏️',
+  기타: '📦',
+};
+
+const platformLabelMap: Record<string, string> = {
+  instagram: '인스타그램',
+  youtube: '유튜브',
+  tiktok: '틱톡',
+  facebook: '페이스북',
+  'naver blog': '네이버 블로그',
+  naverpost: '네이버 포스트',
+  'naver post': '네이버 포스트',
+  naver쇼핑: '네이버 쇼핑',
+  stylec: '스타일씨',
+  blog: '블로그',
+  insta: '인스타',
+  tiktokshop: '틱톡',
+};
+
+const getPlatformDisplayName = (platform: string) => {
+  const normalized = platform.trim().toLowerCase();
+  return platformLabelMap[normalized] ?? platform;
 };
 
 const getScheduleRingColor = (status: string): string | undefined => CALENDAR_RING_COLORS[status];
 
+// --- 메인 컴포넌트 ---
 export default function HomePage({
   schedules,
   onScheduleClick,
@@ -71,6 +110,8 @@ export default function HomePage({
   >('all');
   const [floatingPanel, setFloatingPanel] = useState<'none' | 'noDeadline' | 'reconfirm'>('none');
   const [showDemo, setShowDemo] = useState(false);
+
+  // ... (Demo Data 및 필터 로직 기존 동일)
   const demoSchedules = useMemo(
     () => [
       {
@@ -89,6 +130,7 @@ export default function HomePage({
     ],
     []
   );
+
   const activeSchedules = schedules.filter((s) => s.status !== '완료');
   const activeCount = activeSchedules.length;
   const reconfirmSchedules = schedules.filter((s) => s.status === '재확인');
@@ -104,9 +146,8 @@ export default function HomePage({
     }
   }, [focusDate, onFocusDateApplied]);
 
-  // Filter schedules based on selected date and filter
+  // ... (Schedules Filtering & Sorting Logic - 유지)
   let filteredSchedules = schedules;
-
   if (selectedDate) {
     filteredSchedules = schedules.filter(
       (s) => s.dead === selectedDate || s.visit === selectedDate
@@ -121,7 +162,6 @@ export default function HomePage({
     filteredSchedules = schedules.filter((s) => !s.dead);
   }
 
-  // Sort schedules: overdue/reconfirm first, then by deadline (closest first)
   const sortSchedules = (schedules: Schedule[]) => {
     return [...schedules].sort((a, b) => {
       const aIsOverdue = a.dead && a.dead < today && a.status !== '완료';
@@ -129,19 +169,13 @@ export default function HomePage({
       const aIsReconfirm = a.status === '재확인';
       const bIsReconfirm = b.status === '재확인';
 
-      // Priority 1: Overdue first
       if (aIsOverdue && !bIsOverdue) return -1;
       if (!aIsOverdue && bIsOverdue) return 1;
-
-      // Priority 2: Reconfirm second
       if (aIsReconfirm && !bIsReconfirm) return -1;
       if (!aIsReconfirm && bIsReconfirm) return 1;
-
-      // Priority 3: Sort by deadline (closest first)
       if (a.dead && b.dead) return a.dead.localeCompare(b.dead);
       if (a.dead && !b.dead) return -1;
       if (!a.dead && b.dead) return 1;
-
       return 0;
     });
   };
@@ -149,12 +183,16 @@ export default function HomePage({
   const displayedSchedules = sortSchedules(
     selectedDate || selectedFilter !== 'all' ? filteredSchedules : activeSchedules
   );
+
+  // ... (Tutorial Logic - 유지)
   const shouldShowFirstScheduleTutorial =
     hasSchedules && schedules.length === 1 && displayedSchedules.length > 0;
   const shouldShowFilterTutorial =
     hasSchedules && schedules.length <= 1 && displayedSchedules.length === 0;
+
   const renderTutorialCard = () => (
     <div className="space-y-5 rounded-3xl border border-neutral-200 bg-gradient-to-b from-[#fff6ed] via-white to-white px-5 py-4 shadow-[0_24px_60px_rgba(15,23,42,0.09)]">
+      {/* ... (Tutorial Content 유지) ... */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffecd1] to-[#ffe1cc] text-[#ff6a1f] shadow-inner">
@@ -203,14 +241,13 @@ export default function HomePage({
     onCreateSchedule?.(dateStr);
   };
 
-  const containerClassName = `flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3`;
   const handleGoToToday = () => {
     setSelectedDate(today);
     setSelectedFilter('all');
   };
 
   return (
-    <div className={containerClassName}>
+    <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3">
       {/* Calendar */}
       <CalendarSection
         schedules={schedules}
@@ -221,7 +258,7 @@ export default function HomePage({
         today={today}
       />
 
-      {/* Schedule List */}
+      {/* Schedule List Header */}
       <div className="flex items-center justify-between">
         <div className="mt-1">
           <h3 className="text-xl font-bold text-neutral-900 text-[16px]">
@@ -248,9 +285,12 @@ export default function HomePage({
           </button>
         </div>
       </div>
+
+      {/* Schedule List Items */}
       <div className="space-y-3">
         {!hasSchedules ? (
           <div className="bg-white rounded-3xl p-4 text-center shadow-sm shadow-[0_18px_40px_rgba(15,23,42,0.06)] border border-neutral-100 space-y-4">
+            {/* ... (Empty State Content 유지) ... */}
             <div className="space-y-1">
               <p className="text-[13px] font-bold text-neutral-900">아직 체험단 일정이 없어요</p>
               <p className="text-[11px] text-neutral-500 font-medium">
@@ -322,9 +362,7 @@ export default function HomePage({
               schedule={schedule}
               onClick={() => onScheduleClick(schedule.id)}
               onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
-              onPaybackConfirm={
-                onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined
-              }
+              onPaybackConfirm={onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined}
               today={today}
             />
           ))
@@ -338,7 +376,7 @@ export default function HomePage({
         {shouldShowFirstScheduleTutorial && renderTutorialCard()}
       </div>
 
-      {/* Floating quick filters */}
+      {/* Floating quick filters (유지) */}
       <div
         className="fixed z-40 flex flex-col gap-3"
         style={{
@@ -380,7 +418,7 @@ export default function HomePage({
         )}
       </div>
 
-      {/* Slide-up panel */}
+      {/* Slide-up panel (유지) */}
       {floatingPanel !== 'none' && (
         <>
           <div
@@ -437,6 +475,7 @@ export default function HomePage({
   );
 }
 
+// --- 캘린더 컴포넌트 (기존 유지) ---
 function CalendarSection({
   schedules,
   onDateClick,
@@ -518,7 +557,6 @@ function CalendarSection({
       const info = ensureDayInfo(schedule.visit);
       info.hasVisit = true;
       info.visitCount += 1;
-      // Only mark completed on visit date when there's no separate deadline, to avoid showing the completed dot on visit days
       if (isCompleted && !schedule.dead) {
         info.hasCompleted = true;
       }
@@ -663,11 +701,9 @@ function CalendarSection({
             onDateClick(dateStr);
             const isClickInitiated = event.detail === 1;
             const shouldReopenModal = wasAlreadySelected;
-
             if (!hasSchedule && (isClickInitiated || shouldReopenModal)) {
               onCreateSchedule?.(dateStr);
             }
-
             if (hasSchedule && shouldReopenModal) {
               onCreateSchedule?.(dateStr);
             }
@@ -746,42 +782,7 @@ function CalendarSection({
   );
 }
 
-const scheduleIcons: Record<Schedule['category'], string> = {
-  '맛집/식품': '🍽️',
-  뷰티: '💄',
-  '생활/리빙': '🏡',
-  '출산/육아': '🤱',
-  '주방/가전': '🧺',
-  반려동물: '🐶',
-  '여행/레저': '✈️',
-  '티켓/문화생활': '🎫',
-  '디지털/전자기기': '🎧',
-  '건강/헬스': '💪',
-  '자동차/모빌리티': '🚗',
-  '문구/오피스': '✏️',
-  기타: '📦',
-};
-
-const platformLabelMap: Record<string, string> = {
-  instagram: '인스타그램',
-  youtube: '유튜브',
-  tiktok: '틱톡',
-  facebook: '페이스북',
-  'naver blog': '네이버 블로그',
-  naverpost: '네이버 포스트',
-  'naver post': '네이버 포스트',
-  naver쇼핑: '네이버 쇼핑',
-  stylec: '스타일씨',
-  blog: '블로그',
-  insta: '인스타',
-  tiktokshop: '틱톡',
-};
-
-const getPlatformDisplayName = (platform: string) => {
-  const normalized = platform.trim().toLowerCase();
-  return platformLabelMap[normalized] ?? platform;
-};
-
+// --- 일정 아이템 컴포넌트 (주요 수정 영역) ---
 function ScheduleItem({
   schedule,
   onClick,
@@ -838,10 +839,13 @@ function ScheduleItem({
   const isOverdue = schedule.dead && schedule.dead < today && schedule.status !== '완료';
   const isReconfirm = schedule.status === '재확인';
   const isCompleted = schedule.status === '완료';
-  const canComplete = !!onCompleteClick && !isCompleted;
+  const canComplete = !!onCompleteClick; // 완료 버튼은 토글이므로 언제나 활성화 (로직에 따라 조절 가능)
+
   const platformLabel = schedule.platform ? getPlatformDisplayName(schedule.platform) : '';
-  const hasPaybackPending = schedule.paybackExpected && !schedule.paybackConfirmed;
-  const canConfirmPayback = hasPaybackPending && !!onPaybackConfirm;
+  const hasPaybackExpected = Boolean(schedule.paybackExpected);
+  // paybackConfirmed가 true면 이미 입금 확인된 상태 (Paid)
+  const isPaid = Boolean(schedule.paybackConfirmed);
+  const canConfirmPayback = hasPaybackExpected && !!onPaybackConfirm;
 
   return (
     <div
@@ -854,54 +858,56 @@ function ScheduleItem({
       }`}
       onClick={onClick}
     >
-      <div className="mr-4 flex flex-col items-center gap-1">
+      {/* 1번 스타일 적용: 왼쪽 컨트롤러 영역 */}
+      <div className="mr-3 flex flex-col items-center gap-2 min-w-[60px]">
+        {/* 1. 작업 완료 토글 버튼 */}
         <button
           type="button"
-          aria-label="일정 완료 처리"
-          disabled={!canComplete}
-          className={`w-5 h-5 flex items-center justify-center rounded-full border-2 transition-colors shadow-sm ${
-            isCompleted
-              ? 'bg-orange-400 border-orange-400 text-white'
-              : canComplete
-                ? 'bg-white border-orange-200 text-orange-300 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-500'
-                : 'bg-neutral-50 border-neutral-200 text-neutral-300'
-          } ${canComplete ? 'cursor-pointer' : 'cursor-default'}`}
           onClick={(e) => {
             e.stopPropagation();
             if (canComplete) {
               onCompleteClick?.();
             }
           }}
+          className={`px-2 py-1 rounded-full text-[10px] font-bold border transition-all active:scale-95 w-full text-center ${
+            isCompleted
+              ? 'bg-orange-50 border-orange-200 text-orange-500 shadow-sm' // 켜짐 (완료)
+              : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100' // 꺼짐 (대기)
+          }`}
         >
-          <span className="text-[13px] font-black leading-none">✓</span>
+          {/* 체크 아이콘 */}
+          <span className="px-2.5 text-[10px] font-bold">{isCompleted ? '완료' : '완료'}</span>
         </button>
-        {canComplete && (
-          <span className="mt-1 text-[10.5px] font-semibold leading-none text-orange-600">
-            완료
-          </span>
-        )}
-        {canConfirmPayback && (
+
+        {/* 2. 입금 확인 토글 버튼 (페이백 예정이 있을 때만 표시) */}
+        {hasPaybackExpected && (
           <button
             type="button"
-            aria-label="입금 확인"
-            className="mt-1 w-full rounded-full border border-sky-100 bg-white px-3 py-[2px] text-[11px] font-semibold text-sky-600 shadow-[0_1px_3px_rgba(15,23,42,0.1)] hover:bg-sky-50"
             onClick={(e) => {
               e.stopPropagation();
-              onPaybackConfirm?.();
+              if (canConfirmPayback) {
+                onPaybackConfirm?.();
+              }
             }}
+            className={`px-2 py-1 rounded-full text-[10px] font-bold border transition-all active:scale-95 w-full text-center ${
+              isPaid
+                ? 'bg-orange-600 text-white border-orange-600 shadow-sm' // 켜짐 (입금됨)
+                : 'bg-white text-gray-400 border-gray-200 hover:text-orange-400 hover:border-orange-200' // 꺼짐 (미입금)
+            }`}
           >
-            입금확인
+            {isPaid ? '입금완료' : '입금완료'}
           </button>
         )}
       </div>
 
-      <div className="flex-1">
+      {/* 오른쪽 정보 영역 (기존 유지) */}
+      <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <div className="text-[15px] font-bold text-[#0F172A] flex items-center gap-1.5 flex-1 min-w-0">
             <span className="text-[16px] shrink-0">{scheduleIcons[schedule.category] || '📦'}</span>
-            <span className="text-[15px] block truncate max-w-[150px]">{schedule.title}</span>
+            <span className="text-[15px] block truncate">{schedule.title}</span>
           </div>
-          <div className="text-right min-w-[88px]">
+          <div className="text-right min-w-fit pl-2">
             <div className="font-bold text-[15px] text-neutral-900 leading-tight">
               ₩{total.toLocaleString()}
             </div>
@@ -910,9 +916,9 @@ function ScheduleItem({
         <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1">
           <span className="font-medium text-neutral-600">{dDate}</span>
         </div>
-        <div className="flex mt-2">
+        <div className="flex mt-2 items-center flex-wrap gap-y-1">
           <p
-            className={`text-[10.5px] font-semibold rounded-[10px] px-2 py-[2px] w-fit ml-2 ${
+            className={`text-[10.5px] font-semibold rounded-[10px] px-2 py-[2px] w-fit ${
               status.class ?? 'border border-neutral-100 text-neutral-500 bg-white/80'
             }`}
             style={badgeStyle}
@@ -933,16 +939,8 @@ function ScheduleItem({
             </p>
           )}
           {schedule.memo && (
-            <span className="text-sm shrink-0 ml-2" title="메모 있음">
+            <span className="text-sm shrink-0 ml-2 opacity-50" title="메모 있음">
               📝
-            </span>
-          )}
-          {hasPaybackPending && (
-            <span
-              className="text-sm shrink-0 ml-2"
-              title="광고주에게 받을 페이백이 아직 확인되지 않음"
-            >
-              💸
             </span>
           )}
         </div>
