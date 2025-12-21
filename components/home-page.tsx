@@ -632,14 +632,13 @@ function CalendarSection({
           const todayHighlightClass = isTodayDate ? 'bg-orange-300 text-orange-900' : '';
           const selectedHighlightClass = isSelected ? 'bg-orange-100 text-orange-900' : '';
           const isInteractive = hasSchedule || Boolean(onCreateSchedule);
+          const wasAlreadySelected = selectedDate === dateStr;
           const handleDayClick = (event: MouseEvent<HTMLButtonElement>) => {
             onDateClick(dateStr);
             if (!hasSchedule && event.detail === 1) {
               onCreateSchedule?.(dateStr);
             }
-          };
-          const handleDayDoubleClick = () => {
-            if (hasSchedule) {
+            if (hasSchedule && wasAlreadySelected && event.detail === 1) {
               onCreateSchedule?.(dateStr);
             }
           };
@@ -648,7 +647,6 @@ function CalendarSection({
             <button
               key={day}
               onClick={handleDayClick}
-              onDoubleClick={handleDayDoubleClick}
               className={`relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-colors ${
                 isInteractive ? 'cursor-pointer' : 'cursor-default'
               } ${baseStyle}
