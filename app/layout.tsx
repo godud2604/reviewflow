@@ -1,15 +1,16 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Analytics } from "@vercel/analytics/next"
-import { Toaster } from "@/components/ui/toaster"
-import { PostHogProvider } from "@/components/posthog-provider"
-import "./globals.css"
-import Script from "next/script";
+import type React from 'react';
+import type { Metadata } from 'next';
+import { Analytics } from '@vercel/analytics/next';
+import { Toaster } from '@/components/ui/toaster';
+import { PostHogProvider } from '@/components/posthog-provider';
+import './globals.css';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
-  title: "리뷰플로우 | 블로거 체험단 관리 앱",
-  description: "일정 체크부터 수익 정산까지. 리뷰 관리, 이제 스트레스 받지 마세요. 체험단 관리의 새로운 기준, ReviewFlow",
-  generator: "v0.app",
+  title: '리뷰플로우 | 블로거 체험단 관리 앱',
+  description:
+    '일정 체크부터 수익 정산까지. 리뷰 관리, 이제 스트레스 받지 마세요. 체험단 관리의 새로운 기준, ReviewFlow',
+  generator: 'v0.app',
   metadataBase: new URL('https://reviewflow.tech'),
   keywords: ['리뷰플로우', '체험단', '블로거', '리뷰 관리', '일정 관리', '수익 관리', 'ReviewFlow'],
   authors: [{ name: 'ReviewFlow' }],
@@ -19,7 +20,8 @@ export const metadata: Metadata = {
     url: 'https://reviewflow.tech',
     siteName: '리뷰플로우',
     title: '리뷰플로우 | 블로거 체험단 관리 앱',
-    description: '일정 체크부터 수익 정산까지. 리뷰 관리, 이제 스트레스 받지 마세요. 체험단 관리의 새로운 기준, ReviewFlow',
+    description:
+      '일정 체크부터 수익 정산까지. 리뷰 관리, 이제 스트레스 받지 마세요. 체험단 관리의 새로운 기준, ReviewFlow',
     images: [
       {
         url: '/og-image.png',
@@ -38,26 +40,26 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/logo-white-2.png",
-        media: "(prefers-color-scheme: light)",
+        url: '/logo-white-2.png',
+        media: '(prefers-color-scheme: light)',
       },
       {
-        url: "/logo-white-2.png",
-        media: "(prefers-color-scheme: dark)",
+        url: '/logo-white-2.png',
+        media: '(prefers-color-scheme: dark)',
       },
       {
-        url: "/logo-white-2.png",
-        type: "image/svg+xml",
+        url: '/logo-white-2.png',
+        type: 'image/svg+xml',
       },
     ],
-    apple: "/logo-white-2.png",
+    apple: '/logo-white-2.png',
   },
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="ko">
@@ -85,5 +87,5 @@ export default function RootLayout({
         </PostHogProvider>
       </body>
     </html>
-  )
+  );
 }

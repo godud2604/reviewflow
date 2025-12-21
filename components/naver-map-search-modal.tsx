@@ -1,9 +1,9 @@
-"use client"
+'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from "react"
-import { X, MapPin, Search, Loader2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { X, MapPin, Search, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 declare global {
   interface Window {
@@ -17,16 +17,18 @@ export type MapPlaceSelection = {
   phone: string;
   latitude: number;
   longitude: number;
-}
+};
 
 export default function KakaoMapSearchModal({
   isOpen,
   onClose,
   onSelectPlace,
+  onManualEntryRequest,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSelectPlace: (place: MapPlaceSelection) => void;
+  onManualEntryRequest?: () => void;
 }) {
   const { toast } = useToast();
   const mapRef = useRef<HTMLDivElement>(null);
@@ -34,8 +36,8 @@ export default function KakaoMapSearchModal({
   const markerInstance = useRef<any>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
   const listViewportRef = useRef<HTMLDivElement | null>(null);
-  
-  const [searchKeyword, setSearchKeyword] = useState("");
+
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<MapPlaceSelection | null>(null);
@@ -45,7 +47,7 @@ export default function KakaoMapSearchModal({
     if (!mapInstance.current || !window.kakao) return;
 
     const moveLatLon = new window.kakao.maps.LatLng(place.latitude, place.longitude);
-    
+
     // 마커 업데이트 로직
     if (markerInstance.current) {
       markerInstance.current.setMap(null);
@@ -54,7 +56,7 @@ export default function KakaoMapSearchModal({
     markerInstance.current = new window.kakao.maps.Marker({
       position: moveLatLon,
     });
-    
+
     markerInstance.current.setMap(mapInstance.current);
     mapInstance.current.setCenter(moveLatLon);
     mapInstance.current.setLevel(3);
@@ -68,9 +70,9 @@ export default function KakaoMapSearchModal({
 
     window.kakao.maps.load(() => {
       if (!mapRef.current) return;
-      
+
       const options = {
-        center: new window.kakao.maps.LatLng(37.5665, 126.9780),
+        center: new window.kakao.maps.LatLng(37.5665, 126.978),
         level: 3,
       };
 
@@ -90,12 +92,14 @@ export default function KakaoMapSearchModal({
     markerInstance.current = null;
     setSearchResults([]);
     setSelectedPlace(null);
-    setSearchKeyword("");
+    setSearchKeyword('');
   }, [isOpen, initMap]);
 
   useEffect(() => {
     if (listContainerRef.current) {
-      listViewportRef.current = listContainerRef.current.querySelector('[data-slot="scroll-area-viewport"]') as HTMLDivElement | null;
+      listViewportRef.current = listContainerRef.current.querySelector(
+        '[data-slot="scroll-area-viewport"]'
+      ) as HTMLDivElement | null;
     }
 
     const viewport = listViewportRef.current;
@@ -103,11 +107,11 @@ export default function KakaoMapSearchModal({
 
     viewport.scrollTop = 0;
     const peekTimeout = setTimeout(() => {
-      viewport.scrollTo({ top: 12, behavior: "smooth" });
+      viewport.scrollTo({ top: 12, behavior: 'smooth' });
     }, 80);
 
     const resetTimeout = setTimeout(() => {
-      viewport.scrollTo({ top: 0, behavior: "smooth" });
+      viewport.scrollTo({ top: 0, behavior: 'smooth' });
     }, 500);
 
     return () => {
@@ -117,40 +121,43 @@ export default function KakaoMapSearchModal({
   }, [searchResults.length]);
 
   // 2. 장소 검색 (카카오 로컬 API 활용)
-  const fetchPlaces = useCallback(async (query: string) => {
-    if (!query.trim()) return;
-    setIsLoading(true);
+  const fetchPlaces = useCallback(
+    async (query: string) => {
+      if (!query.trim()) return;
+      setIsLoading(true);
 
-    try {
-      const response = await fetch(`/api/kakao-search?query=${encodeURIComponent(query)}`);
-      const data = await response.json();
+      try {
+        const response = await fetch(`/api/kakao-search?query=${encodeURIComponent(query)}`);
+        const data = await response.json();
 
-      if (!data.documents || data.documents.length === 0) {
-        toast({ title: "검색 결과가 없습니다." });
-        setSearchResults([]);
-        return;
+        if (!data.documents || data.documents.length === 0) {
+          toast({ title: '검색 결과가 없습니다.' });
+          setSearchResults([]);
+          return;
+        }
+
+        const results = data.documents.map((item: any) => ({
+          region: item.place_name,
+          address: item.road_address_name || item.address_name,
+          phone: item.phone,
+          latitude: parseFloat(item.y),
+          longitude: parseFloat(item.x),
+        }));
+
+        setSearchResults(results);
+
+        // 데이터 로드 후 지도가 준비되었다면 첫 번째 장소 자동 선택
+        if (mapInstance.current) {
+          handlePlaceSelect(results[0]);
+        }
+      } catch (error) {
+        toast({ title: '검색 중 오류 발생', variant: 'destructive' });
+      } finally {
+        setIsLoading(false);
       }
-
-      const results = data.documents.map((item: any) => ({
-        region: item.place_name,
-        address: item.road_address_name || item.address_name,
-        phone: item.phone,
-        latitude: parseFloat(item.y),
-        longitude: parseFloat(item.x),
-      }));
-
-      setSearchResults(results);
-      
-      // 데이터 로드 후 지도가 준비되었다면 첫 번째 장소 자동 선택
-      if (mapInstance.current) {
-        handlePlaceSelect(results[0]);
-      }
-    } catch (error) {
-      toast({ title: "검색 중 오류 발생", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast, handlePlaceSelect]);
+    },
+    [toast, handlePlaceSelect]
+  );
 
   if (!isOpen) return null;
 
@@ -158,26 +165,29 @@ export default function KakaoMapSearchModal({
     <div className="fixed inset-0 z-[100] flex flex-col bg-white overflow-hidden shadow-2xl">
       <div className="px-1 py-4 border-b flex justify-between items-center bg-white shrink-0">
         <span className="pl-4 font-bold text-lg text-neutral-800">장소 검색</span>
-        <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-full transition-colors">
+        <button
+          onClick={onClose}
+          className="p-2 hover:bg-neutral-100 rounded-full transition-colors"
+        >
           <X className="w-6 h-6" />
         </button>
       </div>
 
       <div className="p-4 border-b bg-white flex gap-2 shrink-0">
-          <input
-            type="text"
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && fetchPlaces(searchKeyword)}
-            placeholder="장소명을 입력하세요 (예: 강남역 서브웨이)"
-            className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
-          />
-          <button
-            onClick={() => fetchPlaces(searchKeyword)}
-            className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
-          >
-            {isLoading ? <span className="text-[11px]">검색 중...</span> : "검색"}
-          </button>
+        <input
+          type="text"
+          value={searchKeyword}
+          onChange={(e) => setSearchKeyword(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && fetchPlaces(searchKeyword)}
+          placeholder="장소명을 입력하세요 (예: 강남역 서브웨이)"
+          className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
+        />
+        <button
+          onClick={() => fetchPlaces(searchKeyword)}
+          className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
+        >
+          {isLoading ? <span className="text-[11px]">검색 중...</span> : '검색'}
+        </button>
       </div>
 
       <div className="flex-1 flex flex-col md:flex-row min-h-0">
@@ -185,7 +195,7 @@ export default function KakaoMapSearchModal({
         <div
           ref={listContainerRef}
           className={`relative ${
-            searchResults.length > 0 ? "h-2/5 md:h-full" : "md:h-full"
+            searchResults.length > 0 ? 'h-2/5 md:h-full' : 'md:h-full'
           } md:w-1/3 border-r bg-white flex flex-col min-h-0 shadow-lg shadow-black/5`}
         >
           <div className="absolute top-2 left-1/2 -translate-x-1/2 h-1.5 w-14 rounded-full bg-neutral-200/80" />
@@ -198,16 +208,22 @@ export default function KakaoMapSearchModal({
               </div>
             )}
             {searchResults.map((place, i) => (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 onClick={() => handlePlaceSelect(place)}
                 className={`p-5 border-b cursor-pointer transition-colors ${
-                  selectedPlace?.latitude === place.latitude ? 'bg-orange-50 border-orange-200' : 'hover:bg-neutral-50'
+                  selectedPlace?.latitude === place.latitude
+                    ? 'bg-orange-50 border-orange-200'
+                    : 'hover:bg-neutral-50'
                 }`}
               >
                 <div className="font-bold text-sm text-neutral-900">{place.region}</div>
-                <div className="text-xs text-neutral-500 mt-1.5 leading-relaxed">{place.address}</div>
-                {place.phone && <div className="text-[10px] text-neutral-400 mt-1">📞 {place.phone}</div>}
+                <div className="text-xs text-neutral-500 mt-1.5 leading-relaxed">
+                  {place.address}
+                </div>
+                {place.phone && (
+                  <div className="text-[10px] text-neutral-400 mt-1">📞 {place.phone}</div>
+                )}
               </div>
             ))}
           </ScrollArea>
@@ -227,13 +243,17 @@ export default function KakaoMapSearchModal({
         <div className="flex-1 relative bg-neutral-50 min-h-0">
           {/* 지도가 그려질 Ref 요소 - h-full 필수 */}
           <div ref={mapRef} className="w-full h-full" style={{ position: 'absolute', inset: 0 }} />
-          
+
           {/* 선택된 장소 레이어 */}
           {selectedPlace && (
             <div className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md p-5 rounded-2xl shadow-2xl z-10 border border-white flex justify-between items-center animate-in fade-in slide-in-from-bottom-2">
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-base text-neutral-900 truncate">{selectedPlace.region}</div>
-                <div className="text-xs text-neutral-600 mt-1 truncate">{selectedPlace.address}</div>
+                <div className="font-bold text-base text-neutral-900 truncate">
+                  {selectedPlace.region}
+                </div>
+                <div className="text-xs text-neutral-600 mt-1 truncate">
+                  {selectedPlace.address}
+                </div>
               </div>
               <MapPin className="text-orange-500 ml-4 shrink-0 w-6 h-6" />
             </div>
@@ -241,15 +261,22 @@ export default function KakaoMapSearchModal({
         </div>
       </div>
 
-      <div className="p-6 border-t bg-white shrink-0">
+      <div className="p-6 border-t bg-white shrink-0 space-y-3">
         <button
           onClick={() => selectedPlace && onSelectPlace(selectedPlace)}
           disabled={!selectedPlace}
-        className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl disabled:bg-neutral-100 disabled:text-neutral-400 hover:bg-orange-500 transition-all active:scale-[0.98] shadow-lg"
+          className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl disabled:bg-neutral-100 disabled:text-neutral-400 hover:bg-orange-500 transition-all active:scale-[0.98] shadow-lg"
         >
-          {selectedPlace ? `${selectedPlace.region} 선택 완료` : "장소를 선택해주세요"}
+          {selectedPlace ? `${selectedPlace.region} 선택 완료` : '장소를 선택해주세요'}
+        </button>
+        <button
+          type="button"
+          onClick={() => onManualEntryRequest?.()}
+          className="w-full text-[14px] font-semibold text-[#FF5722] hover:text-[#FF7A4C] transition-colors"
+        >
+          직접 주소 입력하기
         </button>
       </div>
     </div>
-  )
+  );
 }

@@ -1,221 +1,218 @@
-"use client"
+'use client';
 
-import { Suspense, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import HomePage from "@/components/home-page"
-import AllSchedulesPage from "@/components/all-schedules-page"
-import StatsPage from "@/components/stats-page"
-import ProfilePage from "@/components/profile-page"
-import PortfolioPage from "@/components/portfolio-page"
-import NavigationBar from "@/components/navigation-bar"
-import ScheduleModal from "@/components/schedule-modal"
-import TodoModal from "@/components/todo-modal"
-import LandingPage from "@/components/landing-page"
-import { useAuth } from "@/hooks/use-auth"
-import { useUserProfile } from "@/hooks/use-user-profile"
-import { useSchedules } from "@/hooks/use-schedules"
-import { useTodos } from "@/hooks/use-todos"
-import { useChannels } from "@/hooks/use-channels"
-import { useFeaturedPosts } from "@/hooks/use-featured-posts"
-import { useExtraIncomes } from "@/hooks/use-extra-incomes"
-import { resolveTier } from "@/lib/tier"
-import type { Schedule } from "@/types"
+import { Suspense, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import HomePage from '@/components/home-page';
+import AllSchedulesPage from '@/components/all-schedules-page';
+import StatsPage from '@/components/stats-page';
+import ProfilePage from '@/components/profile-page';
+import PortfolioPage from '@/components/portfolio-page';
+import NavigationBar from '@/components/navigation-bar';
+import ScheduleModal from '@/components/schedule-modal';
+import TodoModal from '@/components/todo-modal';
+import LandingPage from '@/components/landing-page';
+import { useAuth } from '@/hooks/use-auth';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { useSchedules } from '@/hooks/use-schedules';
+import { useTodos } from '@/hooks/use-todos';
+import { useChannels } from '@/hooks/use-channels';
+import { useFeaturedPosts } from '@/hooks/use-featured-posts';
+import { useExtraIncomes } from '@/hooks/use-extra-incomes';
+import { resolveTier } from '@/lib/tier';
+import type { Schedule } from '@/types';
 
 function PageContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (typeof window === "undefined") return
-    const hash = window.location.hash.replace(/^#/, "")
-    const search = window.location.search.replace(/^\?/, "")
-    const hashParams = new URLSearchParams(hash)
-    const queryParams = new URLSearchParams(search)
-    const type = hashParams.get("type") || queryParams.get("type")
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash.replace(/^#/, '');
+    const search = window.location.search.replace(/^\?/, '');
+    const hashParams = new URLSearchParams(hash);
+    const queryParams = new URLSearchParams(search);
+    const type = hashParams.get('type') || queryParams.get('type');
 
-    if (type === "recovery") {
-      const redirectPath = `/reset-password${window.location.search}${window.location.hash}`
-      router.replace(redirectPath)
+    if (type === 'recovery') {
+      const redirectPath = `/reset-password${window.location.search}${window.location.hash}`;
+      router.replace(redirectPath);
     }
-  }, [router])
+  }, [router]);
 
   // URL 기반 상태 관리
-  const page = searchParams.get("page") || "landing"
-  const view = searchParams.get("view")
-  const isLandingPage = page === "landing"
-  const currentPage = (page === "home" || page === "stats" || page === "profile") ? page : "home"
-  const showPortfolio = view === "portfolio"
-  
+  const page = searchParams.get('page') || 'landing';
+  const view = searchParams.get('view');
+  const isLandingPage = page === 'landing';
+  const currentPage = page === 'home' || page === 'stats' || page === 'profile' ? page : 'home';
+  const showPortfolio = view === 'portfolio';
+
   // Auth Hook
-  const { user, loading: authLoading } = useAuth()
-  
-  const isLoggedIn = !!user && !isLandingPage
-  const { profile, refetch: refetchUserProfile } = useUserProfile({ enabled: isLoggedIn })
-  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>
+  const { user, loading: authLoading } = useAuth();
+
+  const isLoggedIn = !!user && !isLandingPage;
+  const { profile, refetch: refetchUserProfile } = useUserProfile({ enabled: isLoggedIn });
+  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const { isPro } = resolveTier({
     profileTier: profile?.tier ?? undefined,
     metadata,
-  })
-  
-  const { 
-    schedules, 
-    loading: schedulesLoading, 
-    createSchedule, 
-    updateSchedule, 
-    deleteSchedule 
-  } = useSchedules({ enabled: isLoggedIn })
-  
-  const { 
-    todos, 
-    loading: todosLoading, 
-    addTodo, 
-    toggleTodo, 
-    deleteTodo 
-  } = useTodos({ enabled: isLoggedIn && currentPage === "home" })
-  
-  const { channels, loading: channelsLoading } = useChannels({ 
-    enabled: isLoggedIn && showPortfolio 
-  })
-  
-  const { featuredPosts, loading: featuredPostsLoading } = useFeaturedPosts({ 
-    enabled: isLoggedIn && showPortfolio 
-  })
-  
-  const { extraIncomes, loading: extraIncomesLoading } = useExtraIncomes({ 
-    enabled: isLoggedIn && currentPage === "profile" 
-  })
-  
+  });
+
+  const {
+    schedules,
+    loading: schedulesLoading,
+    createSchedule,
+    updateSchedule,
+    deleteSchedule,
+  } = useSchedules({ enabled: isLoggedIn });
+
+  const {
+    todos,
+    loading: todosLoading,
+    addTodo,
+    toggleTodo,
+    deleteTodo,
+  } = useTodos({ enabled: isLoggedIn && currentPage === 'home' });
+
+  const { channels, loading: channelsLoading } = useChannels({
+    enabled: isLoggedIn && showPortfolio,
+  });
+
+  const { featuredPosts, loading: featuredPostsLoading } = useFeaturedPosts({
+    enabled: isLoggedIn && showPortfolio,
+  });
+
+  const { extraIncomes, loading: extraIncomesLoading } = useExtraIncomes({
+    enabled: isLoggedIn && currentPage === 'profile',
+  });
+
   const getIsDataLoading = () => {
-    if (schedulesLoading) return true
-    if (currentPage === "home" && todosLoading) return true
-    if (showPortfolio && (channelsLoading || featuredPostsLoading)) return true
-    if (currentPage === "profile" && extraIncomesLoading) return true
-    return false
-  }
-  
-  const isDataLoading = getIsDataLoading()
-  const scheduleId = searchParams.get("schedule")
-  const isNewSchedule = searchParams.get("new") === "true"
-  const initialDeadline = searchParams.get("date") ?? undefined
-  const isTodoModalOpen = searchParams.get("todo") === "true"
+    if (schedulesLoading) return true;
+    if (currentPage === 'home' && todosLoading) return true;
+    if (showPortfolio && (channelsLoading || featuredPostsLoading)) return true;
+    if (currentPage === 'profile' && extraIncomesLoading) return true;
+    return false;
+  };
 
-  const showAllSchedules = view === "all"
-  const isScheduleModalOpen = scheduleId !== null || isNewSchedule
-  const editingScheduleId = scheduleId ? parseInt(scheduleId) : null
+  const isDataLoading = getIsDataLoading();
+  const scheduleId = searchParams.get('schedule');
+  const isNewSchedule = searchParams.get('new') === 'true';
+  const initialDeadline = searchParams.get('date') ?? undefined;
+  const isTodoModalOpen = searchParams.get('todo') === 'true';
 
-  const handleOpenScheduleModal = (
-    scheduleId?: number,
-    options?: { deadDate?: string },
-  ) => {
-    const params = new URLSearchParams(searchParams.toString())
+  const showAllSchedules = view === 'all';
+  const isScheduleModalOpen = scheduleId !== null || isNewSchedule;
+  const editingScheduleId = scheduleId ? parseInt(scheduleId) : null;
+
+  const handleOpenScheduleModal = (scheduleId?: number, options?: { deadDate?: string }) => {
+    const params = new URLSearchParams(searchParams.toString());
     if (scheduleId) {
-      params.set("schedule", scheduleId.toString())
-      params.delete("new")
-      params.delete("date")
+      params.set('schedule', scheduleId.toString());
+      params.delete('new');
+      params.delete('date');
     } else {
-      params.delete("schedule")
-      params.set("new", "true")
+      params.delete('schedule');
+      params.set('new', 'true');
       if (options?.deadDate) {
-        params.set("date", options.deadDate)
+        params.set('date', options.deadDate);
       } else {
-        params.delete("date")
+        params.delete('date');
       }
     }
-    router.push(`?${params.toString()}`)
-  }
+    router.push(`?${params.toString()}`);
+  };
 
   const handleCloseScheduleModal = () => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete("schedule")
-    params.delete("new")
-    params.delete("date")
-    router.push(`?${params.toString()}`)
-  }
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('schedule');
+    params.delete('new');
+    params.delete('date');
+    router.push(`?${params.toString()}`);
+  };
 
   const handleSaveSchedule = async (schedule: Schedule) => {
-    let success = true
+    let success = true;
     if (editingScheduleId) {
-      const { id, ...updates } = schedule
-      success = await updateSchedule(editingScheduleId, updates)
+      const { id, ...updates } = schedule;
+      success = await updateSchedule(editingScheduleId, updates);
     } else {
-      const { id, ...newSchedule } = schedule
-      const created = await createSchedule(newSchedule)
-      success = Boolean(created)
+      const { id, ...newSchedule } = schedule;
+      const created = await createSchedule(newSchedule);
+      success = Boolean(created);
     }
     if (success) {
-      handleCloseScheduleModal()
+      handleCloseScheduleModal();
     }
-    return success
-  }
+    return success;
+  };
 
   const handleDeleteSchedule = async (id: number) => {
-    await deleteSchedule(id)
-    handleCloseScheduleModal()
-  }
+    await deleteSchedule(id);
+    handleCloseScheduleModal();
+  };
 
-  const handleUpdateScheduleFiles = async (id: number, files: import("@/types").GuideFile[]) => {
-    await updateSchedule(id, { guideFiles: files })
-  }
+  const handleUpdateScheduleFiles = async (id: number, files: import('@/types').GuideFile[]) => {
+    await updateSchedule(id, { guideFiles: files });
+  };
 
   const handleCompleteSchedule = async (id: number) => {
-    await updateSchedule(id, { status: "완료" })
-  }
+    await updateSchedule(id, { status: '완료' });
+  };
 
   const handleAddTodo = async (text: string) => {
-    await addTodo(text)
-  }
+    await addTodo(text);
+  };
 
   const handleToggleTodo = async (id: number) => {
-    await toggleTodo(id)
-  }
+    await toggleTodo(id);
+  };
 
   const handleDeleteTodo = async (id: number) => {
-    await deleteTodo(id)
-  }
+    await deleteTodo(id);
+  };
 
-  const handlePageChange = (newPage: "home" | "stats" | "profile") => {
-    router.push(`?page=${newPage}`)
-  }
+  const handlePageChange = (newPage: 'home' | 'stats' | 'profile') => {
+    router.push(`?page=${newPage}`);
+  };
 
   const handleGoRoot = () => {
-    router.push("/notifications")
-  }
+    router.push('/notifications');
+  };
 
   const handleShowAllSchedules = () => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("view", "all")
-    router.push(`?${params.toString()}`)
-  }
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('view', 'all');
+    router.push(`?${params.toString()}`);
+  };
 
   const handleBackFromAll = () => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete("view")
-    router.push(`?${params.toString()}`)
-  }
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('view');
+    router.push(`?${params.toString()}`);
+  };
 
   const handleShowPortfolio = () => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("view", "portfolio")
-    router.push(`?${params.toString()}`)
-  }
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('view', 'portfolio');
+    router.push(`?${params.toString()}`);
+  };
 
   const handleBackFromPortfolio = () => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete("view")
-    router.push(`?${params.toString()}`)
-  }
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('view');
+    router.push(`?${params.toString()}`);
+  };
 
   const handleOpenTodoModal = () => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("todo", "true")
-    router.push(`?${params.toString()}`)
-  }
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('todo', 'true');
+    router.push(`?${params.toString()}`);
+  };
 
   const handleCloseTodoModal = () => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete("todo")
-    router.push(`?${params.toString()}`)
-  }
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('todo');
+    router.push(`?${params.toString()}`);
+  };
 
   if (authLoading) {
     return (
@@ -225,11 +222,11 @@ function PageContent() {
           <p className="text-gray-500 text-sm">로딩 중...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (isLandingPage || !user) {
-    return <LandingPage />
+    return <LandingPage />;
   }
 
   if (isDataLoading) {
@@ -240,7 +237,7 @@ function PageContent() {
           <p className="text-gray-500 text-sm">데이터 불러오는 중...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -263,20 +260,20 @@ function PageContent() {
             />
           ) : (
             <>
-              {currentPage === "home" && (
-              <HomePage
-                schedules={schedules}
-                onScheduleClick={handleOpenScheduleModal}
-                onShowAllClick={handleShowAllSchedules}
-                onCompleteClick={handleCompleteSchedule}
-                onAddClick={() => handleOpenScheduleModal()}
-                onCreateSchedule={(dateStr) =>
-                  handleOpenScheduleModal(undefined, { deadDate: dateStr })
-                }
-              />
+              {currentPage === 'home' && (
+                <HomePage
+                  schedules={schedules}
+                  onScheduleClick={handleOpenScheduleModal}
+                  onShowAllClick={handleShowAllSchedules}
+                  onCompleteClick={handleCompleteSchedule}
+                  onAddClick={() => handleOpenScheduleModal()}
+                  onCreateSchedule={(dateStr) =>
+                    handleOpenScheduleModal(undefined, { deadDate: dateStr })
+                  }
+                />
               )}
 
-              {currentPage === "stats" && (
+              {currentPage === 'stats' && (
                 <StatsPage
                   schedules={schedules}
                   onScheduleItemClick={(schedule) => handleOpenScheduleModal(schedule.id)}
@@ -285,7 +282,7 @@ function PageContent() {
                 />
               )}
 
-              {currentPage === "profile" && (
+              {currentPage === 'profile' && (
                 <ProfilePage profile={profile} refetchUserProfile={refetchUserProfile} />
               )}
             </>
@@ -307,7 +304,9 @@ function PageContent() {
             onSave={handleSaveSchedule}
             onDelete={handleDeleteSchedule}
             onUpdateFiles={handleUpdateScheduleFiles}
-            schedule={editingScheduleId ? schedules.find((s) => s.id === editingScheduleId) : undefined}
+            schedule={
+              editingScheduleId ? schedules.find((s) => s.id === editingScheduleId) : undefined
+            }
             initialDeadline={initialDeadline}
           />
         )}
@@ -324,13 +323,19 @@ function PageContent() {
         )}
       </div>
     </div>
-  )
+  );
 }
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-neutral-200 flex items-center justify-center">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-neutral-200 flex items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
       <PageContent />
     </Suspense>
-  )
+  );
 }

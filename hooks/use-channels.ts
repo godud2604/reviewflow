@@ -1,24 +1,24 @@
-"use client"
+'use client';
 
-import React, { useState, useEffect, useCallback } from 'react'
-import { getSupabaseClient } from '@/lib/supabase'
-import { useAuth } from './use-auth'
-import { useToast } from './use-toast'
-import type { Channel } from '@/types'
-import type { DbChannel } from '@/types/database'
+import React, { useState, useEffect, useCallback } from 'react';
+import { getSupabaseClient } from '@/lib/supabase';
+import { useAuth } from './use-auth';
+import { useToast } from './use-toast';
+import type { Channel } from '@/types';
+import type { DbChannel } from '@/types/database';
 
 interface UseChannelsOptions {
-  enabled?: boolean
+  enabled?: boolean;
 }
 
 interface UseChannelsReturn {
-  channels: Channel[]
-  loading: boolean
-  error: string | null
-  createChannel: (channel: Omit<Channel, 'id'>) => Promise<Channel | null>
-  updateChannel: (id: number, updates: Partial<Channel>) => Promise<boolean>
-  deleteChannel: (id: number) => Promise<boolean>
-  refetch: () => Promise<void>
+  channels: Channel[];
+  loading: boolean;
+  error: string | null;
+  createChannel: (channel: Omit<Channel, 'id'>) => Promise<Channel | null>;
+  updateChannel: (id: number, updates: Partial<Channel>) => Promise<boolean>;
+  deleteChannel: (id: number) => Promise<boolean>;
+  refetch: () => Promise<void>;
 }
 
 // DB -> Frontend 매핑
@@ -33,7 +33,7 @@ function mapDbToChannel(db: DbChannel): Channel {
     avgReach: db.avg_reach || undefined,
     avgEngagement: db.avg_engagement || undefined,
     url: db.url || undefined,
-  }
+  };
 }
 
 // Frontend -> DB 매핑 (Insert)
@@ -48,164 +48,179 @@ function mapChannelToDb(channel: Omit<Channel, 'id'>, userId: string) {
     avg_reach: channel.avgReach || null,
     avg_engagement: channel.avgEngagement || null,
     url: channel.url || null,
-  }
+  };
 }
 
 // Frontend -> DB 매핑 (Update)
 function mapChannelUpdatesToDb(updates: Partial<Channel>) {
-  const dbUpdates: Record<string, unknown> = {}
-  
-  if (updates.type !== undefined) dbUpdates.type = updates.type
-  if (updates.name !== undefined) dbUpdates.name = updates.name
-  if (updates.followers !== undefined) dbUpdates.followers = updates.followers
-  if (updates.monthlyVisitors !== undefined) dbUpdates.monthly_visitors = updates.monthlyVisitors
-  if (updates.avgViews !== undefined) dbUpdates.avg_views = updates.avgViews
-  if (updates.avgReach !== undefined) dbUpdates.avg_reach = updates.avgReach
-  if (updates.avgEngagement !== undefined) dbUpdates.avg_engagement = updates.avgEngagement
-  if (updates.url !== undefined) dbUpdates.url = updates.url
-  
-  return dbUpdates
+  const dbUpdates: Record<string, unknown> = {};
+
+  if (updates.type !== undefined) dbUpdates.type = updates.type;
+  if (updates.name !== undefined) dbUpdates.name = updates.name;
+  if (updates.followers !== undefined) dbUpdates.followers = updates.followers;
+  if (updates.monthlyVisitors !== undefined) dbUpdates.monthly_visitors = updates.monthlyVisitors;
+  if (updates.avgViews !== undefined) dbUpdates.avg_views = updates.avgViews;
+  if (updates.avgReach !== undefined) dbUpdates.avg_reach = updates.avgReach;
+  if (updates.avgEngagement !== undefined) dbUpdates.avg_engagement = updates.avgEngagement;
+  if (updates.url !== undefined) dbUpdates.url = updates.url;
+
+  return dbUpdates;
 }
 
 export function useChannels(options: UseChannelsOptions = {}): UseChannelsReturn {
-  const { enabled = true } = options
-  const { user } = useAuth()
-  const { toast } = useToast()
-  const [channels, setChannels] = useState<Channel[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const hasFetchedRef = React.useRef(false)
+  const { enabled = true } = options;
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const hasFetchedRef = React.useRef(false);
 
-  const showError = useCallback((message: string) => {
-    setError(message)
-    toast({
-      title: '오류가 발생했습니다',
-      description: message,
-      variant: 'destructive',
-      duration: 3000,
-    })
-  }, [toast])
+  const showError = useCallback(
+    (message: string) => {
+      setError(message);
+      toast({
+        title: '오류가 발생했습니다',
+        description: message,
+        variant: 'destructive',
+        duration: 3000,
+      });
+    },
+    [toast]
+  );
 
-  const userId = user?.id
+  const userId = user?.id;
 
-  const fetchChannels = useCallback(async (force = false) => {
-    if (!userId) {
-      setChannels([])
-      setLoading(false)
-      return
-    }
-
-    // Skip if already fetched and not forcing
-    if (hasFetchedRef.current && !force) {
-      setLoading(false)
-      return
-    }
-    
-    setLoading(true)
-    setError(null)
-    
-    try {
-      const supabase = getSupabaseClient()
-      const { data, error: fetchError } = await supabase
-        .from('channels')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-
-      if (fetchError) {
-        showError(fetchError.message)
-        setChannels([])
-      } else {
-        setChannels((data || []).map(mapDbToChannel))
-        hasFetchedRef.current = true
+  const fetchChannels = useCallback(
+    async (force = false) => {
+      if (!userId) {
+        setChannels([]);
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      showError(err instanceof Error ? err.message : '알 수 없는 오류')
-    } finally {
-      setLoading(false)
-    }
-  }, [userId, showError])
+
+      // Skip if already fetched and not forcing
+      if (hasFetchedRef.current && !force) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error: fetchError } = await supabase
+          .from('channels')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (fetchError) {
+          showError(fetchError.message);
+          setChannels([]);
+        } else {
+          setChannels((data || []).map(mapDbToChannel));
+          hasFetchedRef.current = true;
+        }
+      } catch (err) {
+        showError(err instanceof Error ? err.message : '알 수 없는 오류');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [userId, showError]
+  );
 
   useEffect(() => {
     if (enabled) {
-      fetchChannels()
+      fetchChannels();
     } else {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [enabled, fetchChannels])
+  }, [enabled, fetchChannels]);
 
-  const createChannel = useCallback(async (channel: Omit<Channel, 'id'>): Promise<Channel | null> => {
-    if (!user) return null
+  const createChannel = useCallback(
+    async (channel: Omit<Channel, 'id'>): Promise<Channel | null> => {
+      if (!user) return null;
 
-    try {
-      const supabase = getSupabaseClient()
-      const { data, error: insertError } = await supabase
-        .from('channels')
-        .insert([mapChannelToDb(channel, user.id)])
-        .select()
-        .single()
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error: insertError } = await supabase
+          .from('channels')
+          .insert([mapChannelToDb(channel, user.id)])
+          .select()
+          .single();
 
-      if (insertError) {
-        showError(insertError.message)
-        return null
+        if (insertError) {
+          showError(insertError.message);
+          return null;
+        }
+
+        const newChannel = mapDbToChannel(data);
+        setChannels((prev) => [newChannel, ...prev]);
+        return newChannel;
+      } catch (err) {
+        showError(err instanceof Error ? err.message : '알 수 없는 오류');
+        return null;
       }
+    },
+    [user, showError]
+  );
 
-      const newChannel = mapDbToChannel(data)
-      setChannels(prev => [newChannel, ...prev])
-      return newChannel
-    } catch (err) {
-      showError(err instanceof Error ? err.message : '알 수 없는 오류')
-      return null
-    }
-  }, [user, showError])
+  const updateChannel = useCallback(
+    async (id: number, updates: Partial<Channel>): Promise<boolean> => {
+      if (!user) return false;
 
-  const updateChannel = useCallback(async (id: number, updates: Partial<Channel>): Promise<boolean> => {
-    if (!user) return false
+      try {
+        const supabase = getSupabaseClient();
+        const { error: updateError } = await supabase
+          .from('channels')
+          .update(mapChannelUpdatesToDb(updates))
+          .eq('id', id)
+          .eq('user_id', user.id);
 
-    try {
-      const supabase = getSupabaseClient()
-      const { error: updateError } = await supabase
-        .from('channels')
-        .update(mapChannelUpdatesToDb(updates))
-        .eq('id', id)
-        .eq('user_id', user.id)
+        if (updateError) {
+          showError(updateError.message);
+          return false;
+        }
 
-      if (updateError) {
-        showError(updateError.message)
-        return false
+        setChannels((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
+        return true;
+      } catch (err) {
+        showError(err instanceof Error ? err.message : '알 수 없는 오류');
+        return false;
       }
+    },
+    [user, showError]
+  );
 
-      setChannels(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c))
-      return true
-    } catch (err) {
-      showError(err instanceof Error ? err.message : '알 수 없는 오류')
-      return false
-    }
-  }, [user, showError])
+  const deleteChannel = useCallback(
+    async (id: number): Promise<boolean> => {
+      if (!user) return false;
 
-  const deleteChannel = useCallback(async (id: number): Promise<boolean> => {
-    if (!user) return false
+      try {
+        const supabase = getSupabaseClient();
+        const { error: deleteError } = await supabase
+          .from('channels')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', user.id);
 
-    try {
-      const supabase = getSupabaseClient()
-      const { error: deleteError } = await supabase
-        .from('channels')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id)
+        if (deleteError) {
+          showError(deleteError.message);
+          return false;
+        }
 
-      if (deleteError) {
-        showError(deleteError.message)
-        return false
+        setChannels((prev) => prev.filter((c) => c.id !== id));
+        return true;
+      } catch (err) {
+        showError(err instanceof Error ? err.message : '알 수 없는 오류');
+        return false;
       }
-
-      setChannels(prev => prev.filter(c => c.id !== id))
-      return true
-    } catch (err) {
-      showError(err instanceof Error ? err.message : '알 수 없는 오류')
-      return false
-    }
-  }, [user, showError])
+    },
+    [user, showError]
+  );
 
   return {
     channels,
@@ -215,5 +230,5 @@ export function useChannels(options: UseChannelsOptions = {}): UseChannelsReturn
     updateChannel,
     deleteChannel,
     refetch: () => fetchChannels(true),
-  }
+  };
 }

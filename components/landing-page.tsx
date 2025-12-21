@@ -1,68 +1,68 @@
-"use client"
+'use client';
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { usePostHog } from 'posthog-js/react'
-import { useAuth } from "@/hooks/use-auth"
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePostHog } from 'posthog-js/react';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function LandingPage() {
-  const router = useRouter()
-  const posthog = usePostHog()
-  const { user, isAuthenticated, signOut, loading: authLoading } = useAuth()
-  const [email, setEmail] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-  const [isWaitlistModalOpen, setIsWaitlistModalOpen] = useState(false)
+  const router = useRouter();
+  const posthog = usePostHog();
+  const { user, isAuthenticated, signOut, loading: authLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isWaitlistModalOpen, setIsWaitlistModalOpen] = useState(false);
 
   const isProd = process.env.NODE_ENV === 'production';
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.replace("/?page=home")
+      router.replace('/?page=home');
     }
-  }, [authLoading, isAuthenticated, router])
+  }, [authLoading, isAuthenticated, router]);
 
   const handleSignOut = async () => {
     try {
-      await signOut()
+      await signOut();
     } catch (error) {
-      console.error("로그아웃 실패:", error)
+      console.error('로그아웃 실패:', error);
     }
-  }
+  };
 
   const handleFreeTrial = () => {
     if (isProd) {
       posthog?.capture('free_trial_clicked', {
-        source: 'landing_page'
-      })
+        source: 'landing_page',
+      });
     }
-    router.push("/signin")
-  }
+    router.push('/signin');
+  };
 
   const handlePreRegister = () => {
     if (isProd) {
       posthog?.capture('pre_register_clicked', {
-        source: 'landing_page'
-      })
+        source: 'landing_page',
+      });
     }
-    setMessage(null)
-    setIsWaitlistModalOpen(true)
-  }
+    setMessage(null);
+    setIsWaitlistModalOpen(true);
+  };
 
   const handleCloseWaitlistModal = () => {
-    setIsWaitlistModalOpen(false)
-  }
+    setIsWaitlistModalOpen(false);
+  };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setMessage(null)
+    e.preventDefault();
+    setIsSubmitting(true);
+    setMessage(null);
 
     if (isProd) {
       posthog?.capture('waitlist_submit_attempted', {
-        email: email
-      })
+        email: email,
+      });
     }
 
     try {
@@ -72,72 +72,72 @@ export default function LandingPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
         if (isProd) {
           posthog?.capture('waitlist_submit_success', {
-            email: email
-          })
+            email: email,
+          });
         }
-        setMessage({ type: 'success', text: data.message })
-        setEmail("")
+        setMessage({ type: 'success', text: data.message });
+        setEmail('');
       } else {
         if (isProd) {
           posthog?.capture('waitlist_submit_failed', {
             email: email,
-            error: data.error
-          })
+            error: data.error,
+          });
         }
-        setMessage({ type: 'error', text: data.error })
+        setMessage({ type: 'error', text: data.error });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: '등록 중 오류가 발생했습니다. 다시 시도해주세요.' })
+      setMessage({ type: 'error', text: '등록 중 오류가 발생했습니다. 다시 시도해주세요.' });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   useEffect(() => {
     const observerOptions = {
       threshold: 0.1,
-      rootMargin: '0px 0px -100px 0px'
-    }
+      rootMargin: '0px 0px -100px 0px',
+    };
 
     const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
+      entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          entry.target.classList.add('scroll-visible')
+          entry.target.classList.add('scroll-visible');
         }
-      })
-    }, observerOptions)
+      });
+    }, observerOptions);
 
-    const animateElements = document.querySelectorAll('.scroll-animate')
-    animateElements.forEach(el => observer.observe(el))
+    const animateElements = document.querySelectorAll('.scroll-animate');
+    animateElements.forEach((el) => observer.observe(el));
 
-    return () => observer.disconnect()
-  }, [])
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const scrollToHashTarget = () => {
-      if (!window.location.hash) return
-      const targetId = window.location.hash.slice(1)
-      const target = document.getElementById(targetId)
+      if (!window.location.hash) return;
+      const targetId = window.location.hash.slice(1);
+      const target = document.getElementById(targetId);
       if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-    }
+    };
 
-    const timeoutId = window.setTimeout(scrollToHashTarget, 0)
-    window.addEventListener('hashchange', scrollToHashTarget)
+    const timeoutId = window.setTimeout(scrollToHashTarget, 0);
+    window.addEventListener('hashchange', scrollToHashTarget);
 
     return () => {
-      clearTimeout(timeoutId)
-      window.removeEventListener('hashchange', scrollToHashTarget)
-    }
-  }, [])
+      clearTimeout(timeoutId);
+      window.removeEventListener('hashchange', scrollToHashTarget);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F2F4F6] overflow-x-hidden">
@@ -145,10 +145,11 @@ export default function LandingPage() {
         .scroll-animate {
           opacity: 0;
           transform: translateY(40px);
-          transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                      transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+          transition:
+            opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+            transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
-        
+
         .scroll-animate.scroll-visible {
           opacity: 1;
           transform: translateY(0);
@@ -202,30 +203,41 @@ export default function LandingPage() {
         }
       `}</style>
       {isWaitlistModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-[2px] flex items-center justify-center px-5"
           onClick={handleCloseWaitlistModal}
         >
-          <div 
+          <div
             className="w-90 max-w-sm bg-white rounded-2xl p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-bold text-orange-600 mb-1">사전신청</p>
-                <h3 className="text-xl font-bold text-neutral-900 leading-tight">이메일을 남겨주세요</h3>
+                <h3 className="text-xl font-bold text-neutral-900 leading-tight">
+                  이메일을 남겨주세요
+                </h3>
               </div>
               <button
                 onClick={handleCloseWaitlistModal}
                 className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-neutral-100 transition cursor-pointer"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <path d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
             <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#ffd0b3] p-3">
-              <div className="w-5 h-5 rounded-lg bg-white flex items-center justify-center text-xl">⏰</div>
+              <div className="w-5 h-5 rounded-lg bg-white flex items-center justify-center text-xl">
+                ⏰
+              </div>
               <div className="leading-tight">
                 <p className="text-[12px] font-bold text-[#c24b30]">선착순 50명 사전신청</p>
                 <p className="text-[11px] font-semibold text-[#ff5c39]">몇자리 안 남았어요!</p>
@@ -234,8 +246,12 @@ export default function LandingPage() {
             <div className="mt-4 grid grid-cols-1 gap-3">
               <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-3">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="px-2 py-1 rounded-lg bg-white text-[11px] font-bold text-neutral-700 border border-neutral-200">FREE</span>
-                  <span className="text-[12px] font-semibold text-neutral-600">지금 바로 이용 가능</span>
+                  <span className="px-2 py-1 rounded-lg bg-white text-[11px] font-bold text-neutral-700 border border-neutral-200">
+                    FREE
+                  </span>
+                  <span className="text-[12px] font-semibold text-neutral-600">
+                    지금 바로 이용 가능
+                  </span>
                 </div>
                 <ul className="text-[12px] text-neutral-700 space-y-1.5 list-disc list-inside">
                   <li>체험단 일정 캘린더 관리</li>
@@ -245,8 +261,12 @@ export default function LandingPage() {
               </div>
               <div className="rounded-xl border border-[#ffd6be] bg-gradient-to-r from-[#fff3ea] via-[#ffe6d6] to-[#ffd7bd] p-3">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="px-2 py-1 rounded-lg bg-white text-[11px] font-bold text-[#ff5c39] border border-white/70 shadow-sm">PRO</span>
-                  <span className="text-[12px] font-semibold text-[#c24b30]">12월 20일 오픈 예정</span>
+                  <span className="px-2 py-1 rounded-lg bg-white text-[11px] font-bold text-[#ff5c39] border border-white/70 shadow-sm">
+                    PRO
+                  </span>
+                  <span className="text-[12px] font-semibold text-[#c24b30]">
+                    12월 20일 오픈 예정
+                  </span>
                 </div>
                 <ul className="text-[12px] text-neutral-800 space-y-1.5 list-disc list-inside">
                   <li>월간 수익 리포트 · 알림</li>
@@ -254,7 +274,9 @@ export default function LandingPage() {
                   <li>하루 1번 요약 알림 제공</li>
                   <span className="ml-3">(오늘 해야 할 방문/작성/발행 일정 등)</span>
                 </ul>
-                <p className="text-[11px] text-[#c24b30] font-semibold mt-2">사전신청 시 PRO 3개월 무료로 이용 가능</p>
+                <p className="text-[11px] text-[#c24b30] font-semibold mt-2">
+                  사전신청 시 PRO 3개월 무료로 이용 가능
+                </p>
               </div>
             </div>
             <form className="mt-4 space-y-3" onSubmit={handleEmailSubmit}>
@@ -272,15 +294,15 @@ export default function LandingPage() {
                 className="w-full bg-[#ff5c39] text-white py-3 rounded-xl text-sm font-semibold shadow-lg shadow-orange-400/30 hover:bg-[#ff734f] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "등록 중..." : "사전신청 완료하기"}
+                {isSubmitting ? '등록 중...' : '사전신청 완료하기'}
               </button>
             </form>
             {message && (
               <div
                 className={`mt-3 px-3 py-2 rounded-lg text-xs ${
-                  message.type === "success"
-                    ? "bg-green-50 text-green-700 border border-green-200"
-                    : "bg-red-50 text-red-700 border border-red-200"
+                  message.type === 'success'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
                 }`}
               >
                 {message.text}
@@ -307,7 +329,7 @@ export default function LandingPage() {
                       {user?.email}
                     </span>
                     <button
-                      onClick={() => router.push("/?page=home")}
+                      onClick={() => router.push('/?page=home')}
                       className="bg-white text-[#333D4B] border border-gray-300 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full font-semibold text-[12px] md:text-sm hover:bg-gray-100 transition whitespace-nowrap cursor-pointer"
                     >
                       내 대시보드
@@ -322,13 +344,13 @@ export default function LandingPage() {
                 ) : (
                   <>
                     <button
-                      onClick={() => router.push("/signin")}
+                      onClick={() => router.push('/signin')}
                       className="bg-white text-[#333D4B] border border-gray-300 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full font-semibold text-[12px] md:text-sm hover:bg-gray-100 transition whitespace-nowrap cursor-pointer"
                     >
                       로그인
                     </button>
                     <button
-                      onClick={() => router.push("/signup")}
+                      onClick={() => router.push('/signup')}
                       className="bg-white text-[#FF5722] border border-[#FF5722] px-3 py-1.5 md:px-5 md:py-2.5 rounded-full font-semibold text-[12px] md:text-sm hover:bg-orange-50 transition whitespace-nowrap cursor-pointer"
                     >
                       회원가입
@@ -344,9 +366,18 @@ export default function LandingPage() {
       <section className="min-h-screen flex flex-col justify-center items-center text-center pt-40 md:pt-44 pb-10 bg-gradient-to-b from-white via-orange-50/30 to-white relative overflow-hidden">
         {/* Background Animation Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-orange-200/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-300/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-orange-100/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s', animationDelay: '2s' }} />
+          <div
+            className="absolute top-20 left-10 w-72 h-72 bg-orange-200/20 rounded-full blur-3xl animate-pulse"
+            style={{ animationDuration: '4s' }}
+          />
+          <div
+            className="absolute bottom-20 right-10 w-96 h-96 bg-orange-300/10 rounded-full blur-3xl animate-pulse"
+            style={{ animationDuration: '6s', animationDelay: '1s' }}
+          />
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-orange-100/10 rounded-full blur-3xl animate-pulse"
+            style={{ animationDuration: '8s', animationDelay: '2s' }}
+          />
         </div>
 
         <div className="max-w-4xl px-6 relative z-10">
@@ -362,22 +393,41 @@ export default function LandingPage() {
               여기저기 흩어져 있지 않나요?
             </span>
           </h1>
-          <p className="text-lg md:text-2xl text-[#4A5568] font-semibold leading-relaxed mb-8 md:mb-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <p
+            className="text-lg md:text-2xl text-[#4A5568] font-semibold leading-relaxed mb-8 md:mb-8 animate-fade-in"
+            style={{ animationDelay: '0.2s' }}
+          >
             체험단 블로거를 위한 올인원 일정·정산 캘린더
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center animate-fade-in" style={{ animationDelay: '0.4s' }}>
+          <div
+            className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center animate-fade-in"
+            style={{ animationDelay: '0.4s' }}
+          >
             <button
               onClick={handleFreeTrial}
               className="group bg-gradient-to-r from-orange-600 to-orange-500 text-white px-5 md:px-8 py-2.5 md:py-4 rounded-full text-xs md:text-lg font-bold shadow-2xl shadow-orange-500/40 hover:shadow-orange-500/60 hover:scale-105 transition-all duration-300 flex items-center gap-2 cursor-pointer whitespace-nowrap"
             >
               <span className="md:hidden">무료 체험하기</span>
               <span className="hidden md:inline">지금 무료로 체험하기</span>
-              <svg className="w-3.5 h-3.5 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg
+                className="w-3.5 h-3.5 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>
-          <p className="mt-4 text-sm font-semibold text-[#FF5722] animate-fade-in" style={{ animationDelay: '0.6s' }}>
+          <p
+            className="mt-4 text-sm font-semibold text-[#FF5722] animate-fade-in"
+            style={{ animationDelay: '0.6s' }}
+          >
             회원가입 시 PRO 1개월 무료 혜택을 드려요.
           </p>
         </div>
@@ -391,8 +441,8 @@ export default function LandingPage() {
               체험단 마감 한 번만 깜빡해도, 바로 패널티.
             </h2>
             <p className="text-base md:text-xl text-[#8B95A1] font-medium">
-              정산 날짜 놓쳐서 손해 보고... 
-              <br/>
+              정산 날짜 놓쳐서 손해 보고...
+              <br />
               복잡한 엑셀과 메모장으로는 한계가 있더라고요.
             </p>
           </div>
@@ -412,17 +462,25 @@ export default function LandingPage() {
           </div>
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-[100px]">
             <div className="w-full md:w-auto md:flex-1 md:max-w-[500px] text-center md:text-left">
-              <span className="text-[#FF5722] font-bold text-sm md:text-lg mb-3 md:mb-4 block">일정 관리</span>
+              <span className="text-[#FF5722] font-bold text-sm md:text-lg mb-3 md:mb-4 block">
+                일정 관리
+              </span>
               <h2 className="text-2xl md:text-6xl font-bold leading-tight mb-4 md:mb-6 text-[#191F28]">
                 겹치는 일정,
                 <br />
                 한눈에 보여드려요
               </h2>
               <div className="text-base md:text-xl text-[#6B7684] leading-relaxed">
-                마감·방문·작성 일정이 흩어지지 않게,<br />
-                하루 단위로 해야 할 일만 깔끔하게 모아드립니다. <br/>
-                <span className="text-[14px] font-bold">마감초과는 🔥, 마감일은 숫자 핀으로 한눈에 구분해요 </span><br/>
-                <span className="text-[14px] font-bold">"제품 주문하기", "사장님께 방문 문자 보내기" 등 할 일을 쉽게 관리해요</span>
+                마감·방문·작성 일정이 흩어지지 않게,
+                <br />
+                하루 단위로 해야 할 일만 깔끔하게 모아드립니다. <br />
+                <span className="text-[14px] font-bold">
+                  마감초과는 🔥, 마감일은 숫자 핀으로 한눈에 구분해요{' '}
+                </span>
+                <br />
+                <span className="text-[14px] font-bold">
+                  "제품 주문하기", "사장님께 방문 문자 보내기" 등 할 일을 쉽게 관리해요
+                </span>
               </div>
             </div>
             <div className="w-full md:w-auto md:flex-shrink-0">
@@ -432,7 +490,9 @@ export default function LandingPage() {
                     <div className="inline-flex items-center gap-2 bg-white border border-neutral-200 shadow-sm px-3 py-1.5 rounded-full">
                       <span className="text-lg">🗒️</span>
                       <span className="text-[12px] font-semibold text-neutral-800">할 일</span>
-                      <span className="h-5 min-w-[18px] px-1.5 rounded-full bg-orange-500 text-white text-[10px] font-extrabold flex items-center justify-center">2</span>
+                      <span className="h-5 min-w-[18px] px-1.5 rounded-full bg-orange-500 text-white text-[10px] font-extrabold flex items-center justify-center">
+                        2
+                      </span>
                     </div>
                   </div>
 
@@ -440,37 +500,71 @@ export default function LandingPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <button className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 border border-neutral-200">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M15 18l-6-6 6-6" />
+                          </svg>
                         </button>
                         <div className="text-base font-extrabold text-neutral-900">2025년 12월</div>
                         <button className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 border border-neutral-200">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M9 18l6-6-6-6" />
+                          </svg>
                         </button>
                       </div>
-                      <button className="text-[11px] font-semibold text-orange-600 hover:text-orange-700">오늘로 이동</button>
+                      <button className="text-[11px] font-semibold text-orange-600 hover:text-orange-700">
+                        오늘로 이동
+                      </button>
                     </div>
 
                     <div className="grid grid-cols-7 text-center text-[11px] text-neutral-400 font-semibold">
-                      {["일","월","화","수","목","금","토"].map((d, idx) => (
-                        <div key={d} className={idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : ""}>{d}</div>
+                      {['일', '월', '화', '수', '목', '금', '토'].map((d, idx) => (
+                        <div
+                          key={d}
+                          className={idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : ''}
+                        >
+                          {d}
+                        </div>
                       ))}
                     </div>
 
                     <div className="grid grid-cols-7 gap-y-2 text-center">
-                      {[...Array(1)].map((_, i) => <div key={`emp-${i}`} className="h-9" />)}
-                      {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31].map((day) => {
+                      {[...Array(1)].map((_, i) => (
+                        <div key={`emp-${i}`} className="h-9" />
+                      ))}
+                      {[
+                        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+                        22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+                      ].map((day) => {
                         const meta: { overdue?: boolean; deadline?: number; reconfirm?: boolean } =
-                          day === 9 ? { overdue: true, deadline: 4 } :
-                          day === 16 ? { deadline: 1 } :
-                          {}
-                        const isSelected = [9,16].includes(day)
-                        const hasDeadline = !!meta.deadline
+                          day === 9
+                            ? { overdue: true, deadline: 4 }
+                            : day === 16
+                              ? { deadline: 1 }
+                              : {};
+                        const isSelected = [9, 16].includes(day);
+                        const hasDeadline = !!meta.deadline;
                         return (
                           <div
                             key={day}
                             className={`relative h-9 w-9 mx-auto flex items-center justify-center text-[11px] font-semibold rounded-full ${
-                              isSelected ? "shadow-[inset_0_0_0_2px_rgba(249,115,22,0.9)] text-orange-700" : "text-neutral-700"
-                            } ${hasDeadline ? "bg-white" : "bg-[#F5F6F8]"}`}
+                              isSelected
+                                ? 'shadow-[inset_0_0_0_2px_rgba(249,115,22,0.9)] text-orange-700'
+                                : 'text-neutral-700'
+                            } ${hasDeadline ? 'bg-white' : 'bg-[#F5F6F8]'}`}
                           >
                             {day}
                             {meta.deadline && (
@@ -484,7 +578,7 @@ export default function LandingPage() {
                               </span>
                             )}
                           </div>
-                        )
+                        );
                       })}
                     </div>
                   </div>
@@ -500,38 +594,52 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row-reverse items-center justify-center gap-6 md:gap-[100px]">
             <div className="w-full md:w-auto md:flex-1 md:max-w-[500px] md:ml-[100px] text-center md:text-left">
-              <span className="text-[#FF5722] font-bold text-sm md:text-lg mb-3 md:mb-4 block">수익 분석</span>
-                <h2 className="text-2xl md:text-6xl font-bold leading-tight mb-4 md:mb-6 text-[#191F28]">
-                  얼마 벌었는지
-                  <br />
-                  세어보지 않아도 돼요
-                </h2>
-                <p className="text-base md:text-xl text-[#6B7684] leading-relaxed">
-                  제공받은 서비스 금액부터 원고료까지.
-                  <br />
-                  이번 달 내가 만든 경제적 가치를
-                  <br />
-                  자동으로 계산해 드립니다.
-                </p>
+              <span className="text-[#FF5722] font-bold text-sm md:text-lg mb-3 md:mb-4 block">
+                수익 분석
+              </span>
+              <h2 className="text-2xl md:text-6xl font-bold leading-tight mb-4 md:mb-6 text-[#191F28]">
+                얼마 벌었는지
+                <br />
+                세어보지 않아도 돼요
+              </h2>
+              <p className="text-base md:text-xl text-[#6B7684] leading-relaxed">
+                제공받은 서비스 금액부터 원고료까지.
+                <br />
+                이번 달 내가 만든 경제적 가치를
+                <br />
+                자동으로 계산해 드립니다.
+              </p>
             </div>
             <div className="w-full md:w-auto md:flex-shrink-0">
               <div className="border-[10px] border-white rounded-[40px] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.12)] bg-[#F7F7F8] min-w-[300px] max-w-[360px] w-full mx-auto">
-                <div className="w-full aspect-[9/19.5] px-5 py-4 flex flex-col" style={{ height: '570px' }}>
+                <div
+                  className="w-full aspect-[9/19.5] px-5 py-4 flex flex-col"
+                  style={{ height: '570px' }}
+                >
                   {/* Hero Card */}
-                  <div className="rounded-[30px] p-5 mb-4 text-white" style={{ background: 'linear-gradient(135deg, #FF6F00 0%, #FF3D00 100%)' }}>
+                  <div
+                    className="rounded-[30px] p-5 mb-4 text-white"
+                    style={{ background: 'linear-gradient(135deg, #FF6F00 0%, #FF3D00 100%)' }}
+                  >
                     <div className="text-xs font-semibold opacity-90">이번 달 경제적 가치 💰</div>
                     <div className="text-3xl font-extrabold mb-2 tracking-tight">₩ 357,600</div>
                     <div className="flex gap-4 border-t border-white/20 pt-3">
                       <div className="flex-1">
-                        <div className="text-[9px] opacity-80 mb-0.5 font-medium">방어한 생활비</div>
+                        <div className="text-[9px] opacity-80 mb-0.5 font-medium">
+                          방어한 생활비
+                        </div>
                         <div className="text-xs font-bold">325,000</div>
                       </div>
                       <div className="flex-1 flex">
                         <div>
-                          <div className="text-[9px] opacity-80 mb-0.5 font-medium">부수입 관리</div>
+                          <div className="text-[9px] opacity-80 mb-0.5 font-medium">
+                            부수입 관리
+                          </div>
                           <div className="text-xs font-bold">32,600</div>
                         </div>
-                        <button className="h-5 px-1.5 bg-white/20 border border-white/30 rounded-lg text-[8px] text-white font-semibold ml-2">+ 추가</button>
+                        <button className="h-5 px-1.5 bg-white/20 border border-white/30 rounded-lg text-[8px] text-white font-semibold ml-2">
+                          + 추가
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -540,35 +648,51 @@ export default function LandingPage() {
                   <div className="bg-white rounded-3xl p-4 mb-3">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-sm font-bold">수입 상세 내역</div>
-                      <button className="text-[10px] text-neutral-600 font-semibold">전체 내역 보기 →</button>
+                      <button className="text-[10px] text-neutral-600 font-semibold">
+                        전체 내역 보기 →
+                      </button>
                     </div>
-                    
+
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
-                        <div className="text-xs font-semibold text-neutral-700">💰 방어한 생활비</div>
+                        <div className="text-xs font-semibold text-neutral-700">
+                          💰 방어한 생활비
+                        </div>
                         <div className="text-xs font-bold text-orange-600">325,000원</div>
                       </div>
                       <div className="space-y-2 pl-1">
                         <div className="flex items-center gap-2">
                           <div className="w-12 text-[10px] font-medium text-neutral-600">식품</div>
                           <div className="flex-1 bg-neutral-100 rounded-full h-1.5 overflow-hidden">
-                            <div className="h-full bg-orange-400 rounded-full" style={{ width: '50%' }} />
+                            <div
+                              className="h-full bg-orange-400 rounded-full"
+                              style={{ width: '50%' }}
+                            />
                           </div>
-                          <div className="w-8 text-right text-[9px] text-neutral-400 font-medium">50%</div>
+                          <div className="w-8 text-right text-[9px] text-neutral-400 font-medium">
+                            50%
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="w-12 text-[10px] font-medium text-neutral-600">뷰티</div>
                           <div className="flex-1 bg-neutral-100 rounded-full h-1.5 overflow-hidden">
-                            <div className="h-full bg-orange-400 rounded-full" style={{ width: '30%' }} />
+                            <div
+                              className="h-full bg-orange-400 rounded-full"
+                              style={{ width: '30%' }}
+                            />
                           </div>
-                          <div className="w-8 text-right text-[9px] text-neutral-400 font-medium">30%</div>
+                          <div className="w-8 text-right text-[9px] text-neutral-400 font-medium">
+                            30%
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <div className="text-xs font-semibold text-neutral-700">💵 부수입 (현금)</div>
+                        <div className="text-xs font-semibold text-neutral-700">
+                          💵 부수입 (현금)
+                        </div>
                         <div className="text-xs font-bold text-green-600">32,600원</div>
                       </div>
                     </div>
@@ -577,7 +701,9 @@ export default function LandingPage() {
                   {/* Trend Chart */}
                   <div className="bg-white rounded-3xl p-4 flex-1">
                     <div className="text-sm font-bold mb-0.5">월별 성장 추이</div>
-                    <div className="text-[9px] text-neutral-400 font-medium mb-3">지난 4개월간의 활동입니다</div>
+                    <div className="text-[9px] text-neutral-400 font-medium mb-3">
+                      지난 4개월간의 활동입니다
+                    </div>
                     <div className="flex justify-between items-end h-[100px]">
                       {[
                         { label: '9월', height: 30, value: '18만' },
@@ -585,9 +711,20 @@ export default function LandingPage() {
                         { label: '11월', height: 40, value: '21만' },
                         { label: '이번달', height: 85, active: true, value: '36만' },
                       ].map((month, i) => (
-                        <div key={i} className="w-[18%] rounded-lg relative flex justify-center" style={{ height: `${month.height}%`, background: month.active ? '#651FFF' : '#e5e5e5' }}>
-                          <span className="absolute -top-5 text-[9px] font-bold text-neutral-800">{month.value}</span>
-                          <span className="absolute -bottom-5 text-[9px] text-neutral-400 font-medium">{month.label}</span>
+                        <div
+                          key={i}
+                          className="w-[18%] rounded-lg relative flex justify-center"
+                          style={{
+                            height: `${month.height}%`,
+                            background: month.active ? '#651FFF' : '#e5e5e5',
+                          }}
+                        >
+                          <span className="absolute -top-5 text-[9px] font-bold text-neutral-800">
+                            {month.value}
+                          </span>
+                          <span className="absolute -bottom-5 text-[9px] text-neutral-400 font-medium">
+                            {month.label}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -604,19 +741,23 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-[100px]">
             <div className="w-full md:w-auto md:flex-1 md:max-w-[520px] text-center md:text-left">
-              <span className="text-[#FF5722] font-bold text-sm md:text-lg mb-3 md:mb-4 block">하루 1번 요약 알림</span>
-                <h2 className="text-2xl md:text-6xl font-bold leading-tight mb-4 md:mb-6 text-[#191F28]">
-                  아침 한 번, 
-                  <br />
-                  오늘 할 일 끝까지 챙겨드려요
-                </h2>
-                <p className="text-base md:text-xl text-[#6B7684] leading-relaxed">
-                  마감 임박 일정, 아직 못한 리뷰, 할 일 체크까지
-                  <br />
-                  하루 한 번 요약해서 알려드려요.
-                  <br />
-                  <span className="text-[13px]">지금은 이메일로, 곧 카카오 알림도 준비 중입니다.</span>
-                </p>
+              <span className="text-[#FF5722] font-bold text-sm md:text-lg mb-3 md:mb-4 block">
+                하루 1번 요약 알림
+              </span>
+              <h2 className="text-2xl md:text-6xl font-bold leading-tight mb-4 md:mb-6 text-[#191F28]">
+                아침 한 번,
+                <br />
+                오늘 할 일 끝까지 챙겨드려요
+              </h2>
+              <p className="text-base md:text-xl text-[#6B7684] leading-relaxed">
+                마감 임박 일정, 아직 못한 리뷰, 할 일 체크까지
+                <br />
+                하루 한 번 요약해서 알려드려요.
+                <br />
+                <span className="text-[13px]">
+                  지금은 이메일로, 곧 카카오 알림도 준비 중입니다.
+                </span>
+              </p>
             </div>
             <div className="w-full md:w-auto md:flex-shrink-0">
               <div className="border-[10px] border-white rounded-[40px] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.14)] bg-[#0F172A] min-w-[300px] max-w-[380px] w-full mx-auto">
@@ -629,7 +770,9 @@ export default function LandingPage() {
                     <div className="flex items-start justify-between mb-5 relative z-10">
                       <div>
                         <p className="text-[11px] font-semibold text-orange-200/90">Daily Brief</p>
-                        <h3 className="text-xl font-bold text-white leading-tight">오늘의 요약 알림</h3>
+                        <h3 className="text-xl font-bold text-white leading-tight">
+                          오늘의 요약 알림
+                        </h3>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-white/10 border border-white/10 backdrop-blur">
@@ -645,7 +788,9 @@ export default function LandingPage() {
                       <div className="p-4 rounded-2xl bg-white/10 border border-white/10 backdrop-blur">
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-sm font-bold text-white">마감 임박 · D-1</span>
-                          <span className="text-[11px] px-2 py-1 rounded-full bg-orange-500/20 text-orange-200 font-semibold">우선순위</span>
+                          <span className="text-[11px] px-2 py-1 rounded-full bg-orange-500/20 text-orange-200 font-semibold">
+                            우선순위
+                          </span>
                         </div>
                         <p className="text-[13px] text-orange-50/90 font-medium">
                           오늘 방문 & 촬영 마치고 리뷰 초안까지 작성해두세요.
@@ -653,17 +798,31 @@ export default function LandingPage() {
                       </div>
 
                       {[
-                        { title: '방문 일정', detail: '오후 2시 · 강남 카페', status: '완료 체크 필요', tone: 'border-white/10 bg-white/5 text-white' },
-                        { title: '리뷰 작성', detail: '초안 작성 & 사진 5장 첨부', status: '미완료', tone: 'border-orange-200/20 bg-orange-500/5 text-orange-50' },
-                        { title: '제출 알림', detail: 'URL 제출 · 내일까지', status: '예정', tone: 'border-white/10 bg-white/5 text-white' },
+                        {
+                          title: '방문 일정',
+                          detail: '오후 2시 · 강남 카페',
+                          status: '완료 체크 필요',
+                          tone: 'border-white/10 bg-white/5 text-white',
+                        },
+                        {
+                          title: '리뷰 작성',
+                          detail: '초안 작성 & 사진 5장 첨부',
+                          status: '미완료',
+                          tone: 'border-orange-200/20 bg-orange-500/5 text-orange-50',
+                        },
+                        {
+                          title: '제출 알림',
+                          detail: 'URL 제출 · 내일까지',
+                          status: '예정',
+                          tone: 'border-white/10 bg-white/5 text-white',
+                        },
                       ].map((item, idx) => (
-                        <div
-                          key={idx}
-                          className={`p-3.5 rounded-2xl border ${item.tone}`}
-                        >
+                        <div key={idx} className={`p-3.5 rounded-2xl border ${item.tone}`}>
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                              <span className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-sm">✔</span>
+                              <span className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-sm">
+                                ✔
+                              </span>
                               <div>
                                 <p className="text-sm font-bold">{item.title}</p>
                                 <p className="text-[12px] text-white/70">{item.detail}</p>
@@ -679,10 +838,16 @@ export default function LandingPage() {
 
                     <div className="mt-5 flex items-center justify-between text-[12px] text-white/80 relative z-10">
                       <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 font-semibold">이메일 발송 중</span>
-                        <span className="px-2.5 py-1 rounded-full bg-orange-500/15 border border-orange-300/30 text-orange-50 font-semibold">카카오톡 예정</span>
+                        <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 font-semibold">
+                          이메일 발송 중
+                        </span>
+                        <span className="px-2.5 py-1 rounded-full bg-orange-500/15 border border-orange-300/30 text-orange-50 font-semibold">
+                          카카오톡 예정
+                        </span>
                       </div>
-                      <span className="text-[11px] text-orange-100 font-semibold">채널 확장 준비 중</span>
+                      <span className="text-[11px] text-orange-100 font-semibold">
+                        채널 확장 준비 중
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -697,27 +862,39 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row-reverse items-center justify-center gap-6 md:gap-[100px]">
             <div className="w-full md:w-auto md:flex-1 md:max-w-[500px] md:ml-[100px] text-center md:text-left">
-              <span className="text-[#FF5722] font-bold text-sm md:text-lg mb-3 md:mb-4 block">활동 내역 정리</span>
-                <h2 className="text-2xl md:text-6xl font-bold leading-tight mb-4 md:mb-6 text-[#191F28]">
-                  내 활동 내역,
-                  <br />
-                  엑셀로 한 번에
-                </h2>
-                <p className="text-base md:text-xl text-[#6B7684] leading-relaxed">
-                  그동안의 체험단 활동을 한눈에.
-                  <br />
-                  엑셀 파일로 다운로드하면
-                  <br />
-                  내역 정리가 간편해집니다.
-                </p>
+              <span className="text-[#FF5722] font-bold text-sm md:text-lg mb-3 md:mb-4 block">
+                활동 내역 정리
+              </span>
+              <h2 className="text-2xl md:text-6xl font-bold leading-tight mb-4 md:mb-6 text-[#191F28]">
+                내 활동 내역,
+                <br />
+                엑셀로 한 번에
+              </h2>
+              <p className="text-base md:text-xl text-[#6B7684] leading-relaxed">
+                그동안의 체험단 활동을 한눈에.
+                <br />
+                엑셀 파일로 다운로드하면
+                <br />
+                내역 정리가 간편해집니다.
+              </p>
             </div>
             <div className="w-full md:w-auto md:flex-shrink-0">
               <div className="border-[10px] border-white rounded-[40px] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.12)] bg-[#F7F7F8] min-w-[300px] max-w-[360px] w-full mx-auto">
-                <div className="w-full aspect-[9/19.5] px-5 py-4 flex flex-col" style={{ height: '500px' }}>
+                <div
+                  className="w-full aspect-[9/19.5] px-5 py-4 flex flex-col"
+                  style={{ height: '500px' }}
+                >
                   {/* Header */}
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-bold text-[#191F28]">활동 내역</h2>
-                    <div className="w-10 h-10 rounded-full bg-neutral-200" style={{ backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix')", backgroundSize: 'cover' }} />
+                    <div
+                      className="w-10 h-10 rounded-full bg-neutral-200"
+                      style={{
+                        backgroundImage:
+                          "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix')",
+                        backgroundSize: 'cover',
+                      }}
+                    />
                   </div>
 
                   {/* Excel Preview Card */}
@@ -726,7 +903,14 @@ export default function LandingPage() {
                     <div className="absolute inset-0 backdrop-blur-[3px] bg-white/40 z-10 flex items-center justify-center">
                       <div className="text-center">
                         <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                          <svg
+                            width="32"
+                            height="32"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="white"
+                            strokeWidth="2"
+                          >
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
                           </svg>
                         </div>
@@ -737,8 +921,10 @@ export default function LandingPage() {
 
                     {/* Excel Table Preview (Blurred) */}
                     <div className="space-y-2">
-                      <div className="text-xs font-bold text-neutral-700 mb-3">📊 2025년 활동 요약</div>
-                      
+                      <div className="text-xs font-bold text-neutral-700 mb-3">
+                        📊 2025년 활동 요약
+                      </div>
+
                       {/* Table Header */}
                       <div className="grid grid-cols-4 gap-1 text-[9px] font-bold text-neutral-600 pb-2 border-b">
                         <div>날짜</div>
@@ -755,12 +941,17 @@ export default function LandingPage() {
                         { date: '11/25', name: '헬스케어', value: '52,000', status: '완료' },
                         { date: '11/20', name: '패션 리뷰', value: '29,000', status: '완료' },
                       ].map((row, idx) => (
-                        <div key={idx} className="grid grid-cols-4 gap-1 text-[9px] py-2 border-b border-neutral-100">
+                        <div
+                          key={idx}
+                          className="grid grid-cols-4 gap-1 text-[9px] py-2 border-b border-neutral-100"
+                        >
                           <div className="text-neutral-600">{row.date}</div>
                           <div className="text-neutral-800 font-medium">{row.name}</div>
                           <div className="text-right text-neutral-700">₩{row.value}</div>
                           <div className="text-right">
-                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[8px] font-semibold">{row.status}</span>
+                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[8px] font-semibold">
+                              {row.status}
+                            </span>
                           </div>
                         </div>
                       ))}
@@ -794,12 +985,13 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-[#F9FAFB] rounded-3xl p-8">
               <div className="flex items-center gap-3 mb-4">
-                <div 
-                  className="w-12 h-12 rounded-full bg-orange-100" 
-                  style={{ 
-                    backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Hyeyoung&backgroundColor=ffdfbf')", 
-                    backgroundSize: 'cover' 
-                  }} 
+                <div
+                  className="w-12 h-12 rounded-full bg-orange-100"
+                  style={{
+                    backgroundImage:
+                      "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Hyeyoung&backgroundColor=ffdfbf')",
+                    backgroundSize: 'cover',
+                  }}
                 />
                 <div>
                   <div className="font-bold text-[#191F28]">김혜영 님</div>
@@ -807,17 +999,19 @@ export default function LandingPage() {
                 </div>
               </div>
               <p className="text-[#4A5568] leading-relaxed">
-                "엑셀로 정리하다가 날짜 착각해서 패널티 받은 적 있어요. 이제는 알림도 오고 한눈에 보여서 너무 편해요!"
+                "엑셀로 정리하다가 날짜 착각해서 패널티 받은 적 있어요. 이제는 알림도 오고 한눈에
+                보여서 너무 편해요!"
               </p>
             </div>
             <div className="bg-[#F9FAFB] rounded-3xl p-8">
               <div className="flex items-center gap-3 mb-4">
-                <div 
-                  className="w-12 h-12 rounded-full bg-purple-100" 
-                  style={{ 
-                    backgroundImage: "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Jieun&backgroundColor=e0d4f7')", 
-                    backgroundSize: 'cover' 
-                  }} 
+                <div
+                  className="w-12 h-12 rounded-full bg-purple-100"
+                  style={{
+                    backgroundImage:
+                      "url('https://api.dicebear.com/7.x/avataaars/svg?seed=Jieun&backgroundColor=e0d4f7')",
+                    backgroundSize: 'cover',
+                  }}
                 />
                 <div>
                   <div className="font-bold text-[#191F28]">박지은 님</div>
@@ -825,7 +1019,8 @@ export default function LandingPage() {
                 </div>
               </div>
               <p className="text-[#4A5568] leading-relaxed">
-                "한 달에 얼마 벌었는지 따로 계산 안 해도 되니까 좋아요. 수익 관리가 이렇게 쉬울 줄이야!"
+                "한 달에 얼마 벌었는지 따로 계산 안 해도 되니까 좋아요. 수익 관리가 이렇게 쉬울
+                줄이야!"
               </p>
             </div>
           </div>
@@ -840,8 +1035,7 @@ export default function LandingPage() {
           </h2>
           <p className="text-base md:text-lg text-[#6B7684] mb-12">
             누구나 무료로 시작할 수 있어요.
-            <br />
-            더 강력한 기능이 필요하다면 PRO를 선택하세요.
+            <br />더 강력한 기능이 필요하다면 PRO를 선택하세요.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
@@ -855,7 +1049,9 @@ export default function LandingPage() {
                 <li>✔ 할 일 관리</li>
                 <li>✔ 이번 달 수익/통계 페이지 제공</li>
                 <li>✔ 수익 자랑하기</li>
-                <li className="pl-6 mt-[-4px] text-xs">( 수익 자랑하기는 12월 중으로 찾아올게요. 조금만 기다려주세요 ! )</li>
+                <li className="pl-6 mt-[-4px] text-xs">
+                  ( 수익 자랑하기는 12월 중으로 찾아올게요. 조금만 기다려주세요 ! )
+                </li>
               </ul>
               <div className="w-full pt-6 border-t border-gray-200">
                 <div className="text-3xl font-bold mb-6 text-[#191F28]">₩0</div>
@@ -877,7 +1073,10 @@ export default function LandingPage() {
               <p className="text-[#6B7684] mb-6">더 깊고 편리한 리뷰 관리 기능</p>
               <ul className="text-[16px] text-[#333D4B] space-y-3 mb-8 flex-grow font-medium">
                 <li>✨ 하루 1번 요약 알림 제공 </li>
-                <li className="pl-6 mt-[-4px] text-xs">( 당일 아침, 오늘 해야 할 방문/작성/발행 일정 등, 요약 내용을 깔끔하게 알려드려요. )</li>
+                <li className="pl-6 mt-[-4px] text-xs">
+                  ( 당일 아침, 오늘 해야 할 방문/작성/발행 일정 등, 요약 내용을 깔끔하게 알려드려요.
+                  )
+                </li>
                 <li>✨ 활동 내역 엑셀 다운로드</li>
                 <li>✨ 실시간 랭킹 리포트 제공</li>
                 <li>✨ 월별 수익 내용 전체 조회 가능</li>
@@ -913,7 +1112,8 @@ export default function LandingPage() {
                 정말 무료로 사용할 수 있나요?
               </summary>
               <p className="mt-4 text-[#6B7684] text-sm md:text-base leading-relaxed">
-                네! 기본 기능은 완전 무료입니다. 일정 관리, 수익 조회, 할 일 체크 등 핵심 기능을 모두 사용하실 수 있어요. 지금 바로 회원가입 후 이용해 보세요 :)
+                네! 기본 기능은 완전 무료입니다. 일정 관리, 수익 조회, 할 일 체크 등 핵심 기능을
+                모두 사용하실 수 있어요. 지금 바로 회원가입 후 이용해 보세요 :)
               </p>
             </details>
             <details className="bg-white rounded-2xl p-6 shadow-sm">
@@ -921,7 +1121,8 @@ export default function LandingPage() {
                 PRO 버전은 언제 필요한가요?
               </summary>
               <p className="mt-4 text-[#6B7684] text-sm md:text-base leading-relaxed">
-                매일 요약된 알림을 받고 싶거나, 엑셀로 활동 내역을 정리하고 싶을 때 PRO가 유용해요. 월별 요약 리포트도 볼 수 있어요.
+                매일 요약된 알림을 받고 싶거나, 엑셀로 활동 내역을 정리하고 싶을 때 PRO가 유용해요.
+                월별 요약 리포트도 볼 수 있어요.
               </p>
             </details>
             <details className="bg-white rounded-2xl p-6 shadow-sm">
@@ -929,7 +1130,8 @@ export default function LandingPage() {
                 사전 등록하면 어떤 혜택이 있나요?
               </summary>
               <p className="mt-4 text-[#6B7684] text-sm md:text-base leading-relaxed">
-                사전 등록자에게는 PRO 버전 3개월 무료 혜택을 드립니다. 정식 출시 전 가장 먼저 알림도 받으실 수 있어요.
+                사전 등록자에게는 PRO 버전 3개월 무료 혜택을 드립니다. 정식 출시 전 가장 먼저 알림도
+                받으실 수 있어요.
               </p>
             </details>
             <details className="bg-white rounded-2xl p-6 shadow-sm">
@@ -966,5 +1168,5 @@ export default function LandingPage() {
         </div>
       </footer>
     </div>
-  )
+  );
 }

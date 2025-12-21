@@ -1,42 +1,41 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import Link from "next/link"
-import { getSupabaseClient } from "@/lib/supabase"
-import { getRedirectUrl } from "@/lib/getRedirectUrl"
+import { useState } from 'react';
+import Link from 'next/link';
+import { getSupabaseClient } from '@/lib/supabase';
+import { getRedirectUrl } from '@/lib/getRedirectUrl';
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setMessage(null)
-    setLoading(true)
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+    setLoading(true);
 
     try {
-      const supabase = getSupabaseClient()
+      const supabase = getSupabaseClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: getRedirectUrl("/reset-password"),
-      })
-
+        redirectTo: getRedirectUrl('/reset-password'),
+      });
 
       if (error) {
-        setError("비밀번호 재설정 이메일 발송에 실패했습니다.")
-        return
+        setError('비밀번호 재설정 이메일 발송에 실패했습니다.');
+        return;
       }
 
-      setMessage("이메일을 확인하셔서 안내된 링크로 비밀번호를 재설정하세요.")
+      setMessage('이메일을 확인하셔서 안내된 링크로 비밀번호를 재설정하세요.');
     } catch (err) {
-      console.error("비밀번호 찾기 오류:", err)
-      setError("문제가 발생했습니다. 잠시 후 다시 시도해주세요.")
+      console.error('비밀번호 찾기 오류:', err);
+      setError('문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-[#F2F4F6] flex items-center justify-center p-4">
@@ -60,9 +59,7 @@ export default function ForgotPasswordPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#333D4B] mb-2">
-              이메일
-            </label>
+            <label className="block text-sm font-medium text-[#333D4B] mb-2">이메일</label>
             <input
               type="email"
               value={email}
@@ -78,7 +75,7 @@ export default function ForgotPasswordPage() {
             disabled={loading}
             className="w-full bg-[#FF5722] text-white py-3 rounded-xl font-semibold hover:bg-[#E64A19] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            {loading ? "전송 중..." : "비밀번호 재설정 링크 받기"}
+            {loading ? '전송 중...' : '비밀번호 재설정 링크 받기'}
           </button>
         </form>
 
@@ -89,5 +86,5 @@ export default function ForgotPasswordPage() {
         </p>
       </div>
     </div>
-  )
+  );
 }

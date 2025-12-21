@@ -1,9 +1,9 @@
 // components/MonthlyReport.tsx
-"use client";
-import Link from "next/link";
+'use client';
+import Link from 'next/link';
 import { Award, Zap, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useMonthlyRanking } from '@/hooks/use-monthly-ranking';
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation';
 
 const currencyFormatter = new Intl.NumberFormat('ko-KR', {
   style: 'currency',
@@ -24,19 +24,19 @@ const anonymousAliases = [
   '노을 속 감귤',
   '초코 모카팡',
   '밤하늘 표류자',
-]
+];
 
 const getAnonymousAlias = (rank?: number) => {
   if (rank == null) {
-    return '숨은 별님'
+    return '숨은 별님';
   }
 
-  const index = (rank - 1) % anonymousAliases.length
-  return anonymousAliases[index]
-}
+  const index = (rank - 1) % anonymousAliases.length;
+  return anonymousAliases[index];
+};
 
 const MonthlyReport = () => {
-    const router = useRouter()
+  const router = useRouter();
   const { monthlyRanking, loading: rankingLoading } = useMonthlyRanking();
 
   const rankLabel = monthlyRanking?.rank ?? (rankingLoading ? '...' : '-');
@@ -45,11 +45,12 @@ const MonthlyReport = () => {
     : rankingLoading
       ? '순위를 확인 중이에요'
       : '순위 기록이 없습니다';
-  const topPercentText = monthlyRanking?.topPercent != null
-    ? `상위 ${monthlyRanking.topPercent}% 메이커 등급`
-    : rankingLoading
-      ? '순위를 확인 중이에요'
-      : '상위 % 정보가 없습니다';
+  const topPercentText =
+    monthlyRanking?.topPercent != null
+      ? `상위 ${monthlyRanking.topPercent}% 메이커 등급`
+      : rankingLoading
+        ? '순위를 확인 중이에요'
+        : '상위 % 정보가 없습니다';
 
   const surroundingUsers = monthlyRanking?.surroundingUsers ?? [];
 
@@ -60,7 +61,7 @@ const MonthlyReport = () => {
         <div className="flex items-center justify-between pt-7 mb-3">
           <button
             type="button"
-            onClick={() => router.push("/?page=profile")}
+            onClick={() => router.push('/?page=profile')}
             className="flex items-center gap-2 text-sm font-semibold text-white"
           >
             <ChevronLeft size={16} />
@@ -70,7 +71,9 @@ const MonthlyReport = () => {
         <header className="mb-4 pt-4 flex justify-between items-end">
           <div>
             <div className="flex items-center gap-1.5 mb-2">
-              <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-[10px] font-black px-2 py-0.5 rounded-sm text-black">PRO</span>
+              <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-[10px] font-black px-2 py-0.5 rounded-sm text-black">
+                PRO
+              </span>
               <span className="text-gray-500 text-xs font-medium">실시간 업데이트 중</span>
             </div>
             {/* <h1 className="text-2xl font-bold tracking-tight leading-tight">
@@ -86,19 +89,18 @@ const MonthlyReport = () => {
         </header>
 
         <div className="flex flex-col gap-5">
-          
           {/* Card 1: 실시간 수익 & 랭킹 (Main Dashboard) */}
           <section className="bg-[#1c1c1e] rounded-[28px] p-6">
             <div className="flex justify-between items-start mb-6">
               <span className="text-gray-400 text-sm font-medium">이번 달 실시간 수익 랭킹</span>
               <span className="text-[#3182f6] text-xs font-bold flex items-center">
-                LIVE <span className="ml-1 w-1.5 h-1.5 bg-[#3182f6] rounded-full animate-pulse"></span>
+                LIVE{' '}
+                <span className="ml-1 w-1.5 h-1.5 bg-[#3182f6] rounded-full animate-pulse"></span>
               </span>
             </div>
-            
+
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#3182f6] to-[#a0c4ff] flex items-center justify-center text-2xl font-black">
-              </div>
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#3182f6] to-[#a0c4ff] flex items-center justify-center text-2xl font-black"></div>
               <div>
                 <p className="text-2xl font-extrabold tracking-tighter">{topPercentText}</p>
               </div>
@@ -107,9 +109,10 @@ const MonthlyReport = () => {
             <div className="space-y-4">
               <div className="flex justify-between items-center py-3 border-t border-gray-800">
                 <span className="text-gray-400 text-[15px]">이번달 경제적 가치</span>
-                <span className="font-bold text-lg">{formatCurrency(monthlyRanking?.econValue ?? 0)}</span>
+                <span className="font-bold text-lg">
+                  {formatCurrency(monthlyRanking?.econValue ?? 0)}
+                </span>
               </div>
-             
             </div>
           </section>
 
@@ -148,9 +151,7 @@ const MonthlyReport = () => {
                   >
                     <div className="flex items-center gap-3">
                       <span className={`ml-3 text-[15px] ${user.isCurrentUser ? 'font-bold' : ''}`}>
-                        {user.isCurrentUser
-                          ? '나 (본인)'
-                          : `${getAnonymousAlias(user.rank)}`}
+                        {user.isCurrentUser ? '나 (본인)' : `${getAnonymousAlias(user.rank)}`}
                       </span>
                     </div>
                     <span className="text-sm font-medium">{formatCurrency(user.econValue)}</span>
@@ -159,7 +160,7 @@ const MonthlyReport = () => {
               )}
             </div>
           </section>
-          
+
           <div className="mt-4 flex justify-center pb-10">
             <Link
               href="/?page=home"
@@ -169,7 +170,6 @@ const MonthlyReport = () => {
               <ChevronRight className="ml-2 w-4 h-4 text-[#3182f6]" />
             </Link>
           </div>
-
         </div>
       </div>
     </div>

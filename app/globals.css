@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -75,8 +75,8 @@
 }
 
 @theme inline {
-  --font-sans: "Pretendard", "Geist", "Geist Fallback";
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --font-sans: 'Pretendard', 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -128,23 +128,22 @@
   html {
     -webkit-text-size-adjust: 100%;
   }
-  
+
   /* 모바일 화면에서만 적용 (데스크탑 레이아웃 보호) */
   @media screen and (max-width: 768px) {
-    
     /* 텍스트 입력 관련 태그만 타겟팅 */
-    input[type="text"],
-    input[type="password"],
-    input[type="email"],
-    input[type="number"],
-    input[type="tel"],
-    input[type="search"],
-    input[type="url"],
+    input[type='text'],
+    input[type='password'],
+    input[type='email'],
+    input[type='number'],
+    input[type='tel'],
+    input[type='search'],
+    input[type='url'],
     textarea {
-      font-size: 16px !important;  /*  자동 확대 방지 (필수) */
+      font-size: 16px !important; /*  자동 확대 방지 (필수) */
     }
   }
-  
+
   /* 모바일 뷰포트 높이 최적화 */
   @supports (-webkit-touch-callout: none) {
     body {
@@ -172,28 +171,28 @@
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: transparent;
     border-radius: 3px;
   }
-  
+
   .scrollbar-thin.scrollbar-thumb-neutral-300::-webkit-scrollbar-thumb {
     background-color: rgb(212 212 212);
   }
-  
+
   .scrollbar-thin.scrollbar-track-transparent::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .scrollbar-thin:hover::-webkit-scrollbar-thumb {
     background-color: rgb(163 163 163);
   }

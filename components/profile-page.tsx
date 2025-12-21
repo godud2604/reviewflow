@@ -1,16 +1,16 @@
-"use client"
+'use client';
 
-import { useEffect, useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
-import * as XLSX from "xlsx"
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import * as XLSX from 'xlsx';
 
-import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/hooks/use-auth"
-import { useSchedules } from "@/hooks/use-schedules"
-import type { UserProfile } from "@/hooks/use-user-profile"
-import { getProfileImageUrl } from "@/lib/storage"
-import { getSupabaseClient } from "@/lib/supabase"
-import { resolveTier } from "@/lib/tier"
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { useSchedules } from '@/hooks/use-schedules';
+import type { UserProfile } from '@/hooks/use-user-profile';
+import { getProfileImageUrl } from '@/lib/storage';
+import { getSupabaseClient } from '@/lib/supabase';
+import { resolveTier } from '@/lib/tier';
 import {
   Dialog,
   DialogContent,
@@ -18,352 +18,358 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from '@/components/ui/select';
 
 const formatMonthLabel = (monthKey: string) => {
-  const [year, month] = monthKey.split("-")
-  return `${year}년 ${month}월`
-}
+  const [year, month] = monthKey.split('-');
+  return `${year}년 ${month}월`;
+};
 
 const getMonthKeyFromDate = (raw?: string) => {
-  if (!raw) return null
-  const trimmed = raw.trim()
-  if (!trimmed) return null
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
 
-  const hyphenMatch = trimmed.match(/^(\d{4})-(\d{1,2})/)
+  const hyphenMatch = trimmed.match(/^(\d{4})-(\d{1,2})/);
   if (hyphenMatch) {
-    return `${hyphenMatch[1]}-${hyphenMatch[2].padStart(2, "0")}`
+    return `${hyphenMatch[1]}-${hyphenMatch[2].padStart(2, '0')}`;
   }
 
-  const dotMatch = trimmed.match(/^(\d{4})\.(\d{1,2})/)
+  const dotMatch = trimmed.match(/^(\d{4})\.(\d{1,2})/);
   if (dotMatch) {
-    return `${dotMatch[1]}-${dotMatch[2].padStart(2, "0")}`
+    return `${dotMatch[1]}-${dotMatch[2].padStart(2, '0')}`;
   }
 
-  const parts = trimmed.split(/[^\d]/).filter(Boolean)
+  const parts = trimmed.split(/[^\d]/).filter(Boolean);
   if (parts.length >= 2 && parts[0].length === 4) {
-    return `${parts[0]}-${parts[1].padStart(2, "0")}`
+    return `${parts[0]}-${parts[1].padStart(2, '0')}`;
   }
 
-  const parsed = new Date(trimmed)
+  const parsed = new Date(trimmed);
   if (!Number.isNaN(parsed.getTime())) {
-    const year = parsed.getFullYear().toString()
-    const month = (parsed.getMonth() + 1).toString().padStart(2, "0")
-    return `${year}-${month}`
+    const year = parsed.getFullYear().toString();
+    const month = (parsed.getMonth() + 1).toString().padStart(2, '0');
+    return `${year}-${month}`;
   }
 
-  return null
-}
+  return null;
+};
 
-const PRO_TIER_DURATION_MONTHS = 3
-const COUPON_TIER_DURATION_MONTHS = 3
+const PRO_TIER_DURATION_MONTHS = 3;
+const COUPON_TIER_DURATION_MONTHS = 3;
 
 const formatExpiryLabel = (value?: string | null) => {
-  if (!value) return null
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return null
-  return `${parsed.getFullYear()}년 ${parsed.getMonth() + 1}월 ${parsed.getDate()}일`
-}
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return `${parsed.getFullYear()}년 ${parsed.getMonth() + 1}월 ${parsed.getDate()}일`;
+};
 
 const getDeadlineTimestamp = (schedule: { dead?: string; visit?: string }) => {
-  const target = schedule.dead || schedule.visit
-  if (!target) return Number.POSITIVE_INFINITY
-  const parsed = new Date(target)
-  return Number.isNaN(parsed.getTime()) ? Number.POSITIVE_INFINITY : parsed.getTime()
-}
+  const target = schedule.dead || schedule.visit;
+  if (!target) return Number.POSITIVE_INFINITY;
+  const parsed = new Date(target);
+  return Number.isNaN(parsed.getTime()) ? Number.POSITIVE_INFINITY : parsed.getTime();
+};
 
 type ProfilePageProps = {
-  profile: UserProfile | null
-  refetchUserProfile: () => Promise<void>
-}
+  profile: UserProfile | null;
+  refetchUserProfile: () => Promise<void>;
+};
 
 export default function ProfilePage({ profile, refetchUserProfile }: ProfilePageProps) {
-  const router = useRouter()
-  const { toast } = useToast()
-  const { user: authUser, signOut } = useAuth()
-  const { schedules } = useSchedules()
+  const router = useRouter();
+  const { toast } = useToast();
+  const { user: authUser, signOut } = useAuth();
+  const { schedules } = useSchedules();
 
-  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [downloadScope, setDownloadScope] = useState("all")
-  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false)
-  const [couponCode, setCouponCode] = useState("")
-  const [isRedeemingCoupon, setIsRedeemingCoupon] = useState(false)
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [downloadScope, setDownloadScope] = useState('all');
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [isRedeemingCoupon, setIsRedeemingCoupon] = useState(false);
 
   useEffect(() => {
     if (!profile?.profileImagePath) {
-      setProfileImageUrl(null)
-      return
+      setProfileImageUrl(null);
+      return;
     }
 
-    let isCurrent = true
+    let isCurrent = true;
 
     getProfileImageUrl(profile.profileImagePath)
       .then((url) => {
         if (isCurrent) {
-          setProfileImageUrl(url)
+          setProfileImageUrl(url);
         }
       })
       .catch(() => {
         if (isCurrent) {
-          setProfileImageUrl(null)
+          setProfileImageUrl(null);
         }
-      })
+      });
 
     return () => {
-      isCurrent = false
-    }
-  }, [profile?.profileImagePath])
+      isCurrent = false;
+    };
+  }, [profile?.profileImagePath]);
 
-  const metadata = (authUser?.user_metadata ?? {}) as Record<string, unknown>
+  const metadata = (authUser?.user_metadata ?? {}) as Record<string, unknown>;
   const { tier, isPro } = resolveTier({
     profileTier: profile?.tier ?? undefined,
     metadata,
-  })
-  const tierDurationMonths = profile?.tierDurationMonths ?? 0
-  const displayTierDuration = tierDurationMonths > 0 ? tierDurationMonths : PRO_TIER_DURATION_MONTHS
-  const tierExpiryLabel = formatExpiryLabel(profile?.tierExpiresAt)
+  });
+  const tierDurationMonths = profile?.tierDurationMonths ?? 0;
+  const displayTierDuration =
+    tierDurationMonths > 0 ? tierDurationMonths : PRO_TIER_DURATION_MONTHS;
+  const tierExpiryLabel = formatExpiryLabel(profile?.tierExpiresAt);
 
-  const displayName = profile?.nickname ?? ""
-  const emailLabel = authUser?.email ?? "등록된 이메일이 없습니다"
-  const displayedImage = profileImageUrl
+  const displayName = profile?.nickname ?? '';
+  const emailLabel = authUser?.email ?? '등록된 이메일이 없습니다';
+  const displayedImage = profileImageUrl;
 
   const scheduleMonthOptions = useMemo(() => {
-    const monthMap = new Map<string, string>()
+    const monthMap = new Map<string, string>();
     schedules.forEach((schedule) => {
-      const monthKey = getMonthKeyFromDate(schedule.visit) ?? getMonthKeyFromDate(schedule.dead)
+      const monthKey = getMonthKeyFromDate(schedule.visit) ?? getMonthKeyFromDate(schedule.dead);
       if (monthKey) {
-        monthMap.set(monthKey, formatMonthLabel(monthKey))
+        monthMap.set(monthKey, formatMonthLabel(monthKey));
       }
-    })
+    });
 
     return Array.from(monthMap.entries())
       .sort(([a], [b]) => b.localeCompare(a))
-      .map(([value, label]) => ({ value, label }))
-  }, [schedules])
+      .map(([value, label]) => ({ value, label }));
+  }, [schedules]);
 
   useEffect(() => {
-    if (downloadScope !== "all" && !scheduleMonthOptions.some((option) => option.value === downloadScope)) {
-      setDownloadScope("all")
+    if (
+      downloadScope !== 'all' &&
+      !scheduleMonthOptions.some((option) => option.value === downloadScope)
+    ) {
+      setDownloadScope('all');
     }
-  }, [downloadScope, scheduleMonthOptions])
+  }, [downloadScope, scheduleMonthOptions]);
 
   const filteredSchedules = useMemo(() => {
-    if (downloadScope === "all") {
-      return schedules
+    if (downloadScope === 'all') {
+      return schedules;
     }
 
     return schedules.filter((schedule) => {
-      const visitKey = getMonthKeyFromDate(schedule.visit)
-      const deadKey = getMonthKeyFromDate(schedule.dead)
-      return visitKey === downloadScope || deadKey === downloadScope
-    })
-  }, [schedules, downloadScope])
+      const visitKey = getMonthKeyFromDate(schedule.visit);
+      const deadKey = getMonthKeyFromDate(schedule.dead);
+      return visitKey === downloadScope || deadKey === downloadScope;
+    });
+  }, [schedules, downloadScope]);
 
   const schedulesSortedByDeadline = useMemo(() => {
-    return [...filteredSchedules].sort((a, b) => getDeadlineTimestamp(a) - getDeadlineTimestamp(b))
-  }, [filteredSchedules])
+    return [...filteredSchedules].sort((a, b) => getDeadlineTimestamp(a) - getDeadlineTimestamp(b));
+  }, [filteredSchedules]);
 
-  const downloadScopeLabel = downloadScope === "all" ? "전체 활동" : formatMonthLabel(downloadScope)
+  const downloadScopeLabel =
+    downloadScope === 'all' ? '전체 활동' : formatMonthLabel(downloadScope);
   const downloadSummaryMessage = filteredSchedules.length
     ? `${downloadScopeLabel} 기준 ${filteredSchedules.length}건을 준비합니다.`
-    : "활동 기록을 추가하면 다운로드를 사용할 수 있습니다."
+    : '활동 기록을 추가하면 다운로드를 사용할 수 있습니다.';
 
   const isKakaoBrowserWithTightDownloadSupport = () => {
-    if (typeof window === "undefined") return false
-    const ua = window.navigator.userAgent.toLowerCase()
-    const isIos = /iphone|ipad|ipod/.test(ua)
-    const isAndroid = ua.includes("android")
-    const isKakao = ua.includes("kakaotalk") || ua.includes("kakaobrowser")
-    return (isIos || isAndroid) && isKakao
-  }
+    if (typeof window === 'undefined') return false;
+    const ua = window.navigator.userAgent.toLowerCase();
+    const isIos = /iphone|ipad|ipod/.test(ua);
+    const isAndroid = ua.includes('android');
+    const isKakao = ua.includes('kakaotalk') || ua.includes('kakaobrowser');
+    return (isIos || isAndroid) && isKakao;
+  };
 
   const handleDownloadActivity = () => {
     if (isKakaoBrowserWithTightDownloadSupport()) {
       toast({
-        title: "카카오 브라우저에서는 다운로드가 제한돼요",
-        description: "모바일 카카오 브라우저 환경에서는 다른 브라우저 또는 웹에서 엑셀을 내려받아 주세요.",
-      })
-      return
+        title: '카카오 브라우저에서는 다운로드가 제한돼요',
+        description:
+          '모바일 카카오 브라우저 환경에서는 다른 브라우저 또는 웹에서 엑셀을 내려받아 주세요.',
+      });
+      return;
     }
 
     if (!filteredSchedules.length) {
-      toast({ title: "선택한 기간의 활동 내역이 없습니다.", variant: "destructive" })
-      return
+      toast({ title: '선택한 기간의 활동 내역이 없습니다.', variant: 'destructive' });
+      return;
     }
 
-    const scopeLabel = downloadScope === "all" ? "전체" : formatMonthLabel(downloadScope)
+    const scopeLabel = downloadScope === 'all' ? '전체' : formatMonthLabel(downloadScope);
     const rows = schedulesSortedByDeadline.map((schedule, index) => ({
       번호: index + 1,
-      플랫폼: schedule.platform || "-",
+      플랫폼: schedule.platform || '-',
       제목: schedule.title,
       상태: schedule.status,
-      방문일: schedule.visit || "-",
-      마감일: schedule.dead || "-",
-      채널: schedule.channel.join(", "),
+      방문일: schedule.visit || '-',
+      마감일: schedule.dead || '-',
+      채널: schedule.channel.join(', '),
       혜택: schedule.benefit,
       수익: schedule.income,
       비용: schedule.cost,
-      "순수익": schedule.benefit + schedule.income - schedule.cost,
-    }))
+      순수익: schedule.benefit + schedule.income - schedule.cost,
+    }));
 
-    const worksheet = XLSX.utils.json_to_sheet(rows)
-    const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, "활동 내역")
-    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, '활동 내역');
+    const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    })
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
 
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    const fileSuffix = scopeLabel.replace(/\s+/g, "_")
-    link.download = `활동내역_${fileSuffix}_${new Date().toISOString().slice(0, 10)}.xlsx`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const fileSuffix = scopeLabel.replace(/\s+/g, '_');
+    link.download = `활동내역_${fileSuffix}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
 
-    toast({ title: "엑셀 다운로드가 준비되었습니다." })
-  }
+    toast({ title: '엑셀 다운로드가 준비되었습니다.' });
+  };
 
   const handleApplyCoupon = async () => {
-    const code = couponCode.trim()
+    const code = couponCode.trim();
 
     if (!code) {
-      toast({ title: "쿠폰 코드를 입력해 주세요.", variant: "destructive" })
-      return
+      toast({ title: '쿠폰 코드를 입력해 주세요.', variant: 'destructive' });
+      return;
     }
 
-    const hasCouponDuration = isPro && tierDurationMonths === COUPON_TIER_DURATION_MONTHS
+    const hasCouponDuration = isPro && tierDurationMonths === COUPON_TIER_DURATION_MONTHS;
 
     if (hasCouponDuration) {
       toast({
-        title: "이미 쿠폰 프로 등급입니다.",
+        title: '이미 쿠폰 프로 등급입니다.',
         description: `${COUPON_TIER_DURATION_MONTHS}개월 프로가 이미 적용되어 있습니다.`,
-      })
-      return
+      });
+      return;
     }
 
-    if (code.toUpperCase() !== "HELLO_EARLY") {
-      toast({ title: "유효하지 않은 쿠폰입니다.", variant: "destructive" })
-      return
+    if (code.toUpperCase() !== 'HELLO_EARLY') {
+      toast({ title: '유효하지 않은 쿠폰입니다.', variant: 'destructive' });
+      return;
     }
 
     if (!authUser?.id) {
-      toast({ title: "로그인이 필요합니다.", variant: "destructive" })
-      return
+      toast({ title: '로그인이 필요합니다.', variant: 'destructive' });
+      return;
     }
 
-    setIsRedeemingCoupon(true)
+    setIsRedeemingCoupon(true);
 
     try {
-      const supabase = getSupabaseClient()
-      const expiresAt = new Date()
-      expiresAt.setMonth(expiresAt.getMonth() + COUPON_TIER_DURATION_MONTHS)
-      const expiresAtIso = expiresAt.toISOString()
+      const supabase = getSupabaseClient();
+      const expiresAt = new Date();
+      expiresAt.setMonth(expiresAt.getMonth() + COUPON_TIER_DURATION_MONTHS);
+      const expiresAtIso = expiresAt.toISOString();
 
       const { error: profileError } = await supabase
-        .from("user_profiles")
+        .from('user_profiles')
         .update({
-          tier: "pro",
+          tier: 'pro',
           tier_duration_months: COUPON_TIER_DURATION_MONTHS,
           tier_expires_at: expiresAtIso,
         })
-        .eq("id", authUser.id)
+        .eq('id', authUser.id);
 
       if (profileError) {
-        throw profileError
+        throw profileError;
       }
 
       const { error: metadataError } = await supabase.auth.updateUser({
         data: {
-          tier: "pro",
+          tier: 'pro',
         },
-      })
+      });
 
       if (metadataError) {
-        throw metadataError
+        throw metadataError;
       }
 
-      await refetchUserProfile()
+      await refetchUserProfile();
       toast({
-        title: "쿠폰이 적용되었습니다.",
+        title: '쿠폰이 적용되었습니다.',
         description: `${COUPON_TIER_DURATION_MONTHS}개월 동안 PRO 기능을 이용할 수 있습니다.`,
-      })
-      setCouponCode("")
+      });
+      setCouponCode('');
     } catch (err) {
       toast({
-        title: "쿠폰 적용에 실패했습니다.",
-        description: err instanceof Error ? err.message : "다시 시도해 주세요.",
-        variant: "destructive",
-      })
+        title: '쿠폰 적용에 실패했습니다.',
+        description: err instanceof Error ? err.message : '다시 시도해 주세요.',
+        variant: 'destructive',
+      });
     } finally {
-      setIsRedeemingCoupon(false)
+      setIsRedeemingCoupon(false);
     }
-  }
+  };
 
-  const handleGotoNotifications = () => router.push("/notifications")
-  const handleGotoMonthlyReport = () => router.push("/monthlyReport")
-  const handleGotoPortfolio = () => router.push("/portfolio-management")
-  const handleGotoPortfolioPreview = () => router.push("/portfolio")
+  const handleGotoNotifications = () => router.push('/notifications');
+  const handleGotoMonthlyReport = () => router.push('/monthlyReport');
+  const handleGotoPortfolio = () => router.push('/portfolio-management');
+  const handleGotoPortfolioPreview = () => router.push('/portfolio');
 
   const handleLogout = async () => {
-    setIsLoggingOut(true)
+    setIsLoggingOut(true);
     try {
-      await signOut()
-      router.push("/")
+      await signOut();
+      router.push('/');
     } catch {
-      toast({ title: "로그아웃에 실패했습니다.", variant: "destructive" })
+      toast({ title: '로그아웃에 실패했습니다.', variant: 'destructive' });
     } finally {
-      setIsLoggingOut(false)
+      setIsLoggingOut(false);
     }
-  }
+  };
 
   const openDownloadDialog = () => {
-    if (!filteredSchedules.length) return
-    setIsDownloadDialogOpen(true)
-  }
+    if (!filteredSchedules.length) return;
+    setIsDownloadDialogOpen(true);
+  };
 
   const handleFeatureClick = (feature: { onClick: () => void; isPro?: boolean }) => {
     if (feature.isPro && !isPro) {
       toast({
-        title: "PRO 전용 기능입니다.",
-        variant: "destructive",
-      })
-      return
+        title: 'PRO 전용 기능입니다.',
+        variant: 'destructive',
+      });
+      return;
     }
 
-    feature.onClick()
-  }
+    feature.onClick();
+  };
 
   const proFeatures = [
     {
-      label: "활동 내역 다운로드",
-      description: "캠페인 기록을 엑셀로 저장하며, 모바일에서 어려우면 웹에서 내려받아 주세요",
-      icon: "📂",
+      label: '활동 내역 다운로드',
+      description: '캠페인 기록을 엑셀로 저장하며, 모바일에서 어려우면 웹에서 내려받아 주세요',
+      icon: '📂',
       isPro: true,
       onClick: openDownloadDialog,
     },
     {
-      label: "할일 요약",
-      description: "하단 네비게이션 바 첫 번째 탭에서도 빠르게 확인할 수 있습니다",
-      icon: "🔔",
+      label: '할일 요약',
+      description: '하단 네비게이션 바 첫 번째 탭에서도 빠르게 확인할 수 있습니다',
+      icon: '🔔',
       isPro: true,
       onClick: handleGotoNotifications,
     },
     {
-      label: "실시간 랭킹 리포트",
-      description: "오늘의 실시간 성장 지표",
-      icon: "📊",
+      label: '실시간 랭킹 리포트',
+      description: '오늘의 실시간 성장 지표',
+      icon: '📊',
       isPro: true,
       onClick: handleGotoMonthlyReport,
     },
@@ -373,7 +379,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
     //   icon: "🧾",
     //   onClick: handleGotoPortfolioPreview,
     // },
-  ]
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFF5F0] via-[#FBFBFD] to-[#F7F7F8] pb-20 font-sans tracking-tight">
@@ -408,16 +414,15 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
             <p className="text-[13px] font-medium text-neutral-400">{emailLabel}</p>
           </div>
 
-
           <div className="mt-4 flex justify-center">
             <span
               className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-tight ${
                 isPro
-                  ? "border-amber-200 bg-amber-50 text-amber-700"
-                  : "border-neutral-200 bg-neutral-100 text-neutral-600"
+                  ? 'border-amber-200 bg-amber-50 text-amber-700'
+                  : 'border-neutral-200 bg-neutral-100 text-neutral-600'
               }`}
             >
-              {isPro ? "PRO MEMBER" : "FREE MEMBER"}
+              {isPro ? 'PRO MEMBER' : 'FREE MEMBER'}
             </span>
           </div>
           {isPro && (
@@ -426,7 +431,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
               <span className="text-neutral-400">·</span>
               <span>{`${displayTierDuration}개월`}</span>
               <span className="text-neutral-400">·</span>
-              <span>{tierExpiryLabel ? `만료 ${tierExpiryLabel}` : "만료 정보 없음"}</span>
+              <span>{tierExpiryLabel ? `만료 ${tierExpiryLabel}` : '만료 정보 없음'}</span>
             </div>
           )}
         </section>
@@ -438,28 +443,28 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
               사전신청 시 입력된 이메일로 발송된 쿠폰을 입력하면 등급이 PRO로 전환됩니다.
             </p>
             <div className="mt-3 flex gap-3">
-            <input
-              value={couponCode}
-              onChange={(event) => setCouponCode(event.target.value)}
-              placeholder="쿠폰 코드를 입력하세요"
-              className="flex-1 min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-3 text-[16px] text-neutral-900 shadow-sm transition focus:border-amber-400 focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={handleApplyCoupon}
-              disabled={isRedeemingCoupon}
-              className="rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isRedeemingCoupon ? "적용 중..." : "적용"}
-            </button>
-          </div>
+              <input
+                value={couponCode}
+                onChange={(event) => setCouponCode(event.target.value)}
+                placeholder="쿠폰 코드를 입력하세요"
+                className="flex-1 min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-3 text-[16px] text-neutral-900 shadow-sm transition focus:border-amber-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleApplyCoupon}
+                disabled={isRedeemingCoupon}
+                className="rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isRedeemingCoupon ? '적용 중...' : '적용'}
+              </button>
+            </div>
           </section>
         )}
 
         <div className="space-y-2">
           <div className="bg-white rounded-3xl p-4 shadow-sm">
             {proFeatures.map((feature, idx) => {
-              const isFeatureLocked = feature.isPro && !isPro
+              const isFeatureLocked = feature.isPro && !isPro;
               return (
                 <div
                   key={feature.label}
@@ -470,44 +475,42 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
                     py-3.5 px-3 font-semibold rounded-xl
                     flex items-center gap-3
                     transition-all duration-200
-                    ${idx !== proFeatures.length - 1 ? "border-b border-neutral-100" : ""}
-                    ${isFeatureLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-neutral-50"}
+                    ${idx !== proFeatures.length - 1 ? 'border-b border-neutral-100' : ''}
+                    ${isFeatureLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-neutral-50'}
                   `}
                 >
-                <div className="flex-1 flex items-start justify-between gap-4">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-3">
-                      <div className="text-xl">
-                        {feature.icon}
+                  <div className="flex-1 flex items-start justify-between gap-4">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-3">
+                        <div className="text-xl">{feature.icon}</div>
+                        <p className="text-[15px] font-semibold text-neutral-900 flex items-center gap-2">
+                          {feature.label}
+                          {feature.isPro && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded">
+                              PRO
+                            </span>
+                          )}
+                        </p>
                       </div>
-                      <p className="text-[15px] font-semibold text-neutral-900 flex items-center gap-2">
-                        {feature.label}
-                        {feature.isPro && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded">
-                            PRO
-                          </span>
-                        )}
-                      </p>
+                      {feature.description && (
+                        <p className="text-[12px] text-neutral-500">{feature.description}</p>
+                      )}
                     </div>
-                    {feature.description && (
-                      <p className="text-[12px] text-neutral-500">{feature.description}</p>
-                    )}
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-neutral-400"
+                    >
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
                   </div>
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="text-neutral-400"
-                  >
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
                 </div>
-              </div>
-            )
-          })}
+              );
+            })}
           </div>
         </div>
 
@@ -517,7 +520,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
           disabled={isLoggingOut}
           className="mt-12 w-full py-4 text-sm font-bold text-neutral-300 transition-colors hover:text-neutral-500 active:scale-95"
         >
-          {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
+          {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
         </button>
         <Dialog open={isDownloadDialogOpen} onOpenChange={setIsDownloadDialogOpen}>
           <DialogContent className="max-w-[380px]">
@@ -540,7 +543,11 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
                       전체 활동 내역
                     </SelectItem>
                     {scheduleMonthOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value} className="text-sm text-neutral-900">
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        className="text-sm text-neutral-900"
+                      >
                         {option.label}
                       </SelectItem>
                     ))}
@@ -563,5 +570,5 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
         </Dialog>
       </div>
     </div>
-  )
+  );
 }

@@ -1,24 +1,24 @@
-"use client"
+'use client';
 
-import { type ChangeEvent, useEffect, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
-import { useUserProfile, type CampaignEntry, type SocialLinks } from "@/hooks/use-user-profile"
-import { uploadProfileImage, deleteProfileImage, getProfileImageUrl } from "@/lib/storage"
-import { Bell, Camera, ChevronLeft, FileText, Share2, Shield } from "lucide-react"
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { useUserProfile, type CampaignEntry, type SocialLinks } from '@/hooks/use-user-profile';
+import { uploadProfileImage, deleteProfileImage, getProfileImageUrl } from '@/lib/storage';
+import { Bell, Camera, ChevronLeft, FileText, Share2, Shield } from 'lucide-react';
 
 const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string }[] = [
-  { key: "blog", label: "블로그" },
-  { key: "threads", label: "Threads" },
-  { key: "instagram", label: "Instagram" },
-  { key: "tiktok", label: "TikTok" },
-  { key: "youtube", label: "YouTube" },
-]
+  { key: 'blog', label: '블로그' },
+  { key: 'threads', label: 'Threads' },
+  { key: 'instagram', label: 'Instagram' },
+  { key: 'tiktok', label: 'TikTok' },
+  { key: 'youtube', label: 'YouTube' },
+];
 
-type SocialDraft = Record<keyof SocialLinks, string>
+type SocialDraft = Record<keyof SocialLinks, string>;
 
 export default function PortfolioManagementPage() {
-  const router = useRouter()
+  const router = useRouter();
   const {
     profile,
     socialLinks,
@@ -29,135 +29,135 @@ export default function PortfolioManagementPage() {
     updateProfileImagePath,
     loading,
     refetch,
-  } = useUserProfile()
-  const { toast } = useToast()
+  } = useUserProfile();
+  const { toast } = useToast();
 
   const [socialDraft, setSocialDraft] = useState<SocialDraft>({
-    blog: "",
-    threads: "",
-    instagram: "",
-    tiktok: "",
-    youtube: "",
-  })
-  const [campaignDrafts, setCampaignDrafts] = useState<CampaignEntry[]>([])
-  const [campaignPlatform, setCampaignPlatform] = useState("")
-  const [campaignUrl, setCampaignUrl] = useState("")
-  const [nickname, setNickname] = useState("")
-  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [isSavingProfile, setIsSavingProfile] = useState(false)
-  const [isUploadingImage, setIsUploadingImage] = useState(false)
-  const [isRemovingImage, setIsRemovingImage] = useState(false)
-  const [isSavingPortfolio, setIsSavingPortfolio] = useState(false)
-  const [isSavingCampaignEntry, setIsSavingCampaignEntry] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+    blog: '',
+    threads: '',
+    instagram: '',
+    tiktok: '',
+    youtube: '',
+  });
+  const [campaignDrafts, setCampaignDrafts] = useState<CampaignEntry[]>([]);
+  const [campaignPlatform, setCampaignPlatform] = useState('');
+  const [campaignUrl, setCampaignUrl] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isRemovingImage, setIsRemovingImage] = useState(false);
+  const [isSavingPortfolio, setIsSavingPortfolio] = useState(false);
+  const [isSavingCampaignEntry, setIsSavingCampaignEntry] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setSocialDraft({
-      blog: socialLinks.blog ?? "",
-      threads: socialLinks.threads ?? "",
-      instagram: socialLinks.instagram ?? "",
-      tiktok: socialLinks.tiktok ?? "",
-      youtube: socialLinks.youtube ?? "",
-    })
-  }, [socialLinks])
+      blog: socialLinks.blog ?? '',
+      threads: socialLinks.threads ?? '',
+      instagram: socialLinks.instagram ?? '',
+      tiktok: socialLinks.tiktok ?? '',
+      youtube: socialLinks.youtube ?? '',
+    });
+  }, [socialLinks]);
 
   useEffect(() => {
-    setCampaignDrafts([...recentCampaigns])
-  }, [recentCampaigns])
+    setCampaignDrafts([...recentCampaigns]);
+  }, [recentCampaigns]);
 
   useEffect(() => {
-    setNickname(profile?.nickname ?? "")
-  }, [profile?.nickname])
+    setNickname(profile?.nickname ?? '');
+  }, [profile?.nickname]);
 
   useEffect(() => {
     if (!profile?.profileImagePath) {
-      setProfileImageUrl(null)
-      return
+      setProfileImageUrl(null);
+      return;
     }
 
-    let isCurrent = true
+    let isCurrent = true;
     getProfileImageUrl(profile.profileImagePath)
       .then((url) => {
         if (isCurrent) {
-          setProfileImageUrl(url)
+          setProfileImageUrl(url);
         }
       })
       .catch(() => {
         if (isCurrent) {
-          setProfileImageUrl(null)
+          setProfileImageUrl(null);
         }
-      })
+      });
 
     return () => {
-      isCurrent = false
-    }
-  }, [profile?.profileImagePath])
+      isCurrent = false;
+    };
+  }, [profile?.profileImagePath]);
 
   useEffect(() => {
     return () => {
       if (avatarPreview) {
-        URL.revokeObjectURL(avatarPreview)
+        URL.revokeObjectURL(avatarPreview);
       }
-    }
-  }, [avatarPreview])
+    };
+  }, [avatarPreview]);
 
-  const displayedImage = avatarPreview ?? profileImageUrl ?? "/api/placeholder/100/100"
-  const isInitialLoading = loading && !profile
+  const displayedImage = avatarPreview ?? profileImageUrl ?? '/api/placeholder/100/100';
+  const isInitialLoading = loading && !profile;
 
   const handleAddCampaign = async () => {
-    const platform = campaignPlatform.trim()
-    const url = campaignUrl.trim()
+    const platform = campaignPlatform.trim();
+    const url = campaignUrl.trim();
     if (!platform || !url) {
       toast({
-        title: "플랫폼과 URL을 모두 입력해 주세요.",
-        variant: "destructive",
+        title: '플랫폼과 URL을 모두 입력해 주세요.',
+        variant: 'destructive',
         duration: 2000,
-      })
-      return
+      });
+      return;
     }
-    const updatedCampaigns = [...campaignDrafts, { platform, url }]
-    setCampaignDrafts(updatedCampaigns)
-    setCampaignPlatform("")
-    setCampaignUrl("")
+    const updatedCampaigns = [...campaignDrafts, { platform, url }];
+    setCampaignDrafts(updatedCampaigns);
+    setCampaignPlatform('');
+    setCampaignUrl('');
 
-    if (!updateRecentCampaigns) return
+    if (!updateRecentCampaigns) return;
 
-    setIsSavingCampaignEntry(true)
+    setIsSavingCampaignEntry(true);
     try {
-      const success = await updateRecentCampaigns(updatedCampaigns)
+      const success = await updateRecentCampaigns(updatedCampaigns);
       if (success) {
         toast({
-          title: "캠페인 활동이 저장되었습니다.",
+          title: '캠페인 활동이 저장되었습니다.',
           duration: 1500,
-        })
-        void refetch().catch(() => {})
+        });
+        void refetch().catch(() => {});
       } else {
         toast({
-          title: "캠페인 저장에 실패했습니다.",
-          variant: "destructive",
+          title: '캠페인 저장에 실패했습니다.',
+          variant: 'destructive',
           duration: 2000,
-        })
+        });
       }
     } catch (error) {
       toast({
-        title: "캠페인 저장에 실패했습니다.",
-        description: error instanceof Error ? error.message : "다시 시도해주세요.",
-        variant: "destructive",
+        title: '캠페인 저장에 실패했습니다.',
+        description: error instanceof Error ? error.message : '다시 시도해주세요.',
+        variant: 'destructive',
         duration: 2500,
-      })
+      });
     } finally {
-      setIsSavingCampaignEntry(false)
+      setIsSavingCampaignEntry(false);
     }
-  }
+  };
 
   const handleRemoveCampaign = (index: number) => {
-    setCampaignDrafts((prev) => prev.filter((_, idx) => idx !== index))
-  }
+    setCampaignDrafts((prev) => prev.filter((_, idx) => idx !== index));
+  };
 
   const handleSubmitPortfolio = async () => {
-    if (!updateSocialLinks || !updateRecentCampaigns) return
-    setIsSavingPortfolio(true)
+    if (!updateSocialLinks || !updateRecentCampaigns) return;
+    setIsSavingPortfolio(true);
     try {
       await Promise.all([
         updateSocialLinks({
@@ -168,91 +168,91 @@ export default function PortfolioManagementPage() {
           youtube: socialDraft.youtube.trim() || null,
         }),
         updateRecentCampaigns(campaignDrafts),
-      ])
+      ]);
       toast({
-        title: "포트폴리오 업데이트 완료",
+        title: '포트폴리오 업데이트 완료',
         duration: 2000,
-      })
-      void refetch().catch(() => {})
+      });
+      void refetch().catch(() => {});
     } catch (error) {
       toast({
-        title: "포트폴리오 저장에 실패했습니다.",
-        description: error instanceof Error ? error.message : "다시 시도해주세요.",
-        variant: "destructive",
+        title: '포트폴리오 저장에 실패했습니다.',
+        description: error instanceof Error ? error.message : '다시 시도해주세요.',
+        variant: 'destructive',
         duration: 2500,
-      })
+      });
     } finally {
-      setIsSavingPortfolio(false)
+      setIsSavingPortfolio(false);
     }
-  }
+  };
 
   const handleSaveProfile = async () => {
-    if (!updateNickname) return
-    const trimmed = nickname.trim()
+    if (!updateNickname) return;
+    const trimmed = nickname.trim();
     if (!trimmed) {
-      toast({ title: "닉네임을 입력해 주세요.", variant: "destructive" })
-      return
+      toast({ title: '닉네임을 입력해 주세요.', variant: 'destructive' });
+      return;
     }
 
-    setIsSavingProfile(true)
+    setIsSavingProfile(true);
     try {
-      const success = await updateNickname(trimmed)
+      const success = await updateNickname(trimmed);
       if (success) {
-        toast({ title: "닉네임이 저장되었습니다." })
+        toast({ title: '닉네임이 저장되었습니다.' });
       }
     } catch {
-      toast({ title: "닉네임 저장에 실패했습니다.", variant: "destructive" })
+      toast({ title: '닉네임 저장에 실패했습니다.', variant: 'destructive' });
     } finally {
-      setIsSavingProfile(false)
+      setIsSavingProfile(false);
     }
-  }
+  };
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    event.target.value = ""
-    if (!file || !updateProfileImagePath || !profile?.id) return
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !updateProfileImagePath || !profile?.id) return;
 
     if (avatarPreview) {
-      URL.revokeObjectURL(avatarPreview)
+      URL.revokeObjectURL(avatarPreview);
     }
 
-    const preview = URL.createObjectURL(file)
-    setAvatarPreview(preview)
-    setIsUploadingImage(true)
+    const preview = URL.createObjectURL(file);
+    setAvatarPreview(preview);
+    setIsUploadingImage(true);
 
     try {
-      const uploaded = await uploadProfileImage(profile.id, file)
-      await updateProfileImagePath(uploaded.path)
-      toast({ title: "프로필 사진이 저장되었습니다." })
+      const uploaded = await uploadProfileImage(profile.id, file);
+      await updateProfileImagePath(uploaded.path);
+      toast({ title: '프로필 사진이 저장되었습니다.' });
     } catch {
-      toast({ title: "사진 업로드에 실패했습니다.", variant: "destructive" })
+      toast({ title: '사진 업로드에 실패했습니다.', variant: 'destructive' });
     } finally {
-      setIsUploadingImage(false)
+      setIsUploadingImage(false);
     }
-  }
+  };
 
   const handleRemovePhoto = async () => {
-    if (!profile?.profileImagePath || !updateProfileImagePath) return
-    setIsRemovingImage(true)
+    if (!profile?.profileImagePath || !updateProfileImagePath) return;
+    setIsRemovingImage(true);
 
     try {
-      await deleteProfileImage(profile.profileImagePath)
+      await deleteProfileImage(profile.profileImagePath);
     } catch (error) {
-      console.error(error)
+      console.error(error);
     }
 
     try {
-      const success = await updateProfileImagePath(null)
+      const success = await updateProfileImagePath(null);
       if (success) {
-        toast({ title: "프로필 사진이 삭제되었습니다." })
-        setAvatarPreview(null)
+        toast({ title: '프로필 사진이 삭제되었습니다.' });
+        setAvatarPreview(null);
       }
     } catch {
-      toast({ title: "사진 삭제에 실패했습니다.", variant: "destructive" })
+      toast({ title: '사진 삭제에 실패했습니다.', variant: 'destructive' });
     } finally {
-      setIsRemovingImage(false)
+      setIsRemovingImage(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-[#f7f7f8] pb-24 md:px-4">
@@ -260,7 +260,7 @@ export default function PortfolioManagementPage() {
         <div className="flex items-center justify-between">
           <button
             type="button"
-            onClick={() => router.push("/?page=profile")}
+            onClick={() => router.push('/?page=profile')}
             className="flex items-center gap-2 text-sm font-semibold text-neutral-500 transition hover:text-neutral-900"
           >
             <ChevronLeft size={16} />
@@ -268,21 +268,24 @@ export default function PortfolioManagementPage() {
           </button>
         </div>
         <section className="space-y-4 rounded-3xl bg-white p-5 shadow-sm border border-neutral-100">
-          
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="relative">
-              <div className={`h-28 w-28 rounded-full border-2 border-dashed border-neutral-200 p-1 ${!profileImageUrl && !avatarPreview ? "bg-gradient-to-tr from-orange-100 to-orange-50" : "bg-white shadow-md"}`}>
-                   {profileImageUrl ? (
-                    <img
-                      src={displayedImage}
-                      alt="Profile"
-                      className="h-full w-full rounded-full object-cover shadow-sm"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center rounded-full text-[13px] font-semibold text-neutral-400">
-                      <span className="text-[11px] uppercase tracking-[0.25em] text-[11px]">Profile</span>
-                    </div>
-                  )}
+              <div
+                className={`h-28 w-28 rounded-full border-2 border-dashed border-neutral-200 p-1 ${!profileImageUrl && !avatarPreview ? 'bg-gradient-to-tr from-orange-100 to-orange-50' : 'bg-white shadow-md'}`}
+              >
+                {profileImageUrl ? (
+                  <img
+                    src={displayedImage}
+                    alt="Profile"
+                    className="h-full w-full rounded-full object-cover shadow-sm"
+                  />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center rounded-full text-[13px] font-semibold text-neutral-400">
+                    <span className="text-[11px] uppercase tracking-[0.25em] text-[11px]">
+                      Profile
+                    </span>
+                  </div>
+                )}
               </div>
               <button
                 type="button"
@@ -293,7 +296,13 @@ export default function PortfolioManagementPage() {
                 <Camera size={16} />
               </button>
             </div>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
             <div className="flex w-full flex-col gap-3">
               <input
                 type="text"
@@ -310,7 +319,7 @@ export default function PortfolioManagementPage() {
                   disabled={isSavingProfile}
                   className="flex-1 rounded-2xl bg-[#ff5c39] px-4 py-3 text-sm font-semibold text-white shadow-[0_10px_25px_rgba(255,92,57,0.35)] transition hover:-translate-y-0.5 disabled:opacity-60"
                 >
-                  {isSavingProfile ? "저장 중..." : "닉네임 저장"}
+                  {isSavingProfile ? '저장 중...' : '닉네임 저장'}
                 </button>
                 <button
                   type="button"
@@ -318,7 +327,7 @@ export default function PortfolioManagementPage() {
                   disabled={isRemovingImage || (!profile?.profileImagePath && !avatarPreview)}
                   className="flex-1 rounded-2xl border border-neutral-200 px-4 py-3 text-sm font-semibold text-neutral-500 transition hover:border-neutral-300 disabled:opacity-40"
                 >
-                  {isRemovingImage ? "삭제 중..." : "사진 삭제"}
+                  {isRemovingImage ? '삭제 중...' : '사진 삭제'}
                 </button>
               </div>
             </div>
@@ -425,5 +434,5 @@ export default function PortfolioManagementPage() {
         </button> */}
       </div>
     </div>
-  )
+  );
 }
