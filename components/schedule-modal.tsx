@@ -1602,6 +1602,9 @@ export default function ScheduleModal({
                       <p className="text-[12px] text-neutral-500">
                         구매비용을 페이백 받기로 한 의뢰가 있는 경우 체크하세요.
                       </p>
+                      <p className="text-[12px] text-orange-400">
+                        입금 확인 전까지 달력에 💸 표시로 잊지 않게 알려드려요.
+                      </p>
                     </div>
                   </label>
                   {formData.paybackExpected && (

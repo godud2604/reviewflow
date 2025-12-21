@@ -830,6 +830,7 @@ function ScheduleItem({
   const isCompleted = schedule.status === '완료';
   const canComplete = !!onCompleteClick && !isCompleted;
   const platformLabel = schedule.platform ? getPlatformDisplayName(schedule.platform) : '';
+  const hasPaybackPending = schedule.paybackExpected && !schedule.paybackConfirmed;
 
   return (
     <div
@@ -910,6 +911,14 @@ function ScheduleItem({
           {schedule.memo && (
             <span className="text-sm shrink-0 ml-2" title="메모 있음">
               📝
+            </span>
+          )}
+          {hasPaybackPending && (
+            <span
+              className="text-sm shrink-0 ml-2"
+              title="광고주에게 받을 페이백이 아직 확인되지 않음"
+            >
+              💸
             </span>
           )}
         </div>
