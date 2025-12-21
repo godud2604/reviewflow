@@ -1372,7 +1372,7 @@ export default function ScheduleModal({
                                         duration: 2000,
                                       });
                                     }}
-                                    className="absolute right-10 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                                    className="absolute right-18 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
                                   >
                                     <Copy className="w-4 h-4 cursor-pointer" />
                                   </button>
@@ -1384,9 +1384,12 @@ export default function ScheduleModal({
                                       e.stopPropagation();
                                       setShowMapSearchModal(true);
                                     }}
-                                    className="flex items-center pr-4 text-neutral-500"
+                                    className="flex items-center gap-1 pr-4 text-neutral-500"
                                   >
                                     <Search className="h-5 w-5 text-orange-500" />
+                                    <span className="text-[13px] font-semibold text-orange-500">
+                                      검색
+                                    </span>
                                   </button>
                                 </div>
                               </div>
