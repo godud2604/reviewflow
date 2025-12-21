@@ -644,7 +644,7 @@ function CalendarSection({
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-y-2.5 text-center">
+      <div className="grid grid-cols-7 gap-3 text-center">
         {Array.from({ length: startDayOfWeek }).map((_, i) => (
           <div key={`empty-${i}`} className="h-8" />
         ))}
@@ -849,7 +849,7 @@ function ScheduleItem({
 
   return (
     <div
-      className={`p-4 rounded-3xl flex items-center shadow-sm cursor-pointer transition-transform active:scale-[0.98] ${
+      className={`pl-2.5 pr-4 py-4 rounded-3xl flex items-center shadow-sm cursor-pointer transition-transform active:scale-[0.98] ${
         isOverdue
           ? 'bg-red-50/70 border-red-200'
           : isReconfirm
@@ -858,7 +858,6 @@ function ScheduleItem({
       }`}
       onClick={onClick}
     >
-      {/* 1번 스타일 적용: 왼쪽 컨트롤러 영역 */}
       <div className="mr-3 flex flex-col items-center gap-2 min-w-[60px]">
         {/* 1. 작업 완료 토글 버튼 */}
         <button
@@ -869,14 +868,14 @@ function ScheduleItem({
               onCompleteClick?.();
             }
           }}
-          className={`px-2 py-1 rounded-full text-[10px] font-bold border transition-all active:scale-95 w-full text-center ${
+          className={`py-1 rounded-full text-[10px] font-bold border transition-all active:scale-95 w-full text-center ${
             isCompleted
               ? 'bg-orange-50 border-orange-200 text-orange-500 shadow-sm' // 켜짐 (완료)
               : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100' // 꺼짐 (대기)
           }`}
         >
           {/* 체크 아이콘 */}
-          <span className="flex items-center gap-1 px-2.5 text-[10px] font-bold">
+          <span className="flex items-center gap-1.5 px-2.5 text-[10px] font-bold">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="13"
@@ -885,7 +884,14 @@ function ScheduleItem({
               fill="none"
               className="inline-block align-middle"
             >
-              <circle cx="10" cy="10" r="9" stroke={isCompleted ? '#fb923c' : '#d1d5db'} strokeWidth="2" fill={isCompleted ? '#fb923c' : 'white'} />
+              <circle
+                cx="10"
+                cy="10"
+                r="9"
+                stroke={isCompleted ? '#fb923c' : '#d1d5db'}
+                strokeWidth="2"
+                fill={isCompleted ? '#fb923c' : 'white'}
+              />
               {isCompleted && (
                 <path
                   d="M6 10.5l2.5 2.5 5-5"
@@ -896,7 +902,7 @@ function ScheduleItem({
                 />
               )}
             </svg>
-            <span>{isCompleted ? '완료' : '완료'}</span>
+            <span className="translate-y-[-0.5px]">{isCompleted ? '완료' : '완료'}</span>
           </span>
         </button>
 
