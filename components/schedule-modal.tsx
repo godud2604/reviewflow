@@ -1047,7 +1047,7 @@ export default function ScheduleModal({
                             setTitleError(false);
                           }
                         }}
-                        className="w-full h-[40px] rounded-[18px] bg-[#F2F4F6] px-4 text-[16px] font-semibold text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none"
+                        className="w-full h-[40px] rounded-[18px] bg-[#F2F4F6] px-4 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none"
                         placeholder="체험단 이름을 입력해주세요"
                       />
                       {formData.title && (
@@ -1076,7 +1076,7 @@ export default function ScheduleModal({
                     </label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className="w-full h-[40px] rounded-[18px] bg-[#F2F4F6] px-4 text-[16px] font-semibold text-neutral-900 text-left cursor-pointer focus-visible:outline-none">
+                        <button className="w-full h-[40px] rounded-[18px] bg-[#F2F4F6] px-4 text-[15px] text-neutral-900 text-left cursor-pointer focus-visible:outline-none">
                           {formData.dead
                             ? format(new Date(formData.dead), 'PPP', { locale: ko })
                             : '날짜 선택'}
@@ -1242,11 +1242,11 @@ export default function ScheduleModal({
                       <button
                         type="button"
                         onClick={() => handleToggleVisitMode(!visitMode)}
-                        className={`relative h-9 w-16 rounded-full transition ${visitMode ? 'bg-[#FF5722]' : 'bg-neutral-300'}`}
+                        className={`relative h-8 w-16 rounded-full transition ${visitMode ? 'bg-[#FF5722]' : 'bg-neutral-300'}`}
                         aria-pressed={visitMode}
                       >
                         <span
-                          className={`absolute top-[3px] h-7 w-7 rounded-full bg-white shadow transition ${visitMode ? 'right-[3px]' : 'left-[3px]'}`}
+                          className={`absolute top-[4px] h-6 w-7 rounded-full bg-white shadow transition ${visitMode ? 'right-[3px]' : 'left-[3px]'}`}
                         />
                       </button>
                     </div>
@@ -1540,7 +1540,7 @@ export default function ScheduleModal({
                                     } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3182F6]/40`}
                                   >
                                     <span
-                                      className={`text-[15px] ${
+                                      className={`text-[14px] ${
                                         isSelected
                                           ? 'text-neutral-900 font-semibold'
                                           : 'text-neutral-600'
@@ -1603,7 +1603,7 @@ export default function ScheduleModal({
                           inputMode="numeric"
                           value={formatNumber(formData[field.field] || 0)}
                           onChange={(e) => handleNumberChange(field.field, e.target.value)}
-                          className="w-[120px] rounded-full border border-transparent bg-white/80 px-3 py-[3px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
+                          className="mb-1 w-[120px] rounded-full border border-transparent bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
                         />
                       </label>
                     ))}

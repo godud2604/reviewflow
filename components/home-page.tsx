@@ -953,7 +953,7 @@ function ScheduleItem({
             {status.text}
           </p>
           {schedule.reviewType === '방문형' && schedule.regionDetail && (
-            <span className="text-[11px] font-semibold text-neutral-500 ml-2 bg-white/80 rounded-[10px] px-2 py-0.5 border border-sky-100">
+            <span className="text-[11px] font-semibold text-neutral-500 ml-2 bg-white/80 rounded-[10px] px-2 py-0.5 border border-neutral-200">
               {(() => {
                 const parts = schedule.regionDetail.split(' ');
                 return parts.slice(0, 2).join(' ');
