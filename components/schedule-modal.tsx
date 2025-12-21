@@ -1394,7 +1394,7 @@ export default function ScheduleModal({
                           </div>
                           {locationDetailEnabled && (
                             <div>
-                              <p className="text-[15px] font-semibold text-neutral-900 mb-2">
+                              <p className="text-[15px] font-semibold text-neutral-500 mb-2">
                                 위치 상세
                               </p>
                               <div className="relative">
@@ -1568,7 +1568,7 @@ export default function ScheduleModal({
                     {ASSET_FIELD_CONFIG.map((field) => (
                       <label
                         key={field.field}
-                        className="flex items-center justify-between text-[12px] font-semibold text-neutral-600"
+                        className="flex items-center justify-between text-[14px] font-semibold text-neutral-600"
                       >
                         <span>{field.label}</span>
                         <input
