@@ -462,6 +462,7 @@ function CalendarSection({
         overdue: boolean;
         hasCompleted: boolean;
         ringStatusColors: string[];
+        hasPaybackPending: boolean;
       }
     >
   >((acc, schedule) => {
@@ -475,6 +476,7 @@ function CalendarSection({
           overdue: false,
           hasCompleted: false,
           ringStatusColors: [],
+          hasPaybackPending: false,
         };
       }
       return acc[key];
@@ -498,6 +500,9 @@ function CalendarSection({
       }
       if (statusColor) {
         info.ringStatusColors.push(statusColor);
+      }
+      if (schedule.paybackExpected && !schedule.paybackConfirmed) {
+        info.hasPaybackPending = true;
       }
     }
 
@@ -645,6 +650,7 @@ function CalendarSection({
           const selectedHighlightClass = isSelected ? 'bg-orange-100 text-orange-900' : '';
           const isInteractive = hasSchedule || Boolean(onCreateSchedule);
           const wasAlreadySelected = selectedDate === dateStr;
+          const showPaybackEmoji = Boolean(dayInfo?.hasPaybackPending);
           const handleDayClick = (event: MouseEvent<HTMLButtonElement>) => {
             onDateClick(dateStr);
             const isClickInitiated = event.detail === 1;
@@ -677,6 +683,11 @@ function CalendarSection({
                   className="pointer-events-none absolute inset-0 rounded-full"
                   style={ringGradientStyle}
                 />
+              )}
+              {showPaybackEmoji && (
+                <span className="pointer-events-none absolute -top-[2px] -right-[2px] text-[10px]">
+                  💸
+                </span>
               )}
               <span className="leading-none text-current">{day}</span>
               {hasSchedule && dayInfo?.hasDeadline && (
