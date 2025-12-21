@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import HomePage from '@/components/home-page';
 import AllSchedulesPage from '@/components/all-schedules-page';
@@ -98,6 +98,7 @@ function PageContent() {
   const isNewSchedule = searchParams.get('new') === 'true';
   const initialDeadline = searchParams.get('date') ?? undefined;
   const isTodoModalOpen = searchParams.get('todo') === 'true';
+  const [homeCalendarFocusDate, setHomeCalendarFocusDate] = useState<string | null>(null);
 
   const showAllSchedules = view === 'all';
   const isScheduleModalOpen = scheduleId !== null || isNewSchedule;
@@ -131,15 +132,19 @@ function PageContent() {
 
   const handleSaveSchedule = async (schedule: Schedule) => {
     let success = true;
+    let createdSchedule: Schedule | null = null;
     if (editingScheduleId) {
       const { id, ...updates } = schedule;
       success = await updateSchedule(editingScheduleId, updates);
     } else {
       const { id, ...newSchedule } = schedule;
-      const created = await createSchedule(newSchedule);
-      success = Boolean(created);
+      createdSchedule = await createSchedule(newSchedule);
+      success = Boolean(createdSchedule);
     }
     if (success) {
+      if (!editingScheduleId && createdSchedule?.dead) {
+        setHomeCalendarFocusDate(createdSchedule.dead);
+      }
       handleCloseScheduleModal();
     }
     return success;
@@ -270,6 +275,8 @@ function PageContent() {
                   onCreateSchedule={(dateStr) =>
                     handleOpenScheduleModal(undefined, { deadDate: dateStr })
                   }
+                  focusDate={homeCalendarFocusDate}
+                  onFocusDateApplied={() => setHomeCalendarFocusDate(null)}
                 />
               )}
 

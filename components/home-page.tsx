@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePostHog } from 'posthog-js/react';
@@ -48,6 +48,8 @@ export default function HomePage({
   onCompleteClick,
   onAddClick,
   onCreateSchedule,
+  focusDate,
+  onFocusDateApplied,
 }: {
   schedules: Schedule[];
   onScheduleClick: (id: number) => void;
@@ -55,6 +57,8 @@ export default function HomePage({
   onCompleteClick?: (id: number) => void;
   onAddClick?: () => void;
   onCreateSchedule?: (dateStr: string) => void;
+  focusDate?: string | null;
+  onFocusDateApplied?: () => void;
 }) {
   const router = useRouter();
   const posthog = usePostHog();
@@ -89,6 +93,14 @@ export default function HomePage({
   const reconfirmCount = reconfirmSchedules.length;
   const noDeadlineSchedules = schedules.filter((s) => !s.dead);
   const hasSchedules = schedules.length > 0;
+
+  useEffect(() => {
+    if (focusDate) {
+      setSelectedDate(focusDate);
+      setSelectedFilter('all');
+      onFocusDateApplied?.();
+    }
+  }, [focusDate, onFocusDateApplied]);
 
   // Filter schedules based on selected date and filter
   let filteredSchedules = schedules;
