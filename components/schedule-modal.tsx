@@ -947,7 +947,7 @@ export default function ScheduleModal({
           onValueChange={(value) => handleStatusChange(value as Schedule['status'])}
         >
           <SelectTrigger
-            size="sm"
+            size="default"
             className="w-full bg-[#F7F7F8] border-none rounded-xl text-[16px]"
           >
             <SelectValue placeholder="선택하세요" />
@@ -997,16 +997,16 @@ export default function ScheduleModal({
           </div>
 
           <div className="flex-1 overflow-y-auto overscroll-contain scrollbar-hide touch-pan-y min-h-0">
-            {formData.dead && formData.dead < getTodayInKST() && formData.status !== '완료' && (
-              <div className="mb-4 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
-                <span className="text-[12px]">⚠️</span>
-                <span className="text-[12px] font-bold text-red-700">
-                  마감 기한 초과된 체험단입니다
-                </span>
-              </div>
-            )}
-
             <div className="space-y-4 bg-[#F2F4F6] p-4">
+              {formData.dead && formData.dead < getTodayInKST() && formData.status !== '완료' && (
+                <div className="mb-4 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+                  <span className="text-[14px]">⚠️</span>
+                  <span className="text-[14px] font-bold text-red-700">
+                    마감 기한 초과된 체험단입니다
+                  </span>
+                </div>
+              )}
+
               <section className="rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-5">
                 <div className="space-y-4">
                   <div>
