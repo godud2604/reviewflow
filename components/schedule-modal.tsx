@@ -265,7 +265,10 @@ export default function ScheduleModal({
   const isSubmittingRef = useRef(false);
   const isMountedRef = useRef(false);
   const guideFilesSectionRef = useRef<HTMLDivElement | null>(null);
+  const historyPushRef = useRef(false);
+  const ignorePopStateRef = useRef(false);
 
+  // Keep the modal history entry so the mobile back button triggers the close confirmation dialog.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -294,6 +297,39 @@ export default function ScheduleModal({
       isMountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+
+    const getCurrentUrl = () =>
+      `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+    const pushModalState = () => {
+      window.history.pushState({ scheduleModal: true }, '', getCurrentUrl());
+      historyPushRef.current = true;
+    };
+
+    const handlePopState = () => {
+      if (ignorePopStateRef.current) {
+        ignorePopStateRef.current = false;
+        return;
+      }
+      setShowCloseConfirm(true);
+      pushModalState();
+    };
+
+    pushModalState();
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (historyPushRef.current) {
+        ignorePopStateRef.current = true;
+        window.history.back();
+        historyPushRef.current = false;
+      }
+    };
+  }, [isOpen]);
 
   const allPlatforms = React.useMemo(() => {
     return [...userPlatforms].sort((a, b) => a.localeCompare(b, 'ko'));
