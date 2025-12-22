@@ -87,7 +87,7 @@ type ProfilePageProps = {
 export default function ProfilePage({ profile, refetchUserProfile }: ProfilePageProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { user: authUser, signOut } = useAuth();
+  const { user: authUser, session, signOut } = useAuth();
   const { schedules } = useSchedules();
 
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
@@ -96,6 +96,8 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [isRedeemingCoupon, setIsRedeemingCoupon] = useState(false);
+  const [isWithdrawalDialogOpen, setIsWithdrawalDialogOpen] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (!profile?.profileImagePath) {
@@ -334,6 +336,45 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
     }
   };
 
+  const handleWithdrawAccount = async () => {
+    if (!authUser || !session?.access_token) {
+      toast({ title: '로그인이 필요합니다.', variant: 'destructive' });
+      return;
+    }
+
+    setIsDeletingAccount(true);
+
+    try {
+      const response = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.error ?? '회원 탈퇴에 실패했습니다.');
+      }
+
+      toast({
+        title: '회원 탈퇴가 완료되었습니다.',
+        description: '모든 정보가 삭제되었으며 다시 로그인할 수 없습니다.',
+      });
+      setIsWithdrawalDialogOpen(false);
+      await signOut();
+      router.push('/');
+    } catch (err) {
+      toast({
+        title: '회원 탈퇴에 실패했습니다.',
+        description: err instanceof Error ? err.message : '다시 시도해 주세요.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   const openDownloadDialog = () => {
     if (!filteredSchedules.length) return;
     setIsDownloadDialogOpen(true);
@@ -436,31 +477,6 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
           )}
         </section>
 
-        {isPro && tierDurationMonths !== COUPON_TIER_DURATION_MONTHS && (
-          <section className="relative mb-6 rounded-[30px] border border-amber-100/80 bg-gradient-to-br from-white to-[#fff4ed] p-6 shadow-sm text-left">
-            <p className="text-xs font-semibold text-neutral-500">쿠폰 등록</p>
-            <p className="text-[12px] font-semibold text-neutral-900 mt-1">
-              사전신청 시 입력된 이메일로 발송된 쿠폰을 입력하면 등급이 PRO로 전환됩니다.
-            </p>
-            <div className="mt-3 flex gap-3">
-              <input
-                value={couponCode}
-                onChange={(event) => setCouponCode(event.target.value)}
-                placeholder="쿠폰 코드를 입력하세요"
-                className="flex-1 min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-3 text-[16px] text-neutral-900 shadow-sm transition focus:border-amber-400 focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={handleApplyCoupon}
-                disabled={isRedeemingCoupon}
-                className="rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isRedeemingCoupon ? '적용 중...' : '적용'}
-              </button>
-            </div>
-          </section>
-        )}
-
         <div className="space-y-2">
           <div className="bg-white rounded-3xl p-4 shadow-sm">
             {proFeatures.map((feature, idx) => {
@@ -514,16 +530,50 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
           </div>
         </div>
 
+        {isPro && tierDurationMonths !== COUPON_TIER_DURATION_MONTHS && (
+          <section className="relative mt-6 rounded-[30px] border border-amber-100/80 bg-gradient-to-br from-white to-[#fff4ed] p-6 shadow-sm text-left">
+            <p className="text-xs font-semibold text-neutral-500">쿠폰 등록</p>
+            <p className="text-[12px] font-semibold text-neutral-900 mt-1">
+              사전신청 시 입력된 이메일로 발송된 쿠폰을 입력하면 등급이 PRO로 전환됩니다.
+            </p>
+            <div className="mt-3 flex gap-3">
+              <input
+                value={couponCode}
+                onChange={(event) => setCouponCode(event.target.value)}
+                placeholder="쿠폰 코드를 입력하세요"
+                className="flex-1 min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-3 text-[16px] text-neutral-900 shadow-sm transition focus:border-amber-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleApplyCoupon}
+                disabled={isRedeemingCoupon}
+                className="rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isRedeemingCoupon ? '적용 중...' : '적용'}
+              </button>
+            </div>
+          </section>
+        )}
+
         <button
           type="button"
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="mt-12 w-full py-4 text-sm font-bold text-neutral-300 transition-colors hover:text-neutral-500 active:scale-95"
+          className="mt-6 w-full py-4 text-sm font-bold text-neutral-300 transition-colors hover:text-neutral-500 active:scale-95"
         >
           {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
         </button>
+        <div className="mt-4 text-center text-[14px] text-neutral-400 hover:text-neutral-500">
+          <button
+            type="button"
+            onClick={() => setIsWithdrawalDialogOpen(true)}
+            className="underline-offset-2 transition hover:text-neutral-500 focus-visible:text-neutral-500"
+          >
+            계정 탈퇴
+          </button>
+        </div>
         <Dialog open={isDownloadDialogOpen} onOpenChange={setIsDownloadDialogOpen}>
-          <DialogContent className="max-w-[380px]">
+          <DialogContent className="max-w-[300px]">
             <DialogHeader className="space-y-1 text-left">
               <DialogTitle>활동 내역 다운로드</DialogTitle>
               <DialogDescription>월별 또는 전체 활동을 엑셀로 저장합니다.</DialogDescription>
@@ -564,6 +614,39 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
                 className="w-full rounded-2xl bg-neutral-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neutral-900"
               >
                 엑셀 다운로드
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={isWithdrawalDialogOpen} onOpenChange={setIsWithdrawalDialogOpen}>
+          <DialogContent className="max-w-[300px]">
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle>회원 탈퇴</DialogTitle>
+              <DialogDescription>
+                계정과 모든 활동 기록이 즉시 삭제되며 복구할 수 없습니다.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-2 space-y-2">
+              <p className="text-xs text-neutral-600">
+                탈퇴하면 모든 데이터가 제거되며 동일 이메일로 다시 가입하더라도 기록을 복원할 수
+                없습니다.
+              </p>
+            </div>
+            <DialogFooter className="pt-3 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleWithdrawAccount}
+                disabled={isDeletingAccount}
+                className="w-full rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDeletingAccount ? '탈퇴 진행 중...' : '계정 탈퇴하기'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsWithdrawalDialogOpen(false)}
+                className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
+              >
+                취소
               </button>
             </DialogFooter>
           </DialogContent>
