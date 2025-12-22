@@ -180,11 +180,9 @@ export default function SignUpPage() {
         )}
 
         {/* Form */}
-        {/* <form onSubmit={handleSignUp} className="space-y-4">
+        <form onSubmit={handleSignUp} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#333D4B] mb-2">
-              이메일
-            </label>
+            <label className="block text-sm font-medium text-[#333D4B] mb-2">이메일</label>
             <input
               type="email"
               value={email}
@@ -196,9 +194,7 @@ export default function SignUpPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#333D4B] mb-2">
-              비밀번호
-            </label>
+            <label className="block text-sm font-medium text-[#333D4B] mb-2">비밀번호</label>
             <input
               type="password"
               value={password}
@@ -210,9 +206,7 @@ export default function SignUpPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#333D4B] mb-2">
-              비밀번호 확인
-            </label>
+            <label className="block text-sm font-medium text-[#333D4B] mb-2">비밀번호 확인</label>
             <input
               type="password"
               value={confirmPassword}
@@ -228,16 +222,16 @@ export default function SignUpPage() {
             disabled={loading}
             className="w-full bg-[#FF5722] text-white py-3 rounded-xl font-semibold hover:bg-[#E64A19] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            {loading ? "가입 중..." : "회원가입"}
+            {loading ? '가입 중...' : '회원가입'}
           </button>
-        </form> */}
+        </form>
 
         {/* Divider */}
-        {/* <div className="flex items-center my-6">
+        <div className="flex items-center my-6">
           <div className="flex-1 border-t border-gray-200"></div>
           <span className="px-4 text-sm text-[#8B95A1]">또는</span>
           <div className="flex-1 border-t border-gray-200"></div>
-        </div> */}
+        </div>
 
         {/* Kakao Sign Up */}
         <button
