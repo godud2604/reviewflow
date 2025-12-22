@@ -203,7 +203,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
     }
 
     if (!filteredSchedules.length) {
-      toast({ title: '선택한 기간의 활동 내역이 없습니다.', variant: 'destructive' });
+      toast({ title: '선택한 기간의 활동 내역이 없어요.', variant: 'destructive' });
       return;
     }
 
