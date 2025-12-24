@@ -108,6 +108,9 @@ export default function ScheduleItem({
   const hasPaybackExpected = Boolean(schedule.paybackExpected);
   const isPaid = Boolean(schedule.paybackConfirmed);
   const canConfirmPayback = hasPaybackExpected && !!onPaybackConfirm;
+  const channelList = schedule.channel?.filter(Boolean) ?? [];
+  const channelLabel = channelList.join(', ');
+  const hasChannelLabel = channelLabel.length > 0;
 
   return (
     <div
@@ -200,8 +203,18 @@ export default function ScheduleItem({
         </div>
         <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1">
           <span className="font-medium text-neutral-600">{dDate}</span>
+          {schedule.memo && (
+            <span className="text-sm shrink-0 opacity-50" title="메모 있음">
+              📝
+            </span>
+          )}
+          {hasPaybackExpected && (
+            <span className="text-sm shrink-0 ml-1 opacity-50" title="페이백 예정">
+              💸
+            </span>
+          )}
         </div>
-        <div className="flex mt-2 items-center flex-wrap gap-y-1">
+        <div className="flex mt-2 items-center flex-wrap gap-2">
           <p
             className={`text-[10.5px] font-semibold rounded-[10px] px-2 py-[2px] w-fit ${
               status.class ?? 'border border-neutral-100 text-neutral-500 bg-white/80'
@@ -211,7 +224,7 @@ export default function ScheduleItem({
             {status.text}
           </p>
           {schedule.reviewType === '방문형' && schedule.regionDetail && (
-            <span className="text-[11px] font-semibold text-neutral-500 ml-2 bg-white/80 rounded-[10px] px-2 py-0.5 border border-neutral-200">
+            <span className="text-[11px] font-semibold text-neutral-500 bg-white/80 rounded-[10px] px-2 py-0.5 border border-neutral-200">
               {(() => {
                 const parts = schedule.regionDetail.split(' ');
                 return parts.slice(0, 2).join(' ');
@@ -219,19 +232,14 @@ export default function ScheduleItem({
             </span>
           )}
           {platformLabel && (
-            <p className="text-[10.5px] font-semibold text-neutral-500 rounded-[10px] border border-neutral-200 bg-white/80 px-2 py-[2px] w-fit ml-2">
+            <p className="text-[10.5px] font-semibold text-neutral-500 rounded-[10px] border border-neutral-200 bg-white/80 px-2 py-[2px] w-fit">
               {platformLabel}
             </p>
           )}
-          {schedule.memo && (
-            <span className="text-sm shrink-0 ml-2 opacity-50" title="메모 있음">
-              📝
-            </span>
-          )}
-          {hasPaybackExpected && (
-            <span className="text-sm shrink-0 ml-1 opacity-50" title="페이백 예정">
-              💸
-            </span>
+          {hasChannelLabel && (
+            <p className="text-[10.5px] font-semibold text-neutral-500 rounded-[10px] border border-neutral-200 bg-white/80 px-2 py-[2px] w-fit">
+              {channelLabel}
+            </p>
           )}
         </div>
       </div>
