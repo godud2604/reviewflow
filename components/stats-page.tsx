@@ -5,6 +5,7 @@ import type { Schedule, ExtraIncome, MonthlyGrowth, HistoryView } from '@/types'
 import { useExtraIncomes } from '@/hooks/use-extra-incomes';
 import ExtraIncomeModal from './extra-income-modal';
 import IncomeHistoryModal from './income-history-modal';
+
 const incomeTutorialStorageKey = 'reviewflow-stats-income-tutorial-shown';
 
 type StatsPageProps = {
@@ -669,6 +670,7 @@ export default function StatsPage({
           monthlyGrowth={monthlyGrowth}
           selectedMonthKey={selectedMonthKey}
           selectedMonthLabel={selectedMonthLabelShort || displaySelectedMonthLabel}
+          isPro={isPro}
         />
       </div>
 
@@ -703,12 +705,16 @@ function TrendChart({
   monthlyGrowth,
   selectedMonthKey,
   selectedMonthLabel,
+  isPro,
 }: {
   currentMonthValue: number;
   monthlyGrowth: MonthlyGrowth[];
   selectedMonthKey: string;
   selectedMonthLabel: string;
+  isPro: boolean;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const addSelectedIfMissing = (data: MonthlyGrowth[]) => {
     if (!selectedMonthKey) return data;
     if (data.some((item) => item.monthStart === selectedMonthKey)) return data;
@@ -736,6 +742,9 @@ function TrendChart({
   );
 
   const buildChartData = () => {
+    if (isPro) {
+      return uniqueSortedData;
+    }
     const latest = uniqueSortedData.slice(-4);
     if (!selectedMonthKey) return latest;
     if (latest.some((item) => item.monthStart === selectedMonthKey)) return latest;
@@ -748,18 +757,15 @@ function TrendChart({
     .slice()
     .sort((a, b) => new Date(a.monthStart).getTime() - new Date(b.monthStart).getTime());
 
-  // 1. 최대 양수값과 최소 음수값 계산
   const maxVal = Math.max(...chartData.map((d) => d.econValue), 10000);
   const minVal = Math.min(...chartData.map((d) => d.econValue), -10000);
 
-  // 2. 전체 범위 계산 (여유 공간 20% 확보 - 텍스트 공간 확보용)
   const range = maxVal - minVal;
   const padding = range * 0.2;
   const displayMax = maxVal + padding;
   const displayMin = minVal - padding;
   const displayRange = displayMax - displayMin;
 
-  // 3. 0원 기준선 위치 계산 (%)
   const zeroLinePercent = ((displayMax - 0) / displayRange) * 100;
 
   const formatMoneyShort = (value: number) => {
@@ -772,110 +778,153 @@ function TrendChart({
     return `${sign}${abs.toLocaleString()}`;
   };
 
+  const isScrollable = chartData.length > 4;
+
+  useEffect(() => {
+    if (isScrollable && scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, [isScrollable, chartData]);
+
   return (
-    <div className="bg-white rounded-[26px] p-6 shadow-sm shadow-[0_14px_40px_rgba(18,34,64,0.08)]">
-      <div className="text-[16px] font-bold text-[#0f172a] mb-1">월별 성장 추이</div>
-      <div className="text-xs text-[#9ca3af] font-semibold mb-6">지난 4개월간의 활동입니다</div>
+    <div className="bg-white rounded-[26px] p-6 shadow-sm shadow-[0_14px_40px_rgba(18,34,64,0.08)] relative">
+      <div className="flex justify-between items-start mb-1">
+        {/* [수정] 타이틀과 PRO 뱃지를 감싸는 영역 */}
+        <div className="flex items-center gap-1.5">
+          <div className="text-[16px] font-bold text-[#0f172a]">월별 성장 추이</div>
 
-      {/* 컨테이너: 그래프 영역과 라벨 영역을 Flex로 분리 */}
-      <div className="flex flex-col w-full">
-        {/* A. 그래프 영역 (높이 고정) */}
-        <div className="relative h-[160px] w-full mb-2">
-          {/* 0원 기준선 */}
-          <div
-            className="absolute w-full border-t border-dashed border-gray-300 z-0"
-            style={{ top: `${zeroLinePercent}%` }}
-          />
-
-          <div className="absolute inset-0 flex justify-around items-stretch z-10 px-2">
-            {chartData.map((item) => {
-              const isActive = item.monthStart === selectedMonthKey;
-              const isNegative = item.econValue < 0;
-
-              // 막대 높이 (%)
-              const barHeightPercent = (Math.abs(item.econValue) / displayRange) * 100;
-
-              // 스타일 결정
-              let barClass = '';
-              let valueClass = '';
-
-              if (isActive) {
-                if (isNegative) {
-                  barClass =
-                    'bg-gradient-to-b from-[#ff9a3c] to-[#ff3b0c] rounded-b-[10px] rounded-t-[2px] shadow-[0_4px_12px_rgba(255,59,12,0.25)]';
-                  valueClass = 'text-[#ff3b0c] font-bold drop-shadow-sm';
-                } else {
-                  barClass =
-                    'bg-gradient-to-t from-[#2b5cff] to-[#5f80ff] rounded-t-[10px] rounded-b-[2px] shadow-[0_4px_12px_rgba(43,92,255,0.25)]';
-                  valueClass = 'text-[#2b5cff] font-bold drop-shadow-sm';
-                }
-              } else {
-                if (isNegative) {
-                  barClass = 'bg-[#fff0e6] rounded-b-[10px] rounded-t-[2px]';
-                } else {
-                  barClass = 'bg-[#e7edf5] rounded-t-[10px] rounded-b-[2px]';
-                }
-                valueClass = 'text-[#9ca3af] font-semibold';
-              }
-
-              return (
-                <div key={item.monthStart} className="relative w-12 flex flex-col items-center">
-                  {/* 막대 Wrapper */}
-                  <div
-                    className="absolute w-full flex justify-center transition-all duration-500"
-                    style={{
-                      top: isNegative ? `${zeroLinePercent}%` : 'auto',
-                      bottom: isNegative ? 'auto' : `${100 - zeroLinePercent}%`,
-                      height: `${Math.max(barHeightPercent, 1)}%`,
-                    }}
-                  >
-                    {/* 실제 막대 */}
-                    <div className={`w-full h-full transition-all duration-500 ${barClass}`} />
-
-                    {/* 금액 텍스트 */}
-                    <span
-                      className={`absolute text-[11px] whitespace-nowrap transition-all duration-500 ${valueClass}`}
-                      style={{
-                        top: isNegative ? '100%' : 'auto',
-                        bottom: isNegative ? 'auto' : '100%',
-                        marginTop: '6px', // 막대와 텍스트 사이 간격
-                        marginBottom: '6px',
-                      }}
-                    >
-                      {formatMoneyShort(item.econValue)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {/* [추가] PRO 뱃지 (isPro일 때만 표시) */}
+          {isPro && (
+            <span className="inline-flex items-center justify-center rounded-[4px] bg-[#f97316] px-1.5 py-[3px] text-[10px] font-bold text-white leading-none shadow-sm">
+              PRO
+            </span>
+          )}
         </div>
 
-        {/* B. X축 날짜 라벨 영역 (그래프 영역 밖으로 뺌) */}
-        <div className="w-full flex justify-around px-2 pt-1 border-t border-transparent">
-          {chartData.map((item) => {
-            const isActive = item.monthStart === selectedMonthKey;
-            const isNegative = item.econValue < 0;
-            const monthDate = new Date(item.monthStart);
-            const label = isActive ? selectedMonthLabel : `${monthDate.getMonth() + 1}월`;
+        {/* 스크롤 힌트 */}
+        {isScrollable && (
+          <div className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1 rounded-full animate-pulse">
+            ← 옆으로 넘겨보세요
+          </div>
+        )}
+      </div>
 
-            // 활성 상태 스타일
-            const activeStyle = isActive
-              ? isNegative
-                ? 'text-[#ff3b0c] bg-[#fff0e6] border border-[#ff3b0c]/10 shadow-sm'
-                : 'text-[#2b5cff] bg-[#f0f6ff] border border-[#2b5cff]/10 shadow-sm'
-              : 'text-[#9ca3af]';
+      <div className="text-xs text-[#9ca3af] font-semibold mb-6">
+        {isPro ? '전체 기간의 활동 내역입니다' : '지난 4개월간의 활동입니다'}
+      </div>
 
-            return (
-              <div key={item.monthStart} className="w-12 flex justify-center">
-                <span
-                  className={`text-[11px] px-2.5 py-1 rounded-full transition-colors duration-300 font-semibold ${activeStyle}`}
-                >
-                  {label}
-                </span>
+      <div className="relative w-full">
+        {isScrollable && (
+          <>
+            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-white to-transparent z-20 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent z-20 pointer-events-none" />
+          </>
+        )}
+
+        <div
+          ref={scrollRef}
+          className={`w-full ${isScrollable ? 'overflow-x-auto pb-4 px-2 scrollbar-hide' : ''}`}
+        >
+          <div className={`flex flex-col ${isScrollable ? 'min-w-max' : 'w-full'}`}>
+            <div className="relative h-[160px] w-full mb-2">
+              <div
+                className="absolute w-full border-t border-dashed border-gray-300 z-0"
+                style={{ top: `${zeroLinePercent}%` }}
+              />
+
+              <div
+                className={`absolute inset-0 flex items-stretch z-10 ${
+                  isScrollable ? 'justify-start gap-8 px-4' : 'justify-around px-2'
+                }`}
+              >
+                {chartData.map((item) => {
+                  const isActive = item.monthStart === selectedMonthKey;
+                  const isNegative = item.econValue < 0;
+                  const barHeightPercent = (Math.abs(item.econValue) / displayRange) * 100;
+
+                  let barClass = '';
+                  let valueClass = '';
+
+                  if (isActive) {
+                    if (isNegative) {
+                      barClass =
+                        'bg-gradient-to-b from-[#ff9a3c] to-[#ff3b0c] rounded-b-[10px] rounded-t-[2px] shadow-[0_4px_12px_rgba(255,59,12,0.25)]';
+                      valueClass = 'text-[#ff3b0c] font-bold drop-shadow-sm';
+                    } else {
+                      barClass =
+                        'bg-gradient-to-t from-[#2b5cff] to-[#5f80ff] rounded-t-[10px] rounded-b-[2px] shadow-[0_4px_12px_rgba(43,92,255,0.25)]';
+                      valueClass = 'text-[#2b5cff] font-bold drop-shadow-sm';
+                    }
+                  } else {
+                    if (isNegative) {
+                      barClass = 'bg-[#fff0e6] rounded-b-[10px] rounded-t-[2px]';
+                    } else {
+                      barClass = 'bg-[#e7edf5] rounded-t-[10px] rounded-b-[2px]';
+                    }
+                    valueClass = 'text-[#9ca3af] font-semibold';
+                  }
+
+                  return (
+                    <div
+                      key={item.monthStart}
+                      className="relative w-12 flex-none flex flex-col items-center group"
+                    >
+                      <div
+                        className="absolute w-full flex justify-center transition-all duration-500"
+                        style={{
+                          top: isNegative ? `${zeroLinePercent}%` : 'auto',
+                          bottom: isNegative ? 'auto' : `${100 - zeroLinePercent}%`,
+                          height: `${Math.max(barHeightPercent, 1)}%`,
+                        }}
+                      >
+                        <div className={`w-full h-full transition-all duration-500 ${barClass}`} />
+                        <span
+                          className={`absolute text-[11px] whitespace-nowrap transition-all duration-500 ${valueClass}`}
+                          style={{
+                            top: isNegative ? '100%' : 'auto',
+                            bottom: isNegative ? 'auto' : '100%',
+                            marginTop: '6px',
+                            marginBottom: '6px',
+                          }}
+                        >
+                          {formatMoneyShort(item.econValue)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+
+            <div
+              className={`w-full flex border-t border-transparent pt-1 ${
+                isScrollable ? 'justify-start gap-8 px-4' : 'justify-around px-2'
+              }`}
+            >
+              {chartData.map((item) => {
+                const isActive = item.monthStart === selectedMonthKey;
+                const isNegative = item.econValue < 0;
+                const monthDate = new Date(item.monthStart);
+                const label = isActive ? selectedMonthLabel : `${monthDate.getMonth() + 1}월`;
+
+                const activeStyle = isActive
+                  ? isNegative
+                    ? 'text-[#ff3b0c] bg-[#fff0e6] border border-[#ff3b0c]/10 shadow-sm'
+                    : 'text-[#2b5cff] bg-[#f0f6ff] border border-[#2b5cff]/10 shadow-sm'
+                  : 'text-[#9ca3af]';
+
+                return (
+                  <div key={item.monthStart} className="w-12 flex-none flex justify-center">
+                    <span
+                      className={`text-[11px] px-2.5 py-1 rounded-full transition-colors duration-300 font-semibold whitespace-nowrap ${activeStyle}`}
+                    >
+                      {label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>
