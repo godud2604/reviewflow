@@ -522,7 +522,7 @@ export default function ScheduleModal({
         title: '필수 정보를 모두 입력해주세요.',
         description: '체험단명과 마감일은 반드시 입력해야 합니다.',
         variant: 'destructive',
-        duration: 2000,
+        duration: 1000,
       });
       return;
     }
@@ -566,7 +566,7 @@ export default function ScheduleModal({
             toast({
               title: message,
               variant: 'destructive',
-              duration: 3000,
+              duration: 1000,
             });
             if (typeof window !== 'undefined') {
               alert(message);
@@ -585,7 +585,7 @@ export default function ScheduleModal({
           toast({
             title: message,
             variant: 'destructive',
-            duration: 2000,
+            duration: 1000,
           });
           if (typeof window !== 'undefined') {
             alert(message);
@@ -611,7 +611,7 @@ export default function ScheduleModal({
       if (savedSuccessfully) {
         toast({
           title: schedule ? '체험단 정보가 수정되었습니다.' : '체험단이 등록되었습니다.',
-          duration: 2000,
+          duration: 1000,
         });
       }
     } finally {
@@ -628,7 +628,7 @@ export default function ScheduleModal({
       setPendingFiles((prev) => [...prev, ...files]);
       toast({
         title: `${files.length}개의 파일이 선택되었습니다.`,
-        duration: 2000,
+        duration: 1000,
       });
     }
     e.target.value = '';
@@ -638,7 +638,7 @@ export default function ScheduleModal({
     toast({
       title: '다운로드 시작',
       description: '잠시만 기다려 주세요.',
-      duration: 2000,
+      duration: 1000,
     });
 
     try {
@@ -659,7 +659,7 @@ export default function ScheduleModal({
         toast({
           title: '파일 삭제에 실패했습니다.',
           variant: 'destructive',
-          duration: 2000,
+          duration: 1000,
         });
         return;
       }
@@ -674,7 +674,7 @@ export default function ScheduleModal({
 
     toast({
       title: '파일이 삭제되었습니다.',
-      duration: 2000,
+      duration: 1000,
     });
 
     setFileToDelete(null);
@@ -854,7 +854,7 @@ export default function ScheduleModal({
       setNewPlatform('');
       toast({
         title: '플랫폼이 추가되었습니다.',
-        duration: 2000,
+        duration: 1000,
       });
     }
   };
@@ -867,7 +867,7 @@ export default function ScheduleModal({
       }
       toast({
         title: '플랫폼이 삭제되었습니다.',
-        duration: 2000,
+        duration: 1000,
       });
     }
     setPlatformToDelete(null);
@@ -891,7 +891,7 @@ export default function ScheduleModal({
       setNewChannel('');
       toast({
         title: '작성할 채널이 추가되었습니다.',
-        duration: 2000,
+        duration: 1000,
       });
     }
   };
@@ -905,7 +905,7 @@ export default function ScheduleModal({
       }));
       toast({
         title: '작성할 채널이 삭제되었습니다.',
-        duration: 2000,
+        duration: 1000,
       });
     }
     setChannelToDelete(null);
@@ -1056,7 +1056,7 @@ export default function ScheduleModal({
                             navigator.clipboard.writeText(formData.title || '');
                             toast({
                               title: '체험단명이 복사되었습니다.',
-                              duration: 2000,
+                              duration: 1000,
                             });
                           }}
                           className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
@@ -1393,7 +1393,7 @@ export default function ScheduleModal({
                                       navigator.clipboard.writeText(formData.region || '');
                                       toast({
                                         title: '위치가 복사되었습니다.',
-                                        duration: 2000,
+                                        duration: 1000,
                                       });
                                     }}
                                     className="absolute right-18 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
@@ -1441,7 +1441,7 @@ export default function ScheduleModal({
                                       navigator.clipboard.writeText(formData.regionDetail || '');
                                       toast({
                                         title: '위치 상세가 복사되었습니다.',
-                                        duration: 2000,
+                                        duration: 1000,
                                       });
                                     }}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
@@ -1478,7 +1478,7 @@ export default function ScheduleModal({
                                       navigator.clipboard.writeText(formData.phone || '');
                                       toast({
                                         title: '가게 전화번호가 복사되었습니다.',
-                                        duration: 2000,
+                                        duration: 1000,
                                       });
                                     }}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
@@ -1507,7 +1507,7 @@ export default function ScheduleModal({
                                       navigator.clipboard.writeText(formData.ownerPhone || '');
                                       toast({
                                         title: '사장님 전화번호가 복사되었습니다.',
-                                        duration: 2000,
+                                        duration: 1000,
                                       });
                                     }}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
@@ -1665,7 +1665,7 @@ export default function ScheduleModal({
                         navigator.clipboard.writeText(formData.memo || '');
                         toast({
                           title: '메모가 복사되었습니다.',
-                          duration: 2000,
+                          duration: 1000,
                         });
                       }}
                       className="absolute right-1.5 top-3 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
@@ -1696,7 +1696,7 @@ export default function ScheduleModal({
                           navigator.clipboard.writeText(formData.ownerPhone || '');
                           toast({
                             title: '사장님 전화번호가 복사되었습니다.',
-                            duration: 2000,
+                            duration: 1000,
                           });
                         }}
                         className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
@@ -2233,7 +2233,7 @@ export default function ScheduleModal({
                   setShowDeleteConfirm(false);
                   toast({
                     title: '체험단이 삭제되었습니다.',
-                    duration: 2000,
+                    duration: 1000,
                   });
                 }
               }}

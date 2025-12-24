@@ -33,7 +33,7 @@ export function useMonthlyRanking(): UseMonthlyRankingReturn {
         title: '순위 정보를 불러오는 중 오류 발생',
         description: message,
         variant: 'destructive',
-        duration: 3000,
+        duration: 1000,
       });
     },
     [toast]

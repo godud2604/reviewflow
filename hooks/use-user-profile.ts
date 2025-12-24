@@ -91,7 +91,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
         title: '오류가 발생했습니다',
         description: message,
         variant: 'destructive',
-        duration: 3000,
+        duration: 1000,
       });
     },
     [toast]
@@ -220,7 +220,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
         toast({
           title: '이미 등록된 플랫폼입니다.',
           variant: 'destructive',
-          duration: 2000,
+          duration: 1000,
         });
         return false;
       }
@@ -291,7 +291,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
         toast({
           title: '이미 등록된 작성할 곳입니다.',
           variant: 'destructive',
-          duration: 2000,
+          duration: 1000,
         });
         return false;
       }

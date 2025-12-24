@@ -216,7 +216,7 @@ export default function IncomeHistoryModal({
     toast({
       title: success ? '부수입이 삭제되었습니다' : '부수입 삭제에 실패했습니다',
       variant: success ? 'default' : 'destructive',
-      duration: 2000,
+      duration: 1000,
     });
   };
 

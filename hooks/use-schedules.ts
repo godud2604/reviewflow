@@ -146,7 +146,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
         title: '오류가 발생했습니다',
         description: message,
         variant: 'destructive',
-        duration: 3000,
+        duration: 1000,
       });
     },
     [toast]

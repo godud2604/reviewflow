@@ -22,7 +22,7 @@ export default function FeedbackModal({
       toast({
         title: '내용을 입력해주세요',
         variant: 'destructive',
-        duration: 2000,
+        duration: 1000,
       });
       return;
     }
@@ -32,7 +32,7 @@ export default function FeedbackModal({
 
     toast({
       title: '피드백이 전송되었습니다. 소중한 의견 감사합니다!',
-      duration: 2000,
+      duration: 1000,
     });
 
     setContent('');

@@ -112,7 +112,7 @@ export default function PortfolioManagementPage() {
       toast({
         title: '플랫폼과 URL을 모두 입력해 주세요.',
         variant: 'destructive',
-        duration: 2000,
+        duration: 1000,
       });
       return;
     }
@@ -129,14 +129,14 @@ export default function PortfolioManagementPage() {
       if (success) {
         toast({
           title: '캠페인 활동이 저장되었습니다.',
-          duration: 1500,
+          duration: 1000,
         });
         void refetch().catch(() => {});
       } else {
         toast({
           title: '캠페인 저장에 실패했습니다.',
           variant: 'destructive',
-          duration: 2000,
+          duration: 1000,
         });
       }
     } catch (error) {
@@ -144,7 +144,7 @@ export default function PortfolioManagementPage() {
         title: '캠페인 저장에 실패했습니다.',
         description: error instanceof Error ? error.message : '다시 시도해주세요.',
         variant: 'destructive',
-        duration: 2500,
+        duration: 1000,
       });
     } finally {
       setIsSavingCampaignEntry(false);
@@ -171,7 +171,7 @@ export default function PortfolioManagementPage() {
       ]);
       toast({
         title: '포트폴리오 업데이트 완료',
-        duration: 2000,
+        duration: 1000,
       });
       void refetch().catch(() => {});
     } catch (error) {
@@ -179,7 +179,7 @@ export default function PortfolioManagementPage() {
         title: '포트폴리오 저장에 실패했습니다.',
         description: error instanceof Error ? error.message : '다시 시도해주세요.',
         variant: 'destructive',
-        duration: 2500,
+        duration: 1000,
       });
     } finally {
       setIsSavingPortfolio(false);

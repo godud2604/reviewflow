@@ -110,7 +110,7 @@ export default function ExtraIncomeModal({
       toast({
         title: '항목명과 금액을 입력해주세요',
         variant: 'destructive',
-        duration: 2000,
+        duration: 1000,
       });
       return;
     }
@@ -131,7 +131,7 @@ export default function ExtraIncomeModal({
         if (success) {
           toast({
             title: '부수입이 수정되었습니다',
-            duration: 2000,
+            duration: 1000,
           });
           handleClose();
         }
@@ -142,7 +142,7 @@ export default function ExtraIncomeModal({
 
       toast({
         title: '부수입이 추가되었습니다',
-        duration: 2000,
+        duration: 1000,
       });
 
       handleClose();
@@ -161,7 +161,7 @@ export default function ExtraIncomeModal({
     if (success) {
       toast({
         title: '부수입이 삭제되었습니다',
-        duration: 2000,
+        duration: 1000,
       });
       handleClose();
     }
