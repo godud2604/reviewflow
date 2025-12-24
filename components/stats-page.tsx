@@ -384,12 +384,14 @@ export default function StatsPage({
                 부수입 추가
               </button>
               {showIncomeTutorial && (
-                <div className="absolute -right-0 top-full mt-1 w-[190px] rounded-2xl border border-[#ebeef2] bg-white px-3 py-2.5 text-[11px] leading-snug text-[#111827] shadow-md">
+                <div className="absolute -right-10 top-full mt-1 w-[160px] rounded-2xl border border-[#ebeef2] bg-white px-3 py-2.5 text-[11px] leading-snug text-[#111827] shadow-md">
                   <div className="text-[10px] font-semibold uppercase text-[#f97316] mb-1">
-                    부수입 가이드
+                    혹시 깜빡한 부수입, 없으신가요?
                   </div>
-                  <p className="text-[11px] leading-tight">이 버튼을 눌러 부수입을 추가해보세요</p>
-                  <span className="absolute -right-[-30px] top-[-7px] h-3 w-3 rotate-45 border-t border-r border-[#ebeef2] bg-white" />
+                  <p className="text-[11px] leading-tight">
+                    부수입 입력하고 이번 달 총 가치를 높여보세요!
+                  </p>
+                  <span className="absolute -right-[-80px] top-[-7px] h-3 w-3 rotate-45 border-t border-r border-[#ebeef2] bg-white" />
                 </div>
               )}
             </div>
