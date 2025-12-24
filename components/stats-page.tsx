@@ -554,47 +554,49 @@ export default function StatsPage({
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-[13px] font-bold text-[#0f172a]">부수입</div>
-                    <div className="text-xs text-[#6b7685]">
-                      {totalExtraIncome ? `₩ ${totalExtraIncome.toLocaleString()}` : '없음'}
+                {selectedMonthExtraIncomes.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-[13px] font-bold text-[#0f172a]">부수입</div>
+                      <div className="text-xs text-[#6b7685]">
+                        {totalExtraIncome ? `₩ ${totalExtraIncome.toLocaleString()}` : '없음'}
+                      </div>
+                    </div>
+                    <div className="mt-3 space-y-3">
+                      {selectedMonthExtraIncomes.length > 0 ? (
+                        selectedMonthExtraIncomes
+                          .slice()
+                          .sort((a, b) => b.amount - a.amount)
+                          .map((income) => {
+                            const percentage = totalExtraIncome
+                              ? Math.round((income.amount / totalExtraIncome) * 100)
+                              : 0;
+                            return (
+                              <div key={income.id} className="flex items-center gap-3">
+                                <div
+                                  className="w-26 text-[12px] font-semibold text-[#4b5563] truncate"
+                                  title={income.title}
+                                >
+                                  {income.title}
+                                </div>
+                                <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                </div>
+                                <div className="w-12 text-right text-xs text-[#9ca3af] font-semibold">
+                                  {percentage}%
+                                </div>
+                              </div>
+                            );
+                          })
+                      ) : (
+                        <div className="text-xs text-[#9ca3af]">등록한 부수입이 아직 없습니다.</div>
+                      )}
                     </div>
                   </div>
-                  <div className="mt-3 space-y-3">
-                    {selectedMonthExtraIncomes.length > 0 ? (
-                      selectedMonthExtraIncomes
-                        .slice()
-                        .sort((a, b) => b.amount - a.amount)
-                        .map((income) => {
-                          const percentage = totalExtraIncome
-                            ? Math.round((income.amount / totalExtraIncome) * 100)
-                            : 0;
-                          return (
-                            <div key={income.id} className="flex items-center gap-3">
-                              <div
-                                className="w-26 text-[12px] font-semibold text-[#4b5563] truncate"
-                                title={income.title}
-                              >
-                                {income.title}
-                              </div>
-                              <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
-                                <div
-                                  className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
-                              <div className="w-12 text-right text-xs text-[#9ca3af] font-semibold">
-                                {percentage}%
-                              </div>
-                            </div>
-                          );
-                        })
-                    ) : (
-                      <div className="text-xs text-[#9ca3af]">등록한 부수입이 아직 없습니다.</div>
-                    )}
-                  </div>
-                </div>
+                )}
               </div>
             </section>
 
@@ -745,21 +747,20 @@ function TrendChart({
   const chartData = buildChartData()
     .slice()
     .sort((a, b) => new Date(a.monthStart).getTime() - new Date(b.monthStart).getTime());
-  const maxValue = Math.max(...chartData.map((item) => Math.abs(item.econValue)), 1);
 
-  const bars = chartData.map((item) => {
-    const monthDate = new Date(item.monthStart);
-    const isActive = item.monthStart === selectedMonthKey;
-    const height = Math.max(12, Math.round((Math.abs(item.econValue) / maxValue) * 90));
+  // 1. 최대 양수값과 최소 음수값 계산
+  const maxVal = Math.max(...chartData.map((d) => d.econValue), 10000);
+  const minVal = Math.min(...chartData.map((d) => d.econValue), -10000);
 
-    return {
-      key: item.monthStart,
-      label: isActive ? selectedMonthLabel : `${monthDate.getMonth() + 1}월`,
-      value: item.econValue,
-      height,
-      active: isActive,
-    };
-  });
+  // 2. 전체 범위 계산 (여유 공간 20% 확보 - 텍스트 공간 확보용)
+  const range = maxVal - minVal;
+  const padding = range * 0.2;
+  const displayMax = maxVal + padding;
+  const displayMin = minVal - padding;
+  const displayRange = displayMax - displayMin;
+
+  // 3. 0원 기준선 위치 계산 (%)
+  const zeroLinePercent = ((displayMax - 0) / displayRange) * 100;
 
   const formatMoneyShort = (value: number) => {
     const abs = Math.abs(value);
@@ -768,41 +769,114 @@ function TrendChart({
     if (abs >= 10000) return `${sign}${Math.round(abs / 10000)}만`;
     if (abs >= 1000) return `${sign}${Math.round(abs / 1000)}천`;
     if (abs === 0) return '0원';
-    return `${sign}${abs.toLocaleString()}원`;
+    return `${sign}${abs.toLocaleString()}`;
   };
 
   return (
     <div className="bg-white rounded-[26px] p-6 shadow-sm shadow-[0_14px_40px_rgba(18,34,64,0.08)]">
       <div className="text-[16px] font-bold text-[#0f172a] mb-1">월별 성장 추이</div>
-      <div className="text-xs text-[#9ca3af] font-semibold mb-5">지난 4개월간의 활동입니다</div>
-      <div className="flex justify-start items-end h-[150px] pt-6 pb-4 gap-4">
-        {bars.map((month) => {
-          const labelClassNames = month.active
-            ? 'bg-gradient-to-r from-[#2b5cff] to-[#5f80ff] text-white px-3 py-1 rounded-full shadow-[0_12px_30px_rgba(47,93,255,0.35)]'
-            : 'text-[#9ca3af]';
-          const valueClassNames = month.active
-            ? 'text-white drop-shadow-[0_4px_18px_rgba(15,23,42,0.45)]'
-            : 'text-[#0f172a]';
-          return (
-            <div
-              key={month.key}
-              className={`w-[50%] rounded-[14px] relative flex justify-center transition-all duration-500 ${
-                month.active ? 'bg-gradient-to-t from-[#2b5cff] to-[#5f80ff]' : 'bg-[#e7edf5]'
-              }`}
-              style={{ height: `${month.height}%` }}
-            >
-              <span className={`absolute -top-6 text-xs font-bold ${valueClassNames}`}>
-                {formatMoneyShort(month.value)}
-              </span>
-              <span className="absolute -bottom-6 text-xs text-[#9ca3af] font-semibold">
-                {month.label}
-              </span>
-            </div>
-          );
-        })}
-        {!bars.length && (
-          <div className="text-sm text-[#9ca3af]">데이터가 없습니다. 스케줄을 추가해주세요.</div>
-        )}
+      <div className="text-xs text-[#9ca3af] font-semibold mb-6">지난 4개월간의 활동입니다</div>
+
+      {/* 컨테이너: 그래프 영역과 라벨 영역을 Flex로 분리 */}
+      <div className="flex flex-col w-full">
+        {/* A. 그래프 영역 (높이 고정) */}
+        <div className="relative h-[160px] w-full mb-2">
+          {/* 0원 기준선 */}
+          <div
+            className="absolute w-full border-t border-dashed border-gray-300 z-0"
+            style={{ top: `${zeroLinePercent}%` }}
+          />
+
+          <div className="absolute inset-0 flex justify-around items-stretch z-10 px-2">
+            {chartData.map((item) => {
+              const isActive = item.monthStart === selectedMonthKey;
+              const isNegative = item.econValue < 0;
+
+              // 막대 높이 (%)
+              const barHeightPercent = (Math.abs(item.econValue) / displayRange) * 100;
+
+              // 스타일 결정
+              let barClass = '';
+              let valueClass = '';
+
+              if (isActive) {
+                if (isNegative) {
+                  barClass =
+                    'bg-gradient-to-b from-[#ff9a3c] to-[#ff3b0c] rounded-b-[10px] rounded-t-[2px] shadow-[0_4px_12px_rgba(255,59,12,0.25)]';
+                  valueClass = 'text-[#ff3b0c] font-bold drop-shadow-sm';
+                } else {
+                  barClass =
+                    'bg-gradient-to-t from-[#2b5cff] to-[#5f80ff] rounded-t-[10px] rounded-b-[2px] shadow-[0_4px_12px_rgba(43,92,255,0.25)]';
+                  valueClass = 'text-[#2b5cff] font-bold drop-shadow-sm';
+                }
+              } else {
+                if (isNegative) {
+                  barClass = 'bg-[#fff0e6] rounded-b-[10px] rounded-t-[2px]';
+                } else {
+                  barClass = 'bg-[#e7edf5] rounded-t-[10px] rounded-b-[2px]';
+                }
+                valueClass = 'text-[#9ca3af] font-semibold';
+              }
+
+              return (
+                <div key={item.monthStart} className="relative w-12 flex flex-col items-center">
+                  {/* 막대 Wrapper */}
+                  <div
+                    className="absolute w-full flex justify-center transition-all duration-500"
+                    style={{
+                      top: isNegative ? `${zeroLinePercent}%` : 'auto',
+                      bottom: isNegative ? 'auto' : `${100 - zeroLinePercent}%`,
+                      height: `${Math.max(barHeightPercent, 1)}%`,
+                    }}
+                  >
+                    {/* 실제 막대 */}
+                    <div className={`w-full h-full transition-all duration-500 ${barClass}`} />
+
+                    {/* 금액 텍스트 */}
+                    <span
+                      className={`absolute text-[11px] whitespace-nowrap transition-all duration-500 ${valueClass}`}
+                      style={{
+                        top: isNegative ? '100%' : 'auto',
+                        bottom: isNegative ? 'auto' : '100%',
+                        marginTop: '6px', // 막대와 텍스트 사이 간격
+                        marginBottom: '6px',
+                      }}
+                    >
+                      {formatMoneyShort(item.econValue)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* B. X축 날짜 라벨 영역 (그래프 영역 밖으로 뺌) */}
+        <div className="w-full flex justify-around px-2 pt-1 border-t border-transparent">
+          {chartData.map((item) => {
+            const isActive = item.monthStart === selectedMonthKey;
+            const isNegative = item.econValue < 0;
+            const monthDate = new Date(item.monthStart);
+            const label = isActive ? selectedMonthLabel : `${monthDate.getMonth() + 1}월`;
+
+            // 활성 상태 스타일
+            const activeStyle = isActive
+              ? isNegative
+                ? 'text-[#ff3b0c] bg-[#fff0e6] border border-[#ff3b0c]/10 shadow-sm'
+                : 'text-[#2b5cff] bg-[#f0f6ff] border border-[#2b5cff]/10 shadow-sm'
+              : 'text-[#9ca3af]';
+
+            return (
+              <div key={item.monthStart} className="w-12 flex justify-center">
+                <span
+                  className={`text-[11px] px-2.5 py-1 rounded-full transition-colors duration-300 font-semibold ${activeStyle}`}
+                >
+                  {label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
