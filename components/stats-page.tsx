@@ -28,6 +28,9 @@ export default function StatsPage({
   const [historyView, setHistoryView] = useState<HistoryView>('all');
   const historyDisabled = showIncomeModal || isScheduleModalOpen;
   const cardShadow = 'shadow-[0_14px_40px_rgba(18,34,64,0.08)]';
+
+  const monthScrollRef = useRef<HTMLDivElement>(null);
+
   const toNumber = (value: unknown) => {
     const num = Number(value);
     return Number.isFinite(num) ? num : 0;
@@ -106,7 +109,6 @@ export default function StatsPage({
     기타: 0,
   });
 
-  // Supabase 연동 - useExtraIncomes 훅 사용
   const { extraIncomes, createExtraIncome, updateExtraIncome, deleteExtraIncome } =
     useExtraIncomes();
 
@@ -192,7 +194,6 @@ export default function StatsPage({
     0
   );
   const scheduleValue = totalBen + totalInc - totalCost;
-  // 경제적 가치 = 스케줄(제공+수익-지출) + 부수입
   const econValue = scheduleValue + totalExtraIncome;
   const hasIncomeData = totalBen > 0 || totalInc > 0 || totalCost > 0 || totalExtraIncome > 0;
   const [animatedEconValue, setAnimatedEconValue] = useState(0);
@@ -200,7 +201,6 @@ export default function StatsPage({
   const animationRef = useRef<number | null>(null);
   const lastAnimatedValueRef = useRef<number | null>(null);
 
-  // Animate the economic value once when the number becomes available
   useEffect(() => {
     const target = econValue;
     if (lastAnimatedValueRef.current === target) return;
@@ -221,7 +221,7 @@ export default function StatsPage({
     const step = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+      const eased = 1 - Math.pow(1 - progress, 3);
       const nextValue = Math.round(start + (target - start) * eased);
 
       animatedValueRef.current = nextValue;
@@ -338,8 +338,12 @@ export default function StatsPage({
   return (
     <>
       <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y relative pt-4.5">
-        <div className="mb-4 space-y-2">
-          <div className="flex gap-2 overflow-x-auto pb-1">
+        {/* [수정] 상단 월 선택 영역: 그라데이션 제거하여 버튼이 가려지는 문제 해결 */}
+        <div className="mb-4 relative">
+          <div
+            ref={monthScrollRef}
+            className="flex gap-2 overflow-x-auto pb-1 px-5 -mx-5 scrollbar-hide snap-x"
+          >
             {monthOptions.map((option) => {
               const isMonthLocked = !isPro && option.key !== currentMonthKey;
               return (
@@ -350,9 +354,9 @@ export default function StatsPage({
                     setSelectedMonthKey(option.key);
                   }}
                   disabled={isMonthLocked}
-                  className={`mt-1 flex-none rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  className={`mt-1 flex-none snap-start rounded-full px-4 py-2 text-xs font-semibold transition whitespace-nowrap ${
                     selectedMonthKey === option.key
-                      ? 'bg-[#0f172a] text-white'
+                      ? 'bg-[#0f172a] text-white shadow-md'
                       : 'bg-white text-[#1f2937] border border-[#e5e7eb]'
                   } ${isMonthLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
@@ -360,8 +364,11 @@ export default function StatsPage({
                 </button>
               );
             })}
+            {/* 오른쪽 끝 여백 확보용 더미 div */}
+            <div className="w-2 flex-none" />
           </div>
         </div>
+
         {/* Hero Card */}
         <div className="relative overflow-hidden rounded-[30px] p-6 mt-1 mb-5 bg-gradient-to-br from-[#ff9a3c] via-[#ff6a1f] to-[#ff3b0c]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.22),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.15),transparent_28%)]" />
@@ -400,7 +407,6 @@ export default function StatsPage({
           <div className="relative mt-3 mb-5 border-t border-white/20" />
 
           <div className="grid grid-cols-2 gap-3 text-sm relative">
-            {/* 체험단 경제 효과 (메인 카드) */}
             <div className="p-4 rounded-2xl bg-white/15 backdrop-blur-sm shadow-md ring-1 ring-white/20 text-white">
               <div className="text-[12px] font-semibold mb-1 tracking-tight">체험단 경제 효과</div>
 
@@ -413,7 +419,6 @@ export default function StatsPage({
               </div>
             </div>
 
-            {/* 부수입 카드 (서브 카드) */}
             <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-sm shadow-sm text-white/90">
               <div className="flex flex-col h-full justify-between min-h-[80px]">
                 <div>
@@ -664,7 +669,7 @@ export default function StatsPage({
           </div>
         )}
 
-        {/* Trend Chart */}
+        {/* Trend Chart (이전에 수정된 PRO 뱃지 로직 포함) */}
         <TrendChart
           currentMonthValue={econValue}
           monthlyGrowth={monthlyGrowth}
@@ -674,7 +679,6 @@ export default function StatsPage({
         />
       </div>
 
-      {/* Extra Income Modal */}
       <ExtraIncomeModal
         isOpen={showIncomeModal}
         onClose={handleIncomeModalClose}
@@ -684,7 +688,6 @@ export default function StatsPage({
         onDeleteIncome={handleDeleteEditingIncome}
       />
 
-      {/* Income History Modal */}
       <IncomeHistoryModal
         isOpen={showHistoryModal}
         onClose={() => setShowHistoryModal(false)}
@@ -789,11 +792,9 @@ function TrendChart({
   return (
     <div className="bg-white rounded-[26px] p-6 shadow-sm shadow-[0_14px_40px_rgba(18,34,64,0.08)] relative">
       <div className="flex justify-between items-start mb-1">
-        {/* [수정] 타이틀과 PRO 뱃지를 감싸는 영역 */}
         <div className="flex items-center gap-1.5">
           <div className="text-[16px] font-bold text-[#0f172a]">월별 성장 추이</div>
 
-          {/* [추가] PRO 뱃지 (isPro일 때만 표시) */}
           {isPro && (
             <span className="inline-flex items-center justify-center rounded-[4px] bg-[#f97316] px-1.5 py-[3px] text-[10px] font-bold text-white leading-none shadow-sm">
               PRO
@@ -801,7 +802,6 @@ function TrendChart({
           )}
         </div>
 
-        {/* 스크롤 힌트 */}
         {isScrollable && (
           <div className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1 rounded-full animate-pulse">
             ← 옆으로 넘겨보세요
