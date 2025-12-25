@@ -36,7 +36,6 @@ const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[]
 
 const getScheduleRingColor = (status: string): string | undefined => CALENDAR_RING_COLORS[status];
 
-// --- 메인 컴포넌트 ---
 export default function HomePage({
   schedules,
   onScheduleClick,
