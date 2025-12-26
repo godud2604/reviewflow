@@ -2,12 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
-import { useRouter } from 'next/navigation';
 import { usePostHog } from 'posthog-js/react';
-// --- 아이콘 및 라이브러리 ---
 import { Map, MapMarker } from 'react-kakao-maps-sdk';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, MapPin } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import type { Schedule } from '@/types';
@@ -43,12 +41,6 @@ const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[]
 
 const getScheduleRingColor = (status: string): string | undefined => CALENDAR_RING_COLORS[status];
 
-const VISIT_CARD_ALLOWED_EMAILS = new Set(['korea690105@naver.com', 'ees238@kakao.com']);
-
-const isVisitCardAllowed = (email?: string) =>
-  !!email && VISIT_CARD_ALLOWED_EMAILS.has(email.trim().toLowerCase());
-
-// --- 풀스크린 지도 화면 (기존 유지) ---
 function FullScreenMap({
   schedules,
   onClose,
@@ -77,10 +69,6 @@ function FullScreenMap({
 
   const mapSchedules = useMemo(
     () => schedules.filter((s) => s.lat && s.lng && s.status !== '완료'),
-    [schedules]
-  );
-  const missingLocationSchedules = useMemo(
-    () => schedules.filter((s) => (!s.lat || !s.lng) && s.status !== '완료'),
     [schedules]
   );
   const activeSchedules = useMemo(() => schedules.filter((s) => s.status !== '완료'), [schedules]);
@@ -239,14 +227,12 @@ export default function HomePage({
   userEmail?: string;
   onRegisterLocation?: (id: number) => void;
 }) {
-  const router = useRouter();
   const posthog = usePostHog();
   const today = formatDateStringKST(new Date());
   const upcomingVisitSchedules = useMemo(
     () => getUpcomingVisits(schedules, today),
     [schedules, today]
   );
-  const shouldShowVisitCardHeader = isVisitCardAllowed(userEmail);
   const [selectedDate, setSelectedDate] = useState<string | null>(today);
   const [selectedFilter, setSelectedFilter] = useState<
     'all' | 'active' | 'reconfirm' | 'overdue' | 'noDeadline'
@@ -389,17 +375,13 @@ export default function HomePage({
 
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3 bg-neutral-50/50">
-      {shouldShowVisitCardHeader && (
-        <>
-          <VisitCardHeader
-            schedules={schedules}
-            today={today}
-            onCardClick={onScheduleClick}
-            onOpenMapApp={handleOpenMapApp}
-            onRegisterLocation={handleRegisterLocation}
-          />
-        </>
-      )}
+      <VisitCardHeader
+        schedules={schedules}
+        today={today}
+        onCardClick={onScheduleClick}
+        onOpenMapApp={handleOpenMapApp}
+        onRegisterLocation={handleRegisterLocation}
+      />
 
       {/* 3. 캘린더 */}
       <CalendarSection
