@@ -276,6 +276,8 @@ function PageContent() {
               schedules={schedules}
               onScheduleClick={handleOpenScheduleModal}
               onBack={handleBackFromAll}
+              onCompleteClick={handleCompleteSchedule}
+              onPaybackConfirm={handleConfirmPayback}
             />
           ) : (
             <>

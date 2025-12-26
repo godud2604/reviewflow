@@ -10,10 +10,14 @@ export default function AllSchedulesPage({
   schedules,
   onScheduleClick,
   onBack,
+  onCompleteClick,
+  onPaybackConfirm,
 }: {
   schedules: Schedule[];
   onScheduleClick: (id: number) => void;
   onBack: () => void;
+  onCompleteClick?: (id: number) => void;
+  onPaybackConfirm?: (id: number) => void;
 }) {
   const today = getTodayInKST();
 
@@ -76,6 +80,10 @@ export default function AllSchedulesPage({
             key={schedule.id}
             schedule={schedule}
             onClick={() => onScheduleClick(schedule.id)}
+            onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
+            onPaybackConfirm={
+              onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined
+            }
             today={today}
           />
         ))}
