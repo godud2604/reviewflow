@@ -366,7 +366,7 @@ function VisitCardHeader({
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <h2 className="text-[16px] font-bold text-neutral-900 tracking-tight">곧 방문할 곳</h2>
-            <span className="text-[11px] font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center justify-center rounded-[4px] bg-[#f97316] px-1.5 py-[3px] text-[10px] font-bold text-white leading-none shadow-sm">
               PRO
             </span>
             <span className="flex items-center justify-center bg-neutral-100 text-neutral-600 w-6 h-6 rounded-full text-[13px] font-bold">
