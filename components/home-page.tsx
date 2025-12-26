@@ -1,22 +1,28 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePostHog } from 'posthog-js/react';
+// --- 아이콘 및 라이브러리 ---
+import { Map, MapMarker } from 'react-kakao-maps-sdk';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, MapPin } from 'lucide-react';
+
 import type { Schedule } from '@/types';
 import ScheduleItem from '@/components/schedule-item';
+import VisitCardHeader, {
+  ExpandedScheduleCard,
+  getUpcomingVisits,
+} from '@/components/visit-card-header';
+import { parseDateString } from '@/lib/date-utils';
+import { Z_INDEX } from '@/lib/z-index';
 
 // --- 날짜/시간 유틸리티 ---
 const formatDateStringKST = (date: Date) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date);
 
-const parseDateString = (dateStr: string) => {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, (m || 1) - 1, d || 1);
-};
-
-// --- 상수 및 설정 ---
+// --- 상수 ---
 const CALENDAR_RING_COLORS: Record<string, string> = {
   선정됨: '#f1a0b6',
   예약완료: '#61cedb',
@@ -36,6 +42,185 @@ const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[]
 
 const getScheduleRingColor = (status: string): string | undefined => CALENDAR_RING_COLORS[status];
 
+const VISIT_CARD_ALLOWED_EMAILS = new Set(['korea690105@naver.com', 'ees238@kakao.com']);
+
+const isVisitCardAllowed = (email?: string) =>
+  !!email && VISIT_CARD_ALLOWED_EMAILS.has(email.trim().toLowerCase());
+
+// --- 풀스크린 지도 화면 (기존 유지) ---
+function FullScreenMap({
+  schedules,
+  onClose,
+  today,
+  onCardClick,
+  onRegisterLocation,
+}: {
+  schedules: Schedule[];
+  onClose: () => void;
+  today: string;
+  onCardClick: (id: number) => void;
+  onRegisterLocation?: (id: number) => void;
+}) {
+  const [activeId, setActiveId] = useState<number | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [weatherMap, setWeatherMap] = useState<
+    Record<number, { code: number; min: number; max: number }>
+  >({});
+
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({
+    lat: 37.5665,
+    lng: 126.978,
+  });
+
+  const mapSchedules = useMemo(
+    () => schedules.filter((s) => s.lat && s.lng && s.status !== '완료'),
+    [schedules]
+  );
+  const missingLocationSchedules = useMemo(
+    () => schedules.filter((s) => (!s.lat || !s.lng) && s.status !== '완료'),
+    [schedules]
+  );
+  const activeSchedules = useMemo(() => schedules.filter((s) => s.status !== '완료'), [schedules]);
+
+  useEffect(() => {
+    if (mapSchedules.length > 0) {
+      setMapCenter({
+        lat: Number(mapSchedules[0].lat),
+        lng: Number(mapSchedules[0].lng),
+      });
+      setActiveId(mapSchedules[0].id);
+    }
+  }, [mapSchedules]);
+
+  useEffect(() => {
+    if (mapSchedules.length === 0) return;
+    const fetchWeather = async () => {
+      const newWeatherMap: Record<number, { code: number; min: number; max: number }> = {};
+      await Promise.all(
+        mapSchedules.map(async (schedule) => {
+          if (!schedule.visit) return;
+          try {
+            const res = await fetch(
+              `https://api.open-meteo.com/v1/forecast?latitude=${schedule.lat}&longitude=${schedule.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&start_date=${schedule.visit}&end_date=${schedule.visit}`
+            );
+            const data = await res.json();
+            if (data.daily && data.daily.weather_code) {
+              newWeatherMap[schedule.id] = {
+                code: data.daily.weather_code[0],
+                max: Math.round(data.daily.temperature_2m_max[0]),
+                min: Math.round(data.daily.temperature_2m_min[0]),
+              };
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        })
+      );
+      setWeatherMap(newWeatherMap);
+    };
+    fetchWeather();
+  }, [mapSchedules]);
+
+  const handleMarkerClick = (id: number) => {
+    setActiveId(id);
+    const target = mapSchedules.find((s) => s.id === id);
+    if (target && target.lat && target.lng) {
+      setMapCenter({ lat: Number(target.lat), lng: Number(target.lng) });
+    }
+    const element = document.getElementById(`map-card-${id}`);
+    if (element && scrollContainerRef.current) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: '100%' }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: '100%' }}
+      transition={{ duration: 0.3 }}
+      className="fixed inset-0 bg-white flex flex-col"
+      style={{ zIndex: Z_INDEX.topLayer }}
+    >
+      <div
+        className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 bg-gradient-to-b from-black/60 to-transparent"
+        style={{ zIndex: Z_INDEX.sticky }}
+      >
+        <button
+          onClick={onClose}
+          className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/30 transition-all"
+        >
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <span className="text-white font-bold text-lg drop-shadow-md">지도 보기</span>
+        <div className="w-10" />
+      </div>
+
+      <div className="flex-1 relative">
+        <Map center={mapCenter} style={{ width: '100%', height: '100%' }} level={4} isPanto={true}>
+          {mapSchedules.map((schedule) => {
+            const isActive = activeId === schedule.id;
+            return (
+              <MapMarker
+                key={schedule.id}
+                position={{ lat: Number(schedule.lat), lng: Number(schedule.lng) }}
+                image={{
+                  src: isActive
+                    ? 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png'
+                    : 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png',
+                  size: isActive ? { width: 29, height: 42 } : { width: 24, height: 35 },
+                }}
+                zIndex={isActive ? 100 : 1}
+                onClick={() => handleMarkerClick(schedule.id)}
+              />
+            );
+          })}
+        </Map>
+
+        <div className="absolute bottom-8 left-0 right-0" style={{ zIndex: Z_INDEX.sticky }}>
+          {missingLocationSchedules.length > 0 && (
+            <div className="mx-6 mb-2 flex items-center justify-center gap-2 rounded-2xl bg-black/70 px-4 py-2 text-[13px] text-white">
+              <MapPin className="w-4 h-4 text-white" />
+              <span>
+                위치 정보가 없는 일정 {missingLocationSchedules.length}건은 지도에 표시되지
+                않습니다.
+              </span>
+              {missingLocationSchedules[0] && (
+                <button
+                  type="button"
+                  onClick={() => onCardClick(missingLocationSchedules[0].id)}
+                  className="text-[12px] font-bold text-white underline underline-offset-4"
+                >
+                  상세보기
+                </button>
+              )}
+            </div>
+          )}
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-4 overflow-x-auto px-6 pb-4 snap-x scrollbar-hide items-end h-[320px]"
+          >
+            {activeSchedules.map((schedule) => (
+              <div key={schedule.id} id={`map-card-${schedule.id}`}>
+                <ExpandedScheduleCard
+                  schedule={schedule}
+                  weather={weatherMap[schedule.id]}
+                  isToday={schedule.visit === today}
+                  onClick={() => handleMarkerClick(schedule.id)}
+                  onDetailClick={() => onCardClick(schedule.id)}
+                  locationMissing={!schedule.lat || !schedule.lng}
+                  onRegisterLocation={() => onRegisterLocation?.(schedule.id)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// --- 메인 페이지 ---
 export default function HomePage({
   schedules,
   onScheduleClick,
@@ -46,6 +231,8 @@ export default function HomePage({
   onCreateSchedule,
   focusDate,
   onFocusDateApplied,
+  userEmail,
+  onRegisterLocation,
 }: {
   schedules: Schedule[];
   onScheduleClick: (id: number) => void;
@@ -56,18 +243,31 @@ export default function HomePage({
   onCreateSchedule?: (dateStr: string) => void;
   focusDate?: string | null;
   onFocusDateApplied?: () => void;
+  userEmail?: string;
+  onRegisterLocation?: (id: number) => void;
 }) {
   const router = useRouter();
   const posthog = usePostHog();
   const today = formatDateStringKST(new Date());
+  const upcomingVisitSchedules = useMemo(
+    () => getUpcomingVisits(schedules, today),
+    [schedules, today]
+  );
+  const shouldShowVisitCardHeader = isVisitCardAllowed(userEmail);
   const [selectedDate, setSelectedDate] = useState<string | null>(today);
   const [selectedFilter, setSelectedFilter] = useState<
     'all' | 'active' | 'reconfirm' | 'overdue' | 'noDeadline'
   >('all');
   const [floatingPanel, setFloatingPanel] = useState<'none' | 'noDeadline' | 'reconfirm'>('none');
   const [showDemo, setShowDemo] = useState(false);
+  const [isFullScreenMapOpen, setIsFullScreenMapOpen] = useState(false);
+  const handleOpenMapApp = () => setIsFullScreenMapOpen(true);
+  const handleRegisterLocation = (id: number) => {
+    setIsFullScreenMapOpen(false);
+    onRegisterLocation?.(id);
+  };
 
-  // ... (Demo Data 및 필터 로직 기존 동일)
+  // Demo Data
   const demoSchedules = useMemo(
     () => [
       {
@@ -102,7 +302,7 @@ export default function HomePage({
     }
   }, [focusDate, onFocusDateApplied]);
 
-  // ... (Schedules Filtering & Sorting Logic - 유지)
+  // Filtering Logic
   let filteredSchedules = schedules;
   if (selectedDate) {
     filteredSchedules = schedules.filter(
@@ -140,7 +340,6 @@ export default function HomePage({
     selectedDate || selectedFilter !== 'all' ? filteredSchedules : activeSchedules
   );
 
-  // ... (Tutorial Logic - 유지)
   const shouldShowFirstScheduleTutorial =
     hasSchedules && schedules.length === 1 && displayedSchedules.length > 0;
   const shouldShowFilterTutorial =
@@ -148,7 +347,6 @@ export default function HomePage({
 
   const renderTutorialCard = () => (
     <div className="space-y-5 rounded-3xl border border-neutral-200 bg-gradient-to-b from-[#fff6ed] via-white to-white px-5 py-4 shadow-[0_24px_60px_rgba(15,23,42,0.09)]">
-      {/* ... (Tutorial Content 유지) ... */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffecd1] to-[#ffe1cc] text-[#ff6a1f] shadow-inner">
@@ -175,11 +373,6 @@ export default function HomePage({
                 <span className="font-bold text-orange-600">예상 수익</span>을 자동으로 확인할 수
                 있어요.
               </p>
-              <p className="text-[12px] text-neutral-500 leading-relaxed">
-                애드포스트·원고료 등 <span className="font-bold text-orange-600">부수익</span>도
-                함께 기록하면 <span className="font-bold text-orange-600">전체 수익</span>이 한눈에
-                보여요!
-              </p>
             </div>
           </div>
         </li>
@@ -203,8 +396,20 @@ export default function HomePage({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3">
-      {/* Calendar */}
+    <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3 bg-neutral-50/50">
+      {shouldShowVisitCardHeader && (
+        <>
+          <VisitCardHeader
+            schedules={schedules}
+            today={today}
+            onCardClick={onScheduleClick}
+            onOpenMapApp={handleOpenMapApp}
+            onRegisterLocation={handleRegisterLocation}
+          />
+        </>
+      )}
+
+      {/* 3. 캘린더 */}
       <CalendarSection
         schedules={schedules}
         onDateClick={handleDateClick}
@@ -214,9 +419,9 @@ export default function HomePage({
         today={today}
       />
 
-      {/* Schedule List Header */}
-      <div className="flex items-center justify-between">
-        <div className="mt-1">
+      {/* 5. 일정 리스트 헤더 */}
+      <div className="flex items-center justify-between mt-6 mb-2">
+        <div>
           <h3 className="text-xl font-bold text-neutral-900 text-[16px]">
             {selectedDate
               ? `${selectedDate.slice(5).replace('-', '/')} 일정`
@@ -227,7 +432,7 @@ export default function HomePage({
                   : selectedFilter === 'noDeadline'
                     ? '마감일 미정'
                     : '체험단 일정'}
-            <span className="ml-1 text-sm font-semibold text-orange-600">
+            <span className="ml-1.5 text-sm font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
               {selectedDate || selectedFilter !== 'all' ? filteredSchedules.length : activeCount}건
             </span>
           </h3>
@@ -235,18 +440,17 @@ export default function HomePage({
         <div className="flex items-center gap-2">
           <button
             onClick={onShowAllClick}
-            className="mt-1 text-[12px] font-semibold text-neutral-900 hover:text-neutral-600 transition-colors cursor-pointer"
+            className="text-[12px] font-semibold text-neutral-500 hover:text-neutral-800 transition-colors cursor-pointer"
           >
             전체보기 ({schedules.length})
           </button>
         </div>
       </div>
 
-      {/* Schedule List Items */}
+      {/* 6. 일정 리스트 아이템 */}
       <div className="space-y-3">
         {!hasSchedules ? (
           <div className="bg-white rounded-3xl p-4 text-center shadow-sm shadow-[0_18px_40px_rgba(15,23,42,0.06)] border border-neutral-100 space-y-4">
-            {/* ... (Empty State Content 유지) ... */}
             <div className="space-y-1">
               <p className="text-[13px] font-bold text-neutral-900">아직 체험단 일정이 없어요</p>
               <p className="text-[11px] text-neutral-500 font-medium">
@@ -300,14 +504,6 @@ export default function HomePage({
                     </div>
                   ))}
                 </div>
-                <div className="rounded-2xl bg-gradient-to-r from-[#eef2ff] via-white to-[#fff7ed] border border-neutral-100 p-3">
-                  <div className="text-[12px] font-bold text-neutral-900 mb-1">짧은 투어</div>
-                  <ul className="text-[11.5px] text-neutral-600 space-y-1.5 list-disc list-inside">
-                    <li>체험단 등록 → 캘린더에 일정 표시</li>
-                    <li>마감·방문일 관리하며 수익/비용 입력</li>
-                    <li>통계 탭에서 이번 달 수익 자동 확인</li>
-                  </ul>
-                </div>
               </div>
             )}
           </div>
@@ -332,21 +528,22 @@ export default function HomePage({
         {shouldShowFirstScheduleTutorial && renderTutorialCard()}
       </div>
 
-      {/* Floating quick filters (유지) */}
+      {/* Floating Filters */}
       <div
-        className="fixed z-40 flex flex-col gap-3"
+        className="fixed flex flex-col gap-3"
         style={{
           right: 'calc((100vw - min(100vw, 390px)) / 2 + 20px)',
           bottom: 'calc((100vh - min(100vh, 844px)) / 2 + 130px)',
+          zIndex: Z_INDEX.panel,
         }}
       >
         {reconfirmCount > 0 && (
           <button
             type="button"
             onClick={() => setFloatingPanel(floatingPanel === 'reconfirm' ? 'none' : 'reconfirm')}
-            className="flex items-center gap-2 rounded-full bg-white border border-orange-500 shadow-[0_14px_100px_rgba(249,115,22,0.18)] px-2 py-2 active:scale-[0.98] transition-all ring-2 ring-orange-500/70"
+            className="flex items-center gap-2 rounded-full bg-white border border-orange-500 shadow-[0_8px_30px_rgba(249,115,22,0.25)] px-3 py-2.5 active:scale-[0.98] transition-all ring-2 ring-orange-100"
           >
-            <span className="text-base">⚠️</span>
+            <span className="text-base animate-pulse">⚠️</span>
             <div className="text-left leading-tight">
               <div className="text-[13px] font-bold text-amber-900">재확인</div>
               <div className="text-[12.5px] font-semibold text-amber-800">목록 보기</div>
@@ -360,7 +557,7 @@ export default function HomePage({
           <button
             type="button"
             onClick={() => setFloatingPanel(floatingPanel === 'noDeadline' ? 'none' : 'noDeadline')}
-            className="flex items-center gap-2 rounded-full bg-white from-orange-200/90 to-amber-200/90 border border-orange-500 shadow-[0_14px_100px_rgba(249,115,22,0.18)] px-4 py-2 active:scale-[0.98] transition-all ring-4 ring-orange-500/70"
+            className="flex items-center gap-2 rounded-full bg-white border border-neutral-200 shadow-[0_8px_30px_rgba(0,0,0,0.12)] px-4 py-2.5 active:scale-[0.98] transition-all"
           >
             <span className="text-base">📌</span>
             <div className="text-left leading-tight">
@@ -374,14 +571,18 @@ export default function HomePage({
         )}
       </div>
 
-      {/* Slide-up panel (유지) */}
+      {/* Slide-up panel */}
       {floatingPanel !== 'none' && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/35"
+            className="fixed inset-0 bg-black/35"
             onClick={() => setFloatingPanel('none')}
+            style={{ zIndex: Z_INDEX.backdrop }}
           />
-          <div className="fixed inset-x-0 bottom-0 z-50 max-h-[70vh] rounded-t-3xl bg-white shadow-2xl border-t border-neutral-200">
+          <div
+            className="fixed inset-x-0 bottom-0 max-h-[70vh] rounded-t-3xl bg-white shadow-2xl border-t border-neutral-200"
+            style={{ zIndex: Z_INDEX.modal }}
+          >
             <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100">
               <div className="flex items-center gap-2">
                 <span className="text-lg">{floatingPanel === 'reconfirm' ? '⚠️' : '📌'}</span>
@@ -427,11 +628,24 @@ export default function HomePage({
           </div>
         </>
       )}
+
+      {/* 7. 전체 화면 지도 모달 */}
+      <AnimatePresence>
+        {isFullScreenMapOpen && (
+          <FullScreenMap
+            schedules={upcomingVisitSchedules}
+            onClose={() => setIsFullScreenMapOpen(false)}
+            today={today}
+            onCardClick={onScheduleClick}
+            onRegisterLocation={handleRegisterLocation}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-// --- 캘린더 컴포넌트 (기존 유지) ---
+// --- 캘린더 컴포넌트 ---
 function CalendarSection({
   schedules,
   onDateClick,
@@ -448,12 +662,11 @@ function CalendarSection({
   onCreateSchedule?: (dateStr: string) => void;
 }) {
   const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
-
   const [currentDate, setCurrentDate] = useState(() => parseDateString(today));
   const todayDate = parseDateString(today);
-
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+
   const scheduleByDate = schedules.reduce<
     Record<
       string,
@@ -521,34 +734,24 @@ function CalendarSection({
     return acc;
   }, {});
 
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const daysInMonth = lastDay.getDate();
-  const startDayOfWeek = firstDay.getDay();
-
-  const prevMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
-  };
-
-  const nextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
-  };
-
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
   const goToToday = () => {
     setCurrentDate(new Date());
     onGoToToday();
   };
 
-  const isToday = (day: number) => {
-    return (
-      todayDate.getDate() === day &&
-      todayDate.getMonth() === month &&
-      todayDate.getFullYear() === year
-    );
-  };
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startDayOfWeek = firstDay.getDay();
+  const isToday = (day: number) =>
+    todayDate.getDate() === day &&
+    todayDate.getMonth() === month &&
+    todayDate.getFullYear() === year;
 
   return (
-    <div className="rounded-[24px] p-4 shadow-sm bg-gradient-to-b from-white to-neutral-100 mt-2">
+    <div className="rounded-[24px] p-4 shadow-sm bg-gradient-to-b from-white to-neutral-100">
       <div className="relative flex items-center justify-center mb-3 gap-2">
         <div className="flex items-center gap-3">
           <button

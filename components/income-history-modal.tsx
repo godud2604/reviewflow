@@ -4,6 +4,7 @@ import { useState, type KeyboardEvent } from 'react';
 import { X } from 'lucide-react';
 import type { Schedule, ExtraIncome, HistoryView } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { Z_INDEX } from '@/lib/z-index';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -225,12 +226,13 @@ export default function IncomeHistoryModal({
   return (
     <>
       <div
-        className="absolute top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm z-40 overscroll-none"
+        className="absolute top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm overscroll-none"
         onClick={onClose}
-        style={{ touchAction: 'none' }}
+        style={{ touchAction: 'none', zIndex: Z_INDEX.backdrop }}
       />
       <div
-        className={`w-full absolute bottom-0 left-0 ${containerHeightClass} bg-gradient-to-b from-neutral-50 to-white rounded-t-[32px] z-40 flex flex-col animate-slide-up overscroll-none shadow-2xl transition-opacity ${isDisabled ? 'pointer-events-none opacity-70' : ''}`}
+        className={`w-full absolute bottom-0 left-0 ${containerHeightClass} bg-gradient-to-b from-neutral-50 to-white rounded-t-[32px] flex flex-col animate-slide-up overscroll-none shadow-2xl transition-opacity ${isDisabled ? 'pointer-events-none opacity-70' : ''}`}
+        style={{ zIndex: Z_INDEX.panel }}
       >
         {/* Header */}
         <div className="p-5 pb-3 text-center relative flex-shrink-0">

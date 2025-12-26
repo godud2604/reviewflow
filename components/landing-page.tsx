@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { usePostHog } from 'posthog-js/react';
 import { useAuth } from '@/hooks/use-auth';
+import { Z_INDEX } from '@/lib/z-index';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -203,10 +204,11 @@ export default function LandingPage() {
         }
       `}</style>
       {isWaitlistModalOpen && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-[2px] flex items-center justify-center px-5"
-          onClick={handleCloseWaitlistModal}
-        >
+      <div
+        className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center px-5"
+        onClick={handleCloseWaitlistModal}
+        style={{ zIndex: Z_INDEX.heroOverlay }}
+      >
           <div
             className="w-90 max-w-sm bg-white rounded-2xl p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
@@ -315,7 +317,10 @@ export default function LandingPage() {
         </div>
       )}
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md transition-all duration-300 border-b border-transparent">
+      <nav
+        className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md transition-all duration-300 border-b border-transparent"
+        style={{ zIndex: Z_INDEX.modal }}
+      >
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
           <a href="/" className="flex items-center">
             <img src="/logo.png" alt="ReviewFlow" className="h-40" />
@@ -380,7 +385,10 @@ export default function LandingPage() {
           />
         </div>
 
-        <div className="max-w-4xl px-6 relative z-10">
+        <div
+          className="max-w-4xl px-6 relative"
+          style={{ zIndex: Z_INDEX.content }}
+        >
           {/* Badge with animation */}
           <div className="inline-flex items-center gap-1.5 bg-orange-100 text-orange-700 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold mb-4 md:mb-6 animate-fade-in-down">
             <span className="text-base md:text-lg"></span>
@@ -767,7 +775,10 @@ export default function LandingPage() {
                     <div className="absolute -right-6 -top-6 w-36 h-36 bg-orange-500/10 rounded-full blur-3xl" />
                     <div className="absolute -left-10 bottom-10 w-28 h-28 bg-orange-400/10 rounded-full blur-3xl" />
 
-                    <div className="flex items-start justify-between mb-5 relative z-10">
+                    <div
+                      className="flex items-start justify-between mb-5 relative"
+                      style={{ zIndex: Z_INDEX.content }}
+                    >
                       <div>
                         <p className="text-[11px] font-semibold text-orange-200/90">Daily Brief</p>
                         <h3 className="text-xl font-bold text-white leading-tight">
@@ -784,7 +795,10 @@ export default function LandingPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-3 flex-1 relative z-10">
+                    <div
+                      className="space-y-3 flex-1 relative"
+                      style={{ zIndex: Z_INDEX.content }}
+                    >
                       <div className="p-4 rounded-2xl bg-white/10 border border-white/10 backdrop-blur">
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-sm font-bold text-white">마감 임박 · D-1</span>
@@ -836,7 +850,10 @@ export default function LandingPage() {
                       ))}
                     </div>
 
-                    <div className="mt-5 flex items-center justify-between text-[12px] text-white/80 relative z-10">
+                    <div
+                      className="mt-5 flex items-center justify-between text-[12px] text-white/80 relative"
+                      style={{ zIndex: Z_INDEX.content }}
+                    >
                       <div className="flex items-center gap-2">
                         <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 font-semibold">
                           이메일 발송 중
@@ -900,7 +917,10 @@ export default function LandingPage() {
                   {/* Excel Preview Card */}
                   <div className="bg-white rounded-3xl p-4 mb-4 flex-1 relative overflow-hidden">
                     {/* Blur Overlay */}
-                    <div className="absolute inset-0 backdrop-blur-[3px] bg-white/40 z-10 flex items-center justify-center">
+                    <div
+                      className="absolute inset-0 backdrop-blur-[3px] bg-white/40 flex items-center justify-center"
+                      style={{ zIndex: Z_INDEX.content }}
+                    >
                       <div className="text-center">
                         <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
                           <svg

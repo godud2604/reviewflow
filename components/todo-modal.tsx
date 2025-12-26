@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Todo } from '@/types';
+import { Z_INDEX } from '@/lib/z-index';
 
 export default function TodoModal({
   isOpen,
@@ -72,11 +73,14 @@ export default function TodoModal({
   return (
     <>
       <div
-        className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30"
+        className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm"
         onClick={onClose}
-        style={{ touchAction: 'none' }}
+        style={{ touchAction: 'none', zIndex: Z_INDEX.backdrop }}
       />
-      <div className="absolute bottom-0 left-0 w-full min-h-[30%] max-h-[60%] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
+      <div
+        className="absolute bottom-0 left-0 w-full min-h-[30%] max-h-[60%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+        style={{ zIndex: Z_INDEX.panel }}
+      >
         <div className="relative p-5 border-b border-neutral-100 text-center font-bold text-[16px]">
           할 일 목록
           <button
@@ -89,7 +93,10 @@ export default function TodoModal({
         </div>
 
         {/* Sticky Input Section */}
-        <div className="sticky top-0 bg-white px-4 pt-4 pb-4 border-b border-neutral-100 z-10">
+        <div
+          className="sticky top-0 bg-white px-4 pt-4 pb-4 border-b border-neutral-100"
+          style={{ zIndex: Z_INDEX.content }}
+        >
           <div className="flex gap-2">
             <input
               type="text"

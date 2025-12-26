@@ -37,6 +37,7 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Check, Copy, Loader2, Search, X } from 'lucide-react';
 import NaverMapSearchModal, { MapPlaceSelection } from '@/components/naver-map-search-modal';
+import { Z_INDEX } from '@/lib/z-index';
 
 const getTodayInKST = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
@@ -202,6 +203,7 @@ export default function ScheduleModal({
   focusGuideFiles,
   onGuideFilesFocusDone,
   initialDeadline,
+  initialMapSearchOpen,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -212,6 +214,7 @@ export default function ScheduleModal({
   focusGuideFiles?: boolean;
   onGuideFilesFocusDone?: () => void;
   initialDeadline?: string;
+  initialMapSearchOpen?: boolean;
 }) {
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData());
 
@@ -242,6 +245,11 @@ export default function ScheduleModal({
   const [deadlineError, setDeadlineError] = useState(false);
   const [showCategoryManagement, setShowCategoryManagement] = useState(false);
   const [showMapSearchModal, setShowMapSearchModal] = useState(false);
+  useEffect(() => {
+    if (isOpen && initialMapSearchOpen) {
+      setShowMapSearchModal(true);
+    }
+  }, [isOpen, initialMapSearchOpen]);
   const [selectedCategories, setSelectedCategories] = useState<Schedule['category'][]>([]);
   const [visitMode, setVisitMode] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
@@ -991,10 +999,11 @@ export default function ScheduleModal({
   return (
     <>
       <div
-        className="fixed left-0 w-full z-40 flex flex-col justify-end text-neutral-900"
+        className="fixed left-0 w-full flex flex-col justify-end text-neutral-900"
         style={{
           height: viewportStyle.height,
           top: viewportStyle.top,
+          zIndex: Z_INDEX.scheduleModal,
         }}
       >
         <div
@@ -1768,7 +1777,10 @@ export default function ScheduleModal({
             )}
           </div>
 
-          <div className="flex-none p-4 bg-white border-t border-neutral-100 z-50 pb-safe">
+          <div
+            className="flex-none p-4 bg-white border-t border-neutral-100 pb-safe"
+            style={{ zIndex: Z_INDEX.modal }}
+          >
             {schedule ? (
               <div className="flex gap-3">
                 <button
@@ -1816,10 +1828,14 @@ export default function ScheduleModal({
       {showPlatformManagement && (
         <>
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowPlatformManagement(false)}
+          style={{ zIndex: Z_INDEX.managementBackdrop }}
           />
-          <div className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
+          <div
+            className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+            style={{ zIndex: Z_INDEX.managementModal }}
+          >
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-[16px]">플랫폼 관리</span>
               <button
@@ -1898,10 +1914,14 @@ export default function ScheduleModal({
       {showChannelManagement && (
         <>
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowChannelManagement(false)}
+          style={{ zIndex: Z_INDEX.managementBackdrop }}
           />
-          <div className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
+          <div
+            className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+            style={{ zIndex: Z_INDEX.managementModal }}
+          >
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-[16px]">작성할 채널 관리</span>
               <button
@@ -1980,10 +2000,14 @@ export default function ScheduleModal({
       {showCategoryManagement && (
         <>
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowCategoryManagement(false)}
+          style={{ zIndex: Z_INDEX.managementBackdrop }}
           />
-          <div className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] z-50 flex flex-col animate-slide-up">
+          <div
+            className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+            style={{ zIndex: Z_INDEX.managementModal }}
+          >
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-base">카테고리 관리</span>
               <button

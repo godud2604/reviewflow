@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { Z_INDEX } from '@/lib/z-index';
 
 export default function ExtraIncomeModal({
   isOpen,
@@ -183,23 +184,24 @@ export default function ExtraIncomeModal({
     <>
       {/* ✅ [수정] 뷰포트 크기를 따르며 바닥에 고정되는 컨테이너 */}
       <div
-        className="fixed left-0 w-full z-50 flex flex-col justify-end"
+        className="fixed left-0 w-full flex flex-col justify-end"
         style={{
           height: viewportStyle.height,
           top: viewportStyle.top,
+          zIndex: Z_INDEX.modal,
         }}
       >
         {/* 배경 딤처리 */}
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-sm"
           onClick={handleClose}
-          style={{ touchAction: 'none' }}
+          style={{ touchAction: 'none', zIndex: Z_INDEX.backdrop }}
         />
 
         {/* ✅ [수정] 모달 본체: Flex Column 구조로 변경 */}
         <div
           className="relative w-full bg-white rounded-t-[30px] flex flex-col shadow-2xl overflow-hidden animate-slide-up"
-          style={{ maxHeight: '85%' }}
+          style={{ maxHeight: '85%', zIndex: Z_INDEX.modal }}
         >
           {/* Header (고정) */}
           <div className="relative p-5 border-b border-neutral-100 text-center font-bold text-[16px] flex-none">

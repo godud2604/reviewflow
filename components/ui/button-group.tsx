@@ -1,11 +1,14 @@
+import type { CSSProperties } from 'react';
+
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { Z_INDEX } from '@/lib/z-index';
 
 const buttonGroupVariants = cva(
-  "flex w-fit items-stretch [&>*]:focus-visible:z-10 [&>*]:focus-visible:relative [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-md has-[>[data-slot=button-group]]:gap-2",
+  "flex w-fit items-stretch [&>*]:focus-visible:z-[var(--button-group-focus-index)] [&>*]:focus-visible:relative [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-md has-[>[data-slot=button-group]]:gap-2",
   {
     variants: {
       orientation: {
@@ -24,6 +27,7 @@ const buttonGroupVariants = cva(
 function ButtonGroup({
   className,
   orientation,
+  style,
   ...props
 }: React.ComponentProps<'div'> & VariantProps<typeof buttonGroupVariants>) {
   return (
@@ -32,6 +36,12 @@ function ButtonGroup({
       data-slot="button-group"
       data-orientation={orientation}
       className={cn(buttonGroupVariants({ orientation }), className)}
+      style={
+        {
+          '--button-group-focus-index': Z_INDEX.content,
+          ...style,
+        } as CSSProperties
+      }
       {...props}
     />
   );

@@ -1,0 +1,15 @@
+export const Z_INDEX = {
+  background: 0,
+  navMenuDropdown: 1,
+  content: 10,
+  sticky: 20,
+  backdrop: 30,
+  panel: 40,
+  modal: 50,
+  heroOverlay: 60,
+  topLayer: 100,
+  scheduleModal: 230,
+  managementBackdrop: 235,
+  managementModal: 245,
+  mapSearchModal: 240,
+} as const;

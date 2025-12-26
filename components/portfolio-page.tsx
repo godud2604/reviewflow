@@ -1,6 +1,7 @@
 'use client';
 
 import type { Schedule, Channel, FeaturedPost } from '@/types';
+import { Z_INDEX } from '@/lib/z-index';
 
 export default function PortfolioPage({
   schedules,
@@ -85,7 +86,10 @@ export default function PortfolioPage({
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y relative">
       {/* Header with back button and share */}
-      <div className="flex items-center justify-between pt-2 pb-4 sticky top-0 bg-[#F7F7F8] z-10">
+      <div
+        className="flex items-center justify-between pt-2 pb-4 sticky top-0 bg-[#F7F7F8]"
+        style={{ zIndex: Z_INDEX.content }}
+      >
         <button onClick={onBack} className="flex items-center gap-1 text-neutral-600 font-semibold">
           <svg
             width="20"

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Z_INDEX } from '@/lib/z-index';
 
 export default function FeedbackModal({
   isOpen,
@@ -48,11 +49,14 @@ export default function FeedbackModal({
   return (
     <>
       <div
-        className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm z-30"
+        className="absolute top-0 left-0 w-full h-full bg-black/40 backdrop-blur-sm"
         onClick={onClose}
-        style={{ touchAction: 'none' }}
+        style={{ touchAction: 'none', zIndex: Z_INDEX.backdrop }}
       />
-      <div className="absolute bottom-0 left-0 w-full h-[500px] bg-white rounded-t-[30px] z-40 flex flex-col animate-slide-up">
+      <div
+        className="absolute bottom-0 left-0 w-full h-[500px] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+        style={{ zIndex: Z_INDEX.panel }}
+      >
         <div
           className="w-full bg-white rounded-t-3xl p-6 slide-in-from-bottom duration-300"
           onClick={(e) => e.stopPropagation()}

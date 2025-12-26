@@ -6,6 +6,7 @@ import { type VariantProps } from 'class-variance-authority';
 
 import { cn } from '@/lib/utils';
 import { toggleVariants } from '@/components/ui/toggle';
+import { Z_INDEX } from '@/lib/z-index';
 
 const ToggleGroupContext = React.createContext<VariantProps<typeof toggleVariants>>({
   size: 'default',
@@ -42,6 +43,7 @@ function ToggleGroupItem({
   children,
   variant,
   size,
+  style,
   ...props
 }: React.ComponentProps<typeof ToggleGroupPrimitive.Item> & VariantProps<typeof toggleVariants>) {
   const context = React.useContext(ToggleGroupContext);
@@ -56,9 +58,15 @@ function ToggleGroupItem({
           variant: context.variant || variant,
           size: context.size || size,
         }),
-        'min-w-0 flex-1 shrink-0 rounded-none shadow-none first:rounded-l-md last:rounded-r-md focus:z-10 focus-visible:z-10 data-[variant=outline]:border-l-0 data-[variant=outline]:first:border-l',
+        'min-w-0 flex-1 shrink-0 rounded-none shadow-none first:rounded-l-md last:rounded-r-md focus:z-[var(--toggle-group-focus-z-index)] focus-visible:z-[var(--toggle-group-focus-z-index)] data-[variant=outline]:border-l-0 data-[variant=outline]:first:border-l',
         className
       )}
+      style={
+        {
+          '--toggle-group-focus-z-index': String(Z_INDEX.content),
+          ...style,
+        } as React.CSSProperties
+      }
       {...props}
     >
       {children}

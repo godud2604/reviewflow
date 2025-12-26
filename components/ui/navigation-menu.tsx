@@ -4,6 +4,7 @@ import { cva } from 'class-variance-authority';
 import { ChevronDownIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { Z_INDEX } from '@/lib/z-index';
 
 function NavigationMenu({
   className,
@@ -101,7 +102,10 @@ function NavigationMenuViewport({
   ...props
 }: React.ComponentProps<typeof NavigationMenuPrimitive.Viewport>) {
   return (
-    <div className={'absolute top-full left-0 isolate z-50 flex justify-center'}>
+    <div
+      className="absolute top-full left-0 isolate flex justify-center"
+      style={{ zIndex: Z_INDEX.modal }}
+    >
       <NavigationMenuPrimitive.Viewport
         data-slot="navigation-menu-viewport"
         className={cn(
@@ -132,15 +136,22 @@ function NavigationMenuLink({
 
 function NavigationMenuIndicator({
   className,
+  style,
   ...props
 }: React.ComponentProps<typeof NavigationMenuPrimitive.Indicator>) {
   return (
     <NavigationMenuPrimitive.Indicator
       data-slot="navigation-menu-indicator"
       className={cn(
-        'data-[state=visible]:animate-in data-[state=hidden]:animate-out data-[state=hidden]:fade-out data-[state=visible]:fade-in top-full z-[1] flex h-1.5 items-end justify-center overflow-hidden',
+        'data-[state=visible]:animate-in data-[state=hidden]:animate-out data-[state=hidden]:fade-out data-[state=visible]:fade-in top-full z-[var(--navigation-menu-indicator-z-index)] flex h-1.5 items-end justify-center overflow-hidden',
         className
       )}
+      style={
+        {
+          '--navigation-menu-indicator-z-index': String(Z_INDEX.navMenuDropdown),
+          ...style,
+        } as React.CSSProperties
+      }
       {...props}
     >
       <div className="bg-border relative top-[60%] h-2 w-2 rotate-45 rounded-tl-sm shadow-md" />

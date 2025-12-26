@@ -5,6 +5,7 @@ import type { Schedule, ExtraIncome, MonthlyGrowth, HistoryView } from '@/types'
 import { useExtraIncomes } from '@/hooks/use-extra-incomes';
 import ExtraIncomeModal from './extra-income-modal';
 import IncomeHistoryModal from './income-history-modal';
+import { Z_INDEX } from '@/lib/z-index';
 
 const incomeTutorialStorageKey = 'reviewflow-stats-income-tutorial-shown';
 
@@ -816,8 +817,14 @@ function TrendChart({
       <div className="relative w-full">
         {isScrollable && (
           <>
-            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-white to-transparent z-20 pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent z-20 pointer-events-none" />
+            <div
+              className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-white to-transparent pointer-events-none"
+              style={{ zIndex: Z_INDEX.sticky }}
+            />
+            <div
+              className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none"
+              style={{ zIndex: Z_INDEX.sticky }}
+            />
           </>
         )}
 
@@ -828,14 +835,15 @@ function TrendChart({
           <div className={`flex flex-col ${isScrollable ? 'min-w-max' : 'w-full'}`}>
             <div className="relative h-[160px] w-full mb-2">
               <div
-                className="absolute w-full border-t border-dashed border-gray-300 z-0"
-                style={{ top: `${zeroLinePercent}%` }}
+                className="absolute w-full border-t border-dashed border-gray-300"
+                style={{ top: `${zeroLinePercent}%`, zIndex: Z_INDEX.background }}
               />
 
               <div
-                className={`absolute inset-0 flex items-stretch z-10 ${
+                className={`absolute inset-0 flex items-stretch ${
                   isScrollable ? 'justify-start gap-8 px-4' : 'justify-around px-2'
                 }`}
+                style={{ zIndex: Z_INDEX.content }}
               >
                 {chartData.map((item) => {
                   const isActive = item.monthStart === selectedMonthKey;

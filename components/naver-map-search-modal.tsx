@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, MapPin, Search, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Z_INDEX } from '@/lib/z-index';
 
 declare global {
   interface Window {
@@ -192,7 +193,10 @@ export default function KakaoMapSearchModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-white overflow-hidden shadow-2xl">
+    <div
+      className="fixed inset-0 flex flex-col bg-white overflow-hidden shadow-2xl"
+      style={{ zIndex: Z_INDEX.mapSearchModal }}
+    >
       <div className="px-1 py-4 border-b flex justify-between items-center bg-white shrink-0">
         <span className="pl-4 font-bold text-lg text-neutral-800">장소 검색</span>
         <button
@@ -201,6 +205,10 @@ export default function KakaoMapSearchModal({
         >
           <X className="w-6 h-6" />
         </button>
+      </div>
+
+      <div className="px-4 pt-2 pb-1 text-[13px] text-neutral-500">
+        이곳에서 검색 후 장소를 선택해야만 일정이 지도에 표시됩니다.
       </div>
 
       <div className="p-4 border-b bg-white flex gap-2 shrink-0">
@@ -236,7 +244,10 @@ export default function KakaoMapSearchModal({
         >
           <div className="absolute top-2 left-1/2 -translate-x-1/2 h-1.5 w-14 rounded-full bg-neutral-200/80" />
           {/* 스크롤 UI 표시용 shadow */}
-          <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 z-10 bg-gradient-to-b from-white/90 to-transparent" />
+          <div
+            className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-white/90 to-transparent"
+            style={{ zIndex: Z_INDEX.content }}
+          />
           <ScrollArea className="flex-1 min-h-0">
             {searchResults.length === 0 && !isLoading && (
               <div className="flex flex-1 items-center justify-center p-10 text-center text-neutral-400 text-sm">
@@ -272,7 +283,10 @@ export default function KakaoMapSearchModal({
             </div>
           )}
           {/* 스크롤 UI 표시용 shadow */}
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-4 z-10 bg-gradient-to-t from-white/90 to-transparent" />
+          <div
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white/90 to-transparent"
+            style={{ zIndex: Z_INDEX.content }}
+          />
         </div>
 
         {/* 지도 영역 */}
@@ -282,7 +296,10 @@ export default function KakaoMapSearchModal({
 
           {/* 선택된 장소 레이어 */}
           {selectedPlace && (
-            <div className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md p-5 rounded-2xl shadow-2xl z-10 border border-white flex justify-between items-center animate-in fade-in slide-in-from-bottom-2">
+            <div
+              className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md p-5 rounded-2xl shadow-2xl border border-white flex justify-between items-center animate-in fade-in slide-in-from-bottom-2"
+              style={{ zIndex: Z_INDEX.content }}
+            >
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-base text-neutral-900 truncate">
                   {selectedPlace.region}

@@ -99,12 +99,16 @@ function PageContent() {
   const initialDeadline = searchParams.get('date') ?? undefined;
   const isTodoModalOpen = searchParams.get('todo') === 'true';
   const [homeCalendarFocusDate, setHomeCalendarFocusDate] = useState<string | null>(null);
+  const mapSearchRequested = searchParams.get('mapSearch') === 'true';
 
   const showAllSchedules = view === 'all';
   const isScheduleModalOpen = scheduleId !== null || isNewSchedule;
   const editingScheduleId = scheduleId ? parseInt(scheduleId) : null;
 
-  const handleOpenScheduleModal = (scheduleId?: number, options?: { deadDate?: string }) => {
+  const handleOpenScheduleModal = (
+    scheduleId?: number,
+    options?: { deadDate?: string; openMapSearch?: boolean }
+  ) => {
     const params = new URLSearchParams(searchParams.toString());
     if (scheduleId) {
       params.set('schedule', scheduleId.toString());
@@ -119,6 +123,11 @@ function PageContent() {
         params.delete('date');
       }
     }
+    if (options?.openMapSearch) {
+      params.set('mapSearch', 'true');
+    } else {
+      params.delete('mapSearch');
+    }
     router.push(`?${params.toString()}`);
   };
 
@@ -127,6 +136,7 @@ function PageContent() {
     params.delete('schedule');
     params.delete('new');
     params.delete('date');
+    params.delete('mapSearch');
     router.push(`?${params.toString()}`);
   };
 
@@ -282,6 +292,12 @@ function PageContent() {
                   }
                   focusDate={homeCalendarFocusDate}
                   onFocusDateApplied={() => setHomeCalendarFocusDate(null)}
+                  userEmail={user?.email}
+                  onRegisterLocation={(scheduleId) =>
+                    handleOpenScheduleModal(scheduleId, {
+                      openMapSearch: true,
+                    })
+                  }
                 />
               )}
 
@@ -320,6 +336,7 @@ function PageContent() {
               editingScheduleId ? schedules.find((s) => s.id === editingScheduleId) : undefined
             }
             initialDeadline={initialDeadline}
+            initialMapSearchOpen={mapSearchRequested}
           />
         )}
 

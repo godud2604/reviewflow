@@ -6,19 +6,21 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { X } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { Z_INDEX } from '@/lib/z-index';
 
 const ToastProvider = ToastPrimitives.Provider;
 
 const ToastViewport = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Viewport>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
->(({ className, ...props }, ref) => (
+>(({ className, style, ...props }, ref) => (
   <ToastPrimitives.Viewport
     ref={ref}
-    className={cn(
-      'fixed top-20 left-1/2 -translate-x-1/2 z-[100] flex max-h-screen flex-col gap-2',
-      className
-    )}
+      className={cn(
+        'fixed top-20 left-1/2 -translate-x-1/2 flex max-h-screen flex-col gap-2',
+        className
+      )}
+    style={{ zIndex: Z_INDEX.topLayer, ...style }}
     {...props}
   />
 ));
