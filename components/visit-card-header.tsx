@@ -317,8 +317,6 @@ function VisitCardHeader({
       await Promise.all(
         upcomingVisits.map(async (schedule) => {
           if (!schedule.lat || !schedule.lng || !schedule.visit) return;
-          const diff = getDaysDiff(today, schedule.visit);
-          if (diff > 7) return;
           try {
             const res = await fetch(
               `https://api.open-meteo.com/v1/forecast?latitude=${schedule.lat}&longitude=${schedule.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&start_date=${schedule.visit}&end_date=${schedule.visit}`
