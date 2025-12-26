@@ -375,7 +375,7 @@ function VisitCardHeader({
         <div className="flex items-center gap-1">
           <button
             onClick={handleMapOverview}
-            className="flex items-center gap-1 text-[14px] font-semibold text-neutral-400 hover:text-neutral-600 transition-colors px-2 py-1 rounded-lg hover:bg-neutral-50"
+            className="flex items-center gap-1 text-[14px] font-bold text-orange-400 hover:text-neutral-600 transition-colors px-2 py-1 rounded-lg hover:bg-neutral-50"
           >
             <MapIcon className="w-4 h-4" />
             지도
