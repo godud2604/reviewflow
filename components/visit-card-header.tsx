@@ -172,7 +172,7 @@ function ExpandedScheduleCard({
   return (
     <div
       ref={cardRef}
-      className="snap-center shrink-0 w-[85vw] max-w-[300px] rounded-[32px] bg-white p-7 flex flex-col justify-between h-[300px] relative overflow-hidden mr-4 my-2 shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
+      className="snap-center shrink-0 w-[85vw] max-w-[300px] rounded-[32px] bg-white p-7 flex flex-col justify-between h-[266px] relative overflow-hidden mr-4 my-2 shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
       onClick={onClick}
     >
       <div
@@ -211,13 +211,13 @@ function ExpandedScheduleCard({
       {/* 중간: 시간 및 장소 */}
       <div className="flex flex-col mt-2 z-10">
         <div className="flex items-baseline gap-1 text-neutral-900 mb-2">
-          <span className="text-[24px] font-semibold text-neutral-400 mr-1">{period}</span>
-          <span className="text-[36px] font-extrabold tracking-tight tabular-nums leading-none">
+          <span className="text-[18px] font-semibold text-neutral-400 mr-1">{period}</span>
+          <span className="text-[30px] font-extrabold tracking-tight tabular-nums leading-none">
             {hour}:{minute}
           </span>
         </div>
 
-        <h3 className="text-[22px] font-bold text-neutral-900 leading-tight truncate pr-2">
+        <h3 className="text-[16px] font-bold text-neutral-900 leading-tight truncate pr-2">
           {schedule.title}
         </h3>
 
@@ -262,7 +262,7 @@ function ExpandedScheduleCard({
       <div className="flex gap-3 mt-auto pt-4 z-10">
         <button
           onClick={handleOpenNaverMap}
-          className={`flex-1 h-[54px] rounded-2xl flex items-center justify-center gap-2 font-bold text-[16px] shadow-sm active:scale-[0.96] transition-transform ${
+          className={`flex-1 h-[40px] rounded-2xl flex items-center justify-center gap-2 font-bold text-[14px] shadow-sm active:scale-[0.96] transition-transform ${
             locationMissing
               ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed' // 위치 없으면 비활성 스타일
               : 'bg-[#03C75A] hover:bg-[#02b351] text-white'
@@ -274,7 +274,7 @@ function ExpandedScheduleCard({
         <button
           type="button"
           onClick={handleDetailClick}
-          className="flex-1 h-[54px] rounded-2xl bg-neutral-100 text-neutral-600 font-bold text-[16px] hover:bg-neutral-200 active:scale-[0.96] transition-transform"
+          className="flex-1 h-[40px] rounded-2xl bg-neutral-100 text-neutral-600 font-bold text-[14px] hover:bg-neutral-200 active:scale-[0.96] transition-transform"
         >
           상세보기
         </button>
@@ -365,7 +365,7 @@ function VisitCardHeader({
       <div className="flex items-start justify-between px-3 pt-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <h2 className="text-[18px] font-bold text-neutral-900 tracking-tight">곧 방문할 곳</h2>
+            <h2 className="text-[16px] font-bold text-neutral-900 tracking-tight">곧 방문할 곳</h2>
             <span className="text-[11px] font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">
               PRO
             </span>
