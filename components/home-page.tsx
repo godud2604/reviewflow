@@ -727,7 +727,7 @@ function CalendarSection({
     todayDate.getFullYear() === year;
 
   return (
-    <div className="rounded-[24px] p-4 shadow-sm bg-gradient-to-b from-white to-neutral-100">
+    <div className="rounded-[24px] p-4 shadow-sm bg-gradient-to-b from-white to-neutral-100 mt-2">
       <div className="relative flex items-center justify-center mb-3 gap-2">
         <div className="flex items-center gap-3">
           <button
