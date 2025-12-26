@@ -8,6 +8,7 @@ import { usePostHog } from 'posthog-js/react';
 import { Map, MapMarker } from 'react-kakao-maps-sdk';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, MapPin } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 import type { Schedule } from '@/types';
 import ScheduleItem from '@/components/schedule-item';
@@ -63,6 +64,8 @@ function FullScreenMap({
 }) {
   const [activeId, setActiveId] = useState<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
   const [weatherMap, setWeatherMap] = useState<
     Record<number, { code: number; min: number; max: number }>
   >({});
@@ -133,6 +136,14 @@ function FullScreenMap({
     }
   };
 
+  const handleScheduleCardClick = (schedule: Schedule) => {
+    if (!schedule.lat || !schedule.lng) {
+      toast({ title: '위치등록이 필요합니다.', variant: 'destructive', duration: 1000 });
+      return;
+    }
+    handleMarkerClick(schedule.id);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: '100%' }}
@@ -188,7 +199,7 @@ function FullScreenMap({
                   schedule={schedule}
                   weather={weatherMap[schedule.id]}
                   isToday={schedule.visit === today}
-                  onClick={() => handleMarkerClick(schedule.id)}
+                  onClick={() => handleScheduleCardClick(schedule)}
                   onDetailClick={() => onCardClick(schedule.id)}
                   locationMissing={!schedule.lat || !schedule.lng}
                   onRegisterLocation={() => onRegisterLocation?.(schedule.id)}
