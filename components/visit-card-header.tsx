@@ -76,7 +76,7 @@ function SlimScheduleCard({
   return (
     <button
       onClick={onClick}
-      className="shrink-0 snap-center w-[85vw] max-w-[290px] h-[72px] rounded-[24px] bg-white px-5 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.05)] active:scale-[0.96] transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] mr-3 last:mr-1 my-2"
+      className="shrink-0 snap-center w-[85vw] max-w-[290px] h-[72px] rounded-[24px] bg-white px-5 flex items-center justify-between active:scale-[0.96] transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] mr-3 last:mr-1 my-2"
     >
       <div className="flex items-center gap-4 overflow-hidden w-full">
         <div
