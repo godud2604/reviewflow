@@ -24,7 +24,7 @@ import { getDaysDiff } from '@/lib/date-utils';
 const formatTimeParts = (timeStr?: string) => {
   if (!timeStr) return { period: '', hour: '', minute: '' };
   const [h, m] = timeStr.split(':').map(Number);
-  const period = h < 12 ? 'AM' : 'PM';
+  const period = h < 12 ? '오전' : '오후';
   const hour = h % 12 === 0 ? 12 : h % 12;
   return { period, hour: String(hour), minute: String(m).padStart(2, '0') };
 };
@@ -172,11 +172,11 @@ function ExpandedScheduleCard({
   return (
     <div
       ref={cardRef}
-      className="snap-center shrink-0 w-[85vw] max-w-[300px] rounded-[32px] bg-white p-7 flex flex-col justify-between h-[310px] relative overflow-hidden mr-4 my-2 shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
+      className="snap-center shrink-0 w-[85vw] max-w-[300px] rounded-[32px] bg-white p-7 flex flex-col justify-between h-[300px] relative overflow-hidden mr-4 my-2 shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
       onClick={onClick}
     >
       <div
-        className={`absolute top-0 right-0 w-[80%] h-[82%] bg-gradient-to-bl ${
+        className={`absolute top-0 right-0 w-[80%] h-[80%] bg-gradient-to-bl ${
           isToday ? 'from-orange-50 via-white to-white' : 'from-blue-50 via-white to-white'
         } rounded-bl-[100px] pointer-events-none opacity-60`}
       />
@@ -211,8 +211,8 @@ function ExpandedScheduleCard({
       {/* 중간: 시간 및 장소 */}
       <div className="flex flex-col mt-2 z-10">
         <div className="flex items-baseline gap-1 text-neutral-900 mb-2">
-          <span className="text-[16px] font-semibold text-neutral-400 mr-1">{period}</span>
-          <span className="text-[52px] font-extrabold tracking-tight tabular-nums leading-none">
+          <span className="text-[24px] font-semibold text-neutral-400 mr-1">{period}</span>
+          <span className="text-[36px] font-extrabold tracking-tight tabular-nums leading-none">
             {hour}:{minute}
           </span>
         </div>
