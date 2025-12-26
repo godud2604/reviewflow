@@ -182,7 +182,7 @@ function ExpandedScheduleCard({
       />
 
       {/* 상단: 날짜 및 날씨 */}
-      <div className="flex justify-between items-start z-10">
+      <div className="flex justify-between items-start z-10 mt-[-10px]">
         <div
           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full ${
             isToday ? 'bg-orange-50' : 'bg-neutral-50'
@@ -209,7 +209,7 @@ function ExpandedScheduleCard({
       </div>
 
       {/* 중간: 시간 및 장소 */}
-      <div className="flex flex-col z-10">
+      <div className="flex flex-col z-10 mt-1">
         <div className="flex items-baseline gap-1 text-neutral-900">
           <span className="text-[16px] font-semibold text-neutral-400 mr-1">{period}</span>
           <span className="text-[20px] font-extrabold tracking-tight tabular-nums leading-none">
@@ -217,7 +217,7 @@ function ExpandedScheduleCard({
           </span>
         </div>
 
-        <h3 className="text-[16px] font-bold text-neutral-900 leading-tight truncate pr-2">
+        <h3 className="text-[16px] font-bold text-neutral-900 leading-tight truncate pr-2 mt-1">
           {schedule.title}
         </h3>
 
@@ -231,7 +231,7 @@ function ExpandedScheduleCard({
                 e.stopPropagation();
                 onRegisterLocation?.();
               }}
-              className="group flex items-center gap-3 w-full p-2 -ml-2 rounded-xl hover:bg-orange-50 active:bg-orange-100 transition-colors text-left"
+              className="mt-1 group flex items-center gap-3 w-full p-2 -ml-2 rounded-xl hover:bg-orange-50 active:bg-orange-100 transition-colors text-left"
             >
               <div className="w-3 h-3 rounded-full bg-orange-100 flex items-center justify-center shrink-0 group-active:scale-95 transition-transform">
                 <MapPin className="w-3 h-3 text-orange-600" />
@@ -248,7 +248,7 @@ function ExpandedScheduleCard({
             </button>
           ) : (
             // [Case 2] 위치 정보 있음: 기존 주소 표시
-            <div className="flex items-center gap-1.5 py-1">
+            <div className="mt-2 mb-2 flex items-center gap-1.5 py-1">
               <MapPin className="w-4 h-4 shrink-0 text-neutral-400" />
               <span className="text-[13px] font-medium text-neutral-500 truncate underline decoration-neutral-200 underline-offset-4">
                 {[schedule.region, schedule.regionDetail].filter(Boolean).join(' ')}
@@ -259,7 +259,7 @@ function ExpandedScheduleCard({
       </div>
 
       {/* 하단: 액션 버튼 */}
-      <div className="flex gap-3 pt-3 z-10">
+      <div className="flex gap-3 z-10 mt-2">
         <button
           onClick={handleOpenNaverMap}
           className={`flex-1 h-[36px] rounded-2xl flex items-center justify-center gap-2 font-bold text-[14px] shadow-sm active:scale-[0.96] transition-transform ${
