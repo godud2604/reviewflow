@@ -100,6 +100,7 @@ function PageContent() {
   const isTodoModalOpen = searchParams.get('todo') === 'true';
   const [homeCalendarFocusDate, setHomeCalendarFocusDate] = useState<string | null>(null);
   const mapSearchRequested = searchParams.get('mapSearch') === 'true';
+  const mapSearchAutoSaveRequested = searchParams.get('mapSearchAutoSave') === 'true';
 
   const showAllSchedules = view === 'all';
   const isScheduleModalOpen = scheduleId !== null || isNewSchedule;
@@ -107,7 +108,7 @@ function PageContent() {
 
   const handleOpenScheduleModal = (
     scheduleId?: number,
-    options?: { deadDate?: string; openMapSearch?: boolean }
+    options?: { deadDate?: string; openMapSearch?: boolean; autoSaveMapLocation?: boolean }
   ) => {
     const params = new URLSearchParams(searchParams.toString());
     if (scheduleId) {
@@ -128,6 +129,11 @@ function PageContent() {
     } else {
       params.delete('mapSearch');
     }
+    if (options?.autoSaveMapLocation) {
+      params.set('mapSearchAutoSave', 'true');
+    } else {
+      params.delete('mapSearchAutoSave');
+    }
     router.push(`?${params.toString()}`);
   };
 
@@ -137,6 +143,7 @@ function PageContent() {
     params.delete('new');
     params.delete('date');
     params.delete('mapSearch');
+    params.delete('mapSearchAutoSave');
     router.push(`?${params.toString()}`);
   };
 
@@ -298,6 +305,7 @@ function PageContent() {
                   onRegisterLocation={(scheduleId) =>
                     handleOpenScheduleModal(scheduleId, {
                       openMapSearch: true,
+                      autoSaveMapLocation: true,
                     })
                   }
                 />
@@ -339,6 +347,7 @@ function PageContent() {
             }
             initialDeadline={initialDeadline}
             initialMapSearchOpen={mapSearchRequested}
+            initialMapSearchAutoSave={mapSearchAutoSaveRequested}
           />
         )}
 

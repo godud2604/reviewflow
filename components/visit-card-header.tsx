@@ -10,20 +10,17 @@ import {
   CloudRain,
   CloudSnow,
   CloudLightning,
-  CalendarClock,
   MapPin,
-  Clock,
   Navigation,
-  Map as MapIcon, // 지도 아이콘 추가
+  Map as MapIcon,
   ChevronRight,
+  AlertCircle, // 경고 아이콘 추가 (필요시 사용, 여기선 MapPin 재사용)
 } from 'lucide-react';
 
 import type { Schedule } from '@/types';
 import { getDaysDiff } from '@/lib/date-utils';
-import { Z_INDEX } from '@/lib/z-index';
 
-// ... (formatTimeParts, formatTimeLabel, WeatherBadge 함수는 기존과 동일하여 생략 가능하지만, 전체 코드를 요청하셨으므로 포함하거나 유지한다고 가정합니다. 여기서는 핵심 UI 컴포넌트 위주로 작성합니다.)
-
+// Helper Functions
 const formatTimeParts = (timeStr?: string) => {
   if (!timeStr) return { period: '', hour: '', minute: '' };
   const [h, m] = timeStr.split(':').map(Number);
@@ -33,18 +30,14 @@ const formatTimeParts = (timeStr?: string) => {
 };
 
 const formatTimeLabel = (timeStr?: string) => {
-  if (!timeStr) return '미정'; // 더 심플하게
+  if (!timeStr) return '미정';
   const [hour, minute] = timeStr.split(':').map(Number);
   const period = hour < 12 ? '오전' : '오후';
   const displayHour = hour % 12 === 0 ? 12 : hour % 12;
   return `${period} ${displayHour}:${String(minute).padStart(2, '0')}`;
 };
 
-export const getUpcomingVisits = (
-  schedules: Schedule[],
-  today: string,
-  limit = 20
-): Schedule[] => {
+export const getUpcomingVisits = (schedules: Schedule[], today: string, limit = 20): Schedule[] => {
   if (!today) return [];
   return schedules
     .filter((schedule) => schedule.visit && schedule.visit >= today && schedule.status !== '완료')
@@ -59,7 +52,6 @@ export const getUpcomingVisits = (
 
 function WeatherBadge({ code, className }: { code: number; className?: string }) {
   if (code === undefined || code === null) return null;
-  // 아이콘 색상을 조금 더 파스텔 톤으로 조정
   if (code === 0) return <Sun className={`text-orange-400 ${className}`} />;
   if (code >= 1 && code <= 3) return <Cloud className={`text-sky-400 ${className}`} />;
   if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82))
@@ -69,7 +61,7 @@ function WeatherBadge({ code, className }: { code: number; className?: string })
   return <Sun className={`text-gray-400 ${className}`} />;
 }
 
-// [Toss Style] 슬림 카드 디자인 변경
+// [Toss Style] 슬림 카드
 function SlimScheduleCard({
   schedule,
   onClick,
@@ -84,12 +76,9 @@ function SlimScheduleCard({
   return (
     <button
       onClick={onClick}
-      // border 제거, 그림자를 더 부드럽고 넓게 퍼지도록 수정 (shadow-[0_8px_24px_rgba(0,0,0,0.04)])
-      // 배경색을 순백색(white)으로 하여 깔끔함 강조
       className="shrink-0 snap-center w-[85vw] max-w-[290px] h-[72px] rounded-[24px] bg-white px-5 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.05)] active:scale-[0.96] transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] mr-3 last:mr-1 my-2"
     >
       <div className="flex items-center gap-4 overflow-hidden w-full">
-        {/* D-Day 배지: 더 둥글고(Squircle), 부드러운 색감 */}
         <div
           className={`shrink-0 flex items-center justify-center w-[46px] h-[46px] rounded-[18px] ${
             diff <= 1 ? 'bg-red-50 text-red-500' : 'bg-neutral-50 text-neutral-600'
@@ -126,7 +115,7 @@ function SlimScheduleCard({
   );
 }
 
-// [Toss Style] 확장 카드 디자인 변경
+// [Toss Style] 확장 카드 (수정됨)
 function ExpandedScheduleCard({
   schedule,
   weather,
@@ -150,23 +139,55 @@ function ExpandedScheduleCard({
 }) {
   const { period, hour, minute } = formatTimeParts(schedule.visitTime);
 
-  // 지도 보기 핸들러 (기존 동일)
   const handleOpenNaverMap = (e: MouseEvent) => {
     e.stopPropagation();
+
+    // 1. 위치 정보가 아예 없는 경우 처리
+    if (locationMissing && onRegisterLocation) {
+      onRegisterLocation();
+      return;
+    }
+
     if (onOpenMapApp) {
       onOpenMapApp();
       return;
     }
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const searchTarget = schedule.region || '위치';
-    const query = encodeURIComponent(searchTarget);
 
-    if (isMobile && schedule.lat && schedule.lng) {
-      window.location.href = `nmap://map?lat=${schedule.lat}&lng=${schedule.lng}&zoom=15&appname=reviewflow`;
-    } else if (isMobile) {
-      window.location.href = `nmap://search?query=${query}&appname=reviewflow`;
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    // 검색어 (장소명 혹은 주소)
+    const placeName = schedule.region || schedule.title;
+    const encodedName = encodeURIComponent(placeName);
+
+    if (isMobile) {
+      if (schedule.lat && schedule.lng) {
+        // [CASE A] 좌표가 있는 경우 -> '길찾기(Route)' 모드로 실행
+        // dlat: 목적지 위도, dlng: 목적지 경도, dname: 목적지 이름
+        // appname: 앱 식별자 (필수)
+        window.location.href = `nmap://route/public?dlat=${schedule.lat}&dlng=${schedule.lng}&dname=${encodedName}&appname=reviewflow`;
+
+        // 참고: 대중교통(public), 자동차(car), 도보(walk) 중 선택 가능
+        // 예: nmap://route/walk?...
+      } else {
+        // [CASE B] 좌표는 없고 검색어만 있는 경우 -> '검색(Search)' 모드로 실행
+        // query: 검색어
+        const query = encodeURIComponent(schedule.region || schedule.title || '');
+        window.location.href = `nmap://search?query=${query}&appname=reviewflow`;
+      }
     } else {
-      window.open(`https://map.naver.com/v5/search/${query}`, '_blank');
+      // [PC 환경]
+      if (schedule.lat && schedule.lng) {
+        // PC에서는 길찾기 화면으로 바로 넘기거나, 해당 좌표 검색 결과로 이동
+        // 네이버 지도 PC버전 길찾기 URL: https://map.naver.com/v5/directions/-/-/목적지이름,목적지ID(혹은 좌표)/...
+        // 하지만 간단하게는 좌표 검색 쿼리가 제일 안전합니다.
+        window.open(
+          `https://map.naver.com/v5/search/${encodedName}?c=${schedule.lng},${schedule.lat},15,0,0,0,dh`,
+          '_blank'
+        );
+      } else {
+        const query = encodeURIComponent(schedule.region || '');
+        window.open(`https://map.naver.com/v5/search/${query}`, '_blank');
+      }
     }
   };
 
@@ -178,7 +199,7 @@ function ExpandedScheduleCard({
   return (
     <div
       ref={cardRef}
-      className="snap-center shrink-0 w-[85vw] max-w-[300px] rounded-[32px] bg-white p-7 flex flex-col justify-between h-[300px] relative overflow-hidden mr-4 my-2"
+      className="snap-center shrink-0 w-[85vw] max-w-[300px] rounded-[32px] bg-white p-7 flex flex-col justify-between h-[300px] relative overflow-hidden mr-4 my-2 shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
       onClick={onClick}
     >
       <div
@@ -227,39 +248,52 @@ function ExpandedScheduleCard({
           {schedule.title}
         </h3>
 
-        <div className="flex flex-col gap-1 mt-3">
-          <div className="flex items-center gap-1.5">
-            <MapPin className="w-4 h-4 shrink-0 text-neutral-400" />
-            <span className="text-[14px] font-medium text-neutral-500 truncate underline decoration-neutral-200 underline-offset-4">
-              {[schedule.region, schedule.regionDetail].filter(Boolean).join(' ') ||
-                '위치 정보 없음'}
-            </span>
-          </div>
-          {locationMissing && (
-            <span className="text-[12px] font-semibold text-orange-500">
-              위치 정보가 등록되지 않았습니다. 지도 동기화를 위해 위치 등록이 필요합니다.
-            </span>
-          )}
-          {locationMissing && onRegisterLocation && (
+        {/* UI 수정 부분: 위치 정보 유무에 따른 분기 처리 */}
+        <div className="mt-3">
+          {locationMissing ? (
+            // [Case 1] 위치 정보 없음: 액션 버튼 표시
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onRegisterLocation();
+                onRegisterLocation?.();
               }}
-              className="text-[13px] font-semibold text-orange-600 underline underline-offset-4"
+              className="group flex items-center gap-3 w-full p-2 -ml-2 rounded-xl hover:bg-orange-50 active:bg-orange-100 transition-colors text-left"
             >
-              위치 등록하기
+              <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center shrink-0 group-active:scale-95 transition-transform">
+                <MapPin className="w-4 h-4 text-orange-600" />
+              </div>
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="text-[13px] font-bold text-neutral-800 leading-tight">
+                  위치 등록이 필요해요
+                </span>
+                <span className="text-[11px] font-medium text-neutral-500 truncate leading-tight mt-0.5">
+                  지도를 보려면 눌러서 등록해주세요
+                </span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-orange-400 transition-colors" />
             </button>
+          ) : (
+            // [Case 2] 위치 정보 있음: 기존 주소 표시
+            <div className="flex items-center gap-1.5 py-1">
+              <MapPin className="w-4 h-4 shrink-0 text-neutral-400" />
+              <span className="text-[14px] font-medium text-neutral-500 truncate underline decoration-neutral-200 underline-offset-4">
+                {[schedule.region, schedule.regionDetail].filter(Boolean).join(' ')}
+              </span>
+            </div>
           )}
         </div>
       </div>
 
-      {/* 하단: 액션 버튼 (토스 스타일의 꽉 찬 버튼) */}
+      {/* 하단: 액션 버튼 */}
       <div className="flex gap-3 mt-auto pt-4 z-10">
         <button
           onClick={handleOpenNaverMap}
-          className="flex-1 h-[54px] bg-[#03C75A] hover:bg-[#02b351] active:scale-[0.96] transition-transform rounded-2xl flex items-center justify-center gap-2 text-white font-bold text-[16px] shadow-sm"
+          className={`flex-1 h-[54px] rounded-2xl flex items-center justify-center gap-2 font-bold text-[16px] shadow-sm active:scale-[0.96] transition-transform ${
+            locationMissing
+              ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed' // 위치 없으면 비활성 스타일
+              : 'bg-[#03C75A] hover:bg-[#02b351] text-white'
+          }`}
         >
           <Navigation className="w-4 h-4 fill-current" />
           길찾기
@@ -306,7 +340,6 @@ function VisitCardHeader({
   useEffect(() => {
     if (upcomingVisits.length === 0) return;
     const fetchWeather = async () => {
-      // (기존 날씨 로직 동일)
       const newWeatherMap: Record<number, { code: number; min: number; max: number }> = {};
       await Promise.all(
         upcomingVisits.map(async (schedule) => {
@@ -348,7 +381,6 @@ function VisitCardHeader({
     setIsAllExpanded(true);
   };
 
-  // 지도 전체 보기 핸들러 (예시)
   const handleMapOverview = () => {
     if (onOpenMapApp) {
       onOpenMapApp();
@@ -368,7 +400,6 @@ function VisitCardHeader({
         </div>
 
         <div className="flex items-center gap-1">
-          {/* 지도보기 버튼을 헤더 안으로 깔끔하게 통합 */}
           <button
             onClick={handleMapOverview}
             className="flex items-center gap-1 text-[14px] font-semibold text-neutral-400 hover:text-neutral-600 transition-colors px-2 py-1 rounded-lg hover:bg-neutral-50"
@@ -403,7 +434,6 @@ function VisitCardHeader({
                 onClick={() => handleExpandForSchedule(schedule.id)}
               />
             ))}
-            {/* 리스트 끝에 더보기 느낌의 여백 추가 */}
             <div className="w-4 shrink-0" />
           </div>
         ) : (

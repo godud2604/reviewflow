@@ -204,6 +204,7 @@ export default function ScheduleModal({
   onGuideFilesFocusDone,
   initialDeadline,
   initialMapSearchOpen,
+  initialMapSearchAutoSave,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -215,6 +216,7 @@ export default function ScheduleModal({
   onGuideFilesFocusDone?: () => void;
   initialDeadline?: string;
   initialMapSearchOpen?: boolean;
+  initialMapSearchAutoSave?: boolean;
 }) {
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData());
 
@@ -518,11 +520,12 @@ export default function ScheduleModal({
     setFormData((prev) => ({ ...prev, platform: defaultPlatform }));
   }, [allPlatforms, schedule, formData.platform]);
 
-  const handleSave = async () => {
+  const handleSave = async (overrideFormData?: Partial<Schedule>) => {
     if (isSubmittingRef.current) return;
-    const trimmedTitle = (formData.title ?? '').trim();
+    const mergedFormData = overrideFormData ? { ...formData, ...overrideFormData } : formData;
+    const trimmedTitle = (mergedFormData.title ?? '').trim();
     const missingTitle = trimmedTitle === '';
-    const missingDeadline = !formData.dead;
+    const missingDeadline = !mergedFormData.dead;
     if (missingTitle || missingDeadline) {
       setTitleError(missingTitle);
       setDeadlineError(missingDeadline);
@@ -539,7 +542,7 @@ export default function ScheduleModal({
     setIsSubmitting(true);
 
     try {
-      const updatedFormData: Partial<Schedule> = { ...formData };
+      const updatedFormData: Partial<Schedule> = { ...mergedFormData };
       updatedFormData.title = trimmedTitle;
       const reviewTypeForSave = visitMode ? '방문형' : nonVisitReviewType;
       updatedFormData.reviewType = reviewTypeForSave;
@@ -793,17 +796,22 @@ export default function ScheduleModal({
     });
   };
 
+  const shouldAutoSaveLocationSelection = Boolean(initialMapSearchAutoSave && schedule);
+
   const handleMapPlaceSelection = (place: MapPlaceSelection) => {
-    setFormData((prev) => ({
-      ...prev,
+    const locationUpdate: Partial<Schedule> = {
       region: place.region,
       regionDetail: place.address,
-      phone: place.phone || prev.phone,
+      phone: place.phone || formData.phone,
       lat: place.latitude,
       lng: place.longitude,
-    }));
+    };
+    setFormData((prev) => ({ ...prev, ...locationUpdate }));
     setLocationDetailEnabled(true);
     setShowMapSearchModal(false);
+    if (shouldAutoSaveLocationSelection) {
+      handleSave(locationUpdate);
+    }
   };
 
   const handleManualAddressFallback = () => {
