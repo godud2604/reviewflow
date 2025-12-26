@@ -76,7 +76,7 @@ function SlimScheduleCard({
   return (
     <button
       onClick={onClick}
-      className="shrink-0 snap-center w-[85vw] max-w-[290px] h-[72px] rounded-[24px] bg-white px-5 flex items-center justify-between active:scale-[0.96] transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] mr-3 last:mr-1 my-2"
+      className="shrink-0 snap-center w-[85vw] max-w-[260px] h-[72px] rounded-[24px] bg-white px-5 flex items-center justify-between active:scale-[0.96] transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] mr-3 last:mr-1 my-2"
     >
       <div className="flex items-center gap-4 overflow-hidden w-full">
         <div
@@ -172,7 +172,7 @@ function ExpandedScheduleCard({
   return (
     <div
       ref={cardRef}
-      className="snap-center shrink-0 w-[85vw] max-w-[300px] rounded-[32px] bg-white p-7 flex flex-col justify-between h-[266px] relative overflow-hidden mr-4 my-2 shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
+      className="snap-center shrink-0 w-[85vw] max-w-[260px] rounded-[32px] bg-white p-7 flex flex-col justify-between h-[215px] relative overflow-hidden mr-4 my-2 shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
       onClick={onClick}
     >
       <div
@@ -209,10 +209,10 @@ function ExpandedScheduleCard({
       </div>
 
       {/* 중간: 시간 및 장소 */}
-      <div className="flex flex-col mt-2 z-10">
-        <div className="flex items-baseline gap-1 text-neutral-900 mb-2">
-          <span className="text-[18px] font-semibold text-neutral-400 mr-1">{period}</span>
-          <span className="text-[30px] font-extrabold tracking-tight tabular-nums leading-none">
+      <div className="flex flex-col z-10">
+        <div className="flex items-baseline gap-1 text-neutral-900">
+          <span className="text-[16px] font-semibold text-neutral-400 mr-1">{period}</span>
+          <span className="text-[20px] font-extrabold tracking-tight tabular-nums leading-none">
             {hour}:{minute}
           </span>
         </div>
@@ -222,7 +222,7 @@ function ExpandedScheduleCard({
         </h3>
 
         {/* UI 수정 부분: 위치 정보 유무에 따른 분기 처리 */}
-        <div className="mt-3">
+        <div className="">
           {locationMissing ? (
             // [Case 1] 위치 정보 없음: 액션 버튼 표시
             <button
@@ -233,10 +233,10 @@ function ExpandedScheduleCard({
               }}
               className="group flex items-center gap-3 w-full p-2 -ml-2 rounded-xl hover:bg-orange-50 active:bg-orange-100 transition-colors text-left"
             >
-              <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center shrink-0 group-active:scale-95 transition-transform">
-                <MapPin className="w-4 h-4 text-orange-600" />
+              <div className="w-3 h-3 rounded-full bg-orange-100 flex items-center justify-center shrink-0 group-active:scale-95 transition-transform">
+                <MapPin className="w-3 h-3 text-orange-600" />
               </div>
-              <div className="flex flex-col flex-1 min-w-0">
+              <div className="flex flex-col">
                 <span className="text-[13px] font-bold text-neutral-800 leading-tight">
                   위치 등록이 필요해요
                 </span>
@@ -250,7 +250,7 @@ function ExpandedScheduleCard({
             // [Case 2] 위치 정보 있음: 기존 주소 표시
             <div className="flex items-center gap-1.5 py-1">
               <MapPin className="w-4 h-4 shrink-0 text-neutral-400" />
-              <span className="text-[14px] font-medium text-neutral-500 truncate underline decoration-neutral-200 underline-offset-4">
+              <span className="text-[13px] font-medium text-neutral-500 truncate underline decoration-neutral-200 underline-offset-4">
                 {[schedule.region, schedule.regionDetail].filter(Boolean).join(' ')}
               </span>
             </div>
@@ -259,10 +259,10 @@ function ExpandedScheduleCard({
       </div>
 
       {/* 하단: 액션 버튼 */}
-      <div className="flex gap-3 mt-auto pt-4 z-10">
+      <div className="flex gap-3 pt-3 z-10">
         <button
           onClick={handleOpenNaverMap}
-          className={`flex-1 h-[40px] rounded-2xl flex items-center justify-center gap-2 font-bold text-[14px] shadow-sm active:scale-[0.96] transition-transform ${
+          className={`flex-1 h-[36px] rounded-2xl flex items-center justify-center gap-2 font-bold text-[14px] shadow-sm active:scale-[0.96] transition-transform ${
             locationMissing
               ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed' // 위치 없으면 비활성 스타일
               : 'bg-[#03C75A] hover:bg-[#02b351] text-white'
@@ -274,7 +274,7 @@ function ExpandedScheduleCard({
         <button
           type="button"
           onClick={handleDetailClick}
-          className="flex-1 h-[40px] rounded-2xl bg-neutral-100 text-neutral-600 font-bold text-[14px] hover:bg-neutral-200 active:scale-[0.96] transition-transform"
+          className="flex-1 h-[36px] rounded-2xl bg-neutral-100 text-neutral-600 font-bold text-[14px] hover:bg-neutral-200 active:scale-[0.96] transition-transform"
         >
           상세보기
         </button>
