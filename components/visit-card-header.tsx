@@ -148,11 +148,6 @@ function ExpandedScheduleCard({
       return;
     }
 
-    if (onOpenMapApp) {
-      onOpenMapApp();
-      return;
-    }
-
     // 검색어 결정: region(장소명/주소)이 있으면 그걸 쓰고, 없으면 title(일정명) 사용
     const searchTarget = schedule.region || schedule.title || '';
     const encodedQuery = encodeURIComponent(searchTarget);
