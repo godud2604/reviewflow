@@ -41,6 +41,8 @@ const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[]
 
 const getScheduleRingColor = (status: string): string | undefined => CALENDAR_RING_COLORS[status];
 
+const FULLSCREEN_MAP_BOTTOM_GAP = 'calc(env(safe-area-inset-bottom, 0px) + 74px)';
+
 function FullScreenMap({
   schedules,
   onClose,
@@ -138,8 +140,8 @@ function FullScreenMap({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: '100%' }}
       transition={{ duration: 0.3 }}
-      className="fixed inset-0 bg-white flex flex-col"
-      style={{ zIndex: Z_INDEX.topLayer }}
+      className="fixed left-0 right-0 top-0 flex flex-col bg-white"
+      style={{ zIndex: Z_INDEX.topLayer, bottom: FULLSCREEN_MAP_BOTTOM_GAP }}
     >
       <div
         className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 bg-gradient-to-b from-black/60 to-transparent"
@@ -155,7 +157,7 @@ function FullScreenMap({
         <div className="w-10" />
       </div>
 
-      <div className="flex-1 relative">
+      <div className="flex-1 relative min-h-0">
         <Map center={mapCenter} style={{ width: '100%', height: '100%' }} level={4} isPanto={true}>
           {mapSchedules.map((schedule) => {
             const isActive = activeId === schedule.id;
