@@ -142,7 +142,7 @@ function ExpandedScheduleCard({
   const handleOpenNaverMap = (e: MouseEvent) => {
     e.stopPropagation();
 
-    // 1. 위치 정보가 아예 없는 경우 처리
+    // 1. 위치 정보(텍스트)도 아예 없는 경우 처리
     if (locationMissing && onRegisterLocation) {
       onRegisterLocation();
       return;
@@ -153,41 +153,19 @@ function ExpandedScheduleCard({
       return;
     }
 
+    // 검색어 결정: region(장소명/주소)이 있으면 그걸 쓰고, 없으면 title(일정명) 사용
+    const searchTarget = schedule.region || schedule.title || '';
+    const encodedQuery = encodeURIComponent(searchTarget);
+
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-    // 검색어 (장소명 혹은 주소)
-    const placeName = schedule.region || schedule.title;
-    const encodedName = encodeURIComponent(placeName);
-
     if (isMobile) {
-      if (schedule.lat && schedule.lng) {
-        // [CASE A] 좌표가 있는 경우 -> '길찾기(Route)' 모드로 실행
-        // dlat: 목적지 위도, dlng: 목적지 경도, dname: 목적지 이름
-        // appname: 앱 식별자 (필수)
-        window.location.href = `nmap://route/public?dlat=${schedule.lat}&dlng=${schedule.lng}&dname=${encodedName}&appname=reviewflow`;
-
-        // 참고: 대중교통(public), 자동차(car), 도보(walk) 중 선택 가능
-        // 예: nmap://route/walk?...
-      } else {
-        // [CASE B] 좌표는 없고 검색어만 있는 경우 -> '검색(Search)' 모드로 실행
-        // query: 검색어
-        const query = encodeURIComponent(schedule.region || schedule.title || '');
-        window.location.href = `nmap://search?query=${query}&appname=reviewflow`;
-      }
+      // [모바일] nmap://search?query=검색어
+      // 이 스키마는 앱을 열고 검색창에 해당 단어를 입력하여 검색 결과를 보여줍니다.
+      window.location.href = `nmap://search?query=${encodedQuery}&appname=reviewflow`;
     } else {
-      // [PC 환경]
-      if (schedule.lat && schedule.lng) {
-        // PC에서는 길찾기 화면으로 바로 넘기거나, 해당 좌표 검색 결과로 이동
-        // 네이버 지도 PC버전 길찾기 URL: https://map.naver.com/v5/directions/-/-/목적지이름,목적지ID(혹은 좌표)/...
-        // 하지만 간단하게는 좌표 검색 쿼리가 제일 안전합니다.
-        window.open(
-          `https://map.naver.com/v5/search/${encodedName}?c=${schedule.lng},${schedule.lat},15,0,0,0,dh`,
-          '_blank'
-        );
-      } else {
-        const query = encodeURIComponent(schedule.region || '');
-        window.open(`https://map.naver.com/v5/search/${query}`, '_blank');
-      }
+      // [PC] 네이버 지도 웹사이트 검색 결과로 이동
+      window.open(`https://map.naver.com/v5/search/${encodedQuery}`, '_blank');
     }
   };
 
@@ -199,11 +177,11 @@ function ExpandedScheduleCard({
   return (
     <div
       ref={cardRef}
-      className="snap-center shrink-0 w-[85vw] max-w-[300px] rounded-[32px] bg-white p-7 flex flex-col justify-between h-[300px] relative overflow-hidden mr-4 my-2 shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
+      className="snap-center shrink-0 w-[85vw] max-w-[300px] rounded-[32px] bg-white p-7 flex flex-col justify-between h-[310px] relative overflow-hidden mr-4 my-2 shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
       onClick={onClick}
     >
       <div
-        className={`absolute top-0 right-0 w-[80%] h-[80%] bg-gradient-to-bl ${
+        className={`absolute top-0 right-0 w-[80%] h-[82%] bg-gradient-to-bl ${
           isToday ? 'from-orange-50 via-white to-white' : 'from-blue-50 via-white to-white'
         } rounded-bl-[100px] pointer-events-none opacity-60`}
       />

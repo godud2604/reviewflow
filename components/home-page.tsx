@@ -178,27 +178,9 @@ function FullScreenMap({
         </Map>
 
         <div className="absolute bottom-8 left-0 right-0" style={{ zIndex: Z_INDEX.sticky }}>
-          {missingLocationSchedules.length > 0 && (
-            <div className="mx-6 mb-2 flex items-center justify-center gap-2 rounded-2xl bg-black/70 px-4 py-2 text-[13px] text-white">
-              <MapPin className="w-4 h-4 text-white" />
-              <span>
-                위치 정보가 없는 일정 {missingLocationSchedules.length}건은 지도에 표시되지
-                않습니다.
-              </span>
-              {missingLocationSchedules[0] && (
-                <button
-                  type="button"
-                  onClick={() => onCardClick(missingLocationSchedules[0].id)}
-                  className="text-[12px] font-bold text-white underline underline-offset-4"
-                >
-                  상세보기
-                </button>
-              )}
-            </div>
-          )}
           <div
             ref={scrollContainerRef}
-            className="flex gap-4 overflow-x-auto px-6 pb-4 snap-x scrollbar-hide items-end h-[320px]"
+            className="flex gap-4 overflow-x-auto px-6 pb-4 snap-x scrollbar-hide items-end h-[350px]"
           >
             {activeSchedules.map((schedule) => (
               <div key={schedule.id} id={`map-card-${schedule.id}`}>
@@ -263,7 +245,6 @@ export default function HomePage({
   const [isFullScreenMapOpen, setIsFullScreenMapOpen] = useState(false);
   const handleOpenMapApp = () => setIsFullScreenMapOpen(true);
   const handleRegisterLocation = (id: number) => {
-    setIsFullScreenMapOpen(false);
     onRegisterLocation?.(id);
   };
 
