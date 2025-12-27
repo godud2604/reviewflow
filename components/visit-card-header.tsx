@@ -365,7 +365,7 @@ function VisitCardHeader({
       <div className="flex items-start justify-between px-3 pt-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <h2 className="text-[16px] font-bold text-neutral-900 tracking-tight">곧 방문할 곳</h2>
+            <h2 className="text-[16px] font-bold text-neutral-900 tracking-tight">방문 예정</h2>
             <span className="inline-flex items-center justify-center rounded-[4px] bg-[#f97316] px-1.5 py-[3px] text-[10px] font-bold text-white leading-none shadow-sm">
               PRO
             </span>
@@ -381,19 +381,7 @@ function VisitCardHeader({
             className="flex items-center gap-1 text-[14px] font-bold text-orange-400 hover:text-neutral-600 transition-colors px-2 py-1 rounded-lg hover:bg-neutral-50"
           >
             <MapIcon className="w-4 h-4" />
-            지도
-          </button>
-          <div className="w-[1px] h-3 bg-neutral-200 mx-1"></div>
-          <button
-            onClick={toggleAll}
-            className="flex items-center gap-0.5 text-[14px] font-semibold text-neutral-400 hover:text-neutral-600 transition-colors px-2 py-1 rounded-lg hover:bg-neutral-50"
-          >
-            {isAllExpanded ? '접기' : '펼치기'}
-            {isAllExpanded ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
+            방문할 장소 한눈에 보기
           </button>
         </div>
       </div>
