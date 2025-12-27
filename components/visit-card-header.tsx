@@ -362,7 +362,7 @@ function VisitCardHeader({
 
   return (
     <div className="relative">
-      <div className="flex items-start justify-between px-3 pt-4">
+      <div className="flex items-start justify-between pt-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <h2 className="text-[16px] font-bold text-neutral-900 tracking-tight">방문 예정</h2>
@@ -378,7 +378,7 @@ function VisitCardHeader({
         <div className="flex items-center gap-1">
           <button
             onClick={handleMapOverview}
-            className="flex items-center gap-1 text-[14px] font-bold text-orange-400 hover:text-neutral-600 transition-colors px-2 py-1 rounded-lg hover:bg-neutral-50"
+            className="flex items-center gap-1 text-[13px] font-bold text-orange-400 hover:text-neutral-600 transition-colors px-2 py-1 rounded-lg hover:bg-neutral-50"
           >
             <MapIcon className="w-4 h-4" />
             방문할 장소 한눈에 보기
