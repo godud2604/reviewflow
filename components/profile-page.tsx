@@ -11,6 +11,7 @@ import type { UserProfile } from '@/hooks/use-user-profile';
 import { getProfileImageUrl } from '@/lib/storage';
 import { getSupabaseClient } from '@/lib/supabase';
 import { resolveTier } from '@/lib/tier';
+import FeedbackModal from '@/components/feedback-modal';
 import {
   Dialog,
   DialogContent,
@@ -98,6 +99,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const [isRedeemingCoupon, setIsRedeemingCoupon] = useState(false);
   const [isWithdrawalDialogOpen, setIsWithdrawalDialogOpen] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   useEffect(() => {
     if (!profile?.profileImagePath) {
@@ -454,18 +456,6 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
             {/* <h2 className="text-[14px] font-black text-neutral-900 tracking-tighter">{displayName}</h2> */}
             <p className="text-[13px] font-medium text-neutral-400">{emailLabel}</p>
           </div>
-
-          <div className="mt-4 flex justify-center">
-            <span
-              className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-tight ${
-                isPro
-                  ? 'border-amber-200 bg-amber-50 text-amber-700'
-                  : 'border-neutral-200 bg-neutral-100 text-neutral-600'
-              }`}
-            >
-              {isPro ? 'PRO MEMBER' : 'FREE MEMBER'}
-            </span>
-          </div>
           {isPro && (
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[12px] text-neutral-500">
               <span className="text-neutral-900 font-semibold">PRO</span>
@@ -528,6 +518,16 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
               );
             })}
           </div>
+        </div>
+
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => setIsFeedbackModalOpen(true)}
+            className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-900 transition hover:border-neutral-300 hover:bg-neutral-50"
+          >
+            피드백 / 오류 신고하기
+          </button>
         </div>
 
         {isPro && tierDurationMonths !== COUPON_TIER_DURATION_MONTHS && (
@@ -651,6 +651,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        <FeedbackModal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} />
       </div>
     </div>
   );

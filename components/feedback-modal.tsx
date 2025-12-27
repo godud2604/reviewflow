@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { getSupabaseClient } from '@/lib/supabase';
 import { Z_INDEX } from '@/lib/z-index';
 
 export default function FeedbackModal({
@@ -14,11 +16,13 @@ export default function FeedbackModal({
 }) {
   const [feedbackType, setFeedbackType] = useState<'feature' | 'bug' | 'feedback'>('feature');
   const [content, setContent] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   if (!isOpen) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!content.trim()) {
       toast({
         title: '내용을 입력해주세요',
@@ -28,16 +32,49 @@ export default function FeedbackModal({
       return;
     }
 
-    // 여기에 실제 피드백 전송 로직을 추가할 수 있습니다
-    // 예: API 호출, 이메일 전송, Google Forms 등
+    if (!user) {
+      toast({
+        title: '로그인이 필요합니다.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
 
-    toast({
-      title: '피드백이 전송되었습니다. 소중한 의견 감사합니다!',
-      duration: 1000,
-    });
+    setIsSubmitting(true);
 
-    setContent('');
-    onClose();
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.from('feedback_messages').insert({
+        user_id: user.id,
+        feedback_type: feedbackType,
+        content: content.trim(),
+        metadata: {
+          source: 'profile_page',
+          email: user.email ?? null,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: '피드백이 저장되었습니다.',
+        duration: 1000,
+      });
+
+      setContent('');
+      onClose();
+    } catch (err) {
+      toast({
+        title: '피드백 전송에 실패했습니다.',
+        description: err instanceof Error ? err.message : '다시 시도해 주세요.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const feedbackTypes = [
@@ -72,7 +109,6 @@ export default function FeedbackModal({
           </div>
 
           <div className="space-y-4">
-            {/* 피드백 유형 선택 */}
             <div>
               <label className="block text-sm font-semibold mb-2 text-neutral-700">
                 피드백 유형
@@ -99,7 +135,6 @@ export default function FeedbackModal({
               </div>
             </div>
 
-            {/* 내용 입력 */}
             <div>
               <label className="block text-sm font-semibold mb-2 text-neutral-700">내용</label>
               <textarea
@@ -118,14 +153,15 @@ export default function FeedbackModal({
               <div className="text-xs text-neutral-500 mt-1 text-right">{content.length} / 500</div>
             </div>
 
-            {/* 버튼 */}
             <div className="flex gap-2">
               <button
                 onClick={handleSubmit}
+                disabled={isSubmitting}
                 className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-semibold
-                  hover:bg-blue-600 transition-colors cursor-pointer active:scale-[0.98]"
+                  hover:bg-blue-600 transition-colors cursor-pointer active:scale-[0.98]
+                  disabled:cursor-not-allowed disabled:opacity-50"
               >
-                전송
+                {isSubmitting ? '전송 중...' : '전송'}
               </button>
             </div>
           </div>
