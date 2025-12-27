@@ -68,6 +68,7 @@ function FullScreenMap({
     lat: 37.5665,
     lng: 126.978,
   });
+  const [mapLevel, setMapLevel] = useState(4);
 
   const mapSchedules = useMemo(
     () => schedules.filter((s) => s.lat && s.lng && s.status !== '완료'),
@@ -158,7 +159,12 @@ function FullScreenMap({
       </div>
 
       <div className="flex-1 relative min-h-0">
-        <Map center={mapCenter} style={{ width: '100%', height: '100%' }} level={4} isPanto={true}>
+        <Map
+          center={mapCenter}
+          style={{ width: '100%', height: '100%' }}
+          level={mapLevel}
+          isPanto={true}
+        >
           {mapSchedules.map((schedule) => {
             const isActive = activeId === schedule.id;
             return (
@@ -177,11 +183,29 @@ function FullScreenMap({
             );
           })}
         </Map>
+        <div className="pointer-events-none absolute top-16 right-4 z-10 flex flex-col gap-2">
+          <button
+            type="button"
+            aria-label="지도 확대"
+            onClick={() => setMapLevel((prev) => Math.max(1, prev - 1))}
+            className="pointer-events-auto w-10 h-10 rounded-xl border border-neutral-200 bg-white/90 text-lg font-semibold text-neutral-900 shadow-md hover:bg-white transition-colors"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            aria-label="지도 축소"
+            onClick={() => setMapLevel((prev) => Math.min(14, prev + 1))}
+            className="pointer-events-auto w-10 h-10 rounded-xl border border-neutral-200 bg-white/90 text-lg font-semibold text-neutral-900 shadow-md hover:bg-white transition-colors"
+          >
+            –
+          </button>
+        </div>
 
         <div className="absolute bottom-8 left-0 right-0" style={{ zIndex: Z_INDEX.sticky }}>
           <div
             ref={scrollContainerRef}
-            className="flex gap-4 overflow-x-auto px-6 pb-4 snap-x scrollbar-hide items-end h-[350px]"
+            className="flex gap-4 overflow-x-auto px-6 pb-4 snap-x scrollbar-hide items-end"
           >
             {activeSchedules.map((schedule) => (
               <div key={schedule.id} id={`map-card-${schedule.id}`}>
