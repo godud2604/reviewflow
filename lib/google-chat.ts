@@ -1,6 +1,7 @@
 // lib/google-chat.ts
 
 const WEBHOOK_URL = process.env.GOOGLE_CHAT_WEBHOOK_URL;
+const FEEDBACK_WEBHOOK_URL = process.env.GOOGLE_CHAT_FEEDBACK_WEBHOOK_URL;
 const DEDUPE_WINDOW_MS = 300_000; // 5분
 const sentAlerts = new Map<string, number>();
 
@@ -32,8 +33,6 @@ function formatKST(date: Date): string {
     hour12: false,
   }).format(date);
 }
-
-// lib/google-chat.ts 의 buildCardPayload 함수를 이것으로 교체
 
 /**
  * 3. [수정됨] 안전한 텍스트 모드 Payload 생성
@@ -111,6 +110,50 @@ export async function sendErrorToGoogleChat(error: unknown, context = 'Unknown C
   } catch (err) {
     // console.error는 서버 로그에 남기고, err를 다시 던져서 테스트 결과에 표시되게 함
     console.error('Failed to send Google Chat alert:', err);
+    throw err;
+  }
+}
+
+type FeedbackMessageInput = {
+  feedbackType: string;
+  content: string;
+  author: string;
+};
+
+function buildFeedbackPayload({ feedbackType, content, author }: FeedbackMessageInput) {
+  const timeString = formatKST(new Date());
+  const safeContent = content.trim() || 'No content provided';
+
+  const textMessage =
+    `📝 *Feedback Received*\n\n` +
+    `📌 *Type:* ${feedbackType}\n` +
+    `👤 *Author:* ${author}\n` +
+    `⏰ *Time:* ${timeString}\n` +
+    `🗒 *Content:*\n\`\`\`\n${safeContent}\n\`\`\``;
+
+  return { text: textMessage };
+}
+
+export async function sendFeedbackToGoogleChat(payload: FeedbackMessageInput) {
+  if (!FEEDBACK_WEBHOOK_URL) {
+    console.warn('Google Chat feedback webhook URL missing.');
+    return;
+  }
+
+  try {
+    const body = buildFeedbackPayload(payload);
+    const res = await fetch(FEEDBACK_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Google Chat Feedback API Error (${res.status}): ${errorText}`);
+    }
+  } catch (err) {
+    console.error('Failed to send Google Chat feedback:', err);
     throw err;
   }
 }

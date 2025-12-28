@@ -23,7 +23,9 @@ export default function FeedbackModal({
   if (!isOpen) return null;
 
   const handleSubmit = async () => {
-    if (!content.trim()) {
+    const trimmedContent = content.trim();
+
+    if (!trimmedContent) {
       toast({
         title: '내용을 입력해주세요',
         variant: 'destructive',
@@ -48,7 +50,7 @@ export default function FeedbackModal({
       const { error } = await supabase.from('feedback_messages').insert({
         user_id: user.id,
         feedback_type: feedbackType,
-        content: content.trim(),
+        content: trimmedContent,
         metadata: {
           source: 'profile_page',
           email: user.email ?? null,
@@ -57,6 +59,29 @@ export default function FeedbackModal({
 
       if (error) {
         throw error;
+      }
+
+      try {
+        const userMetadata = user.user_metadata as { full_name?: string; name?: string } | null;
+
+        await fetch('/api/feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            feedbackType,
+            content: trimmedContent,
+            author: {
+              id: user.id,
+              email: user.email ?? null,
+              name: userMetadata?.full_name ?? userMetadata?.name ?? null,
+            },
+          }),
+          keepalive: true,
+        });
+      } catch (notifyError) {
+        console.error('Failed to notify Google Chat:', notifyError);
       }
 
       toast({
