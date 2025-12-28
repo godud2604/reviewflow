@@ -19,11 +19,16 @@ jobs:
         with:
           node-version: 20
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
       - name: Install Dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build Check
-        run: npm run build
+        run: pnpm run build
 
       # ----------------------------------------------------------------
       # ✅ 성공 시 실행 (Success Alert)
