@@ -38,7 +38,7 @@ jobs:
         run: |
           curl -X POST -H "Content-Type: application/json" \
           -d "{
-            \"text\": \"✅ **Build & Check Passed!**\n\n🚀 **Repo:** ${{ github.repository }}\n👤 **Author:** ${{ github.actor }}\n📜 **Commit:** ${{ github.event.head_commit.message }}\n\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>\"
+            \"text\": \"✅ Build & Check Passed!\n\n🚀 Repo: ${{ github.repository }}\n👤 Author: ${{ github.actor }}\n📜 Commit: ${{ github.event.head_commit.message }}\n\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>\"
           }" \
           "${{ secrets.GOOGLE_CAHT_DEPLOY_ALERT }}"
 
@@ -50,6 +50,6 @@ jobs:
         run: |
           curl -X POST -H "Content-Type: application/json" \
           -d "{
-            \"text\": \"🚨 **Build Failed!**\n\n📌 **Repo:** ${{ github.repository }}\n👤 **Author:** ${{ github.actor }}\n📜 **Commit:** ${{ github.event.head_commit.message }}\n\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Check Error Logs>\"
+            \"text\": \"🚨 Build Failed!\n\n📌 Repo: ${{ github.repository }}\n👤 Author: ${{ github.actor }}\n📜 Commit: ${{ github.event.head_commit.message }}\n\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Check Error Logs>\"
           }" \
           "${{ secrets.GOOGLE_CAHT_DEPLOY_ALERT }}"
