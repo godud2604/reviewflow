@@ -35,6 +35,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Z_INDEX } from '@/lib/z-index';
 import { useRouter } from 'next/navigation';
 import {
@@ -43,6 +51,7 @@ import {
   SETTINGS_CHANGE_EVENT,
 } from '@/lib/notification-settings';
 import { triggerDailySummaryNotification } from '@/components/weekly-summary-reminder';
+import { getSupabaseClient } from '@/lib/supabase';
 
 // --- Weather Utils & Types ---
 interface DailyWeather {
@@ -101,6 +110,12 @@ const formatDeadlineLabel = (deadline?: string, referenceDate?: Date) => {
 };
 const formatCurrency = (value: number) => new Intl.NumberFormat('ko-KR').format(value);
 const cleanPhoneNumber = (phone?: string) => phone?.replace(/[^0-9]/g, '') || '';
+const formatPhoneInput = (value: string) => {
+  const digits = cleanPhoneNumber(value);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+};
 
 const formatVisitTimeLabel = (value?: string) => {
   const trimmed = value?.trim();
@@ -115,6 +130,12 @@ const formatVisitTimeLabel = (value?: string) => {
 
 const formatTimeInputValue = (hour: number, minute: number) =>
   `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+const TIME_OPTIONS = ['07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00'] as const;
+const ALIMTALK_ALLOWED_EMAILS = new Set([
+  'ees238@kakao.com',
+  'ees238@naver.com',
+  'korea690105@naver.com',
+]);
 
 const getAdditionalReviews = (schedule: Schedule) => {
   const checklist = schedule.visitReviewChecklist;
@@ -220,7 +241,7 @@ const buildTemplates = (type: 'visit' | 'deadline', schedule: Schedule, userName
 };
 
 export default function NotificationsPage() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const router = useRouter();
   const { schedules, updateSchedule, deleteSchedule } = useSchedules({ enabled: !!user });
   const { toast } = useToast();
@@ -312,6 +333,191 @@ export default function NotificationsPage() {
     writeNotificationSettings(next);
     setNotificationSettingsState(next);
     // syncPermissionStatus(); // 생략
+  };
+
+  const [phoneInput, setPhoneInput] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [phoneVerifiedAt, setPhoneVerifiedAt] = useState<string | null>(null);
+  const [dailySummaryEnabled, setDailySummaryEnabled] = useState(false);
+  const [dailySummaryTime, setDailySummaryTime] = useState(formatTimeInputValue(8, 0));
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const isAlimtalkVisible = ALIMTALK_ALLOWED_EMAILS.has(user?.email ?? '');
+
+  useEffect(() => {
+    if (!user?.id) {
+      setIsProfileLoading(false);
+      return;
+    }
+
+    const fetchProfile = async () => {
+      setIsProfileLoading(true);
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select(
+          'phone_number, phone_verified_at, daily_summary_enabled, daily_summary_hour, daily_summary_minute'
+        )
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('알림 설정 로딩 실패:', error);
+        setIsProfileLoading(false);
+        return;
+      }
+
+      setPhoneInput(data?.phone_number ? formatPhoneInput(data.phone_number) : '');
+      setPhoneVerifiedAt(data?.phone_verified_at ?? null);
+      setDailySummaryEnabled(Boolean(data?.daily_summary_enabled));
+
+      const hour = data?.daily_summary_hour ?? 8;
+      const minute = data?.daily_summary_minute ?? 0;
+      setDailySummaryTime(formatTimeInputValue(hour, minute));
+      setIsProfileLoading(false);
+    };
+
+    fetchProfile();
+  }, [user?.id]);
+
+  const parseTimeValue = (value: string) => {
+    const [hourText, minuteText] = value.split(':');
+    const hour = Number(hourText);
+    const minute = Number(minuteText);
+    const safeHour = Number.isFinite(hour) ? Math.min(Math.max(hour, 7), 10) : 8;
+    const rawMinute = Number.isFinite(minute) ? Math.min(Math.max(minute, 0), 59) : 0;
+    const snappedMinute = rawMinute < 30 ? 0 : 30;
+    return { hour: safeHour, minute: snappedMinute };
+  };
+
+  const updateDailySummarySettings = async (next: Partial<{ enabled: boolean; time: string }>) => {
+    if (!user?.id) return false;
+    const supabase = getSupabaseClient();
+    const timeValue = next.time ?? dailySummaryTime;
+    const { hour, minute } = parseTimeValue(timeValue);
+    const enabled = next.enabled ?? dailySummaryEnabled;
+
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({
+        daily_summary_enabled: enabled,
+        daily_summary_hour: hour,
+        daily_summary_minute: minute,
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      toast({
+        title: '알림 설정 저장 실패',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleSendVerification = async () => {
+    if (!session?.access_token) {
+      toast({ title: '로그인이 필요합니다.', variant: 'destructive' });
+      return;
+    }
+    const cleaned = cleanPhoneNumber(phoneInput);
+    if (!cleaned) {
+      toast({ title: '휴대폰 번호를 입력해주세요.', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      setIsSendingCode(true);
+      const res = await fetch('/api/notifications/phone/send-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ phone: cleaned }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error ?? '인증번호 전송 실패');
+      }
+      toast({ title: '인증번호를 전송했어요.', duration: 1200 });
+    } catch (error) {
+      toast({
+        title: '인증번호 전송 실패',
+        description: error instanceof Error ? error.message : '잠시 후 다시 시도해주세요.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!session?.access_token) {
+      toast({ title: '로그인이 필요합니다.', variant: 'destructive' });
+      return;
+    }
+    if (!verificationCode.trim()) {
+      toast({ title: '인증번호를 입력해주세요.', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      setIsVerifyingCode(true);
+      const res = await fetch('/api/notifications/phone/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ code: verificationCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error ?? '인증 실패');
+      }
+      setPhoneVerifiedAt(new Date().toISOString());
+      if (data?.phoneNumber) {
+        setPhoneInput(formatPhoneInput(String(data.phoneNumber)));
+      }
+      setVerificationCode('');
+      toast({ title: '휴대폰 인증이 완료됐어요.', duration: 1200 });
+    } catch (error) {
+      toast({
+        title: '인증 실패',
+        description: error instanceof Error ? error.message : '인증에 실패했습니다.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsVerifyingCode(false);
+    }
+  };
+
+  const handleToggleDailySummary = async (nextEnabled: boolean) => {
+    if (nextEnabled && !phoneVerifiedAt) {
+      toast({
+        title: '휴대폰 인증이 필요합니다.',
+        description: '인증을 완료한 뒤 알림을 켤 수 있어요.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const previous = dailySummaryEnabled;
+    setDailySummaryEnabled(nextEnabled);
+    const saved = await updateDailySummarySettings({ enabled: nextEnabled });
+    if (!saved) {
+      setDailySummaryEnabled(previous);
+    }
+  };
+
+  const handleDailySummaryTimeChange = async (value: string) => {
+    const parsed = parseTimeValue(value);
+    const normalized = formatTimeInputValue(parsed.hour, parsed.minute);
+    setDailySummaryTime(normalized);
+    await updateDailySummarySettings({ time: normalized });
   };
 
   const filterSchedulesByTimeframe = useCallback(
@@ -527,6 +733,118 @@ export default function NotificationsPage() {
             </div>
           </div>
         </header>
+
+        {isAlimtalkVisible && (
+          <section className="rounded-[28px] border border-white/10 bg-[#0d0d11] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.4)] space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[13px] font-semibold text-white">알림톡 요약 알림</p>
+                <p className="text-[11px] text-white/50">
+                  휴대폰 인증 후 일정 요약 알림을 받을 수 있어요.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={dailySummaryEnabled}
+                  onCheckedChange={handleToggleDailySummary}
+                  disabled={isProfileLoading}
+                />
+                <span className="text-[11px] uppercase tracking-[0.2em] text-white/50">
+                  {dailySummaryEnabled ? 'ON' : 'OFF'}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <div className="text-[11px] uppercase tracking-[0.3em] text-white/40">
+                  휴대폰 번호
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    value={phoneInput}
+                    onChange={(event) => setPhoneInput(formatPhoneInput(event.target.value))}
+                    placeholder="010-1234-5678"
+                    className="flex-1 min-w-[200px] rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleSendVerification}
+                    disabled={isSendingCode || !phoneInput}
+                    className="rounded-2xl bg-white text-black text-[12px] font-bold hover:bg-white/90"
+                  >
+                    {isSendingCode ? '전송 중...' : '인증번호 보내기'}
+                  </Button>
+                </div>
+                {phoneVerifiedAt ? (
+                  <p className="text-[11px] text-emerald-400">휴대폰 인증 완료</p>
+                ) : (
+                  <p className="text-[11px] text-white/40">인증 후에만 알림톡을 받을 수 있어요.</p>
+                )}
+              </div>
+
+              {!phoneVerifiedAt && (
+                <div className="space-y-2">
+                  <div className="text-[11px] uppercase tracking-[0.3em] text-white/40">
+                    인증번호
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      value={verificationCode}
+                      onChange={(event) => setVerificationCode(event.target.value)}
+                      placeholder="6자리 입력"
+                      className="flex-1 min-w-[140px] rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleVerifyCode}
+                      disabled={isVerifyingCode || !verificationCode}
+                      className="rounded-2xl bg-white text-black text-[12px] font-bold hover:bg-white/90"
+                    >
+                      {isVerifyingCode ? '확인 중...' : '인증 완료'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/5 bg-white/5 px-3 py-2">
+                <div className="text-[12px] font-semibold text-white/70">알림 시간</div>
+                <div className="flex items-center gap-2">
+                  {['08:00', '09:00', '10:00'].map((timeValue) => (
+                    <button
+                      key={timeValue}
+                      type="button"
+                      onClick={() => handleDailySummaryTimeChange(timeValue)}
+                      className={`rounded-full px-2 py-1 text-[10px] font-semibold transition ${
+                        dailySummaryTime === timeValue
+                          ? 'bg-white text-black'
+                          : 'bg-black/40 text-white/60 hover:text-white'
+                      }`}
+                    >
+                      {timeValue}
+                    </button>
+                  ))}
+                  <Select value={dailySummaryTime} onValueChange={handleDailySummaryTimeChange}>
+                    <SelectTrigger className="h-8 w-[110px] rounded-lg border-white/10 bg-black/40 text-xs text-white">
+                      <SelectValue placeholder="시간 선택" />
+                    </SelectTrigger>
+                    <SelectContent className="border-white/10 bg-[#0d0d11] text-white">
+                      {TIME_OPTIONS.map((option) => (
+                        <SelectItem
+                          key={option}
+                          value={option}
+                          className="focus:bg-white/10 focus:text-white"
+                        >
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="mb-4 rounded-[28px] border border-white/10 bg-gradient-to-br from-[#111116] via-[#14141a] to-[#0c0c0f] p-3 shadow-[0_20px_30px_rgba(0,0,0,0.45)]">
           <div className="flex flex-wrap items-center justify-between gap-4">

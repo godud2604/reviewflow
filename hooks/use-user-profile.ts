@@ -36,6 +36,11 @@ export interface UserProfile {
   categories: string[];
   scheduleChannels: string[];
   profileImagePath: string | null;
+  phoneNumber: string | null;
+  phoneVerifiedAt: string | null;
+  dailySummaryEnabled: boolean;
+  dailySummaryHour: number;
+  dailySummaryMinute: number;
   snsBlog: string | null;
   snsThreads: string | null;
   snsInstagram: string | null;
@@ -147,6 +152,11 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
                     ? newProfile.schedule_channels
                     : DEFAULT_SCHEDULE_CHANNEL_OPTIONS,
                 profileImagePath: newProfile.profile_image_path ?? null,
+                phoneNumber: newProfile.phone_number ?? null,
+                phoneVerifiedAt: newProfile.phone_verified_at ?? null,
+                dailySummaryEnabled: newProfile.daily_summary_enabled ?? false,
+                dailySummaryHour: newProfile.daily_summary_hour ?? 8,
+                dailySummaryMinute: newProfile.daily_summary_minute ?? 0,
                 snsBlog: newProfile.sns_blog ?? null,
                 snsThreads: newProfile.sns_threads ?? null,
                 snsInstagram: newProfile.sns_instagram ?? null,
@@ -179,6 +189,11 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
                 ? data.schedule_channels
                 : DEFAULT_SCHEDULE_CHANNEL_OPTIONS,
             profileImagePath: data.profile_image_path ?? null,
+            phoneNumber: data.phone_number ?? null,
+            phoneVerifiedAt: data.phone_verified_at ?? null,
+            dailySummaryEnabled: data.daily_summary_enabled ?? false,
+            dailySummaryHour: data.daily_summary_hour ?? 8,
+            dailySummaryMinute: data.daily_summary_minute ?? 0,
             snsBlog: data.sns_blog ?? null,
             snsThreads: data.sns_threads ?? null,
             snsInstagram: data.sns_instagram ?? null,
