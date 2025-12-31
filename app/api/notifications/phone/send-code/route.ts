@@ -43,11 +43,11 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(Date.now() + CODE_EXPIRY_MINUTES * 60 * 1000).toISOString();
 
     const adminClient = getSupabaseAdminClient();
+
     const { error: updateError } = await adminClient
       .from('user_profiles')
       .update({
-        phone_number: cleanedPhone,
-        phone_verified_at: null,
+        pending_phone_number: cleanedPhone, // 임시 저장소에 저장
         phone_verification_code: hashedCode,
         phone_verification_expires_at: expiresAt,
       })
@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 알림톡/SMS는 '새 번호(cleanedPhone)'로 발송 (DB 저장 여부와 무관하게 입력된 번호로 전송)
     const edgeResponse = await fetch(`${supabaseUrl}/functions/v1/aligo-send-sms`, {
       method: 'POST',
       headers: {
@@ -89,7 +90,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true, aligo: edgeData?.data ?? edgeData });
+    return NextResponse.json({
+      success: true,
+      aligo: edgeData?.data ?? edgeData,
+      expiresAt,
+    });
   } catch (error) {
     console.error('휴대폰 인증번호 전송 오류:', error);
     return NextResponse.json(

@@ -45,9 +45,12 @@ export async function POST(request: NextRequest) {
     }
 
     const adminClient = getSupabaseAdminClient();
+
     const { data: profile, error: profileError } = await adminClient
       .from('user_profiles')
-      .select('phone_number, phone_verification_code, phone_verification_expires_at')
+      .select(
+        'phone_number, pending_phone_number, phone_verification_code, phone_verification_expires_at'
+      )
       .eq('id', userData.user.id)
       .single();
 
@@ -64,13 +67,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '인증번호가 일치하지 않습니다.' }, { status: 400 });
     }
 
+    // 대기 중이던 새 번호(pending)를 가져옵니다.
+    // 만약 pending 번호가 없다면 예외처리 (보통 send-code를 거쳤다면 있어야 함)
+    const newPhoneNumber = profile.pending_phone_number;
+
+    if (!newPhoneNumber) {
+      return NextResponse.json({ error: '인증할 대기 번호가 없습니다.' }, { status: 400 });
+    }
+
     const now = new Date().toISOString();
+
+    // 진짜 phone_number를 업데이트하고, 임시 데이터들은 비웁니다.
     const { error: updateError } = await adminClient
       .from('user_profiles')
       .update({
+        phone_number: newPhoneNumber, // 여기서 비로소 교체!
         phone_verified_at: now,
-        phone_verification_code: null,
-        phone_verification_expires_at: null,
+        pending_phone_number: null, // 임시 번호 초기화
+        phone_verification_code: null, // 인증 코드 초기화
+        phone_verification_expires_at: null, // 만료 시간 초기화
       })
       .eq('id', userData.user.id);
 
@@ -78,7 +93,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, phoneNumber: profile.phone_number });
+    // 프론트엔드에 '새로운 번호'를 반환해줍니다.
+    return NextResponse.json({ success: true, phoneNumber: newPhoneNumber });
   } catch (error) {
     console.error('휴대폰 인증 확인 오류:', error);
     return NextResponse.json(
