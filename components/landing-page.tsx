@@ -204,11 +204,11 @@ export default function LandingPage() {
         }
       `}</style>
       {isWaitlistModalOpen && (
-      <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center px-5"
-        onClick={handleCloseWaitlistModal}
-        style={{ zIndex: Z_INDEX.heroOverlay }}
-      >
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center px-5"
+          onClick={handleCloseWaitlistModal}
+          style={{ zIndex: Z_INDEX.heroOverlay }}
+        >
           <div
             className="w-90 max-w-sm bg-white rounded-2xl p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
@@ -385,10 +385,7 @@ export default function LandingPage() {
           />
         </div>
 
-        <div
-          className="max-w-4xl px-6 relative"
-          style={{ zIndex: Z_INDEX.content }}
-        >
+        <div className="max-w-4xl px-6 relative" style={{ zIndex: Z_INDEX.content }}>
           {/* Badge with animation */}
           <div className="inline-flex items-center gap-1.5 bg-orange-100 text-orange-700 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold mb-4 md:mb-6 animate-fade-in-down">
             <span className="text-base md:text-lg"></span>
@@ -750,121 +747,63 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-[100px]">
             <div className="w-full md:w-auto md:flex-1 md:max-w-[520px] text-center md:text-left">
               <span className="text-[#FF5722] font-bold text-sm md:text-lg mb-3 md:mb-4 block">
-                하루 1번 요약 알림
+                카카오 알림톡으로,
               </span>
               <h2 className="text-2xl md:text-6xl font-bold leading-tight mb-4 md:mb-6 text-[#191F28]">
-                아침 한 번,
+                일정이 있을 때,
                 <br />
-                오늘 할 일 끝까지 챙겨드려요
+                잊지 않게 챙겨드려요
               </h2>
               <p className="text-base md:text-xl text-[#6B7684] leading-relaxed">
-                마감 임박 일정, 아직 못한 리뷰, 할 일 체크까지
+                방문, 마감 일정 또는 마감 초과가 있는 날
                 <br />
-                하루 한 번 요약해서 알려드려요.
+                아침에 카카오 알림톡으로 요약해드려요.
                 <br />
-                <span className="text-[13px]">
-                  지금은 이메일로, 곧 카카오 알림도 준비 중입니다.
-                </span>
               </p>
             </div>
             <div className="w-full md:w-auto md:flex-shrink-0">
-              <div className="border-[10px] border-white rounded-[40px] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.14)] bg-[#0F172A] min-w-[300px] max-w-[380px] w-full mx-auto">
-                <div className="w-full px-5 py-4 flex flex-col" style={{ height: '420px' }}>
-                  {/* Daily Summary Preview */}
-                  <div className="relative bg-gradient-to-br from-[#0B1220] via-[#111827] to-[#1C2432] text-white rounded-[32px] shadow-2xl p-6 flex flex-col h-full overflow-hidden">
-                    <div className="absolute -right-6 -top-6 w-36 h-36 bg-orange-500/10 rounded-full blur-3xl" />
-                    <div className="absolute -left-10 bottom-10 w-28 h-28 bg-orange-400/10 rounded-full blur-3xl" />
-
-                    <div
-                      className="flex items-start justify-between mb-5 relative"
-                      style={{ zIndex: Z_INDEX.content }}
-                    >
-                      <div>
-                        <p className="text-[11px] font-semibold text-orange-200/90">Daily Brief</p>
-                        <h3 className="text-xl font-bold text-white leading-tight">
-                          오늘의 요약 알림
-                        </h3>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-white/10 border border-white/10 backdrop-blur">
-                          오전 9시 발송
-                        </span>
-                        <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center">
-                          🔔
-                        </div>
-                      </div>
+              <div className="border-[10px] border-white rounded-[40px] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.14)] bg-[#EDEFF2] min-w-[300px] max-w-[380px] w-full mx-auto">
+                <div className="w-full px-4 py-4 flex flex-col" style={{ height: '520px' }}>
+                  <div className="bg-white rounded-[32px] shadow-[0_20px_40px_rgba(15,23,42,0.08)] flex flex-col h-full overflow-hidden">
+                    <div className="bg-[#FFE500] px-4 py-4 relative">
+                      <div className="text-[13px] font-extrabold text-[#1A1A1A]">알림톡 도착</div>
                     </div>
-
-                    <div
-                      className="space-y-3 flex-1 relative"
-                      style={{ zIndex: Z_INDEX.content }}
-                    >
-                      <div className="p-4 rounded-2xl bg-white/10 border border-white/10 backdrop-blur">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-sm font-bold text-white">마감 임박 · D-1</span>
-                          <span className="text-[11px] px-2 py-1 rounded-full bg-orange-500/20 text-orange-200 font-semibold">
-                            우선순위
-                          </span>
+                    <div className="flex-1 bg-white px-5 py-4 text-[#111]">
+                      <p className="text-[16px] font-bold mb-3">[오늘의 일정]</p>
+                      <p className="text-[14px] font-semibold leading-relaxed mb-4">
+                        좋은 아침이에요!
+                        <br />
+                        오늘 예정된 체험단 일정을 정리해서
+                        <br />
+                        알려드릴게요.
+                      </p>
+                      <div className="space-y-1.5 mb-4 text-[14px] font-semibold">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[16px]">📌</span>
+                          <span>오늘 마감 일정: 3건</span>
                         </div>
-                        <p className="text-[13px] text-orange-50/90 font-medium">
-                          오늘 방문 & 촬영 마치고 리뷰 초안까지 작성해두세요.
-                        </p>
-                      </div>
-
-                      {[
-                        {
-                          title: '방문 일정',
-                          detail: '오후 2시 · 강남 카페',
-                          status: '완료 체크 필요',
-                          tone: 'border-white/10 bg-white/5 text-white',
-                        },
-                        {
-                          title: '리뷰 작성',
-                          detail: '초안 작성 & 사진 5장 첨부',
-                          status: '미완료',
-                          tone: 'border-orange-200/20 bg-orange-500/5 text-orange-50',
-                        },
-                        {
-                          title: '제출 알림',
-                          detail: 'URL 제출 · 내일까지',
-                          status: '예정',
-                          tone: 'border-white/10 bg-white/5 text-white',
-                        },
-                      ].map((item, idx) => (
-                        <div key={idx} className={`p-3.5 rounded-2xl border ${item.tone}`}>
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2">
-                              <span className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-sm">
-                                ✔
-                              </span>
-                              <div>
-                                <p className="text-sm font-bold">{item.title}</p>
-                                <p className="text-[12px] text-white/70">{item.detail}</p>
-                              </div>
-                            </div>
-                            <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-black/20 border border-white/10 text-white/80">
-                              {item.status}
-                            </span>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[16px]">📍</span>
+                          <span>오늘 방문 일정: 3건</span>
                         </div>
-                      ))}
-                    </div>
-
-                    <div
-                      className="mt-5 flex items-center justify-between text-[12px] text-white/80 relative"
-                      style={{ zIndex: Z_INDEX.content }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 font-semibold">
-                          이메일 발송 중
-                        </span>
-                        <span className="px-2.5 py-1 rounded-full bg-orange-500/15 border border-orange-300/30 text-orange-50 font-semibold">
-                          카카오톡 예정
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[16px]">⏰</span>
+                          <span>마감 초과 일정: 1건</span>
+                        </div>
                       </div>
-                      <span className="text-[11px] text-orange-100 font-semibold">
-                        채널 확장 준비 중
-                      </span>
+                      <p className="text-[14px] font-semibold mb-4">
+                        오늘 하루도 천천히 화이팅이에요🧡
+                      </p>
+                      <p className="text-[12px] text-[#6B7280] leading-relaxed mb-4">
+                        해당 메시지는 고객님께서 일정 알림 수신에
+                        <br />
+                        동의하고 요청하신 경우, 체험단 일정이 있을 때마다
+                        <br />
+                        반복적으로 발송됩니다.
+                      </p>
+                      <button className="w-full rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] py-3 text-[14px] font-bold text-[#111] shadow-[0_1px_0_rgba(0,0,0,0.05)]">
+                        일정 한눈에 보기
+                      </button>
                     </div>
                   </div>
                 </div>
