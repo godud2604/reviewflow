@@ -207,10 +207,6 @@ export default function KakaoMapSearchModal({
         </button>
       </div>
 
-      <div className="px-4 pt-2 pb-1 text-[13px] text-neutral-500">
-        이곳에서 검색 후 장소를 선택해야만 일정이 지도에 표시됩니다.
-      </div>
-
       <div className="p-4 border-b bg-white flex gap-2 shrink-0">
         <input
           ref={searchInputRef}

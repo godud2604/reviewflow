@@ -5,7 +5,7 @@ import type { MouseEvent } from 'react';
 import { usePostHog } from 'posthog-js/react';
 import { Map, MapMarker } from 'react-kakao-maps-sdk';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import type { Schedule } from '@/types';
@@ -75,6 +75,7 @@ function FullScreenMap({
   const [activeId, setActiveId] = useState<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const [showScrollBadge, setShowScrollBadge] = useState(false);
 
   const [weatherMap, setWeatherMap] = useState<
     Record<number, { code: number; min: number; max: number }>
@@ -115,6 +116,22 @@ function FullScreenMap({
       setActiveId(mapSchedules[0].id);
     }
   }, [mapSchedules]);
+
+  const updateScrollBadge = () => {
+    const element = scrollContainerRef.current;
+    if (!element) return;
+    const canScroll = element.scrollHeight > element.clientHeight + 1;
+    const scrollBottom = element.scrollTop + element.clientHeight;
+    const atBottom = Math.ceil(scrollBottom) >= element.scrollHeight - 1;
+    setShowScrollBadge(canScroll && !atBottom);
+  };
+
+  useEffect(() => {
+    updateScrollBadge();
+    const handleResize = () => updateScrollBadge();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [sortedSchedules.length]);
 
   useEffect(() => {
     if (mapSchedules.length === 0) {
@@ -207,6 +224,15 @@ function FullScreenMap({
           style={{ width: '100%', height: '100%' }}
           level={mapLevel}
           isPanto={true}
+          draggable={true}
+          scrollwheel={true}
+          onDragEnd={(map) => {
+            const center = map.getCenter();
+            setMapCenter({ lat: center.getLat(), lng: center.getLng() });
+          }}
+          onZoomChanged={(map) => {
+            setMapLevel(map.getLevel());
+          }}
         >
           {mapSchedules.map((schedule) => {
             const isActive = activeId === schedule.id;
@@ -249,100 +275,111 @@ function FullScreenMap({
           <div className="pointer-events-auto rounded-3xl border border-neutral-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-md">
             <div className="flex items-center justify-between px-4 pt-4 pb-2">
               <div className="flex items-center gap-2">
-                <span className="text-[13px] font-bold text-neutral-900">전체 방문 일정</span>
+                <span className="text-[13px] font-bold text-neutral-900">일주일 방문 일정</span>
                 <span className="text-[11px] font-semibold text-neutral-500">
                   {sortedSchedules.length}건
                 </span>
               </div>
               <div className="h-1.5 w-12 rounded-full bg-neutral-200" />
             </div>
-            <div
-              ref={scrollContainerRef}
-              className="max-h-[26vh] space-y-2 overflow-y-auto px-4 pb-4"
-            >
-              {sortedSchedules.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-neutral-200 px-4 py-6 text-center text-[12px] font-medium text-neutral-500">
-                  지도에 표시할 방문 일정이 없습니다.
-                </div>
-              ) : (
-                sortedSchedules.map((schedule) => {
-                  const isActive = activeId === schedule.id;
-                  const hasLocation = Boolean(schedule.lat && schedule.lng);
-                  const visitLabel = schedule.visit
-                    ? `${formatVisitDate(schedule.visit)}${
-                        schedule.visitTime ? ` · ${formatVisitTime(schedule.visitTime)}` : ''
-                      }`
-                    : '방문일 미정';
-                  const diff = schedule.visit ? getDaysDiff(today, schedule.visit) : null;
-                  const badgeLabel =
-                    diff === null
-                      ? '미정'
-                      : diff === 0
-                        ? '오늘'
-                        : diff === 1
-                          ? '내일'
-                          : `D-${diff}`;
-                  const badgeStyle =
-                    diff !== null && diff <= 1
-                      ? 'bg-red-50 text-red-500'
-                      : 'bg-neutral-100 text-neutral-500';
+            <div className="relative">
+              <div
+                ref={scrollContainerRef}
+                onScroll={updateScrollBadge}
+                className="max-h-[26vh] space-y-2 overflow-y-auto px-4 pb-8"
+              >
+                {sortedSchedules.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-neutral-200 px-4 py-6 text-center text-[12px] font-medium text-neutral-500">
+                    지도에 표시할 방문 일정이 없습니다.
+                  </div>
+                ) : (
+                  sortedSchedules.map((schedule) => {
+                    const isActive = activeId === schedule.id;
+                    const hasLocation = Boolean(schedule.lat && schedule.lng);
+                    const visitLabel = schedule.visit
+                      ? `${formatVisitDate(schedule.visit)}${
+                          schedule.visitTime ? ` · ${formatVisitTime(schedule.visitTime)}` : ''
+                        }`
+                      : '방문일 미정';
+                    const diff = schedule.visit ? getDaysDiff(today, schedule.visit) : null;
+                    const badgeLabel =
+                      diff === null
+                        ? '미정'
+                        : diff === 0
+                          ? '오늘'
+                          : diff === 1
+                            ? '내일'
+                            : `D-${diff}`;
+                    const badgeStyle =
+                      diff !== null && diff <= 1
+                        ? 'bg-red-50 text-red-500'
+                        : 'bg-neutral-100 text-neutral-500';
 
-                  return (
-                    <div
-                      key={schedule.id}
-                      id={`map-card-${schedule.id}`}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleScheduleCardClick(schedule)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          handleScheduleCardClick(schedule);
-                        }
-                      }}
-                      className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition ${
-                        isActive
-                          ? 'border-orange-400 bg-orange-50/60 shadow-[0_12px_30px_rgba(249,115,22,0.18)]'
-                          : 'border-neutral-200 bg-white'
-                      }`}
-                    >
-                      <div className="flex min-w-0 items-start gap-3">
-                        <span
-                          className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${badgeStyle}`}
-                        >
-                          {badgeLabel}
-                        </span>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="truncate text-[14px] font-bold text-neutral-900">
-                              {schedule.title}
-                            </span>
-                            <span className="shrink-0 text-[10px] font-semibold text-neutral-400">
-                              {schedule.reviewType}
-                            </span>
-                          </div>
-                          <div className="mt-0.5 truncate text-[12px] font-medium text-neutral-500">
-                            {visitLabel}
-                          </div>
-                          <div className="mt-0.5 truncate text-[11px] text-neutral-400">
-                            {schedule.regionDetail || schedule.region || '위치 미등록'}
+                    return (
+                      <div
+                        key={schedule.id}
+                        id={`map-card-${schedule.id}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleScheduleCardClick(schedule)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleScheduleCardClick(schedule);
+                          }
+                        }}
+                        className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition ${
+                          isActive
+                            ? 'border-orange-400 bg-orange-50/60 shadow-[0_12px_30px_rgba(249,115,22,0.18)]'
+                            : 'border-neutral-200 bg-white'
+                        }`}
+                      >
+                        <div className="flex min-w-0 items-start gap-3">
+                          <span
+                            className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${badgeStyle}`}
+                          >
+                            {badgeLabel}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-[14px] font-bold text-neutral-900">
+                                {schedule.title}
+                              </span>
+                              <span className="shrink-0 text-[10px] font-semibold text-neutral-400">
+                                {schedule.reviewType}
+                              </span>
+                            </div>
+                            <div className="mt-0.5 truncate text-[12px] font-medium text-neutral-500">
+                              {visitLabel}
+                            </div>
+                            <div className="mt-0.5 truncate text-[11px] text-neutral-400">
+                              {schedule.regionDetail || schedule.region || '위치 미등록'}
+                            </div>
                           </div>
                         </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {!hasLocation && onRegisterLocation && (
+                            <button
+                              type="button"
+                              onClick={(event) =>
+                                handleRegisterLocationClick(event, schedule.id)
+                              }
+                              className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
+                            >
+                              위치 등록
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        {!hasLocation && onRegisterLocation && (
-                          <button
-                            type="button"
-                            onClick={(event) => handleRegisterLocationClick(event, schedule.id)}
-                            className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
-                          >
-                            위치 등록
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
+                    );
+                  })
+                )}
+              </div>
+              {showScrollBadge && (
+                <div className="pointer-events-none absolute bottom-2 left-1/2 flex w-fit -translate-x-1/2 items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-neutral-500 shadow-sm animate-pulse">
+                  <ChevronDown className="h-3 w-3" />
+                  <span className="text-orange-900">스크롤하여 더보기</span>
+                </div>
               )}
             </div>
           </div>
@@ -541,6 +578,7 @@ export default function HomePage({
         today={today}
         onCardClick={onScheduleClick}
         onOpenMapApp={handleOpenMapApp}
+        onRegisterLocation={handleRegisterLocation}
       />
 
       {/* 5. 일정 리스트 헤더 */}

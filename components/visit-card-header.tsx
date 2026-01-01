@@ -11,6 +11,7 @@ import {
   Navigation,
   ChevronRight,
   ChevronUp,
+  ChevronDown,
   Map as MapIcon,
 } from 'lucide-react';
 // 👇 Kakao Maps SDK에서 StaticMap 임포트
@@ -33,8 +34,15 @@ const formatTimeParts = (timeStr?: string) => {
 
 const getUpcomingVisits = (schedules: Schedule[], today: string, limit = 20): Schedule[] => {
   if (!today) return [];
+  const start = parseDateString(today);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
   return schedules
-    .filter((schedule) => schedule.visit && schedule.visit >= today && schedule.status !== '완료')
+    .filter((schedule) => schedule.visit && schedule.status !== '완료')
+    .filter((schedule) => {
+      const visitDate = parseDateString(schedule.visit!);
+      return visitDate >= start && visitDate <= end;
+    })
     .sort((a, b) => {
       if (a.visit === b.visit) {
         return (a.visitTime || '23:59').localeCompare(b.visitTime || '23:59');
@@ -265,18 +273,40 @@ function SimpleVisitRow({
   index,
   weather,
   today,
+  onCardClick,
+  onRegisterLocation,
 }: {
   schedule: Schedule;
   index: number;
   weather?: { code: number; min: number; max: number };
   today: string;
+  onCardClick?: (id: number) => void;
+  onRegisterLocation?: (id: number) => void;
 }) {
   const diff = getDaysDiff(today, schedule.visit);
   const dDayLabel = diff === 0 ? 'Day' : `D-${diff}`;
   const dDayColor = diff <= 1 ? 'bg-red-50 text-red-500' : 'bg-neutral-100 text-neutral-500';
+  const hasLocation = Boolean(schedule.lat && schedule.lng);
+  const isClickable = Boolean(onCardClick);
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-neutral-100 last:border-none">
+    <div
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : -1}
+      onClick={() => {
+        onCardClick?.(schedule.id);
+      }}
+      onKeyDown={(event) => {
+        if (!isClickable) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onCardClick?.(schedule.id);
+        }
+      }}
+      className={`flex items-center justify-between py-3 border-b border-neutral-100 last:border-none ${
+        isClickable ? 'cursor-pointer hover:bg-neutral-50/80 transition-colors' : ''
+      }`}
+    >
       <div className="flex items-center gap-3 overflow-hidden">
         <div className="shrink-0 w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center text-[12px] font-bold text-neutral-500">
           {index + 1}
@@ -297,12 +327,26 @@ function SimpleVisitRow({
           </span>
         </div>
       </div>
-      {weather && (
-        <div className="shrink-0 flex flex-col items-end gap-0.5 pl-2">
-          <WeatherBadge code={weather.code} className="w-5 h-5" />
-          <span className="text-[11px] font-medium text-neutral-400">{weather.max}°</span>
-        </div>
-      )}
+      <div className="shrink-0 flex items-center gap-2 pl-2">
+        {!hasLocation && onRegisterLocation && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onRegisterLocation(schedule.id);
+            }}
+            className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
+          >
+            위치 등록
+          </button>
+        )}
+        {weather && (
+          <div className="flex flex-col items-end gap-0.5">
+            <WeatherBadge code={weather.code} className="w-5 h-5" />
+            <span className="text-[11px] font-medium text-neutral-400">{weather.max}°</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -316,17 +360,21 @@ function VisitCardHeader({
   today,
   onCardClick,
   onOpenMapApp,
+  onRegisterLocation,
 }: {
   schedules: Schedule[];
   today: string;
   onCardClick: (id: number) => void;
   onOpenMapApp?: () => void;
+  onRegisterLocation?: (id: number) => void;
 }) {
   const [weatherMap, setWeatherMap] = useState<
     Record<number, { code: number; min: number; max: number }>
   >({});
   const [isExpanded, setIsExpanded] = useState(false);
   const lastWeatherKeyRef = useRef<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [showScrollBadge, setShowScrollBadge] = useState(false);
 
   const upcomingVisits = useMemo(() => getUpcomingVisits(schedules, today), [schedules, today]);
   const nearestVisit = upcomingVisits[0];
@@ -406,6 +454,23 @@ function VisitCardHeader({
     fetchWeather();
   }, [weatherRange, weatherTargets]);
 
+  const updateScrollBadge = () => {
+    const element = listRef.current;
+    if (!element) return;
+    const canScroll = element.scrollHeight > element.clientHeight + 1;
+    const scrollBottom = element.scrollTop + element.clientHeight;
+    const atBottom = Math.ceil(scrollBottom) >= element.scrollHeight - 1;
+    setShowScrollBadge(canScroll && !atBottom);
+  };
+
+  useEffect(() => {
+    if (!isExpanded) return;
+    updateScrollBadge();
+    const handleResize = () => updateScrollBadge();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isExpanded, upcomingWindow.length]);
+
   if (!nearestVisit) return null;
 
   // 지도 앱 열기 (Kakao Scheme 기준 or FullScreenMap 호출)
@@ -424,7 +489,7 @@ function VisitCardHeader({
   };
 
   const advice = getWeatherAdvice(upcomingWindow, weatherMap);
-  const headerTitle = `이번 주 방문 일정 (${upcomingWindow.length})`;
+  const headerTitle = `일주일 방문 일정 (${upcomingWindow.length})`;
 
   return (
     <div className="relative mt-2 mb-4 px-1">
@@ -478,16 +543,30 @@ function VisitCardHeader({
             </div>
 
             {/* Visit List */}
-            <div className="flex flex-col mt-2">
-              {upcomingWindow.map((schedule, idx) => (
-                <SimpleVisitRow
-                  key={schedule.id}
-                  index={idx}
-                  schedule={schedule}
-                  weather={weatherMap[schedule.id]}
-                  today={today}
-                />
-              ))}
+            <div className="relative mt-2">
+              <div
+                ref={listRef}
+                onScroll={updateScrollBadge}
+                className="flex max-h-[23vh] flex-col overflow-y-auto pr-1 pb-8"
+              >
+                {upcomingWindow.map((schedule, idx) => (
+                  <SimpleVisitRow
+                    key={schedule.id}
+                    index={idx}
+                    schedule={schedule}
+                    weather={weatherMap[schedule.id]}
+                    today={today}
+                    onCardClick={onCardClick}
+                    onRegisterLocation={onRegisterLocation}
+                  />
+                ))}
+              </div>
+              {showScrollBadge && (
+                <div className="pointer-events-none absolute bottom-2 left-1/2 flex w-fit -translate-x-1/2 items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-neutral-500 shadow-sm animate-pulse">
+                  <ChevronDown className="h-3 w-3" />
+                  <span className="text-orange-900">스크롤하여 더보기</span>
+                </div>
+              )}
             </div>
           </div>
         )}
