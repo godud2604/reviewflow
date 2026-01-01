@@ -116,7 +116,7 @@ export default function FeedbackModal({
         style={{ touchAction: 'none', zIndex: Z_INDEX.backdrop }}
       />
       <div
-        className="absolute bottom-0 left-0 w-full h-[500px] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+        className="absolute bottom-0 left-0 w-full h-[600px] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
         style={{ zIndex: Z_INDEX.panel }}
       >
         <div
