@@ -556,7 +556,7 @@ export default function NotificationsPage() {
                   <div className="mr-4">
                     <p className="text-[15px] font-bold text-neutral-800">요약 알림 받기</p>
                     <p className="text-[14px] text-neutral-500">
-                      방문・마감 일정・마감 초과가 있는 날만 알림을 보내드려요.
+                      방문・마감 일정・마감 초과가 있는 날에 알림을 보내드려요.
                     </p>
                   </div>
                 </div>
