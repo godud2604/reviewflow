@@ -111,10 +111,33 @@ export default function ScheduleItem({
   const channelList = schedule.channel?.filter(Boolean) ?? [];
   const channelLabel = channelList.join(', ');
   const hasChannelLabel = channelLabel.length > 0;
+
+  // --- 데이터 체크 ---
   const hasMemo = Boolean(schedule.memo?.trim());
-  const [isMemoOpen, setIsMemoOpen] = useState(false);
   const memoText = hasMemo ? schedule.memo!.trim() : '';
+
+  const storePhone = schedule.phone?.trim();
+  const ownerPhone = schedule.ownerPhone?.trim();
+  const hasStorePhone = Boolean(storePhone);
+  const hasOwnerPhone = Boolean(ownerPhone);
+  const hasContact = hasStorePhone || hasOwnerPhone;
+
+  // 메모나 연락처 둘 중 하나라도 있으면 버튼 노출
+  const hasDetails = hasMemo || hasContact;
+
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const { toast } = useToast();
+
+  const toPhoneLink = (value: string) => value.replace(/\s+/g, '');
+
+  // 버튼 라벨 결정 로직
+  const getToggleButtonLabel = () => {
+    if (isDetailsOpen) return '닫기';
+    if (hasMemo && hasContact) return '메모/연락처';
+    if (hasMemo) return '메모 보기';
+    if (hasContact) return '연락처 보기';
+    return '정보 보기';
+  };
 
   return (
     <div
@@ -267,25 +290,25 @@ export default function ScheduleItem({
             </p>
           )}
 
-          {/* ----- 메모 토글 버튼 수정된 부분 ----- */}
-          {hasMemo && (
+          {/* ----- 통합 토글 버튼 ----- */}
+          {hasDetails && (
             <button
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
-                setIsMemoOpen((prev) => !prev);
+                setIsDetailsOpen((prev) => !prev);
               }}
-              aria-expanded={isMemoOpen}
+              aria-expanded={isDetailsOpen}
               className={`flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10.5px] font-semibold transition-all duration-200 active:scale-95 ${
-                isMemoOpen
+                isDetailsOpen
                   ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-sm'
                   : 'bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50'
               }`}
             >
               <span aria-hidden className="text-[10px]">
-                📝
+                {hasContact ? '📞' : '📝'}
               </span>
-              <span>{isMemoOpen ? '메모 닫기' : '메모 보기'}</span>
+              <span>{getToggleButtonLabel()}</span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="12"
@@ -296,42 +319,168 @@ export default function ScheduleItem({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className={`transition-transform duration-200 ${isMemoOpen ? 'rotate-180' : ''}`}
+                className={`transition-transform duration-200 ${isDetailsOpen ? 'rotate-180' : ''}`}
               >
                 <path d="m6 9 6 6 6-6" />
               </svg>
             </button>
           )}
         </div>
-        {hasMemo && isMemoOpen && (
+
+        {/* ----- 통합된 펼침 영역 (메모 + 연락처) ----- */}
+        {hasDetails && isDetailsOpen && (
           <div
-            className="mt-2 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-[12px] text-neutral-700 whitespace-pre-wrap break-words"
+            className="mt-3 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 origin-top"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-2">
-              <p className="flex-1 min-w-0 break-words">{memoText}</p>
-              <button
-                type="button"
-                className="shrink-0 rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-semibold text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  navigator.clipboard
-                    .writeText(memoText)
-                    .then(() => {
-                      toast({ title: '메모가 복사되었습니다', duration: 1000 });
-                    })
-                    .catch(() => {
-                      toast({
-                        title: '메모 복사에 실패했습니다.',
-                        variant: 'destructive',
-                        duration: 1000,
-                      });
-                    });
-                }}
-              >
-                복사
-              </button>
-            </div>
+            {/* 1. 메모 영역 */}
+            {hasMemo && (
+              <div className="rounded-2xl border border-neutral-200 bg-amber-50/50 px-3 py-2 text-[12px] text-neutral-700 whitespace-pre-wrap break-words">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p>{memoText}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-semibold text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      navigator.clipboard
+                        .writeText(memoText)
+                        .then(() => {
+                          toast({ title: '메모가 복사되었습니다', duration: 1000 });
+                        })
+                        .catch(() => {
+                          toast({
+                            title: '메모 복사에 실패했습니다.',
+                            variant: 'destructive',
+                            duration: 1000,
+                          });
+                        });
+                    }}
+                  >
+                    복사
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 2. 연락처 영역 */}
+            {hasContact && (
+              <div className="flex flex-col gap-2 rounded-2xl bg-neutral-50 p-3 border border-neutral-100">
+                {/* 가게 정보 */}
+                {hasStorePhone && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10.5px] font-medium text-neutral-500">매장</span>
+                      <span className="text-[10.5px] font-bold text-neutral-700 tracking-wide select-all">
+                        {storePhone}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {storePhone?.startsWith('010') && (
+                        <a
+                          href={`sms:${toPhoneLink(storePhone)}`}
+                          className="flex items-center justify-center w-7 h-7 rounded-full bg-white border border-neutral-200 text-neutral-500 hover:bg-sky-50 hover:text-sky-600 hover:border-sky-200 transition-colors"
+                          title="문자 보내기"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="13"
+                            height="13"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+                          </svg>
+                        </a>
+                      )}
+                      <a
+                        href={`tel:${toPhoneLink(storePhone!)}`}
+                        className="flex items-center justify-center w-7 h-7 rounded-full bg-white border border-neutral-200 text-neutral-500 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors"
+                        title="매장 전화걸기"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {hasStorePhone && hasOwnerPhone && (
+                  <div className="h-[1px] w-full bg-neutral-200/60" />
+                )}
+
+                {/* 사장님 정보 */}
+                {hasOwnerPhone && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10.5px] font-medium text-neutral-500">사장님</span>
+                      <span className="text-[10.5px] font-bold text-neutral-700 tracking-wide select-all">
+                        {ownerPhone}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`sms:${toPhoneLink(ownerPhone!)}`}
+                        className="flex items-center justify-center w-7 h-7 rounded-full bg-white border border-neutral-200 text-neutral-500 hover:bg-sky-50 hover:text-sky-600 hover:border-sky-200 transition-colors"
+                        title="사장님께 문자하기"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+                        </svg>
+                      </a>
+                      <a
+                        href={`tel:${toPhoneLink(ownerPhone!)}`}
+                        className="flex items-center justify-center w-7 h-7 rounded-full bg-white border border-neutral-200 text-neutral-500 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors"
+                        title="사장님께 전화걸기"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
