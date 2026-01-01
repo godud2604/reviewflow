@@ -484,6 +484,31 @@ export default function HomePage({
 
   const sortSchedules = (schedules: Schedule[]) => {
     return [...schedules].sort((a, b) => {
+      const aIsCompleted = a.status === '완료';
+      const bIsCompleted = b.status === '완료';
+      if (aIsCompleted && !bIsCompleted) return 1;
+      if (!aIsCompleted && bIsCompleted) return -1;
+
+      if (selectedDate) {
+        const aIsSelectedVisit = a.visit === selectedDate;
+        const bIsSelectedVisit = b.visit === selectedDate;
+        const aVisitTimeKey = a.visitTime ?? '23:59';
+        const bVisitTimeKey = b.visitTime ?? '23:59';
+
+        if (aIsSelectedVisit && bIsSelectedVisit) {
+          return aVisitTimeKey.localeCompare(bVisitTimeKey);
+        }
+        if (aIsSelectedVisit && !bIsSelectedVisit) return -1;
+        if (!aIsSelectedVisit && bIsSelectedVisit) return 1;
+
+        const aDeadKey = a.dead ?? '';
+        const bDeadKey = b.dead ?? '';
+        if (aDeadKey && bDeadKey) return aDeadKey.localeCompare(bDeadKey);
+        if (aDeadKey && !bDeadKey) return -1;
+        if (!aDeadKey && bDeadKey) return 1;
+        return 0;
+      }
+
       const aIsOverdue = a.dead && a.dead < today && a.status !== '완료';
       const bIsOverdue = b.dead && b.dead < today && b.status !== '완료';
       const aIsReconfirm = a.status === '재확인';
