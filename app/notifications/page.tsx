@@ -453,6 +453,7 @@ export default function NotificationsPage() {
                     value={phoneInput}
                     onChange={(e) => setPhoneInput(formatPhoneInput(e.target.value))}
                     placeholder="휴대폰 번호 입력"
+                    inputMode="numeric"
                     disabled={isSendingCode || (isVerificationSent && !isVerificationExpired)}
                     autoFocus
                     className="w-full flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-[16px] outline-none focus:border-orange-500 focus:bg-white transition-all disabled:opacity-70"
@@ -503,6 +504,7 @@ export default function NotificationsPage() {
                         onChange={(e) => setVerificationCode(e.target.value)}
                         placeholder="123456"
                         maxLength={6}
+                        inputMode="numeric"
                         className="min-w-0 flex-1 rounded-lg border border-orange-200 bg-orange-50/30 px-3 py-2 text-center text-sm tracking-widest outline-none focus:ring-2 focus:ring-orange-100"
                       />
                       <Button
