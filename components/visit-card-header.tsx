@@ -288,6 +288,13 @@ function SimpleVisitRow({
   const dDayColor = diff <= 1 ? 'bg-red-50 text-red-500' : 'bg-neutral-100 text-neutral-500';
   const hasLocation = Boolean(schedule.lat && schedule.lng);
   const isClickable = Boolean(onCardClick);
+  const visitDateLabel = formatReferenceDate(schedule.visit) || '방문일 미정';
+  const visitTimeParts = formatTimeParts(schedule.visitTime);
+  const visitTimeLabel =
+    visitTimeParts.period && visitTimeParts.hour
+      ? `${visitTimeParts.period} ${visitTimeParts.hour}:${visitTimeParts.minute}`
+      : '시간 미정';
+  const visitDateTimeLabel = `${visitDateLabel} · ${visitTimeLabel}`;
 
   return (
     <div
@@ -322,6 +329,9 @@ function SimpleVisitRow({
               {schedule.title}
             </span>
           </div>
+          <span className="text-[11.5px] font-semibold text-neutral-500 truncate pl-0.5">
+            {visitDateTimeLabel}
+          </span>
           <span className="text-[12px] font-medium text-neutral-400 truncate pl-0.5">
             {schedule.regionDetail || schedule.region || '위치 정보 없음'}
           </span>
