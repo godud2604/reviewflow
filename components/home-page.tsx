@@ -361,9 +361,7 @@ function FullScreenMap({
                           {!hasLocation && onRegisterLocation && (
                             <button
                               type="button"
-                              onClick={(event) =>
-                                handleRegisterLocationClick(event, schedule.id)
-                              }
+                              onClick={(event) => handleRegisterLocationClick(event, schedule.id)}
                               className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
                             >
                               위치 등록
@@ -505,6 +503,10 @@ export default function HomePage({
   const displayedSchedules = sortSchedules(
     selectedDate || selectedFilter !== 'all' ? filteredSchedules : activeSchedules
   );
+  const headerSchedules =
+    selectedDate || selectedFilter !== 'all' ? filteredSchedules : activeSchedules;
+  const visitCount = headerSchedules.filter((s) => s.visit).length;
+  const deadlineCount = headerSchedules.filter((s) => s.dead).length;
 
   const shouldShowFirstScheduleTutorial =
     hasSchedules && schedules.length === 1 && displayedSchedules.length > 0;
@@ -582,7 +584,7 @@ export default function HomePage({
       />
 
       {/* 5. 일정 리스트 헤더 */}
-      <div className="flex items-center justify-between mt-6 mb-2">
+      <div className="flex items-start justify-between mt-4 mb-2">
         <div>
           <h3 className="text-xl font-bold text-neutral-900 text-[16px]">
             {selectedDate
@@ -594,10 +596,13 @@ export default function HomePage({
                   : selectedFilter === 'noDeadline'
                     ? '마감일 미정'
                     : '체험단 일정'}
-            <span className="ml-1.5 text-sm font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+            <span className="ml-1.5 text-sm font-bold text-orange-600">
               {selectedDate || selectedFilter !== 'all' ? filteredSchedules.length : activeCount}건
             </span>
           </h3>
+          <span className="mt-1 text-[11px] font-bold text-neutral-500">
+            방문일 {visitCount}건 · 마감일 {deadlineCount}건
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -689,107 +694,6 @@ export default function HomePage({
         )}
         {shouldShowFirstScheduleTutorial && renderTutorialCard()}
       </div>
-
-      {/* Floating Filters */}
-      <div
-        className="fixed flex flex-col gap-3"
-        style={{
-          right: 'calc((100vw - min(100vw, 390px)) / 2 + 20px)',
-          bottom: 'calc((100vh - min(100vh, 844px)) / 2 + 130px)',
-          zIndex: Z_INDEX.panel,
-        }}
-      >
-        {reconfirmCount > 0 && (
-          <button
-            type="button"
-            onClick={() => setFloatingPanel(floatingPanel === 'reconfirm' ? 'none' : 'reconfirm')}
-            className="flex items-center gap-2 rounded-full bg-white border border-orange-500 shadow-[0_8px_30px_rgba(249,115,22,0.25)] px-3 py-2.5 active:scale-[0.98] transition-all ring-2 ring-orange-100"
-          >
-            <span className="text-base animate-pulse">⚠️</span>
-            <div className="text-left leading-tight">
-              <div className="text-[13px] font-bold text-amber-900">재확인</div>
-              <div className="text-[12.5px] font-semibold text-amber-800">목록 보기</div>
-            </div>
-            <span className="ml-4 rounded-full bg-orange-200 px-2 py-0.5 text-[11px] font-extrabold text-amber-800 shadow-sm">
-              {reconfirmCount}
-            </span>
-          </button>
-        )}
-        {noDeadlineSchedules.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setFloatingPanel(floatingPanel === 'noDeadline' ? 'none' : 'noDeadline')}
-            className="flex items-center gap-2 rounded-full bg-white border border-neutral-200 shadow-[0_8px_30px_rgba(0,0,0,0.12)] px-4 py-2.5 active:scale-[0.98] transition-all"
-          >
-            <span className="text-base">📌</span>
-            <div className="text-left leading-tight">
-              <div className="text-[16px] font-bold text-orange-500">마감일 미정 </div>
-              <div className="text-[14.5px] font-semibold text-orange-900">목록 보기</div>
-            </div>
-            <span className="ml-1 rounded-full bg-orange-200 px-2 py-0.5 text-[11px] font-extrabold text-orange-800 shadow-sm">
-              {noDeadlineSchedules.length}
-            </span>
-          </button>
-        )}
-      </div>
-
-      {/* Slide-up panel */}
-      {floatingPanel !== 'none' && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/35"
-            onClick={() => setFloatingPanel('none')}
-            style={{ zIndex: Z_INDEX.backdrop }}
-          />
-          <div
-            className="fixed inset-x-0 bottom-0 max-h-[70vh] rounded-t-3xl bg-white shadow-2xl border-t border-neutral-200"
-            style={{ zIndex: Z_INDEX.modal }}
-          >
-            <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{floatingPanel === 'reconfirm' ? '⚠️' : '📌'}</span>
-                <div className="leading-tight">
-                  <div className="text-[16px] font-bold text-neutral-900">
-                    {floatingPanel === 'reconfirm' ? '재확인 체험단' : '마감일 미정'}
-                  </div>
-                  <div className="text-[14px] text-neutral-500">
-                    {floatingPanel === 'reconfirm'
-                      ? '확인이 필요한 일정 목록'
-                      : '캘린더에 없는 일정 목록'}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="max-h-[60vh] overflow-y-auto px-4 py-3 space-y-3">
-              {(floatingPanel === 'reconfirm' ? reconfirmSchedules : noDeadlineSchedules).map(
-                (schedule) => (
-                  <ScheduleItem
-                    key={schedule.id}
-                    schedule={schedule}
-                    onClick={() => {
-                      onScheduleClick(schedule.id);
-                      setFloatingPanel('none');
-                    }}
-                    onCompleteClick={
-                      onCompleteClick ? () => onCompleteClick(schedule.id) : undefined
-                    }
-                    onPaybackConfirm={
-                      onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined
-                    }
-                    today={today}
-                  />
-                )
-              )}
-              {(floatingPanel === 'reconfirm' ? reconfirmSchedules : noDeadlineSchedules).length ===
-                0 && (
-                <div className="text-[12px] text-neutral-500 text-center py-4">
-                  표시할 일정이 없습니다.
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
 
       {/* 7. 전체 화면 지도 모달 */}
       <AnimatePresence>

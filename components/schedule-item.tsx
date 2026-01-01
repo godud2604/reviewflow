@@ -128,6 +128,10 @@ export default function ScheduleItem({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
+            if (isCompleted) {
+              onClick();
+              return;
+            }
             if (canComplete) {
               onCompleteClick?.();
             }
