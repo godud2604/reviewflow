@@ -327,7 +327,7 @@ export default function ScheduleItem({
               <span aria-hidden className="text-[9px]">
                 {hasContact ? '📞' : '📝'}
               </span>
-              <span className="text-[10.5px]">{getToggleButtonLabel()}</span>
+              <span className="text-[10.5px] font-bold">{getToggleButtonLabel()}</span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="12"
