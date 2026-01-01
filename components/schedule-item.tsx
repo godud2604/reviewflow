@@ -116,6 +116,16 @@ export default function ScheduleItem({
   // --- 데이터 체크 ---
   const memoText = stripLegacyScheduleMemo(schedule.memo).trim();
   const hasMemo = Boolean(memoText);
+  const visitReviewChecklist = schedule.visitReviewChecklist;
+  const hasVisitReviewExtra = Boolean(
+    schedule.reviewType === '방문형' &&
+    visitReviewChecklist &&
+    (visitReviewChecklist.naverReservation ||
+      visitReviewChecklist.platformAppReview ||
+      visitReviewChecklist.cafeReview ||
+      visitReviewChecklist.googleReview ||
+      visitReviewChecklist.other)
+  );
 
   const storePhone = schedule.phone?.trim();
   const ownerPhone = schedule.ownerPhone?.trim();
@@ -288,6 +298,11 @@ export default function ScheduleItem({
           {hasChannelLabel && (
             <p className="text-[10.5px] font-semibold text-neutral-500 rounded-[10px] border border-neutral-200 bg-white/80 px-2 py-[2px] w-fit">
               {channelLabel}
+            </p>
+          )}
+          {hasVisitReviewExtra && (
+            <p className="text-[10.5px] font-semibold text-amber-700 rounded-[10px] border border-amber-200 bg-amber-50 px-2 py-[2px] w-fit">
+              영수증 리뷰
             </p>
           )}
 
