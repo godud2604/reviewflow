@@ -1,10 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import type { MouseEvent, Ref } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ChevronDown,
-  ChevronUp,
   Sun,
   Cloud,
   CloudRain,
@@ -12,29 +9,26 @@ import {
   CloudLightning,
   MapPin,
   Navigation,
-  Map as MapIcon,
   ChevronRight,
-  AlertCircle, // 경고 아이콘 추가 (필요시 사용, 여기선 MapPin 재사용)
+  ChevronUp,
+  Map as MapIcon,
 } from 'lucide-react';
+// 👇 Kakao Maps SDK에서 StaticMap 임포트
+import { StaticMap } from 'react-kakao-maps-sdk';
 
 import type { Schedule } from '@/types';
-import { getDaysDiff } from '@/lib/date-utils';
+import { getDaysDiff, parseDateString } from '@/lib/date-utils';
 
+// ----------------------------------------------------------------------
 // Helper Functions
+// ----------------------------------------------------------------------
+
 const formatTimeParts = (timeStr?: string) => {
   if (!timeStr) return { period: '', hour: '', minute: '' };
   const [h, m] = timeStr.split(':').map(Number);
   const period = h < 12 ? '오전' : '오후';
   const hour = h % 12 === 0 ? 12 : h % 12;
   return { period, hour: String(hour), minute: String(m).padStart(2, '0') };
-};
-
-const formatTimeLabel = (timeStr?: string) => {
-  if (!timeStr) return '미정';
-  const [hour, minute] = timeStr.split(':').map(Number);
-  const period = hour < 12 ? '오전' : '오후';
-  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${period} ${displayHour}:${String(minute).padStart(2, '0')}`;
 };
 
 const getUpcomingVisits = (schedules: Schedule[], today: string, limit = 20): Schedule[] => {
@@ -50,6 +44,34 @@ const getUpcomingVisits = (schedules: Schedule[], today: string, limit = 20): Sc
     .slice(0, limit);
 };
 
+// 요일 변환 헬퍼
+const getDayLabel = (dateStr: string) => {
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  return days[new Date(dateStr).getDay()];
+};
+
+// 날짜 포맷팅 (YYYY-MM-DD -> M.D(요일))
+const formatReferenceDate = (dateStr?: string) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const dayLabel = getDayLabel(dateStr);
+  return `${month}.${day}(${dayLabel})`;
+};
+
+// 지역명 단순화 (서울 강남구 강남대로... -> 강남구)
+const formatSimpleRegion = (region?: string) => {
+  if (!region) return '방문지';
+  const parts = region.split(' ');
+  // '서울 강남구' 처럼 2번째 단어가 있으면 2번째 사용, 없으면 첫번째 사용
+  return parts.length > 1 ? parts[1] : parts[0];
+};
+
+// ----------------------------------------------------------------------
+// Weather Components & Logic
+// ----------------------------------------------------------------------
+
 function WeatherBadge({ code, className }: { code: number; className?: string }) {
   if (code === undefined || code === null) return null;
   if (code === 0) return <Sun className={`text-orange-400 ${className}`} />;
@@ -61,261 +83,271 @@ function WeatherBadge({ code, className }: { code: number; className?: string })
   return <Sun className={`text-gray-400 ${className}`} />;
 }
 
-// [Toss Style] 슬림 카드
-function SlimScheduleCard({
-  schedule,
-  onClick,
-  diff,
-  weather,
-}: {
-  schedule: Schedule;
-  onClick: () => void;
-  diff: number;
-  weather?: { code: number; min: number; max: number };
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="shrink-0 snap-center w-[85vw] max-w-[260px] h-[72px] rounded-[24px] bg-white px-5 flex items-center justify-between active:scale-[0.96] transition-all hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] mr-3 last:mr-1 my-2"
-    >
-      <div className="flex items-center gap-4 overflow-hidden w-full">
-        <div
-          className={`shrink-0 flex items-center justify-center w-[46px] h-[46px] rounded-[18px] ${
-            diff <= 1 ? 'bg-red-50 text-red-500' : 'bg-neutral-50 text-neutral-600'
-          }`}
-        >
-          <div className="flex flex-col items-center leading-none gap-0.5">
-            <span className="text-[10px] font-medium text-neutral-400">D-Day</span>
-            <span
-              className={`text-[15px] font-bold ${diff <= 1 ? 'text-red-500' : 'text-neutral-800'}`}
-            >
-              {diff === 0 ? 'Day' : diff}
-            </span>
-          </div>
-        </div>
+// ☀️ 친절한 날씨 멘트 생성기 (날짜/장소 명시 로직 적용)
+const getWeatherAdvice = (
+  schedules: Schedule[],
+  weatherMap: Record<number, { code: number; min: number; max: number }>
+) => {
+  // 1. 날씨 데이터가 존재하는 일정만 추리기
+  const validSchedules = schedules.filter((s) => weatherMap[s.id]);
 
-        <div className="flex flex-col items-start min-w-0 flex-1 gap-0.5">
-          <div className="flex items-center justify-between w-full pr-1">
-            <span className="text-[16px] font-bold text-neutral-800 truncate max-w-[140px]">
-              {schedule.title}
-            </span>
-            {weather && (
-              <div className="flex items-center gap-1.5 shrink-0 pl-2">
-                <WeatherBadge code={weather.code} className="w-4 h-4" />
-                <span className="text-[13px] font-medium text-neutral-500">{weather.max}°</span>
-              </div>
-            )}
-          </div>
-          <div className="text-[13px] text-neutral-400 font-medium flex items-center gap-1">
-            {formatTimeLabel(schedule.visitTime)}
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-}
+  if (validSchedules.length === 0) {
+    return {
+      text: '오늘 날씨를 확인해보세요!',
+      icon: '🌤️',
+      reference: '위치 정보 없음',
+    };
+  }
 
-// [Toss Style] 확장 카드 (수정됨)
-function ExpandedScheduleCard({
-  schedule,
-  weather,
-  isToday,
-  onClick,
-  onDetailClick,
-  onOpenMapApp,
-  cardRef,
-  locationMissing,
-  onRegisterLocation,
-}: {
-  schedule: Schedule;
-  weather?: { code: number; min: number; max: number };
-  isToday: boolean;
-  onClick?: () => void;
-  onDetailClick?: () => void;
-  onOpenMapApp?: () => void;
-  cardRef?: Ref<HTMLDivElement>;
-  locationMissing?: boolean;
-  onRegisterLocation?: () => void;
-}) {
-  const { period, hour, minute } = formatTimeParts(schedule.visitTime);
+  // 2. 우선순위별로 "해당 날씨가 있는 가장 빠른 일정" 찾기
 
-  const handleOpenNaverMap = (e: MouseEvent) => {
-    e.stopPropagation();
+  // (1) 눈 (Snow)
+  const snowItem = validSchedules.find((s) => {
+    const w = weatherMap[s.id];
+    return w.code >= 71 && w.code <= 77;
+  });
+  if (snowItem) {
+    const dateRef = formatReferenceDate(snowItem.visit);
+    const regionRef = formatSimpleRegion(snowItem.region);
+    return {
+      text: '눈 소식이 있어요 ☃️ 미끄러움 조심!',
+      icon: '❄️',
+      reference: `${dateRef} ${regionRef} 기준`,
+    };
+  }
 
-    // 1. 위치 정보(텍스트)도 아예 없는 경우 처리
-    if (locationMissing && onRegisterLocation) {
-      onRegisterLocation();
-      return;
-    }
+  // (2) 비 (Rain)
+  const rainItem = validSchedules.find((s) => {
+    const w = weatherMap[s.id];
+    return (w.code >= 51 && w.code <= 67) || (w.code >= 80 && w.code <= 82);
+  });
+  if (rainItem) {
+    const dateRef = formatReferenceDate(rainItem.visit);
+    const regionRef = formatSimpleRegion(rainItem.region);
+    return {
+      text: '비 소식이 있어요 ☔ 우산 챙겨가세요!',
+      icon: '☔',
+      reference: `${dateRef} ${regionRef} 기준`,
+    };
+  }
 
-    // 검색어 결정: region(장소명/주소)이 있으면 그걸 쓰고, 없으면 title(일정명) 사용
-    const searchTarget = schedule.region || schedule.title || '';
-    const encodedQuery = encodeURIComponent(searchTarget);
+  // (3) 천둥번개
+  const thunderItem = validSchedules.find((s) => weatherMap[s.id].code >= 95);
+  if (thunderItem) {
+    const dateRef = formatReferenceDate(thunderItem.visit);
+    const regionRef = formatSimpleRegion(thunderItem.region);
+    return {
+      text: '천둥번개가 쳐요 ⚡ 안전 운전 하세요!',
+      icon: '⚡',
+      reference: `${dateRef} ${regionRef} 기준`,
+    };
+  }
 
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  // (4) 한파 (최저기온 0도 이하)
+  const coldItem = validSchedules.find((s) => weatherMap[s.id].min <= 0);
+  if (coldItem) {
+    const dateRef = formatReferenceDate(coldItem.visit);
+    const regionRef = formatSimpleRegion(coldItem.region);
+    return {
+      text: '너무 추워요 ❄️ 옷 따뜻하게 입고 가세요!',
+      icon: '🧣',
+      reference: `${dateRef} ${regionRef} 기준`,
+    };
+  }
 
-    if (isMobile) {
-      // [모바일] nmap://search?query=검색어
-      // 이 스키마는 앱을 열고 검색창에 해당 단어를 입력하여 검색 결과를 보여줍니다.
-      window.location.href = `nmap://search?query=${encodedQuery}&appname=reviewflow`;
-    } else {
-      // [PC] 네이버 지도 웹사이트 검색 결과로 이동
-      window.open(`https://map.naver.com/v5/search/${encodedQuery}`, '_blank');
-    }
+  // (5) 폭염 (최고기온 30도 이상)
+  const hotItem = validSchedules.find((s) => weatherMap[s.id].max >= 30);
+  if (hotItem) {
+    const dateRef = formatReferenceDate(hotItem.visit);
+    const regionRef = formatSimpleRegion(hotItem.region);
+    return {
+      text: '햇살이 뜨거워요 🔥 더위 조심하세요!',
+      icon: '🧢',
+      reference: `${dateRef} ${regionRef} 기준`,
+    };
+  }
+
+  // (6) 특이사항 없음 -> "가장 빠른 일정" 기준 멘트
+  const firstItem = validSchedules[0];
+  const dateRef = formatReferenceDate(firstItem.visit);
+  const regionRef = formatSimpleRegion(firstItem.region);
+
+  return {
+    text: '날씨 맑음 ☀️ 사진 찍기 딱 좋은 날이에요.',
+    icon: '📸',
+    reference: `${dateRef} ${regionRef} 기준`,
   };
+};
 
-  const handleDetailClick = (event: MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    onDetailClick?.();
-  };
+// 🗺️ 카카오 정적 지도 컴포넌트 (데이터 검증 및 렌더링 안정성 강화)
+function MapVisualizer({ schedules, onClick }: { schedules: Schedule[]; onClick: () => void }) {
+  const mapData = useMemo(() => {
+    // 1. 유효한 데이터 필터링 (lat, lng가 숫자 변환 가능한지 엄격 체크)
+    const validSchedules = schedules
+      .filter((s) => {
+        const lat = Number(s.lat);
+        const lng = Number(s.lng);
+        return s.lat && s.lng && !isNaN(lat) && !isNaN(lng);
+      })
+      .slice(0, 5); // 최대 5개
+
+    if (validSchedules.length === 0) return null;
+
+    // 2. 중심 좌표 생성 (첫 번째 일정 기준)
+    const center = {
+      lat: Number(validSchedules[0].lat),
+      lng: Number(validSchedules[0].lng),
+    };
+
+    // 3. 마커 데이터 생성
+    const markers = validSchedules.map((s) => ({
+      position: {
+        lat: Number(s.lat),
+        lng: Number(s.lng),
+      },
+      text: '', // 필수: 빈 문자열이라도 넣어서 에러 방지
+    }));
+
+    return { center, markers };
+  }, [schedules]);
 
   return (
     <div
-      ref={cardRef}
-      className="snap-center shrink-0 w-[85vw] max-w-[260px] rounded-[32px] bg-white p-7 flex flex-col justify-between h-[215px] relative overflow-hidden mr-4 my-2 shadow-[0_4px_20px_rgba(0,0,0,0.03)]"
       onClick={onClick}
+      className="relative w-full h-[150px] bg-[#F4F7F8] rounded-[20px] overflow-hidden cursor-pointer group active:scale-[0.98] transition-transform border border-black/5"
     >
-      <div
-        className={`absolute top-0 right-0 w-[80%] h-[80%] bg-gradient-to-bl ${
-          isToday ? 'from-orange-50 via-white to-white' : 'from-blue-50 via-white to-white'
-        } rounded-bl-[100px] pointer-events-none opacity-60`}
-      />
-
-      {/* 상단: 날짜 및 날씨 */}
-      <div className="flex justify-between items-start z-10 mt-[-10px]">
-        <div
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full ${
-            isToday ? 'bg-orange-50' : 'bg-neutral-50'
-          }`}
-        >
-          <span
-            className={`text-[13px] font-bold ${isToday ? 'text-orange-600' : 'text-neutral-500'}`}
-          >
-            {isToday ? '오늘 방문' : `${schedule.visit?.slice(5).replace('-', '.')} 예정`}
-          </span>
-        </div>
-
-        {weather && (
-          <div className="flex flex-col items-end">
-            <div className="flex items-center gap-1">
-              <WeatherBadge code={weather.code} className="w-5 h-5" />
-              <span className="text-[14px] font-bold text-neutral-700">{weather.max}°</span>
-            </div>
-            <span className="text-[11px] text-neutral-400 mt-0.5">
-              {weather.min}° / {weather.max}°
+      {/* 데이터가 완벽할 때만 지도 렌더링 */}
+      {mapData && mapData.center && mapData.markers.length > 0 ? (
+        <StaticMap
+          // key를 추가하여 중심점이 바뀔 때 컴포넌트를 새로 그려 에러를 방지합니다.
+          key={`${mapData.center.lat}-${mapData.center.lng}`}
+          center={mapData.center}
+          style={{ width: '100%', height: '100%' }}
+          marker={mapData.markers}
+          level={4}
+          className="pointer-events-none"
+        />
+      ) : (
+        // Fallback UI (데이터가 없거나 로딩 전)
+        <div className="absolute inset-0">
+          <div
+            className="absolute inset-0 opacity-[0.4]"
+            style={{
+              backgroundImage:
+                'radial-gradient(#CBD5E1 1.5px, transparent 1.5px), radial-gradient(#CBD5E1 1.5px, #F4F7F8 1.5px)',
+              backgroundSize: '24px 24px',
+              backgroundPosition: '0 0, 12px 12px',
+            }}
+          />
+          <div className="absolute top-1/2 left-0 w-full h-[12px] bg-white/60 -translate-y-1/2 rotate-[-5deg] blur-[1px]" />
+          <div className="absolute top-[35%] left-[45%] animate-bounce duration-1000">
+            <MapPin className="w-8 h-8 text-orange-500 fill-orange-50 drop-shadow-md" />
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center pt-10">
+            <span className="text-[11px] text-neutral-400 font-medium bg-white/50 px-2 py-1 rounded-md backdrop-blur-sm">
+              위치 정보가 없어요
             </span>
           </div>
-        )}
-      </div>
-
-      {/* 중간: 시간 및 장소 */}
-      <div className="flex flex-col z-10 mt-1">
-        <div className="flex items-baseline gap-1 text-neutral-900">
-          <span className="text-[16px] font-semibold text-neutral-400 mr-1">{period}</span>
-          <span className="text-[20px] font-extrabold tracking-tight tabular-nums leading-none">
-            {hour}:{minute}
-          </span>
         </div>
+      )}
 
-        <h3 className="text-[16px] font-bold text-neutral-900 leading-tight truncate pr-2 mt-1">
-          {schedule.title}
-        </h3>
-
-        {/* UI 수정 부분: 위치 정보 유무에 따른 분기 처리 */}
-        <div className="">
-          {locationMissing ? (
-            // [Case 1] 위치 정보 없음: 액션 버튼 표시
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRegisterLocation?.();
-              }}
-              className="mt-1 group flex items-center gap-3 w-full p-2 -ml-2 rounded-xl hover:bg-orange-50 active:bg-orange-100 transition-colors text-left"
-            >
-              <div className="w-3 h-3 rounded-full bg-orange-100 flex items-center justify-center shrink-0 group-active:scale-95 transition-transform">
-                <MapPin className="w-3 h-3 text-orange-600" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[13px] font-bold text-neutral-800 leading-tight">
-                  위치 등록이 필요해요
-                </span>
-                <span className="text-[11px] font-medium text-neutral-500 truncate leading-tight mt-0.5">
-                  지도를 보려면 눌러서 등록해주세요
-                </span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-orange-400 transition-colors" />
-            </button>
-          ) : (
-            // [Case 2] 위치 정보 있음: 기존 주소 표시
-            <div className="mt-2 mb-2 flex items-center gap-1.5 py-1">
-              <MapPin className="w-4 h-4 shrink-0 text-neutral-400" />
-              <span className="text-[13px] font-medium text-neutral-500 truncate underline decoration-neutral-200 underline-offset-4">
-                {[schedule.region, schedule.regionDetail].filter(Boolean).join(' ')}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 하단: 액션 버튼 */}
-      <div className="flex gap-3 z-10 mt-2">
-        <button
-          onClick={handleOpenNaverMap}
-          className={`flex-1 h-[36px] rounded-2xl flex items-center justify-center gap-2 font-bold text-[14px] shadow-sm active:scale-[0.96] transition-transform ${
-            locationMissing
-              ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed' // 위치 없으면 비활성 스타일
-              : 'bg-[#03C75A] hover:bg-[#02b351] text-white'
-          }`}
-        >
-          <Navigation className="w-4 h-4 fill-current" />
-          길찾기
-        </button>
-        <button
-          type="button"
-          onClick={handleDetailClick}
-          className="flex-1 h-[36px] rounded-2xl bg-neutral-100 text-neutral-600 font-bold text-[14px] hover:bg-neutral-200 active:scale-[0.96] transition-transform"
-        >
-          상세보기
-        </button>
+      {/* 지도 보기 버튼 오버레이 */}
+      <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm border border-black/5 group-hover:bg-white transition-colors z-10">
+        <MapIcon className="w-3.5 h-3.5 text-neutral-600" />
+        <span className="text-[11px] font-bold text-neutral-700">지도 앱 열기</span>
       </div>
     </div>
   );
 }
+
+function SimpleVisitRow({
+  schedule,
+  index,
+  weather,
+  today,
+}: {
+  schedule: Schedule;
+  index: number;
+  weather?: { code: number; min: number; max: number };
+  today: string;
+}) {
+  const diff = getDaysDiff(today, schedule.visit);
+  const dDayLabel = diff === 0 ? 'Day' : `D-${diff}`;
+  const dDayColor = diff <= 1 ? 'bg-red-50 text-red-500' : 'bg-neutral-100 text-neutral-500';
+
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-neutral-100 last:border-none">
+      <div className="flex items-center gap-3 overflow-hidden">
+        <div className="shrink-0 w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center text-[12px] font-bold text-neutral-500">
+          {index + 1}
+        </div>
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-[4px] leading-none ${dDayColor}`}
+            >
+              {dDayLabel}
+            </span>
+            <span className="text-[15px] font-bold text-neutral-800 truncate leading-snug">
+              {schedule.title}
+            </span>
+          </div>
+          <span className="text-[12px] font-medium text-neutral-400 truncate pl-0.5">
+            {schedule.regionDetail || schedule.region || '위치 정보 없음'}
+          </span>
+        </div>
+      </div>
+      {weather && (
+        <div className="shrink-0 flex flex-col items-end gap-0.5 pl-2">
+          <WeatherBadge code={weather.code} className="w-5 h-5" />
+          <span className="text-[11px] font-medium text-neutral-400">{weather.max}°</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------
+// Main Component: VisitCardHeader
+// ----------------------------------------------------------------------
 
 function VisitCardHeader({
   schedules,
   today,
   onCardClick,
   onOpenMapApp,
-  onRegisterLocation,
 }: {
   schedules: Schedule[];
   today: string;
   onCardClick: (id: number) => void;
   onOpenMapApp?: () => void;
-  onRegisterLocation?: (id: number) => void;
 }) {
   const [weatherMap, setWeatherMap] = useState<
     Record<number, { code: number; min: number; max: number }>
   >({});
-  const [isAllExpanded, setIsAllExpanded] = useState(false);
-  const [focusedScheduleId, setFocusedScheduleId] = useState<number | null>(null);
-
-  const activeCardRef = useCallback((node: HTMLDivElement | null) => {
-    if (node) {
-      node.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    }
-  }, []);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const upcomingVisits = useMemo(() => getUpcomingVisits(schedules, today), [schedules, today]);
+  const nearestVisit = upcomingVisits[0];
+
+  const upcomingWindow = useMemo(() => {
+    if (!nearestVisit?.visit) return [];
+    const start = parseDateString(nearestVisit.visit);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return upcomingVisits.filter((schedule) => {
+      if (!schedule.visit) return false;
+      const visitDate = parseDateString(schedule.visit);
+      return visitDate >= start && visitDate <= end;
+    });
+  }, [nearestVisit, upcomingVisits]);
 
   useEffect(() => {
-    if (upcomingVisits.length === 0) return;
+    if (upcomingWindow.length === 0) return;
     const fetchWeather = async () => {
       const newWeatherMap: Record<number, { code: number; min: number; max: number }> = {};
       await Promise.all(
-        upcomingVisits.map(async (schedule) => {
+        upcomingWindow.map(async (schedule) => {
           if (!schedule.lat || !schedule.lng || !schedule.visit) return;
           try {
             const res = await fetch(
@@ -337,86 +369,91 @@ function VisitCardHeader({
       setWeatherMap(newWeatherMap);
     };
     fetchWeather();
-  }, [upcomingVisits, today]);
+  }, [upcomingWindow, today]);
 
-  if (upcomingVisits.length === 0) return null;
+  if (!nearestVisit) return null;
 
-  const toggleAll = () =>
-    setIsAllExpanded((prev) => {
-      if (prev) setFocusedScheduleId(null);
-      return !prev;
-    });
-
-  const handleExpandForSchedule = (id: number) => {
-    setFocusedScheduleId(id);
-    setIsAllExpanded(true);
-  };
-
+  // 지도 앱 열기 (Kakao Scheme 기준 or FullScreenMap 호출)
   const handleMapOverview = () => {
     if (onOpenMapApp) {
-      onOpenMapApp();
+      onOpenMapApp(); // 부모에서 전달받은 FullScreenMap 열기 함수
       return;
     }
-    window.location.href = 'nmap://map?appname=reviewflow';
+    // Fallback: 카카오맵 URL Scheme
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.location.href = 'kakaomap://open';
+    } else {
+      window.open('https://map.kakao.com', '_blank');
+    }
   };
 
+  const advice = getWeatherAdvice(upcomingWindow, weatherMap);
+  const headerTitle = `이번 주 방문 일정 (${upcomingWindow.length})`;
+
   return (
-    <div className="relative">
-      <div className="flex items-start justify-between pt-4">
-        <div className="flex flex-col gap-1">
+    <div className="relative mt-2 mb-4 px-1">
+      <div
+        className={`rounded-[24px] border border-neutral-100 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.06)] overflow-hidden transition-all duration-300 ease-in-out ${
+          isExpanded ? 'p-5' : 'p-3'
+        }`}
+      >
+        {/* Toggle Trigger */}
+        <div
+          className="flex items-center justify-between cursor-pointer select-none"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
           <div className="flex items-center gap-2">
-            <h2 className="text-[16px] font-bold text-neutral-900 tracking-tight">방문 예정</h2>
-            <span className="inline-flex items-center justify-center rounded-[4px] bg-[#f97316] px-1.5 py-[3px] text-[10px] font-bold text-white leading-none shadow-sm">
-              PRO
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] font-bold border transition-colors ${
+                isExpanded
+                  ? 'bg-neutral-800 text-white border-neutral-800'
+                  : 'bg-orange-50 text-orange-600 border-orange-100'
+              }`}
+            >
+              {isExpanded ? '브리핑' : '방문 브리핑'}
             </span>
-            <span className="flex items-center justify-center bg-neutral-100 text-neutral-600 w-6 h-6 rounded-full text-[13px] font-bold">
-              {upcomingVisits.length}
+            <span className="text-[13px] font-bold text-neutral-800 truncate max-w-[200px]">
+              {headerTitle}
             </span>
           </div>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <button
-            onClick={handleMapOverview}
-            className="flex items-center gap-1 text-[13px] font-bold text-orange-400 hover:text-neutral-600 transition-colors px-2 py-1 rounded-lg hover:bg-neutral-50"
-          >
-            <MapIcon className="w-4 h-4" />
-            방문할 장소 한눈에 보기
+          <button className="p-1 rounded-full bg-neutral-50 text-neutral-400 hover:bg-neutral-100 transition-colors">
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
         </div>
-      </div>
 
-      <div>
-        {!isAllExpanded ? (
-          <div className="flex overflow-x-auto px-1 gap-0 snap-x scrollbar-hide">
-            {upcomingVisits.map((schedule) => (
-              <SlimScheduleCard
-                key={schedule.id}
-                schedule={schedule}
-                diff={getDaysDiff(today, schedule.visit)}
-                weather={weatherMap[schedule.id]}
-                onClick={() => handleExpandForSchedule(schedule.id)}
-              />
-            ))}
-            <div className="w-4 shrink-0" />
-          </div>
-        ) : (
-          <div className="flex overflow-x-auto px-1 snap-x scrollbar-hide">
-            {upcomingVisits.map((schedule) => (
-              <ExpandedScheduleCard
-                key={schedule.id}
-                cardRef={schedule.id === focusedScheduleId ? activeCardRef : undefined}
-                schedule={schedule}
-                weather={weatherMap[schedule.id]}
-                isToday={schedule.visit === today}
-                onClick={() => onCardClick(schedule.id)}
-                onDetailClick={() => onCardClick(schedule.id)}
-                onOpenMapApp={onOpenMapApp}
-                onRegisterLocation={() => onRegisterLocation?.(schedule.id)}
-                locationMissing={!schedule.lat || !schedule.lng}
-              />
-            ))}
-            <div className="w-4 shrink-0" />
+        {/* Expanded Dashboard */}
+        {isExpanded && (
+          <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            {/* 📍 Kakao Static Map */}
+            <MapVisualizer schedules={upcomingWindow} onClick={handleMapOverview} />
+
+            {/* Weather Message */}
+            <div className="mt-4 mb-2 flex items-start gap-2.5 bg-neutral-50/80 p-3 rounded-[16px]">
+              <span className="text-[20px] select-none">{advice.icon}</span>
+              <div className="flex flex-col">
+                <span className="text-[13px] font-bold text-neutral-800 leading-snug">
+                  {advice.text}
+                </span>
+                {/* 👇 수정된 부분: 정적 텍스트 대신 계산된 reference 값 사용 */}
+                <span className="text-[11px] font-medium text-neutral-400 mt-0.5">
+                  {advice.reference}
+                </span>
+              </div>
+            </div>
+
+            {/* Visit List */}
+            <div className="flex flex-col mt-2">
+              {upcomingWindow.map((schedule, idx) => (
+                <SimpleVisitRow
+                  key={schedule.id}
+                  index={idx}
+                  schedule={schedule}
+                  weather={weatherMap[schedule.id]}
+                  today={today}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -424,5 +461,6 @@ function VisitCardHeader({
   );
 }
 
-export { ExpandedScheduleCard, getUpcomingVisits };
+// 기존 ExpandedScheduleCard 등은 하단에 유지 (필요하다면)
+export { getUpcomingVisits };
 export default VisitCardHeader;

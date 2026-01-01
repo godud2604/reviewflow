@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, MessageCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useSchedules } from '@/hooks/use-schedules';
 import type { UserProfile } from '@/hooks/use-user-profile';
-import { getProfileImageUrl } from '@/lib/storage';
 import { getSupabaseClient } from '@/lib/supabase';
 import { resolveTier } from '@/lib/tier';
 import FeedbackModal from '@/components/feedback-modal';
@@ -91,7 +91,6 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const { user: authUser, session, signOut } = useAuth();
   const { schedules } = useSchedules();
 
-  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [downloadScope, setDownloadScope] = useState('all');
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
@@ -100,31 +99,6 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const [isWithdrawalDialogOpen, setIsWithdrawalDialogOpen] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-
-  useEffect(() => {
-    if (!profile?.profileImagePath) {
-      setProfileImageUrl(null);
-      return;
-    }
-
-    let isCurrent = true;
-
-    getProfileImageUrl(profile.profileImagePath)
-      .then((url) => {
-        if (isCurrent) {
-          setProfileImageUrl(url);
-        }
-      })
-      .catch(() => {
-        if (isCurrent) {
-          setProfileImageUrl(null);
-        }
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [profile?.profileImagePath]);
 
   const metadata = (authUser?.user_metadata ?? {}) as Record<string, unknown>;
   const { tier, isPro } = resolveTier({
@@ -138,7 +112,6 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
 
   const displayName = profile?.nickname ?? '';
   const emailLabel = authUser?.email ?? '등록된 이메일이 없습니다';
-  const displayedImage = profileImageUrl;
 
   const scheduleMonthOptions = useMemo(() => {
     const monthMap = new Map<string, string>();
@@ -323,8 +296,6 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
 
   const handleGotoNotifications = () => router.push('/notifications');
   const handleGotoMonthlyReport = () => router.push('/monthlyReport');
-  const handleGotoPortfolio = () => router.push('/portfolio-management');
-  const handleGotoPortfolioPreview = () => router.push('/portfolio');
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -397,25 +368,23 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const proFeatures = [
     {
       label: '활동 내역 다운로드',
-      description: '캠페인 기록을 엑셀로 저장하며, 모바일에서 어려우면 웹에서 내려받아 주세요',
       icon: '📂',
       isPro: true,
       onClick: openDownloadDialog,
     },
     {
-      label: '할일 요약',
-      description: '하단 네비게이션 바 첫 번째 탭에서도 빠르게 확인할 수 있습니다',
+      label: '알림 설정',
       icon: '🔔',
       isPro: true,
       onClick: handleGotoNotifications,
     },
-    {
-      label: '실시간 랭킹 리포트',
-      description: '오늘의 실시간 성장 지표',
-      icon: '📊',
-      isPro: true,
-      onClick: handleGotoMonthlyReport,
-    },
+    // {
+    //   label: '실시간 랭킹 리포트',
+    //   description: '오늘의 실시간 성장 지표',
+    //   icon: '📊',
+    //   isPro: true,
+    //   onClick: handleGotoMonthlyReport,
+    // },
     // {
     //   label: "포트폴리오 보기",
     //   description: "외부에 공개된 영향력 페이지를 미리 확인해 보세요",
@@ -425,145 +394,121 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FFF5F0] via-[#FBFBFD] to-[#F7F7F8] pb-20 font-sans tracking-tight">
-      <div className="mx-auto px-6 pt-6">
-        <section className="relative mb-6 rounded-[44px] bg-white px-8 py-6 text-center shadow-[0_40px_80px_-20px_rgba(255,92,39,0.05)] border border-white">
-          {/* <div className="relative mx-auto mb-6 h-28 w-28">
-            <div className={`h-full w-full rounded-full p-1 ${profileImageUrl ? "bg-white shadow-inner" : "bg-gradient-to-tr from-orange-100 to-orange-50"}`}>
-              {profileImageUrl ? (
-                <img
-                  src={displayedImage}
-                  alt="Profile"
-                  className="h-full w-full rounded-full object-cover shadow-sm"
-                />
-              ) : (
-                <div className="flex h-full w-full flex-col items-center justify-center rounded-full text-[13px] font-semibold text-neutral-400">
-                  <span className="text-[11px] uppercase tracking-[0.25em] text-[11px]">Profile</span>
-                </div>
-              )}
-            </div>
-          </div> */}
-          {/* <button
+    <div className="min-h-screen bg-[#F7F7F8] pb-24 font-sans tracking-tight">
+      <div className="mx-auto max-w-[520px] space-y-6 px-5 pt-6">
+        <div className="flex items-center gap-3">
+          <button
             type="button"
-            onClick={handleGotoPortfolio}
-            className="absolute right-6 top-6 flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg shadow-sm transition hover:-translate-y-0.5"
-            aria-label="포트폴리오 정보 수정"
+            onClick={() => router.push('/?page=home')}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-sm transition hover:border-neutral-300 hover:text-neutral-900"
+            aria-label="뒤로가기"
           >
-            <span className="text-[12px]">✏️</span>
-          </button> */}
-
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h2 className="text-[18px] font-semibold text-neutral-900">프로필</h2>
+        </div>
+        <section className="rounded-3xl border border-neutral-200 bg-white px-5 py-4 shadow-sm">
           <div className="space-y-1">
-            {/* <h2 className="text-[14px] font-black text-neutral-900 tracking-tighter">{displayName}</h2> */}
-            <p className="text-[13px] font-medium text-neutral-400">{emailLabel}</p>
+            {displayName ? (
+              <p className="text-[15px] font-semibold text-neutral-900">{displayName}</p>
+            ) : null}
+            <p className="text-[13px] text-neutral-500">{emailLabel}</p>
           </div>
           {isPro && (
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[12px] text-neutral-500">
-              <span className="text-neutral-900 font-semibold">PRO</span>
-              <span className="text-neutral-400">·</span>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-neutral-500">
+              <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">
+                PRO
+              </span>
               <span>{`${displayTierDuration}개월`}</span>
-              <span className="text-neutral-400">·</span>
+              <span className="text-neutral-300">·</span>
               <span>{tierExpiryLabel ? `만료 ${tierExpiryLabel}` : '만료 정보 없음'}</span>
             </div>
           )}
         </section>
 
-        <div className="space-y-2">
-          <div className="bg-white rounded-3xl p-4 shadow-sm">
-            {proFeatures.map((feature, idx) => {
-              const isFeatureLocked = feature.isPro && !isPro;
-              return (
-                <div
-                  key={feature.label}
-                  role="button"
-                  aria-disabled={isFeatureLocked}
-                  onClick={() => handleFeatureClick(feature)}
-                  className={`
-                    py-3.5 px-3 font-semibold rounded-xl
-                    flex items-center gap-3
-                    transition-all duration-200
-                    ${idx !== proFeatures.length - 1 ? 'border-b border-neutral-100' : ''}
-                    ${isFeatureLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-neutral-50'}
-                  `}
-                >
-                  <div className="flex-1 flex items-start justify-between gap-4">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-3">
-                        <div className="text-xl">{feature.icon}</div>
-                        <p className="text-[15px] font-semibold text-neutral-900 flex items-center gap-2">
-                          {feature.label}
-                          {feature.isPro && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded">
-                              PRO
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      {feature.description && (
-                        <p className="text-[12px] text-neutral-500">{feature.description}</p>
-                      )}
-                    </div>
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="text-neutral-400"
-                    >
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
+        <section className="rounded-3xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
+          <p className="px-2 pb-2 text-[12px] font-semibold text-neutral-500">프로 기능</p>
+          {proFeatures.map((feature, idx) => {
+            const isFeatureLocked = feature.isPro && !isPro;
+            return (
+              <button
+                key={feature.label}
+                type="button"
+                aria-disabled={isFeatureLocked}
+                onClick={() => handleFeatureClick(feature)}
+                className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left transition ${
+                  idx !== proFeatures.length - 1 ? 'border-b border-neutral-100' : ''
+                } ${isFeatureLocked ? 'cursor-not-allowed opacity-60' : 'hover:bg-neutral-50'}`}
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-[14px] font-semibold text-neutral-900">
+                    {feature.label}
+                    {feature.isPro && (
+                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-600">
+                        PRO
+                      </span>
+                    )}
                   </div>
+                  {feature.description && (
+                    <p className="text-[12px] text-neutral-500">{feature.description}</p>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+                <span className="text-[18px] text-neutral-300">›</span>
+              </button>
+            );
+          })}
+        </section>
 
-        <div className="mt-6">
-          <button
-            type="button"
-            onClick={() => setIsFeedbackModalOpen(true)}
-            className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-900 transition hover:border-neutral-300 hover:bg-neutral-50"
-          >
-            피드백 / 오류 신고하기
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsFeedbackModalOpen(true)}
+          className="flex w-full items-center justify-between rounded-3xl border border-neutral-200 bg-white px-6 py-4 shadow-sm text-left text-sm font-semibold text-neutral-900 transition hover:border-neutral-300 hover:bg-neutral-50"
+        >
+          <span className="flex items-center gap-3">
+            <span className="flex flex-col gap-1">
+              <span className="text-[14px] font-semibold text-neutral-900">피드백 · 문의하기</span>
+              <span className="text-[12px] font-medium text-neutral-500">
+                궁금한 점이나 불편한 점을 알려주시면 빠르게 개선할게요
+              </span>
+            </span>
+          </span>
+          <span className="text-[18px] text-neutral-300">›</span>
+        </button>
 
-        {isPro && tierDurationMonths !== COUPON_TIER_DURATION_MONTHS && (
-          <section className="relative mt-6 rounded-[30px] border border-amber-100/80 bg-gradient-to-br from-white to-[#fff4ed] p-6 shadow-sm text-left">
+        {/* {isPro && tierDurationMonths !== COUPON_TIER_DURATION_MONTHS && (
+          <section className="rounded-3xl border border-amber-100 bg-white px-5 py-4 shadow-sm">
             <p className="text-xs font-semibold text-neutral-500">쿠폰 등록</p>
-            <p className="text-[12px] font-semibold text-neutral-900 mt-1">
+            <p className="mt-1 text-[12px] font-semibold text-neutral-900">
               사전신청 시 입력된 이메일로 발송된 쿠폰을 입력하면 등급이 PRO로 전환됩니다.
             </p>
-            <div className="mt-3 flex gap-3">
+            <div className="mt-3 flex gap-2">
               <input
                 value={couponCode}
                 onChange={(event) => setCouponCode(event.target.value)}
                 placeholder="쿠폰 코드를 입력하세요"
-                className="flex-1 min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-3 text-[16px] text-neutral-900 shadow-sm transition focus:border-amber-400 focus:outline-none"
+                className="flex-1 min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-3 text-[16px] text-neutral-900 shadow-sm transition focus:border-neutral-300 focus:outline-none"
               />
               <button
                 type="button"
                 onClick={handleApplyCoupon}
                 disabled={isRedeemingCoupon}
-                className="rounded-2xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-2xl bg-neutral-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isRedeemingCoupon ? '적용 중...' : '적용'}
               </button>
             </div>
           </section>
-        )}
+        )} */}
 
         <button
           type="button"
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="mt-6 w-full py-4 text-sm font-bold text-neutral-300 transition-colors hover:text-neutral-500 active:scale-95"
+          className="w-full py-4 text-sm font-semibold text-neutral-400 transition-colors hover:text-neutral-600 active:scale-95"
         >
           {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
         </button>
-        <div className="mt-4 text-center text-[14px] text-neutral-400 hover:text-neutral-500">
+        <div className="text-center text-[14px] text-neutral-400 hover:text-neutral-500">
           <button
             type="button"
             onClick={() => setIsWithdrawalDialogOpen(true)}

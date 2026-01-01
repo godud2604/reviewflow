@@ -10,10 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 
 import type { Schedule } from '@/types';
 import ScheduleItem from '@/components/schedule-item';
-import VisitCardHeader, {
-  ExpandedScheduleCard,
-  getUpcomingVisits,
-} from '@/components/visit-card-header';
+import VisitCardHeader, { getUpcomingVisits } from '@/components/visit-card-header';
 import { parseDateString } from '@/lib/date-utils';
 import { Z_INDEX } from '@/lib/z-index';
 
@@ -201,27 +198,6 @@ function FullScreenMap({
             –
           </button>
         </div>
-
-        <div className="absolute bottom-8 left-0 right-0" style={{ zIndex: Z_INDEX.sticky }}>
-          <div
-            ref={scrollContainerRef}
-            className="flex gap-4 overflow-x-auto px-6 pb-4 snap-x scrollbar-hide items-end"
-          >
-            {activeSchedules.map((schedule) => (
-              <div key={schedule.id} id={`map-card-${schedule.id}`}>
-                <ExpandedScheduleCard
-                  schedule={schedule}
-                  weather={weatherMap[schedule.id]}
-                  isToday={schedule.visit === today}
-                  onClick={() => handleScheduleCardClick(schedule)}
-                  onDetailClick={() => onCardClick(schedule.id)}
-                  locationMissing={!schedule.lat || !schedule.lng}
-                  onRegisterLocation={() => onRegisterLocation?.(schedule.id)}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </motion.div>
   );
@@ -401,14 +377,6 @@ export default function HomePage({
 
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3 bg-neutral-50/50">
-      <VisitCardHeader
-        schedules={schedules}
-        today={today}
-        onCardClick={onScheduleClick}
-        onOpenMapApp={handleOpenMapApp}
-        onRegisterLocation={handleRegisterLocation}
-      />
-
       {/* 3. 캘린더 */}
       <CalendarSection
         schedules={schedules}
@@ -417,6 +385,13 @@ export default function HomePage({
         onGoToToday={handleGoToToday}
         selectedDate={selectedDate}
         today={today}
+      />
+
+      <VisitCardHeader
+        schedules={schedules}
+        today={today}
+        onCardClick={onScheduleClick}
+        onOpenMapApp={handleOpenMapApp}
       />
 
       {/* 5. 일정 리스트 헤더 */}
