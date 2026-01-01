@@ -249,7 +249,7 @@ function FullScreenMap({
           <div className="pointer-events-auto rounded-3xl border border-neutral-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-md">
             <div className="flex items-center justify-between px-4 pt-4 pb-2">
               <div className="flex items-center gap-2">
-                <span className="text-[13px] font-bold text-neutral-900">방문 일정</span>
+                <span className="text-[13px] font-bold text-neutral-900">전체 방문 일정</span>
                 <span className="text-[11px] font-semibold text-neutral-500">
                   {sortedSchedules.length}건
                 </span>

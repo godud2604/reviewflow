@@ -330,10 +330,17 @@ function VisitCardHeader({
 
   const upcomingVisits = useMemo(() => getUpcomingVisits(schedules, today), [schedules, today]);
   const nearestVisit = upcomingVisits[0];
-  const earliestWeatherTarget = useMemo(
-    () => upcomingVisits.find((schedule) => schedule.visit && schedule.lat && schedule.lng),
+  const weatherTargets = useMemo(
+    () => upcomingVisits.filter((schedule) => schedule.visit && schedule.lat && schedule.lng),
     [upcomingVisits]
   );
+  const weatherRange = useMemo(() => {
+    if (weatherTargets.length === 0) return null;
+    const sortedVisits = weatherTargets
+      .map((schedule) => schedule.visit!)
+      .sort((a, b) => a.localeCompare(b));
+    return { start: sortedVisits[0], end: sortedVisits[sortedVisits.length - 1] };
+  }, [weatherTargets]);
 
   const upcomingWindow = useMemo(() => {
     if (!nearestVisit?.visit) return [];
@@ -348,35 +355,56 @@ function VisitCardHeader({
   }, [nearestVisit, upcomingVisits]);
 
   useEffect(() => {
-    if (!earliestWeatherTarget) {
+    if (!weatherRange || weatherTargets.length === 0) {
       setWeatherMap({});
       return;
     }
-    const requestKey = `${earliestWeatherTarget.id}:${earliestWeatherTarget.visit}`;
+    const requestKey = `${weatherRange.start}:${weatherRange.end}|${weatherTargets
+      .map((schedule) => `${schedule.id}:${schedule.visit}:${schedule.lat}:${schedule.lng}`)
+      .join('|')}`;
     if (lastWeatherKeyRef.current === requestKey) return;
     lastWeatherKeyRef.current = requestKey;
     const fetchWeather = async () => {
       const newWeatherMap: Record<number, { code: number; min: number; max: number }> = {};
-      const schedule = earliestWeatherTarget;
-      try {
-        const res = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${schedule.lat}&longitude=${schedule.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&start_date=${schedule.visit}&end_date=${schedule.visit}`
-        );
-        const data = await res.json();
-        if (data.daily && data.daily.weather_code) {
-          newWeatherMap[schedule.id] = {
-            code: data.daily.weather_code[0],
-            max: Math.round(data.daily.temperature_2m_max[0]),
-            min: Math.round(data.daily.temperature_2m_min[0]),
-          };
-        }
-      } catch (e) {
-        console.error(e);
-      }
+      const locationBuckets = new Map<string, Schedule[]>();
+      weatherTargets.forEach((schedule) => {
+        const key = `${schedule.lat},${schedule.lng}`;
+        const bucket = locationBuckets.get(key) ?? [];
+        bucket.push(schedule);
+        locationBuckets.set(key, bucket);
+      });
+      await Promise.all(
+        Array.from(locationBuckets.values()).map(async (group) => {
+          const { lat, lng } = group[0];
+          try {
+            const res = await fetch(
+              `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&start_date=${weatherRange.start}&end_date=${weatherRange.end}`
+            );
+            const data = await res.json();
+            if (!data.daily?.time) return;
+            const byDate: Record<string, { code: number; min: number; max: number }> = {};
+            data.daily.time.forEach((dateStr: string, idx: number) => {
+              byDate[dateStr] = {
+                code: data.daily.weather_code?.[idx],
+                max: Math.round(data.daily.temperature_2m_max?.[idx]),
+                min: Math.round(data.daily.temperature_2m_min?.[idx]),
+              };
+            });
+            group.forEach((schedule) => {
+              if (!schedule.visit) return;
+              const weather = byDate[schedule.visit];
+              if (!weather) return;
+              newWeatherMap[schedule.id] = weather;
+            });
+          } catch (e) {
+            console.error(e);
+          }
+        })
+      );
       setWeatherMap(newWeatherMap);
     };
     fetchWeather();
-  }, [earliestWeatherTarget]);
+  }, [weatherRange, weatherTargets]);
 
   if (!nearestVisit) return null;
 
