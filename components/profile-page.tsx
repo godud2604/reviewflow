@@ -368,7 +368,15 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
       return;
     }
 
-    if (!filteredSchedules.length) return;
+    if (!filteredSchedules.length) {
+      toast({
+        title: '저장된 일정이 없어요.',
+        description: '먼저 일정을 추가해 주세요.',
+        duration: 1000,
+      });
+      return;
+    }
+
     setIsDownloadDialogOpen(true);
   };
 
