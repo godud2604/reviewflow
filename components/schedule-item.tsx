@@ -1,6 +1,9 @@
 'use client';
 
+import { useState } from 'react';
+
 import type { Schedule } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 const scheduleIcons: Record<Schedule['category'], string> = {
   '맛집/식품': '🍽️',
@@ -108,6 +111,10 @@ export default function ScheduleItem({
   const channelList = schedule.channel?.filter(Boolean) ?? [];
   const channelLabel = channelList.join(', ');
   const hasChannelLabel = channelLabel.length > 0;
+  const hasMemo = Boolean(schedule.memo?.trim());
+  const [isMemoOpen, setIsMemoOpen] = useState(false);
+  const memoText = hasMemo ? schedule.memo!.trim() : '';
+  const { toast } = useToast();
 
   return (
     <div
@@ -226,11 +233,6 @@ export default function ScheduleItem({
               '미정'
             )}
           </span>
-          {schedule.memo && (
-            <span className="text-sm shrink-0 opacity-50" title="메모 있음">
-              📝
-            </span>
-          )}
           {hasPaybackExpected && (
             <span className="text-sm shrink-0 ml-1 opacity-50" title="페이백 예정">
               💸
@@ -264,7 +266,74 @@ export default function ScheduleItem({
               {channelLabel}
             </p>
           )}
+
+          {/* ----- 메모 토글 버튼 수정된 부분 ----- */}
+          {hasMemo && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setIsMemoOpen((prev) => !prev);
+              }}
+              aria-expanded={isMemoOpen}
+              className={`flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10.5px] font-semibold transition-all duration-200 active:scale-95 ${
+                isMemoOpen
+                  ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-sm'
+                  : 'bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50'
+              }`}
+            >
+              <span aria-hidden className="text-[10px]">
+                📝
+              </span>
+              <span>{isMemoOpen ? '메모 닫기' : '메모 보기'}</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`transition-transform duration-200 ${isMemoOpen ? 'rotate-180' : ''}`}
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+          )}
         </div>
+        {hasMemo && isMemoOpen && (
+          <div
+            className="mt-2 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-[12px] text-neutral-700 whitespace-pre-wrap break-words"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="flex-1 min-w-0 break-words">{memoText}</p>
+              <button
+                type="button"
+                className="shrink-0 rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-semibold text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigator.clipboard
+                    .writeText(memoText)
+                    .then(() => {
+                      toast({ title: '메모가 복사되었습니다', duration: 1000 });
+                    })
+                    .catch(() => {
+                      toast({
+                        title: '메모 복사에 실패했습니다.',
+                        variant: 'destructive',
+                        duration: 1000,
+                      });
+                    });
+                }}
+              >
+                복사
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
