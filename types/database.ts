@@ -98,12 +98,25 @@ export interface DbMonthlyGrowth {
   econ_value: number;
 }
 
+export interface DbTutorialProgress {
+  id: number;
+  user_id: string;
+  tutorial_key: string;
+  completed_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Insert Types (user_id 제외 - 서버에서 추가)
 export type DbScheduleInsert = Omit<DbSchedule, 'id' | 'created_at' | 'updated_at'>;
 export type DbTodoInsert = Omit<DbTodo, 'id' | 'created_at' | 'updated_at'>;
 export type DbChannelInsert = Omit<DbChannel, 'id' | 'created_at' | 'updated_at'>;
 export type DbFeaturedPostInsert = Omit<DbFeaturedPost, 'id' | 'created_at' | 'updated_at'>;
 export type DbExtraIncomeInsert = Omit<DbExtraIncome, 'id' | 'created_at' | 'updated_at'>;
+export type DbTutorialProgressInsert = Omit<
+  DbTutorialProgress,
+  'id' | 'created_at' | 'updated_at'
+>;
 
 // Update Types
 export type DbScheduleUpdate = Partial<
@@ -118,4 +131,7 @@ export type DbFeaturedPostUpdate = Partial<
 >;
 export type DbExtraIncomeUpdate = Partial<
   Omit<DbExtraIncome, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+>;
+export type DbTutorialProgressUpdate = Partial<
+  Omit<DbTutorialProgress, 'id' | 'user_id' | 'created_at' | 'updated_at'>
 >;
