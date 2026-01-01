@@ -1003,7 +1003,7 @@ function CalendarSection({
               {hasSchedule && dayInfo?.hasDeadline && (
                 <>
                   <span
-                    className={`absolute bottom-[1.5px] -right-0.5 flex h-4 text-[10px] min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] font-extrabold leading-none ${
+                    className={`absolute bottom-[1.5px] -right-1 flex text-[9px] items-center justify-center rounded-full px-1 py-1 text-[9px] font-extrabold leading-none ${
                       dayInfo.deadlineCount > 0
                         ? 'shadow-[0_4px_10px_rgba(0,0,0,0.12)] bg-white text-orange-600'
                         : 'shadow-none bg-transparent text-orange-600'
@@ -1019,15 +1019,19 @@ function CalendarSection({
                 </>
               )}
               {hasSchedule && dayInfo?.hasVisit && (
-                <span
-                  className={`absolute ${dayInfo?.overdue ? 'top-0 left-0' : '-bottom-1 -left-1'} flex h-4 min-w-[16px] items-center justify-center gap-0.5 rounded-full px-1 text-[9px] font-extrabold leading-none shadow-[0_4px_10px_rgba(0,0,0,0.12)] bg-sky-50 text-sky-700`}
-                >
-                  📍
-                  {dayInfo.visitCount > 1 ? dayInfo.visitCount : ''}
-                </span>
+                <>
+                  <span
+                    className={`absolute ${dayInfo?.overdue ? '-top-0.5 -left-1.5' : '-bottom-1 -left-1'} flex h-4 min-w-[16px] items-center justify-center gap-0.1 rounded-full pl-0.5 pr-1 text-[9px] font-extrabold leading-none shadow-[0_4px_10px_rgba(0,0,0,0.12)] bg-sky-50 text-sky-700`}
+                  >
+                    📍
+                    <span className="text-[8.5px]">
+                      {dayInfo.visitCount > 1 ? dayInfo.visitCount : ''}
+                    </span>
+                  </span>
+                </>
               )}
               {hasSchedule && dayInfo?.hasCompleted && !dayInfo?.hasDeadline && (
-                <span className="absolute -bottom-[1px] -right-[-3px] h-2 w-2 rounded-full bg-orange-400 shadow-[0_4px_10px_rgba(0,0,0,0.12)]" />
+                <span className="absolute bottom-[3px] -right-[-1px] h-[7px] w-[7px] rounded-full bg-orange-400 shadow-[0_4px_10px_rgba(0,0,0,0.12)]" />
               )}
             </button>
           );
