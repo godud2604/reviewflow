@@ -120,7 +120,7 @@ export default function FeedbackModal({
         style={{ zIndex: Z_INDEX.panel }}
       >
         <div
-          className="w-full bg-white rounded-t-3xl p-6 slide-in-from-bottom duration-300"
+          className="w-full bg-white rounded-t-3xl p-6 pb-[calc(max(env(safe-area-inset-bottom),constant(safe-area-inset-bottom))+74px)] slide-in-from-bottom duration-300"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-6">
