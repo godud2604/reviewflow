@@ -52,12 +52,14 @@ export default function ScheduleItem({
   onCompleteClick,
   onPaybackConfirm,
   today,
+  selectedDate,
 }: {
   schedule: Schedule;
   onClick: () => void;
   onCompleteClick?: () => void;
   onPaybackConfirm?: () => void;
   today: string;
+  selectedDate?: string | null;
 }) {
   const statusConfig: Record<
     Schedule['status'],
@@ -79,14 +81,9 @@ export default function ScheduleItem({
     ? `${schedule.visit.slice(5)}${schedule.visitTime ? ` ${schedule.visitTime}` : ''} 방문`
     : '방문일 미정';
   const deadLabel = schedule.dead ? `${schedule.dead.slice(5)} 마감` : '마감 미정';
-  const dDate =
-    schedule.reviewType === '방문형'
-      ? `${visitLabel} | ${deadLabel}`
-      : schedule.dead
-        ? `${schedule.dead.slice(5)} 마감`
-        : schedule.visit
-          ? `${schedule.visit.slice(5)} 방문`
-          : '미정';
+  const activeDate = selectedDate ?? today;
+  const isVisitActive = Boolean(schedule.visit && schedule.visit === activeDate);
+  const isDeadActive = Boolean(schedule.dead && schedule.dead === activeDate);
 
   const total = schedule.benefit + schedule.income - schedule.cost;
   const fallbackStatus = {
@@ -206,7 +203,29 @@ export default function ScheduleItem({
           </div>
         </div>
         <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1">
-          <span className="font-medium text-neutral-600">{dDate}</span>
+          <span className="font-medium text-neutral-600">
+            {schedule.reviewType === '방문형' ? (
+              <>
+                <span className={isVisitActive ? 'font-bold text-sky-700' : undefined}>
+                  {visitLabel}
+                </span>
+                <span className="mx-1 text-neutral-400">|</span>
+                <span className={isDeadActive ? 'font-bold text-rose-700' : undefined}>
+                  {deadLabel}
+                </span>
+              </>
+            ) : schedule.dead ? (
+              <span className={isDeadActive ? 'font-bold text-rose-700' : undefined}>
+                {deadLabel}
+              </span>
+            ) : schedule.visit ? (
+              <span className={isVisitActive ? 'font-bold text-sky-700' : undefined}>
+                {visitLabel}
+              </span>
+            ) : (
+              '미정'
+            )}
+          </span>
           {schedule.memo && (
             <span className="text-sm shrink-0 opacity-50" title="메모 있음">
               📝

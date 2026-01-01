@@ -488,11 +488,22 @@ export default function HomePage({
       const bIsOverdue = b.dead && b.dead < today && b.status !== '완료';
       const aIsReconfirm = a.status === '재확인';
       const bIsReconfirm = b.status === '재확인';
+      const aVisitKey = a.visit ?? '';
+      const bVisitKey = b.visit ?? '';
+      const aVisitTimeKey = a.visitTime ?? '23:59';
+      const bVisitTimeKey = b.visitTime ?? '23:59';
 
       if (aIsOverdue && !bIsOverdue) return -1;
       if (!aIsOverdue && bIsOverdue) return 1;
       if (aIsReconfirm && !bIsReconfirm) return -1;
       if (!aIsReconfirm && bIsReconfirm) return 1;
+      if (aVisitKey && bVisitKey) {
+        const visitCompare = aVisitKey.localeCompare(bVisitKey);
+        if (visitCompare !== 0) return visitCompare;
+        return aVisitTimeKey.localeCompare(bVisitTimeKey);
+      }
+      if (aVisitKey && !bVisitKey) return -1;
+      if (!aVisitKey && bVisitKey) return 1;
       if (a.dead && b.dead) return a.dead.localeCompare(b.dead);
       if (a.dead && !b.dead) return -1;
       if (!a.dead && b.dead) return 1;
@@ -505,8 +516,12 @@ export default function HomePage({
   );
   const headerSchedules =
     selectedDate || selectedFilter !== 'all' ? filteredSchedules : activeSchedules;
-  const visitCount = headerSchedules.filter((s) => s.visit).length;
-  const deadlineCount = headerSchedules.filter((s) => s.dead).length;
+  const visitCount = selectedDate
+    ? headerSchedules.filter((s) => s.visit === selectedDate).length
+    : headerSchedules.filter((s) => s.visit).length;
+  const deadlineCount = selectedDate
+    ? headerSchedules.filter((s) => s.dead === selectedDate).length
+    : headerSchedules.filter((s) => s.dead).length;
 
   const shouldShowFirstScheduleTutorial =
     hasSchedules && schedules.length === 1 && displayedSchedules.length > 0;
@@ -596,11 +611,11 @@ export default function HomePage({
                   : selectedFilter === 'noDeadline'
                     ? '마감일 미정'
                     : '체험단 일정'}
-            <span className="ml-1.5 text-sm font-bold text-orange-600">
+            <span className="ml-1.5 text-sm font-bold text-neutral-600">
               {selectedDate || selectedFilter !== 'all' ? filteredSchedules.length : activeCount}건
             </span>
           </h3>
-          <span className="mt-1 text-[11px] font-bold text-neutral-500">
+          <span className="mt-1 text-[11px] font-semibold text-neutral-500">
             방문일 {visitCount}건 · 마감일 {deadlineCount}건
           </span>
         </div>
@@ -683,6 +698,7 @@ export default function HomePage({
               onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
               onPaybackConfirm={onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined}
               today={today}
+              selectedDate={selectedDate}
             />
           ))
         ) : shouldShowFilterTutorial ? (
