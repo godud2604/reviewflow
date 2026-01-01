@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'; // ✅ useRef 추가
 import { useAuth } from '@/hooks/use-auth';
 
-import { ChevronLeft, Clock, Smartphone, BellRing, X, RefreshCw } from 'lucide-react';
+import { ChevronLeft, Clock, Smartphone, BellRing, X, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -374,22 +374,24 @@ export default function NotificationsPage() {
       `}</style>
 
       <div className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-8">
-        <button
-          type="button"
-          onClick={() => router.push('/?page=home')}
-          className="mb-2 flex items-center gap-1 text-sm font-semibold text-neutral-500 hover:text-neutral-800 transition-colors"
-        >
-          <ChevronLeft size={18} /> 이전으로
-        </button>
+        <div className="flex items-center gap-3" onClick={() => router.push('/?page=home')}>
+          <button
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-sm transition hover:border-neutral-300 hover:text-neutral-900"
+            aria-label="뒤로가기"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h2 className="text-[18px] font-semibold text-neutral-900">이전으로</h2>
+        </div>
 
-        <header className="space-y-2">
-          <p className="text-[11px] uppercase tracking-[0.4em] text-orange-600 font-bold">
+        <header className="space-y-1">
+          <p className="text-[11px] uppercase tracking-[0.1em] text-orange-400 font-bold">
             morning brief
           </p>
-          <h1 className="text-xl font-bold text-neutral-800">
-            방문 · 마감 일정이 있는 날,
-            <br />
-            아침에 요약해 드려요.
+          <h1 className="text-[14px] font-bold text-neutral-800">
+            방문, 마감 일정 또는 마감 초과가 있는 날<br />
+            아침에 <span className="text-orange-400">카카오 알림톡</span>으로 요약해드려요.
           </h1>
         </header>
 
@@ -528,7 +530,7 @@ export default function NotificationsPage() {
                         {isVerificationExpired ? (
                           <p className="text-[11px] text-red-500">시간 초과. 다시 요청해주세요.</p>
                         ) : (
-                          <p className="text-[10px] text-neutral-400">3분 이내에 입력해주세요.</p>
+                          <p className="text-[10px] text-neutral-400">10분 이내에 입력해주세요.</p>
                         )}
                         {savedPhoneNumber && (
                           <button

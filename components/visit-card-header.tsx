@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Sun,
   Cloud,
@@ -252,9 +252,9 @@ function MapVisualizer({ schedules, onClick }: { schedules: Schedule[]; onClick:
       )}
 
       {/* 지도 보기 버튼 오버레이 */}
-      <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm border border-black/5 group-hover:bg-white transition-colors z-10">
-        <MapIcon className="w-3.5 h-3.5 text-neutral-600" />
-        <span className="text-[11px] font-bold text-neutral-700">지도 앱 열기</span>
+      <div className="absolute bottom-3 right-3 px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm bg-orange-50 text-orange-600 border-orange-900 z-10">
+        <MapIcon className="w-3.5 h-3.5 text-orange-600" />
+        <span className="text-[11px] font-bold text-orange-500">지도 앱 열기</span>
       </div>
     </div>
   );
@@ -326,9 +326,14 @@ function VisitCardHeader({
     Record<number, { code: number; min: number; max: number }>
   >({});
   const [isExpanded, setIsExpanded] = useState(false);
+  const lastWeatherKeyRef = useRef<string | null>(null);
 
   const upcomingVisits = useMemo(() => getUpcomingVisits(schedules, today), [schedules, today]);
   const nearestVisit = upcomingVisits[0];
+  const earliestWeatherTarget = useMemo(
+    () => upcomingVisits.find((schedule) => schedule.visit && schedule.lat && schedule.lng),
+    [upcomingVisits]
+  );
 
   const upcomingWindow = useMemo(() => {
     if (!nearestVisit?.visit) return [];
@@ -343,33 +348,35 @@ function VisitCardHeader({
   }, [nearestVisit, upcomingVisits]);
 
   useEffect(() => {
-    if (upcomingWindow.length === 0) return;
+    if (!earliestWeatherTarget) {
+      setWeatherMap({});
+      return;
+    }
+    const requestKey = `${earliestWeatherTarget.id}:${earliestWeatherTarget.visit}`;
+    if (lastWeatherKeyRef.current === requestKey) return;
+    lastWeatherKeyRef.current = requestKey;
     const fetchWeather = async () => {
       const newWeatherMap: Record<number, { code: number; min: number; max: number }> = {};
-      await Promise.all(
-        upcomingWindow.map(async (schedule) => {
-          if (!schedule.lat || !schedule.lng || !schedule.visit) return;
-          try {
-            const res = await fetch(
-              `https://api.open-meteo.com/v1/forecast?latitude=${schedule.lat}&longitude=${schedule.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&start_date=${schedule.visit}&end_date=${schedule.visit}`
-            );
-            const data = await res.json();
-            if (data.daily && data.daily.weather_code) {
-              newWeatherMap[schedule.id] = {
-                code: data.daily.weather_code[0],
-                max: Math.round(data.daily.temperature_2m_max[0]),
-                min: Math.round(data.daily.temperature_2m_min[0]),
-              };
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        })
-      );
+      const schedule = earliestWeatherTarget;
+      try {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${schedule.lat}&longitude=${schedule.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&start_date=${schedule.visit}&end_date=${schedule.visit}`
+        );
+        const data = await res.json();
+        if (data.daily && data.daily.weather_code) {
+          newWeatherMap[schedule.id] = {
+            code: data.daily.weather_code[0],
+            max: Math.round(data.daily.temperature_2m_max[0]),
+            min: Math.round(data.daily.temperature_2m_min[0]),
+          };
+        }
+      } catch (e) {
+        console.error(e);
+      }
       setWeatherMap(newWeatherMap);
     };
     fetchWeather();
-  }, [upcomingWindow, today]);
+  }, [earliestWeatherTarget]);
 
   if (!nearestVisit) return null;
 

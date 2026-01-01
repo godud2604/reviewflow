@@ -396,10 +396,9 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   return (
     <div className="min-h-screen bg-[#F7F7F8] pb-24 font-sans tracking-tight">
       <div className="mx-auto max-w-[520px] space-y-6 px-5 pt-6">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3" onClick={() => router.push('/?page=home')}>
           <button
             type="button"
-            onClick={() => router.push('/?page=home')}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-sm transition hover:border-neutral-300 hover:text-neutral-900"
             aria-label="뒤로가기"
           >

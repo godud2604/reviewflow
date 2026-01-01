@@ -11,12 +11,9 @@ type GlobalHeaderProps = {
 export default function GlobalHeader({ title, onNotifications, onProfile }: GlobalHeaderProps) {
   return (
     <div className="sticky top-0 z-30 border-b border-neutral-200/70 bg-[#F7F7F8]/90 backdrop-blur">
-      <div className="flex items-center justify-between px-5 pb-3 pt-5">
+      <div className="flex items-center justify-between px-5 pb-3 pt-3">
         <div className="space-y-0.5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-neutral-400">
-            Reviewflow
-          </p>
-          <h1 className="text-[22px] font-semibold text-neutral-900">{title}</h1>
+          <h1 className="text-[20px] font-semibold text-neutral-900">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button

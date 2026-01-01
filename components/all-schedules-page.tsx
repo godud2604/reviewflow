@@ -2,6 +2,7 @@
 
 import type { Schedule } from '@/types';
 import ScheduleItem from '@/components/schedule-item';
+import { ArrowLeft } from 'lucide-react';
 
 const getTodayInKST = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
@@ -31,24 +32,11 @@ export default function AllSchedulesPage({
 
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-5 mt-5">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-[15px] text-neutral-600 hover:text-neutral-900 transition-colors font-medium cursor-pointer"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-          <span>캘린더로 돌아가기</span>
+      <div className="flex items-center gap-2 mb-5 mt-5" onClick={onBack}>
+        <button className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-sm transition hover:border-neutral-300 hover:text-neutral-900">
+          <ArrowLeft className="h-5 w-5" />
         </button>
+        <span className="text-[18px] font-semibold text-neutral-900">캘린더로 돌아가기</span>
       </div>
 
       {/* Summary */}
@@ -81,9 +69,7 @@ export default function AllSchedulesPage({
             schedule={schedule}
             onClick={() => onScheduleClick(schedule.id)}
             onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
-            onPaybackConfirm={
-              onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined
-            }
+            onPaybackConfirm={onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined}
             today={today}
           />
         ))}
