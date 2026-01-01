@@ -903,13 +903,6 @@ export default function ScheduleModal({
     const nextTemplates = incomeDetailTemplates.filter((detail) => detail.id !== id);
     updateIncomeDetails(nextTemplates).then((success) => {
       if (!success || !target) return;
-      setScheduleIncomeDetails((prev) =>
-        prev.filter(
-          (detail) =>
-            getIncomeDetailKey(detail.type, detail.label) !==
-            getIncomeDetailKey(target.type, target.label)
-        )
-      );
       toast({
         title: '항목이 삭제되었습니다.',
         duration: 1000,
@@ -1148,7 +1141,11 @@ export default function ScheduleModal({
   const hasLocation = Boolean(formData.region || formData.regionDetail);
   const defaultIncomeDetail = scheduleIncomeDetails.find(isDefaultIncomeDetail);
   const defaultCostDetail = scheduleIncomeDetails.find(isDefaultCostDetail);
-  const enabledExtraDetails = enabledIncomeDetailTemplates;
+  const allTemplateKeys = React.useMemo(
+    () =>
+      new Set(incomeDetailTemplates.map((detail) => getIncomeDetailKey(detail.type, detail.label))),
+    [incomeDetailTemplates]
+  );
   const activeTemplateKeys = React.useMemo(
     () =>
       new Set(
@@ -1156,15 +1153,44 @@ export default function ScheduleModal({
       ),
     [enabledIncomeDetailTemplates]
   );
+  const orphanScheduleDetails = React.useMemo(
+    () =>
+      scheduleIncomeDetails.filter(
+        (detail) =>
+          !isDefaultIncomeDetail(detail) &&
+          !isDefaultCostDetail(detail) &&
+          !allTemplateKeys.has(getIncomeDetailKey(detail.type, detail.label))
+      ),
+    [scheduleIncomeDetails, allTemplateKeys]
+  );
+  const orphanDetailKeys = React.useMemo(
+    () =>
+      new Set(
+        orphanScheduleDetails.map((detail) => getIncomeDetailKey(detail.type, detail.label))
+      ),
+    [orphanScheduleDetails]
+  );
+  const enabledExtraDetails = React.useMemo(() => {
+    const merged = new Map<string, ScheduleTransactionItem>();
+    enabledIncomeDetailTemplates.forEach((detail) => {
+      merged.set(getIncomeDetailKey(detail.type, detail.label), detail);
+    });
+    orphanScheduleDetails.forEach((detail) => {
+      const key = getIncomeDetailKey(detail.type, detail.label);
+      if (!merged.has(key)) merged.set(key, detail);
+    });
+    return Array.from(merged.values());
+  }, [enabledIncomeDetailTemplates, orphanScheduleDetails]);
   const activeScheduleDetails = React.useMemo(
     () =>
       scheduleIncomeDetails.filter(
         (detail) =>
           isDefaultIncomeDetail(detail) ||
           isDefaultCostDetail(detail) ||
-          activeTemplateKeys.has(getIncomeDetailKey(detail.type, detail.label))
+          activeTemplateKeys.has(getIncomeDetailKey(detail.type, detail.label)) ||
+          orphanDetailKeys.has(getIncomeDetailKey(detail.type, detail.label))
       ),
-    [scheduleIncomeDetails, activeTemplateKeys]
+    [scheduleIncomeDetails, activeTemplateKeys, orphanDetailKeys]
   );
   const { incomeTotal, costTotal } = React.useMemo(
     () => sumIncomeDetails(activeScheduleDetails),
