@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useSchedules } from '@/hooks/use-schedules';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { UserProfile } from '@/hooks/use-user-profile';
 import { getSupabaseClient } from '@/lib/supabase';
 import { resolveTier } from '@/lib/tier';
@@ -90,6 +91,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const { toast } = useToast();
   const { user: authUser, session, signOut } = useAuth();
   const { schedules } = useSchedules();
+  const isMobile = useIsMobile();
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [downloadScope, setDownloadScope] = useState('all');
@@ -168,6 +170,14 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   };
 
   const handleDownloadActivity = () => {
+    if (isMobile) {
+      toast({
+        title: '활동 내역 다운로드는 웹에서만 가능해요',
+        description: 'PC 웹에서 다운로드를 진행해 주세요.',
+      });
+      return;
+    }
+
     if (isKakaoBrowserWithTightDownloadSupport()) {
       toast({
         title: '카카오 브라우저에서는 다운로드가 제한돼요',
@@ -349,6 +359,15 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   };
 
   const openDownloadDialog = () => {
+    if (isMobile) {
+      toast({
+        title: '활동 내역 다운로드는 웹에서만 가능해요',
+        description: 'PC 웹에서 다운로드를 진행해 주세요.',
+        duration: 1000,
+      });
+      return;
+    }
+
     if (!filteredSchedules.length) return;
     setIsDownloadDialogOpen(true);
   };
