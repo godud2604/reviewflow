@@ -505,7 +505,7 @@ export default function NotificationsPage() {
                         placeholder="123456"
                         maxLength={6}
                         inputMode="numeric"
-                        className="min-w-0 flex-1 rounded-lg border border-orange-200 bg-orange-50/30 px-3 py-2 text-center text-sm tracking-widest outline-none focus:ring-2 focus:ring-orange-100"
+                        className="min-w-0 flex-1 rounded-lg border border-orange-200 bg-orange-50/30 px-3 py-2 text-center text-[16px] tracking-widest outline-none focus:ring-2 focus:ring-orange-100"
                       />
                       <Button
                         onClick={handleVerifyCode}
