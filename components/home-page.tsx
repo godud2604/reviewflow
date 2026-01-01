@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { usePostHog } from 'posthog-js/react';
-import { Map, MapMarker } from 'react-kakao-maps-sdk';
+import { CustomOverlayMap, Map, MapMarker } from 'react-kakao-maps-sdk';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -229,19 +229,48 @@ function FullScreenMap({
         >
           {mapSchedules.map((schedule) => {
             const isActive = activeId === schedule.id;
+            const visitDateLabel = schedule.visit ? formatVisitDate(schedule.visit) : '방문일 미정';
+            const visitTimeLabel = schedule.visitTime
+              ? formatKoreanTime(schedule.visitTime)
+              : '시간 미정';
             return (
-              <MapMarker
-                key={schedule.id}
-                position={{ lat: Number(schedule.lat), lng: Number(schedule.lng) }}
-                image={{
-                  src: isActive
-                    ? 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png'
-                    : 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png',
-                  size: isActive ? { width: 29, height: 42 } : { width: 24, height: 35 },
-                }}
-                zIndex={isActive ? 100 : 1}
-                onClick={() => handleMarkerClick(schedule.id)}
-              />
+              <Fragment key={schedule.id}>
+                <MapMarker
+                  position={{ lat: Number(schedule.lat), lng: Number(schedule.lng) }}
+                  image={{
+                    src: isActive
+                      ? 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png'
+                      : 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png',
+                    size: isActive ? { width: 29, height: 42 } : { width: 24, height: 35 },
+                  }}
+                  zIndex={isActive ? 100 : 1}
+                  onClick={() => handleMarkerClick(schedule.id)}
+                />
+                <CustomOverlayMap
+                  position={{ lat: Number(schedule.lat), lng: Number(schedule.lng) }}
+                  yAnchor={2}
+                  xAnchor={0.5}
+                  zIndex={isActive ? 110 : 2}
+                >
+                  <div className="flex flex-col items-center">
+                    <button
+                      type="button"
+                      onClick={() => handleMarkerClick(schedule.id)}
+                      className={`flex flex-col items-center rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-[0_6px_16px_rgba(15,23,42,0.25)] transition ${
+                        isActive ? 'bg-orange-500 text-white' : 'bg-white text-neutral-800'
+                      }`}
+                    >
+                      <div className="leading-tight">{visitDateLabel}</div>
+                      <div className="leading-tight">{visitTimeLabel}</div>
+                    </button>
+                    <div
+                      className={`mt-0.5 h-1.5 w-1.5 rotate-45 shadow-[0_4px_10px_rgba(15,23,42,0.2)] ${
+                        isActive ? 'bg-orange-500' : 'bg-white'
+                      }`}
+                    />
+                  </div>
+                </CustomOverlayMap>
+              </Fragment>
             );
           })}
         </Map>
