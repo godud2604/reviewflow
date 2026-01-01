@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { usePostHog } from 'posthog-js/react';
 import { CustomOverlayMap, Map, MapMarker } from 'react-kakao-maps-sdk';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -80,6 +81,11 @@ function FullScreenMap({
     lng: 126.978,
   });
   const [mapLevel, setMapLevel] = useState(4);
+  const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setPortalElement(document.body);
+  }, []);
 
   const mapSchedules = useMemo(
     () => schedules.filter((s) => s.lat && s.lng && s.status !== '완료'),
@@ -188,7 +194,9 @@ function FullScreenMap({
     onRegisterLocation?.(id);
   };
 
-  return (
+  if (!portalElement) return null;
+
+  return createPortal(
     <motion.div
       initial={{ opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
@@ -405,7 +413,8 @@ function FullScreenMap({
           </div>
         </div>
       </div>
-    </motion.div>
+    </motion.div>,
+    portalElement
   );
 }
 
