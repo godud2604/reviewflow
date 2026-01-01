@@ -1,19 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react'; // ✅ useRef 추가
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 
-import { ChevronLeft, Clock, Smartphone, BellRing, X, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Clock, Smartphone, BellRing, X, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+
 import { useRouter } from 'next/navigation';
 
 import { getSupabaseClient } from '@/lib/supabase';
@@ -31,14 +25,7 @@ const formatPhoneInput = (value: string) => {
 const formatTimeInputValue = (hour: number, minute: number) =>
   `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 
-const QUICK_TIME_OPTIONS = ['08:00', '08:30', '09:00', '09:30'];
-const ALL_TIME_OPTIONS = ['07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00'] as const;
-
-const ALIMTALK_ALLOWED_EMAILS = new Set([
-  'ees238@kakao.com',
-  'ees238@naver.com',
-  'korea690105@naver.com',
-]);
+const QUICK_TIME_OPTIONS = ['07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00'];
 
 export default function NotificationsPage() {
   const { user, session } = useAuth();
@@ -63,10 +50,8 @@ export default function NotificationsPage() {
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
 
-  // ✅ [Double Click Prevention] 중복 전송 방지를 위한 락(Lock)
+  // [Double Click Prevention] 중복 전송 방지를 위한 락(Lock)
   const sendLock = useRef(false);
-
-  const isAlimtalkVisible = ALIMTALK_ALLOWED_EMAILS.has(user?.email ?? '');
 
   // --- Effects ---
 
@@ -179,7 +164,7 @@ export default function NotificationsPage() {
   const handleSendVerification = async () => {
     if (!session?.access_token) return;
 
-    // ✅ [Debounce Logic] 이미 전송 중이면 클릭 무시 (즉시 차단)
+    // [Debounce Logic] 이미 전송 중이면 클릭 무시 (즉시 차단)
     if (sendLock.current) return;
     sendLock.current = true; // 락 걸기
 
@@ -395,234 +380,222 @@ export default function NotificationsPage() {
           </h1>
         </header>
 
-        {isAlimtalkVisible && (
-          <div className="flex flex-col gap-4">
-            {/* 1. 휴대폰 인증/관리 카드 */}
-            <section
-              className={cn(
-                'relative overflow-hidden rounded-[24px] bg-white p-5 shadow-sm border transition-all duration-300',
-                isViewMode ? 'border-orange-200 ring-1 ring-orange-50' : 'border-neutral-200'
-              )}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded-full',
-                      isViewMode
-                        ? 'bg-orange-100 text-orange-600'
-                        : 'bg-neutral-100 text-neutral-500'
-                    )}
-                  >
-                    <Smartphone size={16} />
-                  </div>
-                  <h2 className="text-[16px] font-bold text-neutral-800">휴대폰 번호</h2>
-                </div>
-                {isViewMode && (
-                  <span className="text-[13px] font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
-                    인증됨
-                  </span>
-                )}
-              </div>
-
-              {/* A. 보기 모드 */}
-              {isViewMode ? (
-                <div className="flex items-center justify-between rounded-xl bg-neutral-50 border border-neutral-100 p-3">
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-bold text-neutral-800 tracking-wide">
-                      {savedPhoneNumber}
-                    </span>
-                    <span className="text-[14px] text-neutral-400">
-                      현재 알림을 받고 있는 번호입니다.
-                    </span>
-                  </div>
-                  <Button
-                    onClick={handleStartChange}
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-white border border-transparent hover:border-neutral-200 hover:shadow-sm"
-                  >
-                    <RefreshCw size={14} className="mr-1.5" /> 변경
-                  </Button>
-                </div>
-              ) : (
-                /* B. 편집/입력 모드 */
-                <div className="space-y-3">
-                  {/* 안내 문구 */}
-                  <p className="text-[15px] text-orange-600 font-medium">
-                    📢 휴대폰 번호를 등록해야 카카오 알림톡 설정을 켤 수 있어요.
-                  </p>
-
-                  {savedPhoneNumber && (
-                    <div className="mb-2 flex items-start gap-2 rounded-lg bg-orange-50 p-2 text-[11px] text-orange-700">
-                      <div className="mt-0.5">
-                        <BellRing size={12} />
-                      </div>
-                      <div className="flex-1 text-[14px]">
-                        새 번호 인증을 완료하기 전까지는
-                        <br />
-                        기존 번호 <strong>{savedPhoneNumber}</strong>(으)로 알림이 발송됩니다.
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-2">
-                    <input
-                      value={phoneInput}
-                      onChange={(e) => setPhoneInput(formatPhoneInput(e.target.value))}
-                      placeholder="새 휴대폰 번호 입력"
-                      disabled={isSendingCode || (isVerificationSent && !isVerificationExpired)}
-                      autoFocus
-                      className="flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-[16px] outline-none focus:border-orange-500 focus:bg-white transition-all disabled:opacity-70"
-                    />
-                    {savedPhoneNumber && !isVerificationSent && (
-                      <Button
-                        onClick={handleCancelChange}
-                        variant="ghost"
-                        className="rounded-xl px-3 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
-                      >
-                        <X size={18} />
-                      </Button>
-                    )}
-
-                    {(!savedPhoneNumber || !isVerificationSent) && (
-                      <Button
-                        onClick={handleSendVerification}
-                        disabled={
-                          isSendingCode ||
-                          !phoneInput ||
-                          (isVerificationSent && !isVerificationExpired)
-                        }
-                        className="rounded-xl px-4 text-sm font-bold bg-neutral-900 text-white hover:bg-black shadow-none"
-                      >
-                        {isSendingCode ? '전송 중' : isVerificationSent ? '전송됨' : '인증요청'}
-                      </Button>
-                    )}
-                  </div>
-
-                  {isVerificationSent && !isViewMode && (
-                    <div className="slide-in space-y-2 rounded-xl bg-white p-1">
-                      <div className="flex justify-between items-center px-1">
-                        <span className="text-[11px] font-medium text-orange-600">
-                          인증번호 입력
-                        </span>
-                        <span className="text-[11px] font-mono text-orange-600">
-                          {formatRemainingTime(remainingSeconds)}
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          value={verificationCode}
-                          onChange={(e) => setVerificationCode(e.target.value)}
-                          placeholder="123456"
-                          maxLength={6}
-                          className="flex-1 rounded-lg border border-orange-200 bg-orange-50/30 px-3 py-2 text-center text-sm tracking-widest outline-none focus:ring-2 focus:ring-orange-100"
-                        />
-                        <Button
-                          onClick={handleVerifyCode}
-                          disabled={isVerifyingCode || !verificationCode}
-                          className="rounded-lg bg-orange-500 text-white text-sm hover:bg-orange-600 w-[70px]"
-                        >
-                          {isVerifyingCode ? '확인...' : '확인'}
-                        </Button>
-                      </div>
-                      <div className="flex justify-between items-center px-1 pt-1">
-                        {isVerificationExpired ? (
-                          <p className="text-[11px] text-red-500">시간 초과. 다시 요청해주세요.</p>
-                        ) : (
-                          <p className="text-[10px] text-neutral-400">10분 이내에 입력해주세요.</p>
-                        )}
-                        {savedPhoneNumber && (
-                          <button
-                            onClick={handleCancelChange}
-                            className="text-[11px] text-neutral-400 underline decoration-neutral-300 underline-offset-2"
-                          >
-                            변경 취소
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </section>
-
-            {/* 2. 설정 카드 */}
-            {savedPhoneNumber && (
-              <section
-                className={cn(
-                  'slide-in rounded-[24px] border border-orange-100 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] space-y-6 transition-opacity duration-300',
-                  isEditingPhone ? 'opacity-60 pointer-events-none grayscale-[0.5]' : 'opacity-100'
-                )}
-              >
-                {isEditingPhone && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[24px] bg-white/10 backdrop-blur-[1px]"></div>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-orange-600">
-                      <BellRing size={16} />
-                    </div>
-                    <div>
-                      <p className="text-[15px] font-bold text-neutral-800">요약 알림 받기</p>
-                      <p className="text-[14px] text-neutral-500">
-                        방문・마감 일정이 있을 때만 알림을 보내드려요.
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={dailySummaryEnabled}
-                    onCheckedChange={handleToggleDailySummary}
-                    className="data-[state=checked]:bg-orange-500"
-                  />
-                </div>
-
+        <div className="flex flex-col gap-4">
+          {/* 1. 휴대폰 인증/관리 카드 */}
+          <section
+            className={cn(
+              'relative overflow-hidden rounded-[24px] bg-white p-5 shadow-sm border transition-all duration-300',
+              isViewMode ? 'border-orange-200 ring-1 ring-orange-50' : 'border-neutral-200'
+            )}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
                 <div
                   className={cn(
-                    'transition-all duration-300 space-y-3 pt-2 border-t border-neutral-100',
-                    dailySummaryEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'
+                    'flex h-8 w-8 items-center justify-center rounded-full',
+                    isViewMode ? 'bg-orange-100 text-orange-600' : 'bg-neutral-100 text-neutral-500'
                   )}
                 >
-                  <div className="flex items-center gap-2 text-[14px] font-semibold text-neutral-700">
-                    <Clock size={14} className="text-orange-500" /> 알림 시간
+                  <Smartphone size={16} />
+                </div>
+                <h2 className="text-[16px] font-bold text-neutral-800">휴대폰 번호</h2>
+              </div>
+              {isViewMode && (
+                <span className="text-[13px] font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+                  인증됨
+                </span>
+              )}
+            </div>
+
+            {/* A. 보기 모드 */}
+            {isViewMode ? (
+              <div className="flex items-center justify-between rounded-xl bg-neutral-50 border border-neutral-100 p-3">
+                <div className="flex flex-col">
+                  <span className="text-[14px] font-bold text-neutral-800 tracking-wide">
+                    {savedPhoneNumber}
+                  </span>
+                  <span className="text-[14px] text-neutral-400">
+                    현재 알림을 받고 있는 번호입니다.
+                  </span>
+                </div>
+                <Button
+                  onClick={handleStartChange}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-white border border-transparent hover:border-neutral-200 hover:shadow-sm"
+                >
+                  <RefreshCw size={14} className="mr-1.5" /> 변경
+                </Button>
+              </div>
+            ) : (
+              /* B. 편집/입력 모드 */
+              <div className="space-y-3">
+                {/* 안내 문구 */}
+                <p className="text-[15px] text-orange-600 font-medium">
+                  📢 휴대폰 번호를 등록해야 카카오 알림톡 설정을 켤 수 있어요.
+                </p>
+
+                {savedPhoneNumber && (
+                  <div className="mb-2 flex items-start gap-2 rounded-lg bg-orange-50 p-2 text-[11px] text-orange-700">
+                    <div className="mt-0.5">
+                      <BellRing size={12} />
+                    </div>
+                    <div className="flex-1 text-[14px]">
+                      새 번호 인증을 완료하기 전까지는
+                      <br />
+                      기존 번호 <strong>{savedPhoneNumber}</strong>(으)로 알림이 발송됩니다.
+                    </div>
                   </div>
+                )}
 
-                  <div className="flex flex-wrap gap-2">
-                    {QUICK_TIME_OPTIONS.map((timeValue) => (
-                      <button
-                        key={timeValue}
-                        type="button"
-                        onClick={() => handleDailySummaryTimeChange(timeValue)}
-                        className={cn(
-                          'rounded-full px-3 py-1.5 text-[14px] font-medium transition-all border',
-                          dailySummaryTime === timeValue
-                            ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-sm'
-                            : 'bg-white border-neutral-100 text-neutral-500 hover:border-orange-200 hover:text-orange-600'
-                        )}
+                <div className="space-y-2">
+                  <input
+                    value={phoneInput}
+                    onChange={(e) => setPhoneInput(formatPhoneInput(e.target.value))}
+                    placeholder="휴대폰 번호 입력"
+                    disabled={isSendingCode || (isVerificationSent && !isVerificationExpired)}
+                    autoFocus
+                    className="w-full flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-[16px] outline-none focus:border-orange-500 focus:bg-white transition-all disabled:opacity-70"
+                  />
+                  {(!isVerificationSent || savedPhoneNumber) && (
+                    <div className="grid grid-cols-10 gap-2">
+                      {savedPhoneNumber && !isVerificationSent && (
+                        <Button
+                          onClick={handleCancelChange}
+                          variant="ghost"
+                          className="col-span-3 h-11 rounded-xl border border-neutral-200 bg-white px-3 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900"
+                        >
+                          닫기
+                        </Button>
+                      )}
+
+                      {(!savedPhoneNumber || !isVerificationSent) && (
+                        <Button
+                          onClick={handleSendVerification}
+                          disabled={
+                            isSendingCode ||
+                            !phoneInput ||
+                            (isVerificationSent && !isVerificationExpired)
+                          }
+                          className={cn(
+                            'h-11 rounded-xl px-4 text-sm font-bold bg-neutral-900 text-white hover:bg-black shadow-none',
+                            savedPhoneNumber ? 'col-span-7' : 'col-span-10'
+                          )}
+                        >
+                          {isSendingCode ? '전송 중' : isVerificationSent ? '전송됨' : '인증요청'}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {isVerificationSent && !isViewMode && (
+                  <div className="slide-in space-y-2 rounded-xl bg-white p-1">
+                    <div className="flex justify-between items-center px-1">
+                      <span className="text-[11px] font-medium text-orange-600">인증번호 입력</span>
+                      <span className="text-[11px] font-mono text-orange-600">
+                        {formatRemainingTime(remainingSeconds)}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value)}
+                        placeholder="123456"
+                        maxLength={6}
+                        className="flex-1 rounded-lg border border-orange-200 bg-orange-50/30 px-3 py-2 text-center text-sm tracking-widest outline-none focus:ring-2 focus:ring-orange-100"
+                      />
+                      <Button
+                        onClick={handleVerifyCode}
+                        disabled={isVerifyingCode || !verificationCode}
+                        className="rounded-lg bg-orange-500 text-white text-sm hover:bg-orange-600 w-[70px]"
                       >
-                        {timeValue}
-                      </button>
-                    ))}
+                        {isVerifyingCode ? '확인...' : '확인'}
+                      </Button>
+                    </div>
+                    <div className="flex justify-between items-center px-1 pt-1">
+                      {isVerificationExpired ? (
+                        <p className="text-[11px] text-red-500">시간 초과. 다시 요청해주세요.</p>
+                      ) : (
+                        <p className="text-[10px] text-neutral-400">10분 이내에 입력해주세요.</p>
+                      )}
+                      {savedPhoneNumber && (
+                        <button
+                          onClick={handleCancelChange}
+                          className="text-[11px] text-neutral-400 underline decoration-neutral-300 underline-offset-2"
+                        >
+                          변경 취소
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
 
-                    <Select value={dailySummaryTime} onValueChange={handleDailySummaryTimeChange}>
-                      <SelectTrigger className="h-[30px] w-auto gap-2 rounded-full border-neutral-200 bg-white px-3 text-[14px] text-neutral-600 shadow-sm hover:border-orange-200">
-                        <SelectValue placeholder="기타" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ALL_TIME_OPTIONS.map((t) => (
-                          <SelectItem key={t} value={t} className="text-[14px]">
-                            {t}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+          {/* 2. 설정 카드 */}
+          {savedPhoneNumber && (
+            <section
+              className={cn(
+                'slide-in rounded-[24px] border border-orange-100 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] space-y-6 transition-opacity duration-300',
+                isEditingPhone ? 'opacity-60 pointer-events-none grayscale-[0.5]' : 'opacity-100'
+              )}
+            >
+              {isEditingPhone && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[24px] bg-white/10 backdrop-blur-[1px]"></div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                    <BellRing size={16} />
+                  </div>
+                  <div className="mr-4">
+                    <p className="text-[15px] font-bold text-neutral-800">요약 알림 받기</p>
+                    <p className="text-[14px] text-neutral-500">
+                      방문・마감 일정이 있을 때만 알림을 보내드려요.
+                    </p>
                   </div>
                 </div>
-              </section>
-            )}
-          </div>
-        )}
+                <Switch
+                  checked={dailySummaryEnabled}
+                  onCheckedChange={handleToggleDailySummary}
+                  className="data-[state=checked]:bg-orange-500"
+                />
+              </div>
+
+              <div
+                className={cn(
+                  'transition-all duration-300 space-y-3 pt-2 border-t border-neutral-100',
+                  dailySummaryEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'
+                )}
+              >
+                <div className="flex items-center gap-2 text-[14px] font-semibold text-neutral-700">
+                  <Clock size={14} className="text-orange-500" /> 알림 시간
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_TIME_OPTIONS.map((timeValue) => (
+                    <button
+                      key={timeValue}
+                      type="button"
+                      onClick={() => handleDailySummaryTimeChange(timeValue)}
+                      className={cn(
+                        'rounded-full px-3 py-1.5 text-[14px] font-medium transition-all border',
+                        dailySummaryTime === timeValue
+                          ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-sm'
+                          : 'bg-white border-neutral-100 text-neutral-500 hover:border-orange-200 hover:text-orange-600'
+                      )}
+                    >
+                      {timeValue}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+        </div>
       </div>
     </div>
   );
