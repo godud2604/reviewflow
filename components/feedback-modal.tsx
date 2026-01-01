@@ -85,8 +85,9 @@ export default function FeedbackModal({
       }
 
       toast({
-        title: '피드백이 저장되었습니다.',
-        duration: 1000,
+        title: '피드백을 전송하였습니다.',
+        description: '검토 후 빠른 시일 내에 반영하겠습니다.',
+        duration: 1500,
       });
 
       setContent('');
