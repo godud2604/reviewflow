@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { Schedule } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { stripLegacyScheduleMemo } from '@/lib/schedule-memo-legacy';
+import { formatKoreanTime } from '@/lib/time-utils';
 
 const scheduleIcons: Record<Schedule['category'], string> = {
   '맛집/식품': '🍽️',
@@ -82,7 +83,9 @@ export default function ScheduleItem({
   };
 
   const visitLabel = schedule.visit
-    ? `${schedule.visit.slice(5)}${schedule.visitTime ? ` ${schedule.visitTime}` : ''} 방문`
+    ? `${schedule.visit.slice(5)}${
+        schedule.visitTime ? ` ${formatKoreanTime(schedule.visitTime)}` : ''
+      } 방문`
     : '방문일 미정';
   const deadLabel = schedule.dead ? `${schedule.dead.slice(5)} 마감` : '마감 미정';
   const activeDate = selectedDate ?? today;

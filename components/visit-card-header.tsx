@@ -19,18 +19,11 @@ import { StaticMap } from 'react-kakao-maps-sdk';
 
 import type { Schedule } from '@/types';
 import { getDaysDiff, parseDateString } from '@/lib/date-utils';
+import { formatKoreanTime } from '@/lib/time-utils';
 
 // ----------------------------------------------------------------------
 // Helper Functions
 // ----------------------------------------------------------------------
-
-const formatTimeParts = (timeStr?: string) => {
-  if (!timeStr) return { period: '', hour: '', minute: '' };
-  const [h, m] = timeStr.split(':').map(Number);
-  const period = h < 12 ? '오전' : '오후';
-  const hour = h % 12 === 0 ? 12 : h % 12;
-  return { period, hour: String(hour), minute: String(m).padStart(2, '0') };
-};
 
 const getUpcomingVisits = (schedules: Schedule[], today: string, limit = 20): Schedule[] => {
   if (!today) return [];
@@ -289,11 +282,7 @@ function SimpleVisitRow({
   const hasLocation = Boolean(schedule.lat && schedule.lng);
   const isClickable = Boolean(onCardClick);
   const visitDateLabel = formatReferenceDate(schedule.visit) || '방문일 미정';
-  const visitTimeParts = formatTimeParts(schedule.visitTime);
-  const visitTimeLabel =
-    visitTimeParts.period && visitTimeParts.hour
-      ? `${visitTimeParts.period} ${visitTimeParts.hour}:${visitTimeParts.minute}`
-      : '시간 미정';
+  const visitTimeLabel = schedule.visitTime ? formatKoreanTime(schedule.visitTime) : '시간 미정';
   const visitDateTimeLabel = `${visitDateLabel} · ${visitTimeLabel}`;
 
   return (

@@ -44,6 +44,7 @@ import {
   sumIncomeDetails,
 } from '@/lib/schedule-income-details';
 import { stripLegacyScheduleMemo } from '@/lib/schedule-memo-legacy';
+import { formatKoreanTime } from '@/lib/time-utils';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Check, Copy, Loader2, Search, X } from 'lucide-react';
@@ -1141,7 +1142,9 @@ export default function ScheduleModal({
   };
 
   const { period, hour, minute } = parseVisitTime(formData.visitTime || '');
-  const displayVisitTime = formData.visitTime ? `${period} ${hour}:${minute}` : '시간 선택';
+  const displayVisitTime = formData.visitTime
+    ? formatKoreanTime(formData.visitTime)
+    : '시간 선택';
   const hasLocation = Boolean(formData.region || formData.regionDetail);
   const defaultIncomeDetail = scheduleIncomeDetails.find(isDefaultIncomeDetail);
   const defaultCostDetail = scheduleIncomeDetails.find(isDefaultCostDetail);

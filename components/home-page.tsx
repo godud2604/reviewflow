@@ -12,6 +12,7 @@ import type { Schedule } from '@/types';
 import ScheduleItem from '@/components/schedule-item';
 import VisitCardHeader, { getUpcomingVisits } from '@/components/visit-card-header';
 import { getDaysDiff, parseDateString } from '@/lib/date-utils';
+import { formatKoreanTime } from '@/lib/time-utils';
 import { Z_INDEX } from '@/lib/z-index';
 
 // --- 날짜/시간 유틸리티 ---
@@ -27,14 +28,6 @@ const formatVisitDate = (dateStr?: string) => {
   if (!dateStr) return '방문일 미정';
   const date = new Date(dateStr);
   return `${date.getMonth() + 1}.${date.getDate()} (${getDayLabel(dateStr)})`;
-};
-
-const formatVisitTime = (timeStr?: string) => {
-  if (!timeStr) return '';
-  const [h, m] = timeStr.split(':').map(Number);
-  const period = h < 12 ? '오전' : '오후';
-  const hour = h % 12 === 0 ? 12 : h % 12;
-  return `${period} ${hour}:${String(m).padStart(2, '0')}`;
 };
 
 // --- 상수 ---
@@ -298,7 +291,7 @@ function FullScreenMap({
                     const hasLocation = Boolean(schedule.lat && schedule.lng);
                     const visitLabel = schedule.visit
                       ? `${formatVisitDate(schedule.visit)}${
-                          schedule.visitTime ? ` · ${formatVisitTime(schedule.visitTime)}` : ''
+                          schedule.visitTime ? ` · ${formatKoreanTime(schedule.visitTime)}` : ''
                         }`
                       : '방문일 미정';
                     const diff = schedule.visit ? getDaysDiff(today, schedule.visit) : null;
