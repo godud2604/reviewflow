@@ -23,6 +23,7 @@ export interface DbSchedule {
   benefit: number;
   income: number;
   cost: number;
+  income_details_json: string | null;
   posting_link: string;
   purchase_link: string;
   guide_files: GuideFile[];

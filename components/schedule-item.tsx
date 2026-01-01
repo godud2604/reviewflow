@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import type { Schedule } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { stripLegacyScheduleMemo } from '@/lib/schedule-memo-legacy';
 
 const scheduleIcons: Record<Schedule['category'], string> = {
   '맛집/식품': '🍽️',
@@ -113,8 +114,8 @@ export default function ScheduleItem({
   const hasChannelLabel = channelLabel.length > 0;
 
   // --- 데이터 체크 ---
-  const hasMemo = Boolean(schedule.memo?.trim());
-  const memoText = hasMemo ? schedule.memo!.trim() : '';
+  const memoText = stripLegacyScheduleMemo(schedule.memo).trim();
+  const hasMemo = Boolean(memoText);
 
   const storePhone = schedule.phone?.trim();
   const ownerPhone = schedule.ownerPhone?.trim();

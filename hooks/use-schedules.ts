@@ -57,6 +57,7 @@ function mapDbToSchedule(db: DbSchedule): Schedule {
     paybackConfirmed: db.payback_confirmed,
     phone: db.phone || '',
     ownerPhone: db.owner_phone || '',
+    incomeDetailsJson: db.income_details_json || undefined,
   };
 }
 
@@ -78,6 +79,7 @@ function mapScheduleToDb(schedule: Omit<Schedule, 'id'>, userId: string) {
     benefit: schedule.benefit || 0,
     income: schedule.income || 0,
     cost: schedule.cost || 0,
+    income_details_json: schedule.incomeDetailsJson || null,
     posting_link: schedule.postingLink || '',
     purchase_link: schedule.purchaseLink || '',
     guide_files: schedule.guideFiles || [],
@@ -110,6 +112,8 @@ function mapScheduleUpdatesToDb(updates: Partial<Schedule>) {
   if (updates.benefit !== undefined) dbUpdates.benefit = updates.benefit;
   if (updates.income !== undefined) dbUpdates.income = updates.income;
   if (updates.cost !== undefined) dbUpdates.cost = updates.cost;
+  if (updates.incomeDetailsJson !== undefined)
+    dbUpdates.income_details_json = updates.incomeDetailsJson;
   if (updates.postingLink !== undefined) dbUpdates.posting_link = updates.postingLink;
   if (updates.purchaseLink !== undefined) dbUpdates.purchase_link = updates.purchaseLink;
   if (updates.guideFiles !== undefined) dbUpdates.guide_files = updates.guideFiles;

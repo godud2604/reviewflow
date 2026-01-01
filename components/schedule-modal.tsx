@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { Schedule, GuideFile, ScheduleChannel } from '@/types';
+import type { Schedule, GuideFile, ScheduleChannel, ScheduleTransactionItem } from '@/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -33,6 +33,17 @@ import {
   getGuideFileUrl,
 } from '@/lib/storage';
 import { DEFAULT_SCHEDULE_CHANNEL_OPTIONS, sanitizeChannels } from '@/lib/schedule-channels';
+import {
+  DEFAULT_COST_LABEL,
+  DEFAULT_INCOME_LABEL,
+  buildIncomeDetailsFromLegacy,
+  createIncomeDetail,
+  parseIncomeDetailsJson,
+  sanitizeIncomeDetails,
+  serializeIncomeDetails,
+  sumIncomeDetails,
+} from '@/lib/schedule-income-details';
+import { stripLegacyScheduleMemo } from '@/lib/schedule-memo-legacy';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Check, Copy, Loader2, Search, X } from 'lucide-react';
@@ -87,35 +98,11 @@ const DEFAULT_VISIT_REVIEW_CHECKLIST: NonNullable<Schedule['visitReviewChecklist
   otherText: '',
 };
 
-const ASSET_FIELD_CONFIG: Array<{
-  field: 'benefit' | 'income' | 'cost';
-  label: string;
-  description: string;
-  valueColor: string;
-  tag: string;
-}> = [
-  {
-    field: 'benefit',
-    label: '제품/서비스 가격',
-    description: '제품/서비스 가격',
-    valueColor: 'text-[#3182F6]',
-    tag: '수익',
-  },
-  {
-    field: 'income',
-    label: '현금 수익',
-    description: '입금된 현금',
-    valueColor: 'text-[#3182F6]',
-    tag: '수익',
-  },
-  {
-    field: 'cost',
-    label: '내가 쓴 돈',
-    description: '내가 결제한 금액',
-    valueColor: 'text-[#F04452]',
-    tag: '지출',
-  },
-];
+const BENEFIT_FIELD = {
+  field: 'benefit' as const,
+  label: '제품/서비스 가격',
+  description: '제품/서비스 가격',
+};
 
 const MANAGE_BUTTON_CLASS =
   'flex items-center gap-1 rounded-[16px] border border-[#FF5722]/40 bg-white px-3 py-1 text-[12px] font-semibold text-[#FF5722] transition hover:bg-[#FF5722] hover:text-white hover:shadow-[0_10px_22px_rgba(255,87,34,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/50';
@@ -257,17 +244,24 @@ export default function ScheduleModal({
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [locationDetailEnabled, setLocationDetailEnabled] = useState(false);
   const [nonVisitReviewType, setNonVisitReviewType] = useState<Schedule['reviewType']>('제공형');
+  const [scheduleIncomeDetails, setScheduleIncomeDetails] = useState<ScheduleTransactionItem[]>([]);
+  const [showIncomeDetailManagement, setShowIncomeDetailManagement] = useState(false);
+  const [newIncomeDetailLabel, setNewIncomeDetailLabel] = useState('');
+  const [newIncomeDetailType, setNewIncomeDetailType] =
+    useState<ScheduleTransactionItem['type']>('INCOME');
   const { toast } = useToast();
   const { user } = useAuth();
   const {
     platforms: userPlatforms,
     categories: userCategories,
     scheduleChannels: userChannels,
+    incomeDetails: userIncomeDetails,
     addPlatform,
     removePlatform,
     addScheduleChannel,
     removeScheduleChannel,
     updateCategories,
+    updateIncomeDetails,
     loading: profileLoading,
   } = useUserProfile();
   const isSubmittingRef = useRef(false);
@@ -383,6 +377,48 @@ export default function ScheduleModal({
     return a.every((item, idx) => item === b[idx]);
   };
 
+  const incomeDetailTemplates = React.useMemo(() => {
+    return (userIncomeDetails || [])
+      .map((detail) => ({
+        ...detail,
+        label: detail.label?.trim() || '',
+        type: detail.type === 'EXPENSE' ? 'EXPENSE' : 'INCOME',
+        enabled: typeof detail.enabled === 'boolean' ? detail.enabled : true,
+      }))
+      .filter(
+        (detail) =>
+          detail.label &&
+          !(
+            (detail.type === 'INCOME' && detail.label === DEFAULT_INCOME_LABEL) ||
+            (detail.type === 'EXPENSE' && detail.label === DEFAULT_COST_LABEL)
+          )
+      );
+  }, [userIncomeDetails]);
+
+  const enabledIncomeDetailTemplates = incomeDetailTemplates.filter(
+    (detail) => detail.enabled !== false
+  );
+
+  const getIncomeDetailKey = (type: ScheduleTransactionItem['type'], label: string) =>
+    `${type}:${label.trim()}`;
+
+  const isDefaultIncomeDetail = (detail: ScheduleTransactionItem) =>
+    detail.type === 'INCOME' && detail.label.trim() === DEFAULT_INCOME_LABEL;
+
+  const isDefaultCostDetail = (detail: ScheduleTransactionItem) =>
+    detail.type === 'EXPENSE' && detail.label.trim() === DEFAULT_COST_LABEL;
+
+  const ensureDefaultIncomeDetails = (details: ScheduleTransactionItem[]) => {
+    const next = [...details];
+    if (!next.some(isDefaultIncomeDetail)) {
+      next.unshift({ ...createIncomeDetail('INCOME', DEFAULT_INCOME_LABEL), enabled: true });
+    }
+    if (!next.some(isDefaultCostDetail)) {
+      next.push({ ...createIncomeDetail('EXPENSE', DEFAULT_COST_LABEL), enabled: true });
+    }
+    return next;
+  };
+
   const hasVisitData = React.useCallback((data?: Partial<Schedule>) => {
     if (!data) return false;
     const checklist = data.visitReviewChecklist;
@@ -400,9 +436,14 @@ export default function ScheduleModal({
   useEffect(() => {
     if (schedule) {
       const initialNonVisit = schedule.reviewType !== '방문형' ? schedule.reviewType : '제공형';
+      const parsedDetails = parseIncomeDetailsJson(schedule.incomeDetailsJson);
+      const fallbackDetails = buildIncomeDetailsFromLegacy(schedule.income, schedule.cost);
+      const mergedDetails = parsedDetails.length ? parsedDetails : fallbackDetails;
+      setScheduleIncomeDetails(ensureDefaultIncomeDetails(mergedDetails));
       setNonVisitReviewType(initialNonVisit);
       setFormData({
         ...schedule,
+        memo: stripLegacyScheduleMemo(schedule.memo),
         visitReviewChecklist:
           schedule.reviewType === '방문형'
             ? { ...DEFAULT_VISIT_REVIEW_CHECKLIST, ...schedule.visitReviewChecklist }
@@ -437,6 +478,7 @@ export default function ScheduleModal({
       setVisitMode(false);
       setNonVisitReviewType('제공형');
       setLocationDetailEnabled(false);
+      setScheduleIncomeDetails(ensureDefaultIncomeDetails([]));
     }
   }, [schedule, isOpen, hasVisitData, initialDeadline]);
 
@@ -544,6 +586,30 @@ export default function ScheduleModal({
     try {
       const updatedFormData: Partial<Schedule> = { ...mergedFormData };
       updatedFormData.title = trimmedTitle;
+      const hasInvalidDetails = activeScheduleDetails.some(
+        (detail) => detail.enabled !== false && detail.amount > 0 && !detail.label.trim()
+      );
+      if (hasInvalidDetails) {
+        toast({
+          title: '수익/지출 항목 이름을 입력해주세요.',
+          variant: 'destructive',
+          duration: 1000,
+        });
+        return;
+      }
+      const sanitizedDetails = ensureDefaultIncomeDetails(
+        sanitizeIncomeDetails(
+          activeScheduleDetails.map((detail) =>
+            isDefaultIncomeDetail(detail) || isDefaultCostDetail(detail)
+              ? { ...detail, enabled: true }
+              : detail
+          )
+        )
+      );
+      const { incomeTotal, costTotal } = sumIncomeDetails(sanitizedDetails);
+      updatedFormData.income = incomeTotal;
+      updatedFormData.cost = costTotal;
+      updatedFormData.incomeDetailsJson = serializeIncomeDetails(sanitizedDetails);
       const reviewTypeForSave = visitMode ? '방문형' : nonVisitReviewType;
       updatedFormData.reviewType = reviewTypeForSave;
       if (!visitMode) {
@@ -733,9 +799,138 @@ export default function ScheduleModal({
     }
   };
 
-  const handleNumberChange = (field: 'benefit' | 'income' | 'cost', value: string) => {
+  const handleNumberChange = (field: 'benefit', value: string) => {
     const numValue = parseNumber(value);
     setFormData({ ...formData, [field]: numValue });
+  };
+
+  const handleIncomeDetailChange = (id: string, updates: Partial<ScheduleTransactionItem>) => {
+    setScheduleIncomeDetails((prev) =>
+      prev.map((detail) => (detail.id === id ? { ...detail, ...updates } : detail))
+    );
+  };
+
+  const handleAddIncomeDetailFromModal = () => {
+    const trimmedLabel = newIncomeDetailLabel.trim();
+    if (!trimmedLabel) {
+      toast({
+        title: '항목 이름을 입력해주세요.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+    if (
+      (newIncomeDetailType === 'INCOME' && trimmedLabel === DEFAULT_INCOME_LABEL) ||
+      (newIncomeDetailType === 'EXPENSE' && trimmedLabel === DEFAULT_COST_LABEL)
+    ) {
+      toast({
+        title: '기본 항목과 동일한 이름입니다.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+    const duplicate = incomeDetailTemplates.some(
+      (detail) =>
+        getIncomeDetailKey(detail.type, detail.label) ===
+        getIncomeDetailKey(newIncomeDetailType, trimmedLabel)
+    );
+    if (duplicate) {
+      toast({
+        title: '이미 등록된 항목입니다.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+    const nextTemplates = [
+      ...incomeDetailTemplates,
+      { ...createIncomeDetail(newIncomeDetailType, trimmedLabel), enabled: true },
+    ];
+    updateIncomeDetails(nextTemplates).then((success) => {
+      if (!success) return;
+      setNewIncomeDetailLabel('');
+      setNewIncomeDetailType('INCOME');
+      toast({
+        title: '항목이 추가되었습니다.',
+        duration: 1000,
+      });
+    });
+  };
+
+  const handleToggleIncomeDetailTemplate = (id: string, enabled: boolean) => {
+    const nextTemplates = incomeDetailTemplates.map((detail) =>
+      detail.id === id ? { ...detail, enabled } : detail
+    );
+    updateIncomeDetails(nextTemplates);
+  };
+
+  const handleUpdateIncomeDetailTemplateType = (
+    id: string,
+    type: ScheduleTransactionItem['type']
+  ) => {
+    const current = incomeDetailTemplates.find((detail) => detail.id === id);
+    if (!current) return;
+    const duplicate = incomeDetailTemplates.some(
+      (detail) =>
+        detail.id !== id &&
+        getIncomeDetailKey(detail.type, detail.label) === getIncomeDetailKey(type, current.label)
+    );
+    if (duplicate) {
+      toast({
+        title: '이미 등록된 항목입니다.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+    const nextTemplates = incomeDetailTemplates.map((detail) =>
+      detail.id === id ? { ...detail, type } : detail
+    );
+    updateIncomeDetails(nextTemplates).then((success) => {
+      if (!success) return;
+      toast({
+        title: type === 'EXPENSE' ? '지출로 변경되었습니다.' : '수익으로 변경되었습니다.',
+        duration: 1000,
+      });
+    });
+  };
+
+  const handleRemoveIncomeDetailTemplate = (id: string) => {
+    const target = incomeDetailTemplates.find((detail) => detail.id === id);
+    const nextTemplates = incomeDetailTemplates.filter((detail) => detail.id !== id);
+    updateIncomeDetails(nextTemplates).then((success) => {
+      if (!success || !target) return;
+      setScheduleIncomeDetails((prev) =>
+        prev.filter(
+          (detail) =>
+            getIncomeDetailKey(detail.type, detail.label) !==
+            getIncomeDetailKey(target.type, target.label)
+        )
+      );
+      toast({
+        title: '항목이 삭제되었습니다.',
+        duration: 1000,
+      });
+    });
+  };
+
+  const handleTemplateAmountChange = (template: ScheduleTransactionItem, value: string) => {
+    const amount = parseNumber(value);
+    setScheduleIncomeDetails((prev) => {
+      const index = prev.findIndex(
+        (detail) =>
+          getIncomeDetailKey(detail.type, detail.label) ===
+          getIncomeDetailKey(template.type, template.label)
+      );
+      if (index === -1) {
+        return [...prev, { ...createIncomeDetail(template.type, template.label), amount }];
+      }
+      const next = [...prev];
+      next[index] = { ...next[index], amount };
+      return next;
+    });
   };
 
   const handleOwnerPhoneChange = (value: string) => {
@@ -948,7 +1143,31 @@ export default function ScheduleModal({
   const { period, hour, minute } = parseVisitTime(formData.visitTime || '');
   const displayVisitTime = formData.visitTime ? `${period} ${hour}:${minute}` : '시간 선택';
   const hasLocation = Boolean(formData.region || formData.regionDetail);
-  const totalAssetGain = (formData.benefit || 0) + (formData.income || 0) - (formData.cost || 0);
+  const defaultIncomeDetail = scheduleIncomeDetails.find(isDefaultIncomeDetail);
+  const defaultCostDetail = scheduleIncomeDetails.find(isDefaultCostDetail);
+  const enabledExtraDetails = enabledIncomeDetailTemplates;
+  const activeTemplateKeys = React.useMemo(
+    () =>
+      new Set(
+        enabledIncomeDetailTemplates.map((detail) => getIncomeDetailKey(detail.type, detail.label))
+      ),
+    [enabledIncomeDetailTemplates]
+  );
+  const activeScheduleDetails = React.useMemo(
+    () =>
+      scheduleIncomeDetails.filter(
+        (detail) =>
+          isDefaultIncomeDetail(detail) ||
+          isDefaultCostDetail(detail) ||
+          activeTemplateKeys.has(getIncomeDetailKey(detail.type, detail.label))
+      ),
+    [scheduleIncomeDetails, activeTemplateKeys]
+  );
+  const { incomeTotal, costTotal } = React.useMemo(
+    () => sumIncomeDetails(activeScheduleDetails),
+    [activeScheduleDetails]
+  );
+  const totalAssetGain = (formData.benefit || 0) + incomeTotal - costTotal;
 
   const updateVisitTime = (next: { period?: string; hour?: string; minute?: string }) => {
     const finalPeriod = next.period || period;
@@ -1601,34 +1820,123 @@ export default function ScheduleModal({
               </section>
 
               <section className="rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-[16px] font-semibold text-neutral-900">자산 관리</p>
-                  <span className="text-[11px] text-neutral-400">
-                    제공(물품) + 수익(현금) - 내가 쓴 돈 = 수익
-                  </span>
-                </div>
-                <div className="rounded-[20px] bg-[#EFF5FF] px-4 py-4 space-y-3">
-                  <div className="space-y-1">
-                    {ASSET_FIELD_CONFIG.map((field) => (
-                      <label
-                        key={field.field}
-                        className="flex items-center justify-between text-[14px] font-semibold text-neutral-600"
-                      >
-                        <span>{field.label}</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={formatNumber(formData[field.field] || 0)}
-                          onChange={(e) => handleNumberChange(field.field, e.target.value)}
-                          className="mb-1 w-[120px] rounded-full border border-transparent bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
-                        />
-                      </label>
-                    ))}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[16px] font-semibold text-neutral-900">자산 관리</p>
+                    <span className="text-[11px] text-neutral-400">
+                      제공(물품) + 수익(현금) - 내가 쓴 돈 = 수익
+                    </span>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowIncomeDetailManagement(true)}
+                    className={MANAGE_BUTTON_CLASS}
+                  >
+                    + <span>항목 추가</span>
+                  </button>
+                </div>
+                <div className="rounded-[20px] bg-[#EFF5FF] px-4 py-4 space-y-1">
+                  <label className="flex items-center justify-between text-[14px] font-semibold text-neutral-600">
+                    <span>{BENEFIT_FIELD.label}</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={formatNumber(formData.benefit || 0)}
+                      onChange={(e) => handleNumberChange('benefit', e.target.value)}
+                      className="mb-1 w-[120px] rounded-full border border-transparent bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between text-[14px] font-semibold text-neutral-600">
+                    <span>{DEFAULT_INCOME_LABEL}</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={formatNumber(defaultIncomeDetail?.amount || 0)}
+                      onChange={(e) =>
+                        defaultIncomeDetail
+                          ? handleIncomeDetailChange(defaultIncomeDetail.id, {
+                              amount: parseNumber(e.target.value),
+                            })
+                          : undefined
+                      }
+                      className="mb-1 w-[120px] rounded-full border border-transparent bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between text-[14px] font-semibold text-neutral-600">
+                    <span>{DEFAULT_COST_LABEL}</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={formatNumber(defaultCostDetail?.amount || 0)}
+                      onChange={(e) =>
+                        defaultCostDetail
+                          ? handleIncomeDetailChange(defaultCostDetail.id, {
+                              amount: parseNumber(e.target.value),
+                            })
+                          : undefined
+                      }
+                      className="mb-1 w-[120px] rounded-full border border-transparent bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
+                    />
+                  </label>
+                  {!incomeDetailTemplates.length && (
+                    <p className="text-[13px] font-bold text-neutral-600 tracking-tight text-right">
+                      총 {formatNumber(totalAssetGain)}원 경제적 가치
+                    </p>
+                  )}
+                </div>
+                {incomeDetailTemplates.length > 0 && (
+                  <div className="rounded-[18px] border border-neutral-200/80 bg-white px-4 py-3">
+                    <p className="text-[12px] font-semibold text-neutral-500 mb-2">
+                      추가 항목 {enabledExtraDetails.length}개
+                    </p>
+                    {enabledExtraDetails.length === 0 ? (
+                      <div className="text-[12px] text-neutral-400">
+                        체크된 추가 항목이 없습니다.
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {enabledExtraDetails.map((detail) => {
+                          const matchedDetail = scheduleIncomeDetails.find(
+                            (item) =>
+                              getIncomeDetailKey(item.type, item.label) ===
+                              getIncomeDetailKey(detail.type, detail.label)
+                          );
+                          return (
+                            <label
+                              key={detail.id}
+                              className="flex items-center justify-between text-[14px] font-semibold text-neutral-600"
+                            >
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                    detail.type === 'EXPENSE'
+                                      ? 'bg-[#fee2e2]/70 text-[#ef4444]'
+                                      : 'bg-[#eef5ff] text-[#2563eb]'
+                                  }`}
+                                >
+                                  {detail.type === 'EXPENSE' ? '지출' : '수익'}
+                                </span>
+                                <span>{detail.label}</span>
+                              </span>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={formatNumber(matchedDetail?.amount || 0)}
+                                onChange={(e) => handleTemplateAmountChange(detail, e.target.value)}
+                                className="mb-1 w-[120px] rounded-full border border-neutral-200 bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
+                              />
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {incomeDetailTemplates.length > 0 && (
                   <p className="text-[13px] font-bold text-neutral-600 tracking-tight text-right">
                     총 {formatNumber(totalAssetGain)}원 경제적 가치
                   </p>
-                </div>
+                )}
                 <div className="space-y-2 pt-3 border-t border-neutral-200/80">
                   <label className="flex items-start gap-3">
                     <Checkbox
@@ -1664,7 +1972,6 @@ export default function ScheduleModal({
                   )}
                 </div>
               </section>
-
               <section className="rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-3">
                 <p className="text-[16px] font-semibold text-neutral-900">메모장</p>
                 <div className="relative">
@@ -1833,12 +2140,153 @@ export default function ScheduleModal({
         </div>
       </div>
 
+      {showIncomeDetailManagement && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowIncomeDetailManagement(false)}
+            style={{ zIndex: Z_INDEX.managementBackdrop }}
+          />
+          <div
+            className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+            style={{ zIndex: Z_INDEX.managementModal }}
+          >
+            <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
+              <span className="font-bold text-[16px]">수익/지출 항목 관리</span>
+              <button
+                onClick={() => setShowIncomeDetailManagement(false)}
+                className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
+                aria-label="닫기"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+              <div>
+                <label className="block text-[15px] font-bold text-neutral-500 mb-2">
+                  새 항목 추가
+                </label>
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setNewIncomeDetailType('INCOME')}
+                    className={`rounded-full px-3 py-1 text-[12px] font-semibold transition ${
+                      newIncomeDetailType === 'INCOME'
+                        ? 'bg-[#eef5ff] text-[#2563eb]'
+                        : 'border border-neutral-200 text-neutral-500'
+                    }`}
+                  >
+                    수익
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewIncomeDetailType('EXPENSE')}
+                    className={`rounded-full px-3 py-1 text-[12px] font-semibold transition ${
+                      newIncomeDetailType === 'EXPENSE'
+                        ? 'bg-[#fee2e2]/70 text-[#ef4444]'
+                        : 'border border-neutral-200 text-neutral-500'
+                    }`}
+                  >
+                    지출
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newIncomeDetailLabel}
+                    onChange={(e) => setNewIncomeDetailLabel(e.target.value)}
+                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
+                    placeholder={
+                      newIncomeDetailType === 'INCOME' ? '예: 상품권 수익' : '예: 발렛비'
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddIncomeDetailFromModal}
+                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer"
+                  >
+                    추가
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[15px] font-bold text-neutral-500 mb-2">
+                  등록된 추가 항목
+                </label>
+                {incomeDetailTemplates.length === 0 ? (
+                  <div className="text-[15px] text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
+                    등록된 추가 항목이 없습니다
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {incomeDetailTemplates.map((detail) => (
+                      <div
+                        key={detail.id}
+                        className="flex flex-wrap items-center gap-2 px-4 py-3 bg-neutral-50 rounded-xl"
+                      >
+                        <Checkbox
+                          checked={detail.enabled !== false}
+                          onCheckedChange={(checked) =>
+                            handleToggleIncomeDetailTemplate(detail.id, Boolean(checked))
+                          }
+                          className="mt-[2px]"
+                        />
+                        <div className="flex items-center rounded-full bg-white p-0.5 shadow-sm">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUpdateIncomeDetailTemplateType(detail.id, 'INCOME')
+                            }
+                            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                              detail.type === 'INCOME'
+                                ? 'bg-[#eef5ff] text-[#2563eb]'
+                                : 'text-neutral-400'
+                            }`}
+                          >
+                            수익
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUpdateIncomeDetailTemplateType(detail.id, 'EXPENSE')
+                            }
+                            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                              detail.type === 'EXPENSE'
+                                ? 'bg-[#fee2e2]/70 text-[#ef4444]'
+                                : 'text-neutral-400'
+                            }`}
+                          >
+                            지출
+                          </button>
+                        </div>
+                        <span className="flex-1 min-w-[140px] text-[14px] font-semibold text-neutral-700">
+                          {detail.label}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveIncomeDetailTemplate(detail.id)}
+                          className="text-red-600 hover:text-red-700 font-semibold text-[14px] cursor-pointer"
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {showPlatformManagement && (
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowPlatformManagement(false)}
-          style={{ zIndex: Z_INDEX.managementBackdrop }}
+            style={{ zIndex: Z_INDEX.managementBackdrop }}
           />
           <div
             className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
@@ -1924,7 +2372,7 @@ export default function ScheduleModal({
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowChannelManagement(false)}
-          style={{ zIndex: Z_INDEX.managementBackdrop }}
+            style={{ zIndex: Z_INDEX.managementBackdrop }}
           />
           <div
             className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
@@ -2010,7 +2458,7 @@ export default function ScheduleModal({
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowCategoryManagement(false)}
-          style={{ zIndex: Z_INDEX.managementBackdrop }}
+            style={{ zIndex: Z_INDEX.managementBackdrop }}
           />
           <div
             className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"

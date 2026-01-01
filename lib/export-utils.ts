@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { Schedule, ExtraIncome } from '@/types';
+import { stripLegacyScheduleMemo } from '@/lib/schedule-memo-legacy';
 
 export function exportSchedulesToExcel(schedules: Schedule[]) {
   // 체험단 활동 내역 데이터 변환
@@ -23,7 +24,7 @@ export function exportSchedulesToExcel(schedules: Schedule[]) {
     '포스팅 링크': schedule.postingLink || '-',
     '구매 링크': schedule.purchaseLink || '-',
     '가이드 링크': schedule.guideLink || '-',
-    메모: schedule.memo || '-',
+    메모: stripLegacyScheduleMemo(schedule.memo) || '-',
   }));
 
   // 워크북 생성
@@ -125,7 +126,7 @@ export function exportAllDataToExcel(schedules: Schedule[], extraIncomes: ExtraI
     '포스팅 링크': schedule.postingLink || '-',
     '구매 링크': schedule.purchaseLink || '-',
     '가이드 링크': schedule.guideLink || '-',
-    메모: schedule.memo || '-',
+    메모: stripLegacyScheduleMemo(schedule.memo) || '-',
   }));
 
   // 부수입 내역 데이터

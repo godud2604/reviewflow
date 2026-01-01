@@ -45,6 +45,7 @@ export interface Schedule {
   benefit: number;
   income: number;
   cost: number;
+  incomeDetailsJson?: string | null;
   postingLink: string;
   purchaseLink: string;
   guideFiles: GuideFile[];
@@ -60,6 +61,16 @@ export interface Schedule {
   };
   paybackExpected?: boolean;
   paybackConfirmed?: boolean;
+}
+
+export type TransactionType = 'INCOME' | 'EXPENSE';
+
+export interface ScheduleTransactionItem {
+  id: string;
+  label: string;
+  amount: number;
+  type: TransactionType;
+  enabled?: boolean;
 }
 
 export type ScheduleChannel = string;

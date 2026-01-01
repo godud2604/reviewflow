@@ -6,6 +6,11 @@ import type { Schedule, ExtraIncome, HistoryView } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Z_INDEX } from '@/lib/z-index';
 import {
+  buildIncomeDetailsFromLegacy,
+  parseIncomeDetailsJson,
+  sumIncomeDetails,
+} from '@/lib/schedule-income-details';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -207,6 +212,23 @@ export default function IncomeHistoryModal({
     }
   };
 
+  const formatScheduleDetail = (schedule: Schedule, detailType: 'INCOME' | 'EXPENSE') => {
+    const parsed = parseIncomeDetailsJson(schedule.incomeDetailsJson);
+    const fallback = buildIncomeDetailsFromLegacy(
+      toNumber(schedule.income),
+      toNumber(schedule.cost)
+    );
+    const details = parsed.length ? parsed : fallback;
+    if (!details.length) return '';
+    const { incomeBreakdown, costBreakdown } = sumIncomeDetails(details);
+    const breakdown = detailType === 'INCOME' ? incomeBreakdown : costBreakdown;
+    const entries = Object.entries(breakdown)
+      .filter(([, amount]) => amount > 0)
+      .sort(([, aAmount], [, bAmount]) => bAmount - aAmount);
+    if (!entries.length) return '';
+    return entries.map(([label, amount]) => `${label} ${amount.toLocaleString()}원`).join(' · ');
+  };
+
   const handleDeleteExtraIncome = async (incomeId?: number) => {
     if (!incomeId || !onDeleteExtraIncome) return;
     setDeletingId(incomeId);
@@ -315,6 +337,16 @@ export default function IncomeHistoryModal({
                           {item.category}
                         </span>
                       </div>
+                      {item.type === 'schedule' && item.sourceSchedule && viewType === 'income' && (
+                        <div className="mt-2 text-xs text-neutral-400 break-words">
+                          {formatScheduleDetail(item.sourceSchedule, 'INCOME') || '없음'}
+                        </div>
+                      )}
+                      {item.type === 'schedule' && item.sourceSchedule && viewType === 'cost' && (
+                        <div className="mt-2 text-xs text-neutral-400 break-words">
+                          {formatScheduleDetail(item.sourceSchedule, 'EXPENSE') || '없음'}
+                        </div>
+                      )}
                       {/* 부수입 메모 표시 */}
                       {item.type === 'extra' &&
                         (() => {

@@ -6,6 +6,11 @@ import { useExtraIncomes } from '@/hooks/use-extra-incomes';
 import ExtraIncomeModal from './extra-income-modal';
 import IncomeHistoryModal from './income-history-modal';
 import { Z_INDEX } from '@/lib/z-index';
+import {
+  buildIncomeDetailsFromLegacy,
+  parseIncomeDetailsJson,
+  sumIncomeDetails,
+} from '@/lib/schedule-income-details';
 
 const incomeTutorialStorageKey = 'reviewflow-stats-income-tutorial-shown';
 
@@ -157,6 +162,41 @@ export default function StatsPage({
     [extraIncomes, selectedMonthKey, selectedMonthDate]
   );
 
+  const { detailIncomeTotal, detailCostTotal, incomeDetailBreakdown, costDetailBreakdown } =
+    useMemo(() => {
+      const summary = {
+        detailIncomeTotal: 0,
+        detailCostTotal: 0,
+        incomeDetailBreakdown: {} as Record<string, number>,
+        costDetailBreakdown: {} as Record<string, number>,
+      };
+
+      selectedMonthSchedules.forEach((schedule) => {
+        const parsed = parseIncomeDetailsJson(schedule.incomeDetailsJson);
+        const fallback = buildIncomeDetailsFromLegacy(
+          toNumber(schedule.income),
+          toNumber(schedule.cost)
+        );
+        const details = parsed.length ? parsed : fallback;
+        if (!details.length) return;
+        const { incomeTotal, costTotal, incomeBreakdown, costBreakdown } =
+          sumIncomeDetails(details);
+
+        summary.detailIncomeTotal += incomeTotal;
+        summary.detailCostTotal += costTotal;
+
+        Object.entries(incomeBreakdown).forEach(([label, amount]) => {
+          summary.incomeDetailBreakdown[label] =
+            (summary.incomeDetailBreakdown[label] || 0) + amount;
+        });
+        Object.entries(costBreakdown).forEach(([label, amount]) => {
+          summary.costDetailBreakdown[label] = (summary.costDetailBreakdown[label] || 0) + amount;
+        });
+      });
+
+      return summary;
+    }, [selectedMonthSchedules]);
+
   const { totalBen, totalInc, totalCost, benefitByCategory, incomeByCategory, costByCategory } =
     useMemo(() => {
       const benefitMap = createCategoryMap();
@@ -249,9 +289,16 @@ export default function StatsPage({
       .filter(([, amount]) => amount > 0)
       .sort(([, aAmount], [, bAmount]) => bAmount - aAmount);
 
+  const getDetailEntries = (detailMap: Record<string, number>) =>
+    Object.entries(detailMap)
+      .filter(([, amount]) => amount > 0)
+      .sort(([, aAmount], [, bAmount]) => bAmount - aAmount);
+
   const benefitEntries = getCategoryEntries(benefitByCategory);
   const incomeEntries = getCategoryEntries(incomeByCategory);
   const costEntries = getCategoryEntries(costByCategory);
+  const incomeDetailEntries = getDetailEntries(incomeDetailBreakdown);
+  const costDetailEntries = getDetailEntries(costDetailBreakdown);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -482,14 +529,14 @@ export default function StatsPage({
                       <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
                         {category}
                       </div>
-                      <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                      <div className="flex-1 max-w-[150px] bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-[#ff9431] to-[#ff6b2c] rounded-full transition-all duration-500"
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
-                      <div className="w-12 text-right text-xs text-[#9ca3af] font-semibold">
-                        {percentage}%
+                      <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                        {amount.toLocaleString()}원
                       </div>
                     </div>
                   );
@@ -523,16 +570,10 @@ export default function StatsPage({
                 </button>
               </div>
               <p className="text-xs text-[#6b7280] mt-1">
-                체험단 현금 수입과 등록한 부수입을 한눈에 확인해보세요.
+                체험단 수입과 등록한 부수입을 한눈에 확인해보세요.
               </p>
               <div className="mt-4 space-y-4">
                 <div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-[13px] font-bold text-[#0f172a]">체험단 현금 수입</div>
-                    <div className="text-xs text-[#6b7280]">
-                      {totalInc ? `₩ ${totalInc.toLocaleString()}` : '없음'}
-                    </div>
-                  </div>
                   <div className="mt-3 space-y-3">
                     {incomeEntries.map(([category, amount]) => {
                       const percentage = totalInc ? Math.round((amount / totalInc) * 100) : 0;
@@ -541,14 +582,14 @@ export default function StatsPage({
                           <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
                             {category}
                           </div>
-                          <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                          <div className="flex-1 max-w-[150px] bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                             <div
                               className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
-                          <div className="w-12 text-right text-xs text-[#9ca3af] font-semibold">
-                            {percentage}%
+                          <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                            {amount.toLocaleString()}원
                           </div>
                         </div>
                       );
@@ -561,12 +602,47 @@ export default function StatsPage({
                   </div>
                 </div>
 
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-[13px] font-bold text-[#0f172a]">체험단 수익 상세</div>
+                    <div className="text-xs text-[#6b7685]">
+                      {detailIncomeTotal ? `총 ${detailIncomeTotal.toLocaleString()}원` : '없음'}
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    {incomeDetailEntries.map(([label, amount]) => {
+                      const percentage = detailIncomeTotal
+                        ? Math.round((amount / detailIncomeTotal) * 100)
+                        : 0;
+                      return (
+                        <div key={label} className="flex items-center gap-3">
+                          <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
+                            {label}
+                          </div>
+                          <div className="flex-1 max-w-[150px] bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                          <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                            {amount.toLocaleString()}원
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {!incomeDetailEntries.length && (
+                      <div className="text-xs text-[#9ca3af]">상세 수익 내역이 없습니다.</div>
+                    )}
+                  </div>
+                </div>
+
                 {selectedMonthExtraIncomes.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between">
                       <div className="text-[13px] font-bold text-[#0f172a]">부수입</div>
                       <div className="text-xs text-[#6b7685]">
-                        {totalExtraIncome ? `₩ ${totalExtraIncome.toLocaleString()}` : '없음'}
+                        {totalExtraIncome ? `총 ${totalExtraIncome.toLocaleString()}원` : '없음'}
                       </div>
                     </div>
                     <div className="mt-3 space-y-3">
@@ -586,14 +662,14 @@ export default function StatsPage({
                                 >
                                   {income.title}
                                 </div>
-                                <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                                <div className="flex-1 max-w-[150px] bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                                   <div
                                     className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
                                     style={{ width: `${percentage}%` }}
                                   />
                                 </div>
-                                <div className="w-12 text-right text-xs text-[#9ca3af] font-semibold">
-                                  {percentage}%
+                                <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                                  {income.amount.toLocaleString()}원
                                 </div>
                               </div>
                             );
@@ -638,14 +714,14 @@ export default function StatsPage({
                       <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
                         {category}
                       </div>
-                      <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                      <div className="flex-1 max-w-[150px] bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-[#fca5a5] to-[#ef4444] rounded-full transition-all duration-500"
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
-                      <div className="w-12 text-right text-xs text-[#9ca3af] font-semibold">
-                        {percentage}%
+                      <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                        {amount.toLocaleString()}원
                       </div>
                     </div>
                   );
@@ -655,6 +731,38 @@ export default function StatsPage({
                     아직 지출 내역이 기록되지 않았습니다.
                   </div>
                 )}
+              </div>
+              <div className="mt-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-[13px] font-bold text-[#0f172a]">체험단 지출 상세</div>
+                  <div className="text-xs text-[#6b7685]">
+                    {detailCostTotal ? `총 ${detailCostTotal.toLocaleString()}원` : '없음'}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {costDetailEntries.map(([label, amount]) => {
+                    const percentage = detailCostTotal
+                      ? Math.round((amount / detailCostTotal) * 100)
+                      : 0;
+                    return (
+                      <div key={label} className="flex items-center gap-3">
+                        <div className="w-26 text-[12px] font-semibold text-[#4b5563]">{label}</div>
+                        <div className="flex-1 max-w-[150px] bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-[#fca5a5] to-[#ef4444] rounded-full transition-all duration-500"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                          {amount.toLocaleString()}원
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {!costDetailEntries.length && (
+                    <div className="text-xs text-[#9ca3af]">상세 지출 내역이 없습니다.</div>
+                  )}
+                </div>
               </div>
             </section>
           </div>
