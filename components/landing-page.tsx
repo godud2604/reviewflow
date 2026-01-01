@@ -613,6 +613,8 @@ export default function LandingPage() {
                 이번 달 내가 만든 경제적 가치를
                 <br />
                 자동으로 계산해 드립니다.
+                <br />
+                가계부처럼 항목별로 꼼꼼하게 확인할 수 있어요.
               </p>
             </div>
             <div className="w-full md:w-auto md:flex-shrink-0">
@@ -1005,12 +1007,12 @@ export default function LandingPage() {
               <ul className="text-[16px] text-[#4E5968] space-y-3 mb-8 flex-grow">
                 <li>✔ 체험단 일정 등록</li>
                 <li>✔ 캘린더 확인</li>
-                <li>✔ 할 일 관리</li>
+                <li>✔ 방문 일정 브리핑</li>
                 <li>✔ 이번 달 수익/통계 페이지 제공</li>
-                <li>✔ 수익 자랑하기</li>
+                {/* <li>✔ 수익 자랑하기</li>
                 <li className="pl-6 mt-[-4px] text-xs">
                   ( 수익 자랑하기는 12월 중으로 찾아올게요. 조금만 기다려주세요 ! )
-                </li>
+                </li> */}
               </ul>
               <div className="w-full pt-6 border-t border-gray-200">
                 <div className="text-3xl font-bold mb-6 text-[#191F28]">₩0</div>
@@ -1030,28 +1032,29 @@ export default function LandingPage() {
               </div>
               <h3 className="text-2xl font-bold mb-2 text-[#FF5722]">PRO</h3>
               <p className="text-[#6B7684] mb-6">더 깊고 편리한 리뷰 관리 기능</p>
-              <ul className="text-[16px] text-[#333D4B] space-y-3 mb-8 flex-grow font-medium">
-                <li>✨ 하루 1번 요약 알림 제공 </li>
-                <li className="pl-6 mt-[-4px] text-xs">
-                  ( 당일 아침, 오늘 해야 할 방문/작성/발행 일정 등, 요약 내용을 깔끔하게 알려드려요.
-                  )
+              <ul className="text-[16px] text-[#333D4B] space-y-3 mb-9 flex-grow font-medium">
+                <li>✔ 체험단 일정 등록</li>
+                <li>✔ 캘린더 확인</li>
+                <li>✔ 방문 일정 브리핑</li>
+                <li>✔ 월별 수익 내용 전체 조회 가능</li>
+                <li className="pl-5 mt-[-4px] text-xs">월별 성장 변화도 한눈에 확인</li>
+                <li>✔ 카카오 알림톡으로 요약 제공 </li>
+                <li className="pl-5 mt-[-4px] text-xs">
+                  방문, 마감 일정 또는 마감 초과가 있는 날, <br />
+                  아침에 카카오 알림톡으로 요약해드려요.
                 </li>
-                <li>✨ 활동 내역 엑셀 다운로드</li>
-                <li>✨ 실시간 랭킹 리포트 제공</li>
-                <li>✨ 월별 수익 내용 전체 조회 가능</li>
-                <li className="pl-6 mt-[-4px] text-xs">( 월별 성장 변화도 한눈에 확인 )</li>
+                <li>✔ 활동 내역 엑셀 다운로드</li>
               </ul>
               <div className="w-full pt-6 border-t border-gray-100">
-                <div className="flex items-end gap-2 mb-2">
+                <div className="flex items-end gap-2 mb-5">
                   <span className="text-3xl font-bold text-[#191F28]">₩2,900</span>
                   <span className="text-lg text-[#8B95A1]">/월</span>
                 </div>
-                <p className="text-[#FF5722] font-bold text-sm mb-6">🔥 사전 등록 시 3개월 무료</p>
                 <button
-                  onClick={handlePreRegister}
+                  onClick={handleFreeTrial}
                   className="w-full bg-[#FF5722] text-white px-6 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition cursor-pointer"
                 >
-                  사전 등록하기
+                  PRO 1개월 무료 혜택 받기
                 </button>
               </div>
             </div>
@@ -1071,8 +1074,9 @@ export default function LandingPage() {
                 정말 무료로 사용할 수 있나요?
               </summary>
               <p className="mt-4 text-[#6B7684] text-sm md:text-base leading-relaxed">
-                네! 기본 기능은 완전 무료입니다. 일정 관리, 수익 조회, 할 일 체크 등 핵심 기능을
-                모두 사용하실 수 있어요. 지금 바로 회원가입 후 이용해 보세요 :)
+                네! 기본 기능은 완전 무료입니다. 일정 관리, 수익 조회, 이번달 통계 등 핵심 기능을
+                모두 사용하실 수 있어요. 지금 바로 회원가입 후 PRO 1개월 무료 혜택으로 이용해 보세요
+                :)
               </p>
             </details>
             <details className="bg-white rounded-2xl p-6 shadow-sm">
@@ -1080,19 +1084,11 @@ export default function LandingPage() {
                 PRO 버전은 언제 필요한가요?
               </summary>
               <p className="mt-4 text-[#6B7684] text-sm md:text-base leading-relaxed">
-                매일 요약된 알림을 받고 싶거나, 엑셀로 활동 내역을 정리하고 싶을 때 PRO가 유용해요.
-                월별 요약 리포트도 볼 수 있어요.
+                마감일·방문일·마감 초과 알림을 카카오 알림톡으로 받고 싶을 때 PRO가 필요해요.
+                매월 가계부처럼 정리해보고 싶을 때도 PRO가 잘 맞아요.
               </p>
             </details>
-            <details className="bg-white rounded-2xl p-6 shadow-sm">
-              <summary className="font-bold text-[#191F28] cursor-pointer text-sm md:text-base">
-                사전 등록하면 어떤 혜택이 있나요?
-              </summary>
-              <p className="mt-4 text-[#6B7684] text-sm md:text-base leading-relaxed">
-                사전 등록자에게는 PRO 버전 3개월 무료 혜택을 드립니다. 정식 출시 전 가장 먼저 알림도
-                받으실 수 있어요.
-              </p>
-            </details>
+
             <details className="bg-white rounded-2xl p-6 shadow-sm">
               <summary className="font-bold text-[#191F28] cursor-pointer text-sm md:text-base">
                 모바일에서도 사용할 수 있나요?
