@@ -68,7 +68,8 @@ serve(async (req) => {
             .from('schedules')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
-            .eq('deadline', todayStr),
+            .eq('deadline', todayStr)
+            .neq('status', '완료'),
           supabaseAdmin
             .from('schedules')
             .select('*', { count: 'exact', head: true })
