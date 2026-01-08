@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { PostHogProvider } from '@/components/posthog-provider';
 import './globals.css';
 import Script from 'next/script';
+import TokenListener from '@/components/token-listener';
 
 export const metadata: Metadata = {
   title: '리뷰플로우 | 블로거 체험단 관리 앱',
@@ -85,6 +86,7 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
         <PostHogProvider>
+          <TokenListener /> {/* 👈 여기에 넣으면 됩니다 */}
           {children}
           <Toaster />
           <Analytics />
