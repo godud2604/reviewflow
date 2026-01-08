@@ -4,12 +4,44 @@ import { useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js'; // ⚠️ 본인의 supabase client 경로로 수정!
 
 export default function TokenListener() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   useEffect(() => {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    // 💾 Supabase 저장 함수
+    const saveTokenToSupabase = async (token: string) => {
+      try {
+        // 1. 현재 로그인한 유저 확인
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          console.log('로그인 상태가 아니라서 토큰 저장을 건너뜁니다.');
+          return;
+        }
+
+        // 2. profiles 테이블에 토큰 업데이트 (Upsert)
+        const { error } = await supabase
+          .from('user_profiles') // ⚠️ 테이블 이름 확인 (users 또는 profiles)
+          .upsert({
+            id: user.id,
+            expo_push_token: token,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) {
+          console.error('❌ Supabase 저장 실패:', error);
+        } else {
+          console.log('✅ Supabase 저장 성공!');
+        }
+      } catch (e) {
+        console.error('저장 중 오류 발생:', e);
+      }
+    };
+
     // 📩 앱에서 보낸 메시지를 받는 함수
     const handleMessage = async (event: any) => {
       try {
@@ -46,38 +78,6 @@ export default function TokenListener() {
       document.removeEventListener('message', handleMessage);
     };
   }, []);
-
-  // 💾 Supabase 저장 함수
-  const saveTokenToSupabase = async (token: string) => {
-    try {
-      // 1. 현재 로그인한 유저 확인
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        console.log('로그인 상태가 아니라서 토큰 저장을 건너뜁니다.');
-        return;
-      }
-
-      // 2. profiles 테이블에 토큰 업데이트 (Upsert)
-      const { error } = await supabase
-        .from('user_profiles') // ⚠️ 테이블 이름 확인 (users 또는 profiles)
-        .upsert({
-          id: user.id,
-          expo_push_token: token,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (error) {
-        console.error('❌ Supabase 저장 실패:', error);
-      } else {
-        console.log('✅ Supabase 저장 성공!');
-      }
-    } catch (e) {
-      console.error('저장 중 오류 발생:', e);
-    }
-  };
 
   return null; // 이 컴포넌트는 화면에 아무것도 그리지 않습니다.
 }
