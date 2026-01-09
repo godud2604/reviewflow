@@ -1084,8 +1084,8 @@ export default function LandingPage() {
                 PRO 버전은 언제 필요한가요?
               </summary>
               <p className="mt-4 text-[#6B7684] text-sm md:text-base leading-relaxed">
-                마감일·방문일·마감 초과 알림을 카카오 알림톡으로 받고 싶을 때 PRO가 필요해요.
-                매월 가계부처럼 정리해보고 싶을 때도 PRO가 잘 맞아요.
+                마감일·방문일·마감 초과 알림을 카카오 알림톡으로 받고 싶을 때 PRO가 필요해요. 매월
+                가계부처럼 정리해보고 싶을 때도 PRO가 잘 맞아요.
               </p>
             </details>
 
