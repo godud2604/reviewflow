@@ -73,6 +73,7 @@ export default function RootLayout({
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover"
         />
+        <meta name="naver-site-verification" content="ac464cf805997419a11e4e6e471c78a2fcd56ecf" />
         <link
           rel="stylesheet"
           as="style"
