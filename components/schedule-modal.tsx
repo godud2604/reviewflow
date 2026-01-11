@@ -1483,9 +1483,6 @@ export default function ScheduleModal({
                         <span className="text-[13px] font-bold text-orange-700">
                           📋 세부 마감일
                         </span>
-                        <span className="text-[11px] text-orange-600/70 translate-y-[1px]">
-                          각 단계별로 완료 체크
-                        </span>
                       </div>
                       {profileLoading ? (
                         <div className="space-y-3">
@@ -1582,56 +1579,74 @@ export default function ScheduleModal({
                                       </PopoverContent>
                                     </Popover>
                                     {hasDeadline && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const newDeadlines = (
-                                            formData.additionalDeadlines || []
-                                          ).map((d) => {
-                                            if (d.label === template.label) {
-                                              return { ...d, completed: !d.completed };
-                                            }
-                                            return d;
-                                          });
-                                          setFormData({
-                                            ...formData,
-                                            additionalDeadlines: newDeadlines,
-                                          });
-                                        }}
-                                        className={`flex items-center gap-1.5 px-3 h-[40px] rounded-[18px] transition-all active:scale-95 font-semibold text-[13px] ${
-                                          isCompleted
-                                            ? 'bg-orange-400 text-white shadow-sm'
-                                            : 'bg-white text-neutral-600 border border-neutral-200 hover:border-orange-300'
-                                        }`}
-                                      >
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          width="16"
-                                          height="16"
-                                          viewBox="0 0 20 20"
-                                          fill="none"
-                                          className="inline-block"
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const newDeadlines = (
+                                              formData.additionalDeadlines || []
+                                            ).map((d) => {
+                                              if (d.label === template.label) {
+                                                return { ...d, completed: !d.completed };
+                                              }
+                                              return d;
+                                            });
+                                            setFormData({
+                                              ...formData,
+                                              additionalDeadlines: newDeadlines,
+                                            });
+                                          }}
+                                          className={`flex items-center gap-1.5 px-3 h-[40px] rounded-[18px] transition-all active:scale-95 font-semibold text-[13px] ${
+                                            isCompleted
+                                              ? 'bg-orange-400 text-white shadow-sm'
+                                              : 'bg-white text-neutral-600 border border-neutral-200 hover:border-orange-300'
+                                          }`}
                                         >
-                                          <circle
-                                            cx="10"
-                                            cy="10"
-                                            r="8"
-                                            stroke={isCompleted ? 'white' : '#d1d5db'}
-                                            strokeWidth="2"
-                                            fill={isCompleted ? 'white' : 'transparent'}
-                                          />
-                                          {isCompleted && (
-                                            <path
-                                              d="M6 10.5l2.5 2.5 5-5"
-                                              stroke="#f97316"
+                                          <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 20 20"
+                                            fill="none"
+                                            className="inline-block"
+                                          >
+                                            <circle
+                                              cx="10"
+                                              cy="10"
+                                              r="8"
+                                              stroke={isCompleted ? 'white' : '#d1d5db'}
                                               strokeWidth="2"
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
+                                              fill={isCompleted ? 'white' : 'transparent'}
                                             />
-                                          )}
-                                        </svg>
-                                        <span>{isCompleted ? '완료' : '완료'}</span>
-                                      </button>
+                                            {isCompleted && (
+                                              <path
+                                                d="M6 10.5l2.5 2.5 5-5"
+                                                stroke="#f97316"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                              />
+                                            )}
+                                          </svg>
+                                          <span>{isCompleted ? '완료' : '완료'}</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const filtered = (
+                                              formData.additionalDeadlines || []
+                                            ).filter((d) => d.label !== template.label);
+                                            setFormData({
+                                              ...formData,
+                                              additionalDeadlines: filtered,
+                                            });
+                                          }}
+                                          className="flex items-center gap-1 px-2.5 h-[40px] rounded-[18px] bg-white text-neutral-500 border border-neutral-200 hover:border-red-300 hover:text-red-600 transition-all active:scale-95 font-semibold text-[13px]"
+                                          title="날짜 초기화"
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                      </>
                                     )}
                                   </div>
                                 </div>

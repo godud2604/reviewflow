@@ -277,7 +277,7 @@ function PageContent() {
   if (isDataLoading) {
     return (
       <div className="min-h-screen bg-neutral-200 md:flex md:items-center md:justify-center md:p-4">
-        <div className="w-full md:max-w-[390px] h-screen md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col items-center justify-center">
+        <div className="w-full md:max-w-[800px] h-screen md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mb-2"></div>
           <p className="text-gray-500 text-sm">데이터 불러오는 중...</p>
         </div>
@@ -291,7 +291,7 @@ function PageContent() {
   return (
     // 1. 최상단 컨테이너를 fixed로 고정하여 사파리 바운스(튕김)를 방지
     <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
-      <div className="w-full md:max-w-[390px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
+      <div className="w-full md:max-w-[800px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
         <main className="flex-1 overflow-y-auto outline-none">
           {showGlobalHeader && (
             <GlobalHeader

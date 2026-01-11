@@ -552,7 +552,7 @@ export default function ScheduleItem({
             {/* 1. 메모 영역 */}
             {hasMemo && (
               <div className="rounded-2xl bg-neutral-50 p-3 border border-neutral-100 px-3 py-2 text-[12px] text-neutral-700 whitespace-pre-wrap break-words">
-                <div className="flex justify-between items-center gap-1.5 mb-1">
+                <div className="flex justify-between items-center gap-1.5">
                   <span className="text-[10.5px] font-semibold text-orange-700">메모</span>
                   <button
                     type="button"
