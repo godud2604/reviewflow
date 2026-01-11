@@ -5,7 +5,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { DEFAULT_SCHEDULE_CHANNEL_OPTIONS } from '@/lib/schedule-channels';
 import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
-import type { ScheduleTransactionItem } from '@/types';
+import type { ScheduleTransactionItem, DeadlineTemplate, TransactionType } from '@/types';
 
 const DEFAULT_PLATFORMS = ['레뷰', '리뷰노트', '스타일씨', '리뷰플레이스'];
 const DEFAULT_CATEGORIES = [
@@ -37,6 +37,7 @@ export interface UserProfile {
   categories: string[];
   scheduleChannels: string[];
   incomeDetails: ScheduleTransactionItem[];
+  deadlineTemplates: DeadlineTemplate[];
   profileImagePath: string | null;
   phoneNumber: string | null;
   phoneVerifiedAt: string | null;
@@ -64,6 +65,7 @@ interface UseUserProfileReturn {
   categories: string[];
   scheduleChannels: string[];
   incomeDetails: ScheduleTransactionItem[];
+  deadlineTemplates: DeadlineTemplate[];
   profileImagePath: string | null;
   socialLinks: SocialLinks;
   recentCampaigns: CampaignEntry[];
@@ -76,6 +78,7 @@ interface UseUserProfileReturn {
   updateNickname: (nickname: string) => Promise<boolean>;
   updateCategories: (categories: string[]) => Promise<boolean>;
   updateIncomeDetails: (details: ScheduleTransactionItem[]) => Promise<boolean>;
+  updateDeadlineTemplates: (templates: DeadlineTemplate[]) => Promise<boolean>;
   updateProfileImagePath: (path: string | null) => Promise<boolean>;
   updateSocialLinks: (links: SocialLinks) => Promise<boolean>;
   updateRecentCampaigns: (campaigns: CampaignEntry[]) => Promise<boolean>;
@@ -163,6 +166,9 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
                 incomeDetails: Array.isArray(newProfile.income_details)
                   ? newProfile.income_details
                   : [],
+                deadlineTemplates: Array.isArray(newProfile.deadline_templates)
+                  ? newProfile.deadline_templates
+                  : [],
                 profileImagePath: newProfile.profile_image_path ?? null,
                 phoneNumber: newProfile.phone_number ?? null,
                 phoneVerifiedAt: newProfile.phone_verified_at ?? null,
@@ -201,6 +207,9 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
                 ? data.schedule_channels
                 : DEFAULT_SCHEDULE_CHANNEL_OPTIONS,
             incomeDetails: Array.isArray(data.income_details) ? data.income_details : [],
+            deadlineTemplates: Array.isArray(data.deadline_templates)
+              ? data.deadline_templates
+              : [],
             profileImagePath: data.profile_image_path ?? null,
             phoneNumber: data.phone_number ?? null,
             phoneVerifiedAt: data.phone_verified_at ?? null,
@@ -525,11 +534,11 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
     async (details: ScheduleTransactionItem[]): Promise<boolean> => {
       if (!userId || !profile) return false;
 
-      const cleaned = details
+      const cleaned: ScheduleTransactionItem[] = details
         .map((item) => ({
           ...item,
           label: item.label.trim(),
-          type: item.type === 'EXPENSE' ? 'EXPENSE' : 'INCOME',
+          type: (item.type === 'EXPENSE' ? 'EXPENSE' : 'INCOME') as TransactionType,
           enabled: typeof item.enabled === 'boolean' ? item.enabled : true,
           amount: 0,
         }))
@@ -548,6 +557,40 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
         }
 
         setProfile({ ...profile, incomeDetails: cleaned });
+        return true;
+      } catch (err) {
+        showError(err instanceof Error ? err.message : '알 수 없는 오류');
+        return false;
+      }
+    },
+    [userId, profile, showError]
+  );
+
+  const updateDeadlineTemplates = useCallback(
+    async (templates: DeadlineTemplate[]): Promise<boolean> => {
+      if (!userId || !profile) return false;
+
+      const cleaned = templates
+        .map((item) => ({
+          ...item,
+          label: item.label.trim(),
+          enabled: typeof item.enabled === 'boolean' ? item.enabled : true,
+        }))
+        .filter((item) => item.label);
+
+      try {
+        const supabase = getSupabaseClient();
+        const { error: updateError } = await supabase
+          .from('user_profiles')
+          .update({ deadline_templates: cleaned })
+          .eq('id', userId);
+
+        if (updateError) {
+          showError(updateError.message);
+          return false;
+        }
+
+        setProfile({ ...profile, deadlineTemplates: cleaned });
         return true;
       } catch (err) {
         showError(err instanceof Error ? err.message : '알 수 없는 오류');
@@ -585,6 +628,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
     categories: profile?.categories || [],
     scheduleChannels: profile?.scheduleChannels || [],
     incomeDetails: profile?.incomeDetails || [],
+    deadlineTemplates: profile?.deadlineTemplates || [],
     profileImagePath: profile?.profileImagePath ?? null,
     socialLinks,
     recentCampaigns: memoizedRecentCampaigns,
@@ -597,6 +641,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
     updateNickname,
     updateCategories,
     updateIncomeDetails,
+    updateDeadlineTemplates,
     updateProfileImagePath,
     updateSocialLinks,
     updateRecentCampaigns,

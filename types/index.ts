@@ -5,6 +5,19 @@ export interface GuideFile {
   type: string; // MIME type
 }
 
+export interface AdditionalDeadline {
+  id: string;
+  label: string;
+  date: string;
+  completed?: boolean;
+}
+
+export interface DeadlineTemplate {
+  id: string;
+  label: string;
+  enabled?: boolean;
+}
+
 export interface Schedule {
   id: number;
   title: string;
@@ -42,6 +55,7 @@ export interface Schedule {
   visit: string;
   visitTime: string;
   dead: string;
+  additionalDeadlines?: AdditionalDeadline[];
   benefit: number;
   income: number;
   cost: number;

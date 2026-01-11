@@ -88,14 +88,25 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
             </button>
             {showKakaoCta && (
               <>
-                <span className="pointer-events-none absolute -right-1 -top-1 h-3 w-3 rounded-full bg-amber-400 shadow-[0_0_0_2px_rgba(247,247,248,1)] animate-pulse" />
-                <div className="pointer-events-none absolute right-0 top-12 w-[220px] rounded-xl border border-amber-200 bg-white/95 px-3 py-2 text-[12px] text-neutral-800 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur">
-                  <p className="font-semibold text-neutral-900">
-                    깜빡하기 쉬운 일정, 놓치지 마세요!
-                  </p>
-                  <p className="text-neutral-600">🔔 알림 버튼을 눌러 카톡으로 일정 받기</p>
-                  <span className="absolute -top-[9px] right-4 h-0 w-0 border-x-[9px] border-b-[9px] border-x-transparent border-b-amber-200" />
-                  <span className="absolute -top-2 right-[18px] h-0 w-0 border-x-8 border-b-8 border-x-transparent border-b-white/95" />
+                <span className="pointer-events-none absolute -right-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 shadow-[0_0_0_2px_rgba(247,247,248,1)] animate-pulse" />
+                <div className="pointer-events-none absolute right-0 top-12 w-[220px] rounded-xl bg-white/95 px-3 py-2 text-[12px] text-neutral-800 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur overflow-hidden">
+                  <div
+                    className="absolute inset-0 rounded-xl p-[3px] bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
+                    style={{
+                      WebkitMask:
+                        'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                      WebkitMaskComposite: 'xor',
+                      maskComposite: 'exclude',
+                    }}
+                  ></div>
+                  <div className="relative z-10">
+                    <p className="font-semibold text-neutral-900">
+                      깜빡하기 쉬운 일정, 놓치지 마세요!
+                    </p>
+                    <p className="text-neutral-600">🔔 알림 버튼을 눌러 카톡으로 일정 받기</p>
+                  </div>
+                  <span className="absolute -top-[9px] right-4 h-0 w-0 border-x-[9px] border-b-[9px] border-x-transparent border-b-orange-500 z-20" />
+                  <span className="absolute -top-2 right-[18px] h-0 w-0 border-x-8 border-b-8 border-x-transparent border-b-white/95 z-20" />
                 </div>
               </>
             )}

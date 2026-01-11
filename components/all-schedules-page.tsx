@@ -16,12 +16,14 @@ export default function AllSchedulesPage({
   onBack,
   onCompleteClick,
   onPaybackConfirm,
+  onAdditionalDeadlineToggle,
 }: {
   schedules: Schedule[];
   onScheduleClick: (id: number) => void;
   onBack: () => void;
   onCompleteClick?: (id: number) => void;
   onPaybackConfirm?: (id: number) => void;
+  onAdditionalDeadlineToggle?: (scheduleId: number, deadlineId: string) => void;
 }) {
   const [filter, setFilter] = useState<FilterType>('ALL');
   const today = getTodayInKST();
@@ -153,6 +155,11 @@ export default function AllSchedulesPage({
               onClick={() => onScheduleClick(schedule.id)}
               onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
               onPaybackConfirm={onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined}
+              onAdditionalDeadlineToggle={
+                onAdditionalDeadlineToggle
+                  ? (deadlineId) => onAdditionalDeadlineToggle(schedule.id, deadlineId)
+                  : undefined
+              }
               today={today}
             />
           ))

@@ -56,6 +56,7 @@ export default function ScheduleItem({
   onClick,
   onCompleteClick,
   onPaybackConfirm,
+  onAdditionalDeadlineToggle,
   today,
   selectedDate,
 }: {
@@ -63,6 +64,7 @@ export default function ScheduleItem({
   onClick: () => void;
   onCompleteClick?: () => void;
   onPaybackConfirm?: () => void;
+  onAdditionalDeadlineToggle?: (deadlineId: string) => void;
   today: string;
   selectedDate?: string | null;
 }) {
@@ -115,6 +117,9 @@ export default function ScheduleItem({
   const channelList = schedule.channel?.filter(Boolean) ?? [];
   const channelLabel = channelList.join(', ');
   const hasChannelLabel = channelLabel.length > 0;
+  const hasAdditionalDeadlines = Boolean(
+    schedule.additionalDeadlines && schedule.additionalDeadlines.length > 0
+  );
 
   // --- 데이터 체크 ---
   const memoText = stripLegacyScheduleMemo(schedule.memo).trim();
@@ -136,8 +141,14 @@ export default function ScheduleItem({
   const hasOwnerPhone = Boolean(ownerPhone);
   const hasContact = hasStorePhone || hasOwnerPhone;
 
+  // 방문형 주소 정보
+  const isVisitType = schedule.reviewType === '방문형';
+  const region = schedule.region?.trim();
+  const regionDetail = schedule.regionDetail?.trim();
+  const hasAddress = Boolean(isVisitType && (region || regionDetail));
+
   // 메모나 연락처 둘 중 하나라도 있으면 버튼 노출
-  const hasDetails = hasMemo || hasContact;
+  const hasDetails = hasMemo || hasContact || hasAddress;
 
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const { toast } = useToast();
@@ -147,10 +158,7 @@ export default function ScheduleItem({
   // 버튼 라벨 결정 로직
   const getToggleButtonLabel = () => {
     if (isDetailsOpen) return '닫기';
-    if (hasMemo && hasContact) return '메모/연락처';
-    if (hasMemo) return '메모 보기';
-    if (hasContact) return '연락처 보기';
-    return '정보 보기';
+    return '상세 보기';
   };
 
   return (
@@ -177,42 +185,44 @@ export default function ScheduleItem({
               onCompleteClick?.();
             }
           }}
-          className={`py-1 rounded-full text-[10px] font-bold border transition-all active:scale-95 w-full text-center ${
+          className={`py-1 rounded-full text-[9px] font-bold border transition-all active:scale-95 w-full text-center ${
             isCompleted
               ? 'bg-orange-50 border-orange-200 text-orange-500 shadow-sm'
               : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100'
           }`}
         >
-          <span className="flex items-center gap-1.5 px-2.5 text-[10px] font-bold">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="13"
-              height="13"
-              viewBox="0 0 20 20"
-              fill="none"
-              className="inline-block align-middle"
-            >
-              <circle
-                cx="10"
-                cy="10"
-                r="9"
-                stroke={isCompleted ? '#fb923c' : '#d1d5db'}
-                strokeWidth="2"
-                fill={isCompleted ? '#fb923c' : 'white'}
-              />
-              {isCompleted && (
-                <path
-                  d="M6 10.5l2.5 2.5 5-5"
-                  stroke="#fff"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              )}
-            </svg>
-            <span className="translate-y-[-0.5px]">{isCompleted ? '완료' : '완료'}</span>
+          <span className="flex justify-center items-center gap-1 px-2 text-[9px] font-bold">
+            <span className="translate-y-[-0.5px] truncate">{isCompleted ? '완료' : '완료'}</span>
           </span>
         </button>
+
+        {schedule.additionalDeadlines &&
+          schedule.additionalDeadlines.length > 0 &&
+          schedule.additionalDeadlines.map((deadline) => {
+            if (!deadline.date) return null;
+            const isDeadlineCompleted = deadline.completed === true;
+            return (
+              <button
+                key={deadline.id}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onAdditionalDeadlineToggle) {
+                    onAdditionalDeadlineToggle(deadline.id);
+                  }
+                }}
+                className={`py-1 rounded-full text-[9px] font-bold border transition-all active:scale-95 w-full text-center ${
+                  isDeadlineCompleted
+                    ? 'bg-orange-50 border-orange-200 text-orange-500 shadow-sm'
+                    : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100'
+                }`}
+              >
+                <span className="flex justify-center items-center gap-1 px-2 text-[9px] font-bold">
+                  <span className="translate-y-[-0.5px] truncate">{deadline.label}</span>
+                </span>
+              </button>
+            );
+          })}
 
         {hasPaybackExpected && (
           <button
@@ -223,7 +233,7 @@ export default function ScheduleItem({
                 onPaybackConfirm?.();
               }
             }}
-            className={`px-2 py-1 rounded-full text-[10px] font-bold border transition-all active:scale-95 w-full text-center ${
+            className={`px-2 py-1 rounded-full text-[9px] font-bold border transition-all active:scale-95 w-full text-center ${
               isPaid
                 ? 'bg-orange-600/70 text-white border-orange-600 shadow-sm'
                 : 'bg-white text-gray-400 border-gray-200 hover:text-orange-400 hover:border-orange-200'
@@ -246,7 +256,7 @@ export default function ScheduleItem({
             </div>
           </div>
         </div>
-        <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1">
+        <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1 flex-wrap">
           <span className="font-medium text-neutral-600">
             {schedule.reviewType === '방문형' ? (
               <>
@@ -254,12 +264,20 @@ export default function ScheduleItem({
                   {visitLabel}
                 </span>
                 <span className="mx-1 text-neutral-400">|</span>
-                <span className={isDeadActive ? 'font-bold text-rose-700' : undefined}>
+                <span
+                  className={`${isDeadActive ? 'font-bold text-rose-700' : ''} ${
+                    isCompleted ? 'line-through opacity-50' : ''
+                  }`}
+                >
                   {deadLabel}
                 </span>
               </>
             ) : schedule.dead ? (
-              <span className={isDeadActive ? 'font-bold text-rose-700' : undefined}>
+              <span
+                className={`${isDeadActive ? 'font-bold text-rose-700' : ''} ${
+                  isCompleted ? 'line-through opacity-50' : ''
+                }`}
+              >
                 {deadLabel}
               </span>
             ) : schedule.visit ? (
@@ -270,6 +288,25 @@ export default function ScheduleItem({
               '미정'
             )}
           </span>
+          {schedule.additionalDeadlines &&
+            schedule.additionalDeadlines.length > 0 &&
+            schedule.additionalDeadlines.map((deadline) => {
+              if (!deadline.date) return null;
+              const isActiveDeadline = selectedDate && deadline.date === selectedDate;
+              const isDeadlineCompleted = deadline.completed === true;
+              return (
+                <span key={deadline.id} className="font-medium text-neutral-600">
+                  <span className="text-neutral-400">|</span>
+                  <span
+                    className={`ml-1.5 ${isActiveDeadline ? 'font-bold text-rose-700' : ''} ${
+                      isDeadlineCompleted ? 'line-through opacity-50' : ''
+                    }`}
+                  >
+                    {deadline.label} {deadline.date.slice(5)}
+                  </span>
+                </span>
+              );
+            })}
           {hasPaybackExpected && (
             <span className="text-sm shrink-0 ml-1 opacity-50" title="페이백 예정">
               💸
@@ -318,27 +355,28 @@ export default function ScheduleItem({
                 setIsDetailsOpen((prev) => !prev);
               }}
               aria-expanded={isDetailsOpen}
-              className={`flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10.5px] font-semibold transition-all duration-200 active:scale-95 ${
+              className={`flex items-center gap-1 rounded-[10px] px-2.5 py-[3px] text-[10.5px] font-semibold transition-all duration-150 border ${
                 isDetailsOpen
-                  ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-sm'
-                  : 'bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50'
+                  ? 'bg-neutral-800 text-white border-neutral-800 shadow-md'
+                  : 'bg-white text-neutral-700 border-neutral-300 hover:shadow-md hover:border-neutral-400 active:shadow-sm'
               }`}
             >
-              <span aria-hidden className="text-[9px]">
-                {hasContact ? '📞' : '📝'}
+              <span
+                className={`text-[10.5px] font-bold ${isDetailsOpen ? 'text-white' : 'text-orange-600'}`}
+              >
+                {getToggleButtonLabel()}
               </span>
-              <span className="text-[10.5px] font-bold">{getToggleButtonLabel()}</span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
+                width="11"
+                height="11"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className={`transition-transform duration-200 ${isDetailsOpen ? 'rotate-180' : ''}`}
+                className={`transition-transform duration-150 ${isDetailsOpen ? 'rotate-180' : ''}`}
               >
                 <path d="m6 9 6 6 6-6" />
               </svg>
@@ -352,26 +390,37 @@ export default function ScheduleItem({
             className="mt-3 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 origin-top"
             onClick={(event) => event.stopPropagation()}
           >
-            {/* 1. 메모 영역 */}
-            {hasMemo && (
-              <div className="rounded-2xl border border-neutral-200 bg-amber-50/50 px-3 py-2 text-[12px] text-neutral-700 whitespace-pre-wrap break-words">
+            {/* 1-1. 주소 영역 (방문형만) */}
+            {hasAddress && (
+              <div className="rounded-2xl bg-neutral-50 p-3 border border-neutral-100 px-3 py-2 text-[12px] text-neutral-700">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p>{memoText}</p>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-[10.5px] font-semibold text-orange-700">매장 주소</span>
+                    </div>
+                    {region && (
+                      <p className="text-[12px] font-semibold text-neutral-900 mb-1">{region}</p>
+                    )}
+                    {regionDetail && (
+                      <p className="text-[12px] font-medium break-words text-neutral-700">
+                        {regionDetail}
+                      </p>
+                    )}
                   </div>
                   <button
                     type="button"
                     className="shrink-0 rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-semibold text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
                     onClick={(event) => {
                       event.stopPropagation();
+                      const fullAddress = [region, regionDetail].filter(Boolean).join(' ');
                       navigator.clipboard
-                        .writeText(memoText)
+                        .writeText(fullAddress)
                         .then(() => {
-                          toast({ title: '메모가 복사되었습니다', duration: 1000 });
+                          toast({ title: '주소가 복사되었습니다', duration: 1000 });
                         })
                         .catch(() => {
                           toast({
-                            title: '메모 복사에 실패했습니다.',
+                            title: '주소 복사에 실패했습니다.',
                             variant: 'destructive',
                             duration: 1000,
                           });
@@ -498,6 +547,40 @@ export default function ScheduleItem({
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+            {/* 1. 메모 영역 */}
+            {hasMemo && (
+              <div className="rounded-2xl bg-neutral-50 p-3 border border-neutral-100 px-3 py-2 text-[12px] text-neutral-700 whitespace-pre-wrap break-words">
+                <div className="flex justify-between items-center gap-1.5 mb-1">
+                  <span className="text-[10.5px] font-semibold text-orange-700">메모</span>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-semibold text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      navigator.clipboard
+                        .writeText(memoText)
+                        .then(() => {
+                          toast({ title: '메모가 복사되었습니다', duration: 1000 });
+                        })
+                        .catch(() => {
+                          toast({
+                            title: '메모 복사에 실패했습니다.',
+                            variant: 'destructive',
+                            duration: 1000,
+                          });
+                        });
+                    }}
+                  >
+                    복사
+                  </button>
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p>{memoText}</p>
+                  </div>
+                </div>
               </div>
             )}
           </div>

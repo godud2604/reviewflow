@@ -62,30 +62,52 @@ serve(async (req) => {
     // 4. [변경됨] 병렬 처리 (Promise.all) - 100명 동시 발송
     const sendPromises = users.map(async (user) => {
       try {
-        // (1) DB 조회 병렬 실행
-        const [deadlineRes, visitRes, overdueRes] = await Promise.all([
-          supabaseAdmin
-            .from('schedules')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('deadline', todayStr)
-            .neq('status', '완료'),
-          supabaseAdmin
-            .from('schedules')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('visit_date', todayStr),
-          supabaseAdmin
-            .from('schedules')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .lt('deadline', todayStr)
-            .neq('status', '완료'),
-        ]);
+        // (1) DB 조회 - 모든 스케줄 가져오기 (완료 여부 무관)
+        const { data: allSchedules, error: schedError } = await supabaseAdmin
+          .from('schedules')
+          .select('id, deadline, additional_deadlines, status, visit_date')
+          .eq('user_id', user.id);
 
-        const dCount = deadlineRes.count ?? 0;
-        const vCount = visitRes.count ?? 0;
-        const oCount = overdueRes.count ?? 0;
+        if (schedError) throw schedError;
+
+        const schedules = allSchedules || [];
+
+        // 오늘 마감인 마감일 개수 카운트 (스케줄 개수가 아닌 마감일 개수)
+        let dCount = 0;
+        schedules.forEach((schedule) => {
+          // 메인 마감일이 오늘이고 미완료인 경우만 카운트
+          if (schedule.deadline === todayStr && schedule.status !== '완료') {
+            dCount++;
+          }
+
+          // 추가 마감일 중 오늘이고 개별 completed가 false인 것만 카운트
+          if (schedule.additional_deadlines) {
+            try {
+              // DB에서 JSON 문자열로 저장되어 있으므로 파싱 필요
+              const deadlines =
+                typeof schedule.additional_deadlines === 'string'
+                  ? JSON.parse(schedule.additional_deadlines)
+                  : schedule.additional_deadlines;
+
+              if (Array.isArray(deadlines)) {
+                const todayDeadlines = deadlines.filter(
+                  (d: any) => d.date === todayStr && !d.completed
+                );
+                dCount += todayDeadlines.length;
+              }
+            } catch (e) {
+              console.error('Failed to parse additional_deadlines', e);
+            }
+          }
+        });
+
+        // 오늘 방문 일정 카운트 (완료 여부 무관)
+        const vCount = schedules.filter((s) => s.visit_date === todayStr).length;
+
+        // 마감 초과 일정 카운트 (메인 마감일만 체크, 미완료만)
+        const oCount = schedules.filter(
+          (s) => s.deadline && s.deadline < todayStr && s.status !== '완료'
+        ).length;
 
         // 일정이 없으면 null 리턴 (나중에 필터링)
         if (dCount === 0 && vCount === 0 && oCount === 0) {

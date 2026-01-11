@@ -20,6 +20,7 @@ export interface DbSchedule {
   visit_date: string | null;
   visit_time: string | null;
   deadline: string | null;
+  additional_deadlines: string | null;
   benefit: number;
   income: number;
   cost: number;
@@ -113,10 +114,7 @@ export type DbTodoInsert = Omit<DbTodo, 'id' | 'created_at' | 'updated_at'>;
 export type DbChannelInsert = Omit<DbChannel, 'id' | 'created_at' | 'updated_at'>;
 export type DbFeaturedPostInsert = Omit<DbFeaturedPost, 'id' | 'created_at' | 'updated_at'>;
 export type DbExtraIncomeInsert = Omit<DbExtraIncome, 'id' | 'created_at' | 'updated_at'>;
-export type DbTutorialProgressInsert = Omit<
-  DbTutorialProgress,
-  'id' | 'created_at' | 'updated_at'
->;
+export type DbTutorialProgressInsert = Omit<DbTutorialProgress, 'id' | 'created_at' | 'updated_at'>;
 
 // Update Types
 export type DbScheduleUpdate = Partial<

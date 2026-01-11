@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
-import type { Schedule } from '@/types';
+import type { Schedule, AdditionalDeadline } from '@/types';
 import type { DbSchedule } from '@/types/database';
 import { parseStoredChannels, stringifyChannels } from '@/lib/schedule-channels';
 
@@ -29,6 +29,21 @@ const toNumber = (value: unknown) => {
 
 // DB -> Frontend 매핑
 function mapDbToSchedule(db: DbSchedule): Schedule {
+  let additionalDeadlines: AdditionalDeadline[] = [];
+  if (db.additional_deadlines) {
+    try {
+      const parsed =
+        typeof db.additional_deadlines === 'string'
+          ? JSON.parse(db.additional_deadlines)
+          : db.additional_deadlines;
+      if (Array.isArray(parsed)) {
+        additionalDeadlines = parsed;
+      }
+    } catch (e) {
+      console.error('Failed to parse additional_deadlines:', e);
+    }
+  }
+
   return {
     id: db.id,
     title: db.title,
@@ -44,6 +59,7 @@ function mapDbToSchedule(db: DbSchedule): Schedule {
     visit: db.visit_date || '',
     visitTime: db.visit_time || '',
     dead: db.deadline || '',
+    additionalDeadlines,
     benefit: toNumber(db.benefit),
     income: toNumber(db.income),
     cost: toNumber(db.cost),
@@ -76,6 +92,9 @@ function mapScheduleToDb(schedule: Omit<Schedule, 'id'>, userId: string) {
     visit_date: schedule.visit || null,
     visit_time: schedule.visitTime || null,
     deadline: schedule.dead || null,
+    additional_deadlines: schedule.additionalDeadlines?.length
+      ? JSON.stringify(schedule.additionalDeadlines)
+      : null,
     benefit: schedule.benefit || 0,
     income: schedule.income || 0,
     cost: schedule.cost || 0,
@@ -109,6 +128,11 @@ function mapScheduleUpdatesToDb(updates: Partial<Schedule>) {
   if (updates.visit !== undefined) dbUpdates.visit_date = updates.visit;
   if (updates.visitTime !== undefined) dbUpdates.visit_time = updates.visitTime;
   if (updates.dead !== undefined) dbUpdates.deadline = updates.dead;
+  if (updates.additionalDeadlines !== undefined) {
+    dbUpdates.additional_deadlines = updates.additionalDeadlines?.length
+      ? JSON.stringify(updates.additionalDeadlines)
+      : null;
+  }
   if (updates.benefit !== undefined) dbUpdates.benefit = updates.benefit;
   if (updates.income !== undefined) dbUpdates.income = updates.income;
   if (updates.cost !== undefined) dbUpdates.cost = updates.cost;

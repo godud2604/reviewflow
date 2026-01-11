@@ -1,7 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { Schedule, GuideFile, ScheduleChannel, ScheduleTransactionItem } from '@/types';
+import type {
+  Schedule,
+  GuideFile,
+  ScheduleChannel,
+  ScheduleTransactionItem,
+  TransactionType,
+  DeadlineTemplate,
+  AdditionalDeadline,
+} from '@/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -45,11 +53,15 @@ import {
 } from '@/lib/schedule-income-details';
 import { stripLegacyScheduleMemo } from '@/lib/schedule-memo-legacy';
 import { formatKoreanTime } from '@/lib/time-utils';
+import { getSupabaseClient } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Check, Copy, Loader2, Search, X } from 'lucide-react';
 import NaverMapSearchModal, { MapPlaceSelection } from '@/components/naver-map-search-modal';
 import { Z_INDEX } from '@/lib/z-index';
+
+const DEADLINE_MANAGEMENT_CTA_KEY = 'deadline-management-cta';
+const INCOME_DETAIL_MANAGEMENT_CTA_KEY = 'income-detail-management-cta';
 
 const getTodayInKST = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
@@ -162,6 +174,7 @@ const createEmptyFormData = (): Partial<Schedule> => ({
   visit: '',
   visitTime: '',
   dead: '',
+  additionalDeadlines: [],
   benefit: 0,
   income: 0,
   cost: 0,
@@ -250,6 +263,10 @@ export default function ScheduleModal({
   const [newIncomeDetailLabel, setNewIncomeDetailLabel] = useState('');
   const [newIncomeDetailType, setNewIncomeDetailType] =
     useState<ScheduleTransactionItem['type']>('INCOME');
+  const [showDeadlineManagement, setShowDeadlineManagement] = useState(false);
+  const [newDeadlineLabel, setNewDeadlineLabel] = useState('');
+  const [showDeadlineManagementCta, setShowDeadlineManagementCta] = useState(false);
+  const [showIncomeDetailManagementCta, setShowIncomeDetailManagementCta] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const {
@@ -257,12 +274,14 @@ export default function ScheduleModal({
     categories: userCategories,
     scheduleChannels: userChannels,
     incomeDetails: userIncomeDetails,
+    deadlineTemplates: userDeadlineTemplates,
     addPlatform,
     removePlatform,
     addScheduleChannel,
     removeScheduleChannel,
     updateCategories,
     updateIncomeDetails,
+    updateDeadlineTemplates,
     loading: profileLoading,
   } = useUserProfile();
   const isSubmittingRef = useRef(false);
@@ -333,6 +352,37 @@ export default function ScheduleModal({
     };
   }, [isOpen]);
 
+  // Load CTA tutorial status
+  useEffect(() => {
+    if (!user?.id || !isOpen) return;
+
+    const fetchCtaStatus = async () => {
+      const supabase = getSupabaseClient();
+
+      // Check deadline management CTA
+      const { data: deadlineData } = await supabase
+        .from('tutorial_progress')
+        .select('completed_at')
+        .eq('user_id', user.id)
+        .eq('tutorial_key', DEADLINE_MANAGEMENT_CTA_KEY)
+        .maybeSingle();
+
+      setShowDeadlineManagementCta(!deadlineData?.completed_at);
+
+      // Check income detail management CTA
+      const { data: incomeData } = await supabase
+        .from('tutorial_progress')
+        .select('completed_at')
+        .eq('user_id', user.id)
+        .eq('tutorial_key', INCOME_DETAIL_MANAGEMENT_CTA_KEY)
+        .maybeSingle();
+
+      setShowIncomeDetailManagementCta(!incomeData?.completed_at);
+    };
+
+    fetchCtaStatus();
+  }, [user?.id, isOpen]);
+
   const allPlatforms = React.useMemo(() => {
     return [...userPlatforms].sort((a, b) => a.localeCompare(b, 'ko'));
   }, [userPlatforms]);
@@ -378,14 +428,16 @@ export default function ScheduleModal({
     return a.every((item, idx) => item === b[idx]);
   };
 
-  const incomeDetailTemplates = React.useMemo(() => {
+  const incomeDetailTemplates = React.useMemo((): ScheduleTransactionItem[] => {
     return (userIncomeDetails || [])
-      .map((detail) => ({
-        ...detail,
-        label: detail.label?.trim() || '',
-        type: detail.type === 'EXPENSE' ? 'EXPENSE' : 'INCOME',
-        enabled: typeof detail.enabled === 'boolean' ? detail.enabled : true,
-      }))
+      .map(
+        (detail): ScheduleTransactionItem => ({
+          ...detail,
+          label: detail.label?.trim() || '',
+          type: (detail.type === 'EXPENSE' ? 'EXPENSE' : 'INCOME') as TransactionType,
+          enabled: typeof detail.enabled === 'boolean' ? detail.enabled : true,
+        })
+      )
       .filter(
         (detail) =>
           detail.label &&
@@ -598,14 +650,14 @@ export default function ScheduleModal({
         });
         return;
       }
+      const mappedDetails: ScheduleTransactionItem[] = activeScheduleDetails.map(
+        (detail): ScheduleTransactionItem =>
+          isDefaultIncomeDetail(detail) || isDefaultCostDetail(detail)
+            ? { ...detail, enabled: true }
+            : detail
+      );
       const sanitizedDetails = ensureDefaultIncomeDetails(
-        sanitizeIncomeDetails(
-          activeScheduleDetails.map((detail) =>
-            isDefaultIncomeDetail(detail) || isDefaultCostDetail(detail)
-              ? { ...detail, enabled: true }
-              : detail
-          )
-        )
+        sanitizeIncomeDetails(mappedDetails as ScheduleTransactionItem[])
       );
       const { incomeTotal, costTotal } = sumIncomeDetails(sanitizedDetails);
       updatedFormData.income = incomeTotal;
@@ -910,6 +962,63 @@ export default function ScheduleModal({
     });
   };
 
+  // Deadline Template Handlers
+  const deadlineTemplates = React.useMemo(
+    () => userDeadlineTemplates || [],
+    [userDeadlineTemplates]
+  );
+
+  const handleAddDeadlineTemplate = () => {
+    const trimmedLabel = newDeadlineLabel.trim();
+    if (!trimmedLabel) {
+      toast({
+        title: '항목 이름을 입력해주세요.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+    const duplicate = deadlineTemplates.some((template) => template.label === trimmedLabel);
+    if (duplicate) {
+      toast({
+        title: '이미 등록된 항목입니다.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+    const nextTemplates = [
+      ...deadlineTemplates,
+      { id: `deadline-${Date.now()}`, label: trimmedLabel, enabled: true },
+    ];
+    updateDeadlineTemplates(nextTemplates).then((success) => {
+      if (!success) return;
+      setNewDeadlineLabel('');
+      toast({
+        title: '항목이 추가되었습니다.',
+        duration: 1000,
+      });
+    });
+  };
+
+  const handleToggleDeadlineTemplate = (id: string, enabled: boolean) => {
+    const nextTemplates = deadlineTemplates.map((template) =>
+      template.id === id ? { ...template, enabled } : template
+    );
+    updateDeadlineTemplates(nextTemplates);
+  };
+
+  const handleRemoveDeadlineTemplate = (id: string) => {
+    const nextTemplates = deadlineTemplates.filter((template) => template.id !== id);
+    updateDeadlineTemplates(nextTemplates).then((success) => {
+      if (!success) return;
+      toast({
+        title: '항목이 삭제되었습니다.',
+        duration: 1000,
+      });
+    });
+  };
+
   const handleTemplateAmountChange = (template: ScheduleTransactionItem, value: string) => {
     const amount = parseNumber(value);
     setScheduleIncomeDetails((prev) => {
@@ -1135,9 +1244,7 @@ export default function ScheduleModal({
   };
 
   const { period, hour, minute } = parseVisitTime(formData.visitTime || '');
-  const displayVisitTime = formData.visitTime
-    ? formatKoreanTime(formData.visitTime)
-    : '시간 선택';
+  const displayVisitTime = formData.visitTime ? formatKoreanTime(formData.visitTime) : '시간 선택';
   const hasLocation = Boolean(formData.region || formData.regionDetail);
   const defaultIncomeDetail = scheduleIncomeDetails.find(isDefaultIncomeDetail);
   const defaultCostDetail = scheduleIncomeDetails.find(isDefaultCostDetail);
@@ -1165,9 +1272,7 @@ export default function ScheduleModal({
   );
   const orphanDetailKeys = React.useMemo(
     () =>
-      new Set(
-        orphanScheduleDetails.map((detail) => getIncomeDetailKey(detail.type, detail.label))
-      ),
+      new Set(orphanScheduleDetails.map((detail) => getIncomeDetailKey(detail.type, detail.label))),
     [orphanScheduleDetails]
   );
   const enabledExtraDetails = React.useMemo(() => {
@@ -1182,7 +1287,7 @@ export default function ScheduleModal({
     return Array.from(merged.values());
   }, [enabledIncomeDetailTemplates, orphanScheduleDetails]);
   const activeScheduleDetails = React.useMemo(
-    () =>
+    (): ScheduleTransactionItem[] =>
       scheduleIncomeDetails.filter(
         (detail) =>
           isDefaultIncomeDetail(detail) ||
@@ -1335,6 +1440,8 @@ export default function ScheduleModal({
                     </div>
                   </div>
 
+                  {schedule && <div className="space-y-6">{statusFields}</div>}
+
                   <div>
                     <label className="block text-[15px] font-bold text-[#FF5722] mb-2">
                       마감일 (필수)
@@ -1369,7 +1476,225 @@ export default function ScheduleModal({
                     )}
                   </div>
 
-                  {schedule && <div className="">{statusFields}</div>}
+                  {deadlineTemplates.filter((template) => template.enabled !== false).length >
+                    0 && (
+                    <div className="mt-4 p-4 rounded-2xl bg-orange-50/30 border border-orange-100">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-[13px] font-bold text-orange-700">
+                          📋 세부 마감일
+                        </span>
+                        <span className="text-[11px] text-orange-600/70 translate-y-[1px]">
+                          각 단계별로 완료 체크
+                        </span>
+                      </div>
+                      {profileLoading ? (
+                        <div className="space-y-3">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="space-y-2">
+                              <div className="h-5 w-20 bg-neutral-200 rounded animate-pulse" />
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 h-[40px] bg-neutral-200 rounded-[18px] animate-pulse" />
+                                <div className="w-20 h-[40px] bg-neutral-200 rounded-[18px] animate-pulse" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {deadlineTemplates
+                            .filter((template) => template.enabled !== false)
+                            .map((template) => {
+                              const deadline = (formData.additionalDeadlines || []).find(
+                                (d) => d.label === template.label
+                              );
+                              const hasDeadline = Boolean(deadline?.date);
+                              const isCompleted = deadline?.completed === true;
+                              return (
+                                <div key={template.id}>
+                                  <label
+                                    className={`block text-[14px] font-semibold mb-2 ${
+                                      isCompleted
+                                        ? 'text-neutral-400 line-through'
+                                        : 'text-neutral-700'
+                                    }`}
+                                  >
+                                    {template.label}
+                                  </label>
+                                  <div className="flex items-center gap-2">
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <button
+                                          className={`flex-1 h-[40px] rounded-[18px] px-4 text-[15px] text-left cursor-pointer focus-visible:outline-none transition-colors ${
+                                            isCompleted
+                                              ? 'bg-neutral-100 text-neutral-400'
+                                              : 'bg-white text-neutral-900 border border-neutral-200'
+                                          }`}
+                                        >
+                                          {deadline?.date
+                                            ? format(new Date(deadline.date), 'PPP', {
+                                                locale: ko,
+                                              })
+                                            : '날짜 선택'}
+                                        </button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                          mode="single"
+                                          selected={
+                                            deadline?.date ? new Date(deadline.date) : undefined
+                                          }
+                                          onSelect={(date) => {
+                                            const newDeadlines = formData.additionalDeadlines || [];
+                                            if (date) {
+                                              const existing = newDeadlines.findIndex(
+                                                (d) => d.label === template.label
+                                              );
+                                              if (existing >= 0) {
+                                                newDeadlines[existing] = {
+                                                  ...newDeadlines[existing],
+                                                  date: format(date, 'yyyy-MM-dd'),
+                                                };
+                                              } else {
+                                                newDeadlines.push({
+                                                  id: `${template.id}-${Date.now()}`,
+                                                  label: template.label,
+                                                  date: format(date, 'yyyy-MM-dd'),
+                                                  completed: false,
+                                                });
+                                              }
+                                            } else {
+                                              const filtered = newDeadlines.filter(
+                                                (d) => d.label !== template.label
+                                              );
+                                              setFormData({
+                                                ...formData,
+                                                additionalDeadlines: filtered,
+                                              });
+                                              return;
+                                            }
+                                            setFormData({
+                                              ...formData,
+                                              additionalDeadlines: [...newDeadlines],
+                                            });
+                                          }}
+                                          locale={ko}
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
+                                    {hasDeadline && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const newDeadlines = (
+                                            formData.additionalDeadlines || []
+                                          ).map((d) => {
+                                            if (d.label === template.label) {
+                                              return { ...d, completed: !d.completed };
+                                            }
+                                            return d;
+                                          });
+                                          setFormData({
+                                            ...formData,
+                                            additionalDeadlines: newDeadlines,
+                                          });
+                                        }}
+                                        className={`flex items-center gap-1.5 px-3 h-[40px] rounded-[18px] transition-all active:scale-95 font-semibold text-[13px] ${
+                                          isCompleted
+                                            ? 'bg-orange-400 text-white shadow-sm'
+                                            : 'bg-white text-neutral-600 border border-neutral-200 hover:border-orange-300'
+                                        }`}
+                                      >
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="16"
+                                          height="16"
+                                          viewBox="0 0 20 20"
+                                          fill="none"
+                                          className="inline-block"
+                                        >
+                                          <circle
+                                            cx="10"
+                                            cy="10"
+                                            r="8"
+                                            stroke={isCompleted ? 'white' : '#d1d5db'}
+                                            strokeWidth="2"
+                                            fill={isCompleted ? 'white' : 'transparent'}
+                                          />
+                                          {isCompleted && (
+                                            <path
+                                              d="M6 10.5l2.5 2.5 5-5"
+                                              stroke="#f97316"
+                                              strokeWidth="2"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            />
+                                          )}
+                                        </svg>
+                                        <span>{isCompleted ? '완료' : '완료'}</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end">
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (showDeadlineManagementCta && user?.id) {
+                            const supabase = getSupabaseClient();
+                            try {
+                              await supabase.from('tutorial_progress').upsert(
+                                {
+                                  user_id: user.id,
+                                  tutorial_key: DEADLINE_MANAGEMENT_CTA_KEY,
+                                  completed_at: new Date().toISOString(),
+                                },
+                                { onConflict: 'user_id,tutorial_key' }
+                              );
+                            } catch {
+                              // Ignore failures
+                            }
+                            setShowDeadlineManagementCta(false);
+                          }
+                          setShowDeadlineManagement(true);
+                        }}
+                        className={MANAGE_BUTTON_CLASS}
+                      >
+                        +<span>마감일 항목 관리</span>
+                      </button>
+                      {showDeadlineManagementCta && (
+                        <>
+                          <span className="pointer-events-none absolute -right-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 shadow-[0_0_0_2px_rgba(255,255,255,1)] animate-pulse" />
+                          <div className="pointer-events-none absolute right-0 top-8 w-[210px] rounded-xl bg-white/95 px-3 py-2 text-[12px] text-neutral-800 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur z-10 overflow-hidden">
+                            <div
+                              className="absolute inset-0 rounded-xl p-[3px] bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
+                              style={{
+                                WebkitMask:
+                                  'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                                WebkitMaskComposite: 'xor',
+                                maskComposite: 'exclude',
+                              }}
+                            ></div>
+                            <div className="relative z-10">
+                              <p className="font-semibold text-neutral-900">
+                                마감일 항목을 자유롭게 관리하세요
+                              </p>
+                              <p className="text-neutral-600">📅 캘린더 마감일 카운팅에 포함돼요</p>
+                            </div>
+                            <span className="absolute -top-[9px] right-4 h-0 w-0 border-x-[9px] border-b-[9px] border-x-transparent border-b-purple-500 z-20" />
+                            <span className="absolute -top-2 right-[18px] h-0 w-0 border-x-8 border-b-8 border-x-transparent border-b-white/95 z-20" />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -1856,13 +2181,55 @@ export default function ScheduleModal({
                       제공(물품) + 수익(현금) - 내가 쓴 돈 = 수익
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowIncomeDetailManagement(true)}
-                    className={MANAGE_BUTTON_CLASS}
-                  >
-                    + <span>항목 추가</span>
-                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (showIncomeDetailManagementCta && user?.id) {
+                          const supabase = getSupabaseClient();
+                          try {
+                            await supabase.from('tutorial_progress').upsert(
+                              {
+                                user_id: user.id,
+                                tutorial_key: INCOME_DETAIL_MANAGEMENT_CTA_KEY,
+                                completed_at: new Date().toISOString(),
+                              },
+                              { onConflict: 'user_id,tutorial_key' }
+                            );
+                          } catch {
+                            // Ignore failures
+                          }
+                          setShowIncomeDetailManagementCta(false);
+                        }
+                        setShowIncomeDetailManagement(true);
+                      }}
+                      className={MANAGE_BUTTON_CLASS}
+                    >
+                      + <span>항목 추가</span>
+                    </button>
+                    {showIncomeDetailManagementCta && (
+                      <>
+                        <span className="pointer-events-none absolute -right-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 shadow-[0_0_0_2px_rgba(255,255,255,1)] animate-pulse" />
+                        <div className="pointer-events-none absolute right-0 top-8 w-[210px] rounded-xl bg-white/95 px-3 py-2 text-[12px] text-neutral-800 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur z-10 overflow-hidden">
+                          <div
+                            className="absolute inset-0 rounded-xl p-[3px] bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
+                            style={{
+                              WebkitMask:
+                                'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                              WebkitMaskComposite: 'xor',
+                              maskComposite: 'exclude',
+                            }}
+                          ></div>
+                          <div className="relative z-10">
+                            <p className="font-semibold text-neutral-900">디테일한 수익 관리</p>
+                            <p className="text-neutral-600">💰 통계에서 상세하게 확인 가능해요</p>
+                          </div>
+                          <span className="absolute -top-[9px] right-4 h-0 w-0 border-x-[9px] border-b-[9px] border-x-transparent border-b-purple-500 z-20" />
+                          <span className="absolute -top-2 right-[18px] h-0 w-0 border-x-8 border-b-8 border-x-transparent border-b-white/95 z-20" />
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="rounded-[20px] bg-[#EFF5FF] px-4 py-4 space-y-1">
                   <label className="flex items-center justify-between text-[14px] font-semibold text-neutral-600">
@@ -2135,7 +2502,7 @@ export default function ScheduleModal({
                   삭제
                 </button>
                 <button
-                  onClick={handleSave}
+                  onClick={() => handleSave()}
                   disabled={isUploading || isSubmitting}
                   className="flex-8 h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
@@ -2151,7 +2518,7 @@ export default function ScheduleModal({
               </div>
             ) : (
               <button
-                onClick={handleSave}
+                onClick={() => handleSave()}
                 disabled={isUploading || isSubmitting}
                 className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
@@ -2193,10 +2560,11 @@ export default function ScheduleModal({
 
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
               <div>
-                <label className="block text-[15px] font-bold text-neutral-500 mb-2">
-                  새 항목 추가
-                </label>
-                <div className="flex items-center gap-2 mb-3">
+                <label className="block text-[15px] font-bold text-neutral-500">새 항목 추가</label>
+                <p className="text-[13px] text-neutral-500 mb-4">
+                  추가한 항목은 통계에서 상세하게 확인할 수 있습니다
+                </p>
+                <div className="flex items-center gap-2 mb-2">
                   <button
                     type="button"
                     onClick={() => setNewIncomeDetailType('INCOME')}
@@ -2262,34 +2630,15 @@ export default function ScheduleModal({
                           }
                           className="mt-[2px]"
                         />
-                        <div className="flex items-center rounded-full bg-white p-0.5 shadow-sm">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleUpdateIncomeDetailTemplateType(detail.id, 'INCOME')
-                            }
-                            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
-                              detail.type === 'INCOME'
-                                ? 'bg-[#eef5ff] text-[#2563eb]'
-                                : 'text-neutral-400'
-                            }`}
-                          >
-                            수익
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleUpdateIncomeDetailTemplateType(detail.id, 'EXPENSE')
-                            }
-                            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
-                              detail.type === 'EXPENSE'
-                                ? 'bg-[#fee2e2]/70 text-[#ef4444]'
-                                : 'text-neutral-400'
-                            }`}
-                          >
-                            지출
-                          </button>
-                        </div>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            detail.type === 'EXPENSE'
+                              ? 'bg-[#fee2e2]/70 text-[#ef4444]'
+                              : 'bg-[#eef5ff] text-[#2563eb]'
+                          }`}
+                        >
+                          {detail.type === 'EXPENSE' ? '지출' : '수익'}
+                        </span>
                         <span className="flex-1 min-w-[140px] text-[14px] font-semibold text-neutral-700">
                           {detail.label}
                         </span>
@@ -2791,6 +3140,96 @@ export default function ScheduleModal({
         onSelectPlace={handleMapPlaceSelection}
         onManualEntryRequest={handleManualAddressFallback}
       />
+
+      {showDeadlineManagement && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowDeadlineManagement(false)}
+            style={{ zIndex: Z_INDEX.managementBackdrop }}
+          />
+          <div
+            className="fixed bottom-0 left-0 w-full h-auto max-h-[60%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+            style={{ zIndex: Z_INDEX.managementModal }}
+          >
+            <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
+              <span className="font-bold text-[16px]">마감일 항목 관리</span>
+              <button
+                onClick={() => setShowDeadlineManagement(false)}
+                className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
+                aria-label="닫기"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+              <div>
+                <label className="block text-[15px] font-bold text-neutral-500 mb-1">
+                  새 항목 추가
+                </label>
+                <p className="text-[13px] text-neutral-500 mb-3">
+                  추가한 마감일 항목은 캘린더의 마감일 카운팅에 포함됩니다
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newDeadlineLabel}
+                    onChange={(e) => setNewDeadlineLabel(e.target.value)}
+                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
+                    placeholder="예: 초안 제출일, 수정본 제출일"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddDeadlineTemplate}
+                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer"
+                  >
+                    추가
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[15px] font-bold text-neutral-500 mb-2">
+                  등록된 마감일 항목
+                </label>
+                {deadlineTemplates.length === 0 ? (
+                  <div className="text-[15px] text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
+                    등록된 마감일 항목이 없습니다
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {deadlineTemplates.map((template) => (
+                      <div
+                        key={template.id}
+                        className="flex items-center gap-3 px-4 py-3 bg-neutral-50 rounded-xl"
+                      >
+                        <Checkbox
+                          checked={template.enabled !== false}
+                          onCheckedChange={(checked) =>
+                            handleToggleDeadlineTemplate(template.id, Boolean(checked))
+                          }
+                          className="mt-[2px]"
+                        />
+                        <span className="flex-1 text-[14px] font-semibold text-neutral-700">
+                          {template.label}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDeadlineTemplate(template.id)}
+                          className="text-red-600 hover:text-red-700 font-semibold text-[14px] cursor-pointer"
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

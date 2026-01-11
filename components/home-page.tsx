@@ -305,9 +305,8 @@ function FullScreenMap({
           <div className="pointer-events-auto rounded-3xl border border-neutral-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-md">
             <div className="flex items-center justify-between px-4 pt-4 pb-2">
               <div className="flex items-center gap-2">
-                <span className="text-[13px] font-bold text-neutral-900">일주일 방문 일정</span>
-                <span className="text-[11px] font-semibold text-neutral-500">
-                  {sortedSchedules.length}건
+                <span className="text-[13px] font-bold text-neutral-900">
+                  방문 일정 ({sortedSchedules.length})
                 </span>
               </div>
               <div className="h-1.5 w-12 rounded-full bg-neutral-200" />
@@ -425,6 +424,7 @@ export default function HomePage({
   onShowAllClick,
   onCompleteClick,
   onPaybackConfirm,
+  onAdditionalDeadlineToggle,
   onAddClick,
   onCreateSchedule,
   focusDate,
@@ -437,6 +437,7 @@ export default function HomePage({
   onShowAllClick: () => void;
   onCompleteClick?: (id: number) => void;
   onPaybackConfirm?: (id: number) => void;
+  onAdditionalDeadlineToggle?: (scheduleId: number, deadlineId: string) => void;
   onAddClick?: () => void;
   onCreateSchedule?: (dateStr: string) => void;
   focusDate?: string | null;
@@ -501,7 +502,10 @@ export default function HomePage({
   let filteredSchedules = schedules;
   if (selectedDate) {
     filteredSchedules = schedules.filter(
-      (s) => s.dead === selectedDate || s.visit === selectedDate
+      (s) =>
+        s.dead === selectedDate ||
+        s.visit === selectedDate ||
+        (s.additionalDeadlines || []).some((d) => d.date === selectedDate)
     );
   } else if (selectedFilter === 'active') {
     filteredSchedules = activeSchedules;
@@ -517,6 +521,21 @@ export default function HomePage({
     return [...schedules].sort((a, b) => {
       const aIsCompleted = a.status === '완료';
       const bIsCompleted = b.status === '완료';
+
+      // 추가 마감일 미완료 체크
+      const aHasIncompleteAdditionalDeadlines = (a.additionalDeadlines || []).some(
+        (d) => d.date && !d.completed
+      );
+      const bHasIncompleteAdditionalDeadlines = (b.additionalDeadlines || []).some(
+        (d) => d.date && !d.completed
+      );
+
+      // 완료 상태여도 추가 마감일이 미완료면 위쪽에 배치
+      if (aIsCompleted && bIsCompleted) {
+        if (aHasIncompleteAdditionalDeadlines && !bHasIncompleteAdditionalDeadlines) return -1;
+        if (!aHasIncompleteAdditionalDeadlines && bHasIncompleteAdditionalDeadlines) return 1;
+      }
+
       if (aIsCompleted && !bIsCompleted) return 1;
       if (!aIsCompleted && bIsCompleted) return -1;
 
@@ -575,9 +594,30 @@ export default function HomePage({
   const visitCount = selectedDate
     ? headerSchedules.filter((s) => s.visit === selectedDate).length
     : headerSchedules.filter((s) => s.visit).length;
+
+  // 마감일 카운트: 메인 마감일 + 추가 마감일 (완료 여부 무관하게 모두 카운팅)
   const deadlineCount = selectedDate
-    ? headerSchedules.filter((s) => s.dead === selectedDate).length
-    : headerSchedules.filter((s) => s.dead).length;
+    ? headerSchedules.reduce((count, s) => {
+        let c = 0;
+        // 메인 마감일이 오늘인 경우 (완료 여부 무관)
+        if (s.dead === selectedDate) c++;
+        // 추가 마감일 중 오늘인 것 (completed 여부 무관)
+        const additionalCount = (s.additionalDeadlines || []).filter(
+          (d) => d.date === selectedDate
+        ).length;
+        return count + c + additionalCount;
+      }, 0)
+    : headerSchedules.reduce((count, s) => {
+        let c = 0;
+        // 메인 마감일이 있는 경우 (완료 여부 무관)
+        if (s.dead) c++;
+        // 추가 마감일 (completed 여부 무관)
+        const additionalCount = (s.additionalDeadlines || []).filter((d) => d.date).length;
+        return count + c + additionalCount;
+      }, 0);
+
+  // 총 일정 개수: 방문일 + 마감일 개수의 합
+  const totalScheduleCount = visitCount + deadlineCount;
 
   const shouldShowFirstScheduleTutorial =
     hasSchedules && schedules.length === 1 && displayedSchedules.length > 0;
@@ -668,7 +708,12 @@ export default function HomePage({
                     ? '마감일 미정'
                     : '체험단 일정'}
             <span className="ml-1.5 text-sm font-bold text-neutral-600">
-              {selectedDate || selectedFilter !== 'all' ? filteredSchedules.length : activeCount}건
+              {selectedDate
+                ? totalScheduleCount
+                : selectedFilter !== 'all'
+                  ? filteredSchedules.length
+                  : activeCount}
+              건
             </span>
           </h3>
           <span className="mt-1 text-[11px] font-semibold text-neutral-500">
@@ -753,6 +798,11 @@ export default function HomePage({
               onClick={() => onScheduleClick(schedule.id)}
               onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
               onPaybackConfirm={onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined}
+              onAdditionalDeadlineToggle={
+                onAdditionalDeadlineToggle
+                  ? (deadlineId) => onAdditionalDeadlineToggle(schedule.id, deadlineId)
+                  : undefined
+              }
               today={today}
               selectedDate={selectedDate}
             />
@@ -858,6 +908,32 @@ function CalendarSection({
       if (schedule.paybackExpected && !schedule.paybackConfirmed) {
         info.hasPaybackPending = true;
       }
+    }
+
+    // 추가 마감일 (additionalDeadlines)
+    if (schedule.additionalDeadlines && schedule.additionalDeadlines.length > 0) {
+      schedule.additionalDeadlines.forEach((deadline) => {
+        if (deadline.date) {
+          const info = ensureDayInfo(deadline.date);
+
+          if (!deadline.completed) {
+            // 미완료인 경우 기존 로직
+            info.hasDeadline = true;
+            if (deadline.date < today) {
+              info.deadlineCount += 1;
+              info.overdue = true;
+            } else {
+              info.deadlineCount += 1;
+            }
+            if (statusColor) {
+              info.ringStatusColors.push(statusColor);
+            }
+          } else {
+            // 완료된 경우 주황색 점 표시를 위해 hasCompleted 설정
+            info.hasCompleted = true;
+          }
+        }
+      });
     }
 
     if (schedule.visit) {
@@ -984,9 +1060,9 @@ function CalendarSection({
               : undefined;
           const baseStyle =
             indicatorType === 'overdue'
-              ? 'text-orange-800 shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.65)]'
+              ? 'text-orange-800 shadow-[inset_0_0_0_2.5px_rgba(249,115,22,0.65)]'
               : indicatorType === 'deadline'
-                ? 'text-orange-700 shadow-[inset_0_0_0_1.5px_rgba(249,115,22,0.6)]'
+                ? 'text-orange-700 shadow-[inset_0_0_0_2.5px_rgba(249,115,22,0.6)]'
                 : 'text-neutral-800';
           const hoverable = !isSelected && !isTodayDate && hasSchedule;
           const todayHighlightClass = isTodayDate ? 'bg-orange-300 text-orange-900' : '';

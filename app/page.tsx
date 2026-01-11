@@ -185,6 +185,20 @@ function PageContent() {
     await updateSchedule(id, { paybackConfirmed: true });
   };
 
+  const handleAdditionalDeadlineToggle = async (scheduleId: number, deadlineId: string) => {
+    const schedule = schedules.find((s) => s.id === scheduleId);
+    if (!schedule?.additionalDeadlines) return;
+
+    const updatedDeadlines = schedule.additionalDeadlines.map((deadline) => {
+      if (deadline.id === deadlineId) {
+        return { ...deadline, completed: !deadline.completed };
+      }
+      return deadline;
+    });
+
+    await updateSchedule(scheduleId, { additionalDeadlines: updatedDeadlines });
+  };
+
   const handleAddTodo = async (text: string) => {
     await addTodo(text);
   };
@@ -300,6 +314,7 @@ function PageContent() {
               onBack={handleBackFromAll}
               onCompleteClick={handleCompleteSchedule}
               onPaybackConfirm={handleConfirmPayback}
+              onAdditionalDeadlineToggle={handleAdditionalDeadlineToggle}
             />
           ) : (
             <>
@@ -310,6 +325,7 @@ function PageContent() {
                   onShowAllClick={handleShowAllSchedules}
                   onCompleteClick={handleCompleteSchedule}
                   onPaybackConfirm={handleConfirmPayback}
+                  onAdditionalDeadlineToggle={handleAdditionalDeadlineToggle}
                   onAddClick={() => handleOpenScheduleModal()}
                   onCreateSchedule={(dateStr) =>
                     handleOpenScheduleModal(undefined, { deadDate: dateStr })
