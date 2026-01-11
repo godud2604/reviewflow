@@ -529,7 +529,7 @@ export default function StatsPage({
                       <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
                         {category}
                       </div>
-                      <div className="flex-1 max-w-[150px] bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                      <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-[#ff9431] to-[#ff6b2c] rounded-full transition-all duration-500"
                           style={{ width: `${percentage}%` }}
@@ -582,7 +582,7 @@ export default function StatsPage({
                           <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
                             {category}
                           </div>
-                          <div className="flex-1 max-w-[150px] bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                          <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                             <div
                               className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
                               style={{ width: `${percentage}%` }}
@@ -619,7 +619,7 @@ export default function StatsPage({
                           <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
                             {label}
                           </div>
-                          <div className="flex-1 max-w-[150px] bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                          <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                             <div
                               className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
                               style={{ width: `${percentage}%` }}
@@ -662,7 +662,7 @@ export default function StatsPage({
                                 >
                                   {income.title}
                                 </div>
-                                <div className="flex-1 max-w-[150px] bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                                <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                                   <div
                                     className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
                                     style={{ width: `${percentage}%` }}
@@ -714,7 +714,7 @@ export default function StatsPage({
                       <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
                         {category}
                       </div>
-                      <div className="flex-1 max-w-[150px] bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                      <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-[#fca5a5] to-[#ef4444] rounded-full transition-all duration-500"
                           style={{ width: `${percentage}%` }}
@@ -747,7 +747,7 @@ export default function StatsPage({
                     return (
                       <div key={label} className="flex items-center gap-3">
                         <div className="w-26 text-[12px] font-semibold text-[#4b5563]">{label}</div>
-                        <div className="flex-1 max-w-[150px] bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                        <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                           <div
                             className="h-full bg-gradient-to-r from-[#fca5a5] to-[#ef4444] rounded-full transition-all duration-500"
                             style={{ width: `${percentage}%` }}
