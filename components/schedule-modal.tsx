@@ -1637,7 +1637,7 @@ export default function ScheduleModal({
                         완료 상태를 변경하려면 진행 상태를 조정해주세요
                       </p>
                       <p className="text-[12px] text-orange-700">
-                        상단 진행 상태에서 필요한 단계로 바꾼 뒤 저장하면 반영됩니다.
+                        진행 상태에서 필요한 단계로 바꾼 뒤 저장하면 반영됩니다.
                       </p>
                     </div>
                   </div>
