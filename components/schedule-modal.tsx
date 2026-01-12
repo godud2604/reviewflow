@@ -1503,7 +1503,7 @@ export default function ScheduleModal({
             {schedule && (
               <div className="sticky top-0 z-40">
                 <div
-                  className="flex gap-2 overflow-x-auto bg-white/95 px-4 pt-3 backdrop-blur-md scrollbar-hide shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all"
+                  className="flex overflow-x-auto bg-white/95 px-4 pt-3 backdrop-blur-md scrollbar-hide shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all"
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                   <button
