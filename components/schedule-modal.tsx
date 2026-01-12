@@ -1493,7 +1493,9 @@ export default function ScheduleModal({
             ref={scrollContainerRef}
             className="flex-1 overflow-y-auto overscroll-contain scrollbar-hide touch-pan-y min-h-0"
           >
-            <div className="px-6 py-5 flex justify-center items-center flex-none">
+            <div
+              className={`px-6 py-5 flex justify-center items-center ${schedule ? 'flex-none' : 'sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02)]'}`}
+            >
               <span className="font-bold text-[16px]">
                 {schedule ? '체험단 수정' : '체험단 등록'}
               </span>
