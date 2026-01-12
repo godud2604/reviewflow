@@ -439,7 +439,7 @@ export default function StatsPage({
               >
                 부수입 추가
               </button>
-              {showIncomeTutorial && (
+              {/* {showIncomeTutorial && (
                 <div className="absolute -right-10 top-full mt-1 w-[160px] rounded-2xl border border-[#ebeef2] bg-white px-3 py-2.5 text-[11px] leading-snug text-[#111827] shadow-md">
                   <div className="text-[10px] font-semibold uppercase text-[#f97316] mb-1">
                     혹시 깜빡한 부수입, 없으신가요?
@@ -449,7 +449,7 @@ export default function StatsPage({
                   </p>
                   <span className="absolute -right-[-80px] top-[-7px] h-3 w-3 rotate-45 border-t border-r border-[#ebeef2] bg-white" />
                 </div>
-              )}
+              )} */}
             </div>
           </div>
           <div className="relative mt-3 mb-5 border-t border-white/20" />
