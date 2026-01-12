@@ -123,6 +123,83 @@ export default function ScheduleItem({
     schedule.additionalDeadlines && schedule.additionalDeadlines.length > 0
   );
 
+  const dateItems: Array<{
+    key: string;
+    date: string;
+    label: string;
+    className?: string;
+  }> = [];
+  const undatedItems: Array<{ key: string; label: string; className?: string }> = [];
+
+  if (schedule.reviewType === '방문형') {
+    if (schedule.visit) {
+      dateItems.push({
+        key: 'visit',
+        date: schedule.visit,
+        label: visitLabel,
+        className: isVisitActive ? 'font-bold text-sky-700' : undefined,
+      });
+    } else {
+      undatedItems.push({ key: 'visit-unknown', label: visitLabel });
+    }
+
+    if (schedule.dead) {
+      dateItems.push({
+        key: 'dead',
+        date: schedule.dead,
+        label: deadLabel,
+        className: `${isDeadActive ? 'font-bold text-rose-700' : ''} ${
+          isCompleted ? 'line-through opacity-50' : ''
+        }`.trim(),
+      });
+    } else {
+      undatedItems.push({ key: 'dead-unknown', label: deadLabel });
+    }
+  } else {
+    if (schedule.dead) {
+      dateItems.push({
+        key: 'dead',
+        date: schedule.dead,
+        label: deadLabel,
+        className: `${isDeadActive ? 'font-bold text-rose-700' : ''} ${
+          isCompleted ? 'line-through opacity-50' : ''
+        }`.trim(),
+      });
+    }
+
+    if (!schedule.dead && schedule.visit) {
+      dateItems.push({
+        key: 'visit',
+        date: schedule.visit,
+        label: visitLabel,
+        className: isVisitActive ? 'font-bold text-sky-700' : undefined,
+      });
+    }
+  }
+
+  if (schedule.additionalDeadlines) {
+    schedule.additionalDeadlines.forEach((deadline) => {
+      if (!deadline.date) return;
+      const isActiveDeadline = selectedDate && deadline.date === selectedDate;
+      const isDeadlineCompleted = deadline.completed === true;
+      dateItems.push({
+        key: `additional-${deadline.id}`,
+        date: deadline.date,
+        label: `${deadline.date.slice(5)} ${deadline.label}`,
+        className: `${isActiveDeadline ? 'font-bold text-rose-700' : ''} ${
+          isDeadlineCompleted ? 'line-through opacity-50' : ''
+        }`.trim(),
+      });
+    });
+  }
+
+  const sortedDateItems = [...dateItems].sort((a, b) => {
+    const byDate = a.date.localeCompare(b.date);
+    if (byDate !== 0) return byDate;
+    return a.key.localeCompare(b.key);
+  });
+  const timelineItems = [...sortedDateItems, ...undatedItems];
+
   // --- 데이터 체크 ---
   const memoText = stripLegacyScheduleMemo(schedule.memo).trim();
   const hasMemo = Boolean(memoText);
@@ -263,56 +340,16 @@ export default function ScheduleItem({
           </div>
         </div>
         <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1 flex-wrap">
-          <span className="font-medium text-neutral-600">
-            {schedule.reviewType === '방문형' ? (
-              <>
-                <span className={isVisitActive ? 'font-bold text-sky-700' : undefined}>
-                  {visitLabel}
-                </span>
-                <span className="mx-1 text-neutral-400">|</span>
-                <span
-                  className={`${isDeadActive ? 'font-bold text-rose-700' : ''} ${
-                    isCompleted ? 'line-through opacity-50' : ''
-                  }`}
-                >
-                  {deadLabel}
-                </span>
-              </>
-            ) : schedule.dead ? (
-              <span
-                className={`${isDeadActive ? 'font-bold text-rose-700' : ''} ${
-                  isCompleted ? 'line-through opacity-50' : ''
-                }`}
-              >
-                {deadLabel}
+          {timelineItems.length > 0 ? (
+            timelineItems.map((item, index) => (
+              <span key={item.key} className="font-medium text-neutral-600">
+                {index > 0 && <span className="mx-1 text-neutral-400">|</span>}
+                <span className={item.className}>{item.label}</span>
               </span>
-            ) : schedule.visit ? (
-              <span className={isVisitActive ? 'font-bold text-sky-700' : undefined}>
-                {visitLabel}
-              </span>
-            ) : (
-              '미정'
-            )}
-          </span>
-          {schedule.additionalDeadlines &&
-            schedule.additionalDeadlines.length > 0 &&
-            schedule.additionalDeadlines.map((deadline) => {
-              if (!deadline.date) return null;
-              const isActiveDeadline = selectedDate && deadline.date === selectedDate;
-              const isDeadlineCompleted = deadline.completed === true;
-              return (
-                <span key={deadline.id} className="font-medium text-neutral-600">
-                  <span className="text-neutral-400">|</span>
-                  <span
-                    className={`ml-1.5 ${isActiveDeadline ? 'font-bold text-rose-700' : ''} ${
-                      isDeadlineCompleted ? 'line-through opacity-50' : ''
-                    }`}
-                  >
-                    {deadline.label} {deadline.date.slice(5)}
-                  </span>
-                </span>
-              );
-            })}
+            ))
+          ) : (
+            <span className="font-medium text-neutral-600">미정</span>
+          )}
           {hasPaybackExpected && (
             <span className="text-sm shrink-0 ml-1 opacity-50" title="페이백 예정">
               💸
