@@ -15,6 +15,7 @@ export default function AllSchedulesPage({
   onScheduleClick,
   onBack,
   onCompleteClick,
+  onCompletedClick,
   onPaybackConfirm,
   onAdditionalDeadlineToggle,
 }: {
@@ -22,6 +23,7 @@ export default function AllSchedulesPage({
   onScheduleClick: (id: number) => void;
   onBack: () => void;
   onCompleteClick?: (id: number) => void;
+  onCompletedClick?: (id: number) => void;
   onPaybackConfirm?: (id: number) => void;
   onAdditionalDeadlineToggle?: (scheduleId: number, deadlineId: string) => void;
 }) {
@@ -154,6 +156,9 @@ export default function AllSchedulesPage({
               schedule={schedule}
               onClick={() => onScheduleClick(schedule.id)}
               onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
+              onCompletedClick={
+                onCompletedClick ? () => onCompletedClick(schedule.id) : undefined
+              }
               onPaybackConfirm={onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined}
               onAdditionalDeadlineToggle={
                 onAdditionalDeadlineToggle

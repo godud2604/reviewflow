@@ -55,6 +55,7 @@ export default function ScheduleItem({
   schedule,
   onClick,
   onCompleteClick,
+  onCompletedClick,
   onPaybackConfirm,
   onAdditionalDeadlineToggle,
   today,
@@ -63,6 +64,7 @@ export default function ScheduleItem({
   schedule: Schedule;
   onClick: () => void;
   onCompleteClick?: () => void;
+  onCompletedClick?: () => void;
   onPaybackConfirm?: () => void;
   onAdditionalDeadlineToggle?: (deadlineId: string) => void;
   today: string;
@@ -178,7 +180,11 @@ export default function ScheduleItem({
           onClick={(e) => {
             e.stopPropagation();
             if (isCompleted) {
-              onClick();
+              if (onCompletedClick) {
+                onCompletedClick();
+              } else {
+                onClick();
+              }
               return;
             }
             if (canComplete) {

@@ -102,6 +102,7 @@ function PageContent() {
   const [homeCalendarFocusDate, setHomeCalendarFocusDate] = useState<string | null>(null);
   const mapSearchRequested = searchParams.get('mapSearch') === 'true';
   const mapSearchAutoSaveRequested = searchParams.get('mapSearchAutoSave') === 'true';
+  const [statusChangeIntent, setStatusChangeIntent] = useState(false);
 
   const showAllSchedules = view === 'all';
   const isScheduleModalOpen = scheduleId !== null || isNewSchedule;
@@ -109,9 +110,15 @@ function PageContent() {
 
   const handleOpenScheduleModal = (
     scheduleId?: number,
-    options?: { deadDate?: string; openMapSearch?: boolean; autoSaveMapLocation?: boolean }
+    options?: {
+      deadDate?: string;
+      openMapSearch?: boolean;
+      autoSaveMapLocation?: boolean;
+      statusChangeIntent?: boolean;
+    }
   ) => {
     const params = new URLSearchParams(searchParams.toString());
+    setStatusChangeIntent(Boolean(options?.statusChangeIntent));
     if (scheduleId) {
       params.set('schedule', scheduleId.toString());
       params.delete('new');
@@ -146,6 +153,7 @@ function PageContent() {
     params.delete('mapSearch');
     params.delete('mapSearchAutoSave');
     router.push(`?${params.toString()}`);
+    setStatusChangeIntent(false);
   };
 
   const handleSaveSchedule = async (schedule: Schedule) => {
@@ -179,6 +187,10 @@ function PageContent() {
 
   const handleCompleteSchedule = async (id: number) => {
     await updateSchedule(id, { status: '완료' });
+  };
+
+  const handleCompletedStatusEdit = (id: number) => {
+    handleOpenScheduleModal(id, { statusChangeIntent: true });
   };
 
   const handleConfirmPayback = async (id: number) => {
@@ -315,6 +327,7 @@ function PageContent() {
               onScheduleClick={handleOpenScheduleModal}
               onBack={handleBackFromAll}
               onCompleteClick={handleCompleteSchedule}
+              onCompletedClick={handleCompletedStatusEdit}
               onPaybackConfirm={handleConfirmPayback}
               onAdditionalDeadlineToggle={handleAdditionalDeadlineToggle}
             />
@@ -326,6 +339,7 @@ function PageContent() {
                   onScheduleClick={handleOpenScheduleModal}
                   onShowAllClick={handleShowAllSchedules}
                   onCompleteClick={handleCompleteSchedule}
+                  onCompletedClick={handleCompletedStatusEdit}
                   onPaybackConfirm={handleConfirmPayback}
                   onAdditionalDeadlineToggle={handleAdditionalDeadlineToggle}
                   onAddClick={() => handleOpenScheduleModal()}
@@ -379,6 +393,7 @@ function PageContent() {
             initialDeadline={initialDeadline}
             initialMapSearchOpen={mapSearchRequested}
             initialMapSearchAutoSave={mapSearchAutoSaveRequested}
+            statusChangeIntent={statusChangeIntent}
           />
         )}
 

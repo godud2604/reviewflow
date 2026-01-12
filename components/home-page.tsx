@@ -423,6 +423,7 @@ export default function HomePage({
   onScheduleClick,
   onShowAllClick,
   onCompleteClick,
+  onCompletedClick,
   onPaybackConfirm,
   onAdditionalDeadlineToggle,
   onAddClick,
@@ -436,6 +437,7 @@ export default function HomePage({
   onScheduleClick: (id: number) => void;
   onShowAllClick: () => void;
   onCompleteClick?: (id: number) => void;
+  onCompletedClick?: (id: number) => void;
   onPaybackConfirm?: (id: number) => void;
   onAdditionalDeadlineToggle?: (scheduleId: number, deadlineId: string) => void;
   onAddClick?: () => void;
@@ -797,6 +799,9 @@ export default function HomePage({
               schedule={schedule}
               onClick={() => onScheduleClick(schedule.id)}
               onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
+              onCompletedClick={
+                onCompletedClick ? () => onCompletedClick(schedule.id) : undefined
+              }
               onPaybackConfirm={onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined}
               onAdditionalDeadlineToggle={
                 onAdditionalDeadlineToggle

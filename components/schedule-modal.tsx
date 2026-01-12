@@ -206,6 +206,7 @@ export default function ScheduleModal({
   initialDeadline,
   initialMapSearchOpen,
   initialMapSearchAutoSave,
+  statusChangeIntent,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -218,6 +219,7 @@ export default function ScheduleModal({
   initialDeadline?: string;
   initialMapSearchOpen?: boolean;
   initialMapSearchAutoSave?: boolean;
+  statusChangeIntent?: boolean;
 }) {
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData());
 
@@ -253,6 +255,7 @@ export default function ScheduleModal({
       setShowMapSearchModal(true);
     }
   }, [isOpen, initialMapSearchOpen]);
+  const [showCompletionOnboarding, setShowCompletionOnboarding] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<Schedule['category'][]>([]);
   const [visitMode, setVisitMode] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
@@ -287,6 +290,7 @@ export default function ScheduleModal({
   const isSubmittingRef = useRef(false);
   const isMountedRef = useRef(false);
   const guideFilesSectionRef = useRef<HTMLDivElement | null>(null);
+  const statusSectionRef = useRef<HTMLDivElement | null>(null);
   const showMapSearchModalRef = useRef(showMapSearchModal);
 
   // Keep the modal history entry so the mobile back button triggers the close confirmation dialog.
@@ -322,6 +326,15 @@ export default function ScheduleModal({
   useEffect(() => {
     showMapSearchModalRef.current = showMapSearchModal;
   }, [showMapSearchModal]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setShowCompletionOnboarding(Boolean(statusChangeIntent && formData.status === '완료'));
+  }, [formData.status, isOpen, statusChangeIntent]);
+
+  const scrollToSection = (target: React.RefObject<HTMLElement | null>) => {
+    target.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   useEffect(() => {
     if (!isOpen || typeof window === 'undefined') return;
@@ -1400,6 +1413,36 @@ export default function ScheduleModal({
                   </span>
                 </div>
               )}
+              {showCompletionOnboarding && schedule && (
+                <div className="rounded-2xl border border-orange-200 bg-orange-50/70 px-4 py-3 text-orange-900 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="text-[14px] font-bold">
+                        완료 상태를 변경하려면 진행 상태를 조정해주세요
+                      </p>
+                      <p className="text-[12px] text-orange-700">
+                        상단 진행 상태에서 필요한 단계로 바꾼 뒤 저장하면 반영됩니다.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCompletionOnboarding(false)}
+                      className="shrink-0 rounded-full border border-orange-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-orange-600 hover:border-orange-300"
+                    >
+                      닫기
+                    </button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => scrollToSection(statusSectionRef)}
+                      className="rounded-full border border-orange-200 bg-white px-3 py-1 text-[12px] font-semibold text-orange-700 hover:border-orange-300"
+                    >
+                      진행 상태로 이동
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <section className="rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-5">
                 <div className="space-y-4">
@@ -1440,7 +1483,11 @@ export default function ScheduleModal({
                     </div>
                   </div>
 
-                  {schedule && <div className="space-y-6">{statusFields}</div>}
+                  {schedule && (
+                    <div ref={statusSectionRef} className="space-y-6">
+                      {statusFields}
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-[15px] font-bold text-[#FF5722] mb-2">
