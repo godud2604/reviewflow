@@ -1,0 +1,148 @@
+import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '요금제 | 리뷰플로우',
+  description: '리뷰플로우의 요금제를 확인하고 구독하세요',
+};
+
+export default function PricingPage() {
+  return (
+    <div className="min-h-screen bg-[#F2F4F6] text-[#0F172A]">
+      <div className="max-w-6xl mx-auto px-6 py-16 space-y-10">
+        <Link
+          href="/"
+          className="inline-flex items-center text-sm font-semibold text-[#FF5722] hover:text-[#E64A19]"
+        >
+          ← 홈으로 돌아가기
+        </Link>
+
+        <div className="text-center space-y-4 mb-12">
+          <p className="text-xs font-semibold text-[#FF7043] uppercase tracking-[0.2em]">Pricing</p>
+          <h1 className="text-4xl md:text-5xl font-bold">간편한 요금제</h1>
+          <p className="text-lg text-[#6B7280] max-w-2xl mx-auto">
+            체험단 관리를 더 효율적으로. 지금 바로 시작하세요.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {/* Free Plan */}
+          <div className="bg-white shadow-lg rounded-3xl p-8 border border-gray-200 hover:border-[#FF5722] transition-all">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">무료</h2>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold">₩0</span>
+                  <span className="text-[#6B7280]">/월</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 py-6 border-t border-b border-gray-200">
+                <div className="flex items-start gap-3">
+                  <span className="text-[#FF5722] mt-1">✓</span>
+                  <span className="text-[#374151]">기본 일정 관리</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-[#FF5722] mt-1">✓</span>
+                  <span className="text-[#374151]">캘린더 확인</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-[#FF5722] mt-1">✓</span>
+                  <span className="text-[#374151]">이번달 수익/비용 통계</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-[#FF5722] mt-1">✓</span>
+                  <span className="text-[#374151]">방문 일정 브리핑</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pro Plan */}
+          <div className="bg-gradient-to-br from-[#FF5722] to-[#FF7043] shadow-xl rounded-3xl p-8 text-white relative overflow-hidden">
+            <div className="absolute top-4 right-4 bg-white text-[#FF5722] text-xs font-bold px-3 py-1 rounded-full">
+              추천
+            </div>
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">프로</h2>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold">₩2,900</span>
+                  <span className="text-white/90">/월</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 py-6 border-t border-b border-white/20">
+                <div className="flex items-start gap-3">
+                  <span className="mt-1">✓</span>
+                  <span>무제한 일정 관리</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="mt-1">✓</span>
+                  <span>고급 통계 및 차트</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="mt-1">✓</span>
+                  <span>일일 요약 알림 (알림톡/SMS)</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="mt-1">✓</span>
+                  <span>매월 수익/비용 통계</span>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <span className="mt-1">✓</span>
+                  <span>활동 내역 엑셀 내보내기</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="bg-white shadow-lg rounded-3xl p-8 md:p-10 max-w-4xl mx-auto mt-16">
+          <h2 className="text-2xl font-bold mb-8 text-center">자주 묻는 질문</h2>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h3 className="font-semibold text-lg">결제 방법은 어떻게 되나요?</h3>
+              <p className="text-[#6B7280]">
+                Paddle을 통해 안전하게 결제하실 수 있으며, 신용카드 및 다양한 결제 수단을
+                지원합니다.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-semibold text-lg">언제든 해지할 수 있나요?</h3>
+              <p className="text-[#6B7280]">
+                네, 언제든지 구독을 취소하실 수 있습니다. 남은 기간 동안 서비스를 계속 이용하실 수
+                있습니다.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-semibold text-lg">환불 정책은 어떻게 되나요?</h3>
+              <p className="text-[#6B7280]">
+                디지털 서비스 특성상 환불이 제한될 수 있습니다. 자세한 내용은{' '}
+                <Link href="/refund" className="text-[#FF5722] hover:underline">
+                  환불 정책
+                </Link>
+                을 참고하세요.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Links */}
+        <div className="text-center space-x-6 text-sm text-[#6B7280] pt-8">
+          <Link href="/terms" className="hover:text-[#FF5722] transition-colors">
+            이용약관
+          </Link>
+          <Link href="/privacy" className="hover:text-[#FF5722] transition-colors">
+            개인정보처리방침
+          </Link>
+          <Link href="/refund" className="hover:text-[#FF5722] transition-colors">
+            환불 정책
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
