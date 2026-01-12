@@ -348,13 +348,6 @@ function PageContent() {
                   }
                   focusDate={homeCalendarFocusDate}
                   onFocusDateApplied={() => setHomeCalendarFocusDate(null)}
-                  userEmail={user?.email}
-                  onRegisterLocation={(scheduleId) =>
-                    handleOpenScheduleModal(scheduleId, {
-                      openMapSearch: true,
-                      autoSaveMapLocation: true,
-                    })
-                  }
                 />
               )}
 

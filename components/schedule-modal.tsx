@@ -62,6 +62,7 @@ import { Z_INDEX } from '@/lib/z-index';
 
 const DEADLINE_MANAGEMENT_CTA_KEY = 'deadline-management-cta';
 const INCOME_DETAIL_MANAGEMENT_CTA_KEY = 'income-detail-management-cta';
+const STICKY_NAVIGATION_CTA_KEY = 'sticky-navigation-cta';
 
 const getTodayInKST = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
@@ -270,6 +271,9 @@ export default function ScheduleModal({
   const [newDeadlineLabel, setNewDeadlineLabel] = useState('');
   const [showDeadlineManagementCta, setShowDeadlineManagementCta] = useState(false);
   const [showIncomeDetailManagementCta, setShowIncomeDetailManagementCta] = useState(false);
+  const [showStickyNavigationCta, setShowStickyNavigationCta] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('basicInfo');
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   const {
@@ -291,6 +295,10 @@ export default function ScheduleModal({
   const isMountedRef = useRef(false);
   const guideFilesSectionRef = useRef<HTMLDivElement | null>(null);
   const statusSectionRef = useRef<HTMLDivElement | null>(null);
+  const basicInfoRef = useRef<HTMLDivElement | null>(null);
+  const progressInfoRef = useRef<HTMLDivElement | null>(null);
+  const assetManagementRef = useRef<HTMLDivElement | null>(null);
+  const memoRef = useRef<HTMLDivElement | null>(null);
   const showMapSearchModalRef = useRef(showMapSearchModal);
 
   // Keep the modal history entry so the mobile back button triggers the close confirmation dialog.
@@ -391,10 +399,74 @@ export default function ScheduleModal({
         .maybeSingle();
 
       setShowIncomeDetailManagementCta(!incomeData?.completed_at);
+
+      // Check sticky navigation CTA
+      const { data: stickyData } = await supabase
+        .from('tutorial_progress')
+        .select('completed_at')
+        .eq('user_id', user.id)
+        .eq('tutorial_key', STICKY_NAVIGATION_CTA_KEY)
+        .maybeSingle();
+
+      setShowStickyNavigationCta(!stickyData?.completed_at);
     };
 
     fetchCtaStatus();
   }, [user?.id, isOpen]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const basicInfo = basicInfoRef.current;
+      const progressInfo = progressInfoRef.current;
+      const assetManagement = assetManagementRef.current;
+      const memo = memoRef.current;
+      const guideFiles = guideFilesSectionRef.current;
+
+      const containerTop = container.scrollTop;
+      const containerHeight = container.clientHeight;
+      const scrollHeight = container.scrollHeight;
+      const scrollBottom = containerTop + containerHeight;
+      const offset = 180;
+
+      const isBottom = Math.abs(scrollHeight - scrollBottom) < 20;
+
+      const posBasic = basicInfo?.offsetTop ?? 0;
+      const posProgress = progressInfo?.offsetTop ?? 0;
+      const posAsset = assetManagement?.offsetTop ?? 0;
+      const posMemo = memo?.offsetTop ?? 0;
+      const posGuide = guideFiles?.offsetTop ?? 0;
+
+      let currentTab = 'basicInfo';
+
+      if (isBottom) {
+        if (guideFiles) currentTab = 'guideFiles';
+        else currentTab = 'memo';
+      } else {
+        if (guideFiles && containerTop >= posGuide - offset) {
+          currentTab = 'guideFiles';
+        } else if (containerTop >= posMemo - offset) {
+          currentTab = 'memo';
+        } else if (containerTop >= posAsset - offset) {
+          currentTab = 'assetManagement';
+        } else if (containerTop >= posProgress - offset) {
+          currentTab = 'progressInfo';
+        } else {
+          currentTab = 'basicInfo';
+        }
+      }
+
+      setActiveTab((prev) => (prev !== currentTab ? currentTab : prev));
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    // Initial check
+    handleScroll();
+
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [guideFilesSectionRef.current]);
 
   const allPlatforms = React.useMemo(() => {
     return [...userPlatforms].sort((a, b) => a.localeCompare(b, 'ko'));
@@ -627,6 +699,25 @@ export default function ScheduleModal({
     if (formData.platform) return;
     setFormData((prev) => ({ ...prev, platform: defaultPlatform }));
   }, [allPlatforms, schedule, formData.platform]);
+
+  const dismissStickyCta = async () => {
+    if (showStickyNavigationCta && user?.id) {
+      const supabase = getSupabaseClient();
+      try {
+        await supabase.from('tutorial_progress').upsert(
+          {
+            user_id: user.id,
+            tutorial_key: STICKY_NAVIGATION_CTA_KEY,
+            completed_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,tutorial_key' }
+        );
+      } catch {
+        // Ignore failures
+      }
+      setShowStickyNavigationCta(false);
+    }
+  };
 
   const handleSave = async (overrideFormData?: Partial<Schedule>) => {
     if (isSubmittingRef.current) return;
@@ -1390,20 +1481,143 @@ export default function ScheduleModal({
           className="relative w-full bg-white rounded-t-[30px] flex flex-col shadow-2xl overflow-hidden animate-slide-up text-neutral-900 mx-auto"
           style={{ maxHeight: '85%', maxWidth: '800px' }}
         >
-          <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-none">
-            <span className="font-bold text-[16px]">
-              {schedule ? '체험단 수정' : '체험단 등록'}
-            </span>
-            <button
-              onClick={() => setShowCloseConfirm(true)}
-              className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
-              aria-label="닫기"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="absolute right-5 top-3 z-50 flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-all hover:bg-neutral-200 hover:text-neutral-900 active:scale-95"
+            aria-label="닫기"
+          >
+            <X className="h-5 w-5" />
+          </button>
 
-          <div className="flex-1 overflow-y-auto overscroll-contain scrollbar-hide touch-pan-y min-h-0">
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto overscroll-contain scrollbar-hide touch-pan-y min-h-0"
+          >
+            <div className="px-6 py-5 flex justify-center items-center flex-none">
+              <span className="font-bold text-[16px]">
+                {schedule ? '체험단 수정' : '체험단 등록'}
+              </span>
+            </div>
+            {schedule && (
+              <div className="sticky top-0 z-40">
+                <div
+                  className="flex gap-2 overflow-x-auto bg-white/95 px-4 pt-3 backdrop-blur-md scrollbar-hide shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      scrollToSection(basicInfoRef);
+                      dismissStickyCta();
+                    }}
+                    className={`relative shrink-0 px-3 py-3 text-[14px] transition-colors ${
+                      activeTab === 'basicInfo'
+                        ? 'font-bold text-[#FF5F00]'
+                        : 'font-medium text-neutral-400 hover:text-neutral-600'
+                    }`}
+                  >
+                    기본 정보
+                    {activeTab === 'basicInfo' && (
+                      <span className="absolute bottom-1 left-1/2 h-[2.5px] w-[calc(100%-20px)] -translate-x-1/2 bg-[#FF5F00] rounded-full" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      scrollToSection(progressInfoRef);
+                      dismissStickyCta();
+                    }}
+                    className={`relative shrink-0 px-3 py-3 text-[14px] transition-colors ${
+                      activeTab === 'progressInfo'
+                        ? 'font-bold text-[#FF5F00]'
+                        : 'font-medium text-neutral-400 hover:text-neutral-600'
+                    }`}
+                  >
+                    체험 진행
+                    {activeTab === 'progressInfo' && (
+                      <span className="absolute bottom-1 left-1/2 h-[2.5px] w-[calc(100%-20px)] -translate-x-1/2 bg-[#FF5F00] rounded-full" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      scrollToSection(assetManagementRef);
+                      dismissStickyCta();
+                    }}
+                    className={`relative shrink-0 px-3 py-3 text-[14px] transition-colors ${
+                      activeTab === 'assetManagement'
+                        ? 'font-bold text-[#FF5F00]'
+                        : 'font-medium text-neutral-400 hover:text-neutral-600'
+                    }`}
+                  >
+                    자산 관리
+                    {activeTab === 'assetManagement' && (
+                      <span className="absolute bottom-1 left-1/2 h-[2.5px] w-[calc(100%-20px)] -translate-x-1/2 bg-[#FF5F00] rounded-full" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      scrollToSection(memoRef);
+                      dismissStickyCta();
+                    }}
+                    className={`relative shrink-0 px-3 py-3 text-[14px] transition-colors ${
+                      activeTab === 'memo'
+                        ? 'font-bold text-[#FF5F00]'
+                        : 'font-medium text-neutral-400 hover:text-neutral-600'
+                    }`}
+                  >
+                    메모장
+                    {activeTab === 'memo' && (
+                      <span className="absolute bottom-1 left-1/2 h-[2.5px] w-[calc(100%-20px)] -translate-x-1/2 bg-[#FF5F00] rounded-full" />
+                    )}
+                  </button>
+                  {guideFilesCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        scrollToSection(guideFilesSectionRef);
+                        dismissStickyCta();
+                      }}
+                      className={`relative shrink-0 px-3 py-3 text-[14px] transition-colors ${
+                        activeTab === 'guideFiles'
+                          ? 'font-bold text-[#FF5F00]'
+                          : 'font-medium text-neutral-400 hover:text-neutral-600'
+                      }`}
+                    >
+                      영수증 ({guideFilesCount})
+                      {activeTab === 'guideFiles' && (
+                        <span className="absolute bottom-1 left-1/2 h-[2.5px] w-[calc(100%-20px)] -translate-x-1/2 bg-[#FF5F00] rounded-full" />
+                      )}
+                    </button>
+                  )}
+                </div>
+                {showStickyNavigationCta && (
+                  <div className="absolute left-4 top-[calc(100%+8px)] z-50 animate-bounce-subtle">
+                    <span className="pointer-events-none absolute -left-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-orange-400 to-red-500 shadow-[0_0_0_2px_rgba(255,255,255,1)] animate-ping" />
+                    <span className="pointer-events-none absolute -left-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-orange-400 to-red-500 shadow-[0_0_0_2px_rgba(255,255,255,1)]" />
+                    <div className="pointer-events-none relative w-[220px] rounded-xl bg-white/95 px-3 py-2 text-[12px] text-neutral-800 shadow-[0_8px_20px_rgba(15,23,42,0.15)] backdrop-blur overflow-hidden">
+                      <div
+                        className="absolute inset-0 rounded-xl p-[2px] bg-gradient-to-r from-orange-400 via-red-500 to-orange-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
+                        style={{
+                          WebkitMask:
+                            'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                          WebkitMaskComposite: 'xor',
+                          maskComposite: 'exclude',
+                        }}
+                      ></div>
+                      <div className="relative z-10">
+                        <p className="font-bold text-[#FF5F00]">원하는 위치로 빠르게 이동!</p>
+                        <p className="text-neutral-600 mt-0.5">
+                          탭을 눌러 해당 구간으로 갈 수 있어요
+                        </p>
+                      </div>
+                      <span className="absolute -top-[5px] left-[6px] h-2.5 w-2.5 rotate-45 border-l border-t border-transparent bg-white/95 z-20" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="space-y-4 bg-[#F2F4F6] p-4">
               {formData.dead && formData.dead < getTodayInKST() && formData.status !== '완료' && (
                 <div className="mb-4 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
@@ -1424,13 +1638,6 @@ export default function ScheduleModal({
                         상단 진행 상태에서 필요한 단계로 바꾼 뒤 저장하면 반영됩니다.
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowCompletionOnboarding(false)}
-                      className="shrink-0 rounded-full border border-orange-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-orange-600 hover:border-orange-300"
-                    >
-                      닫기
-                    </button>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
@@ -1444,7 +1651,10 @@ export default function ScheduleModal({
                 </div>
               )}
 
-              <section className="rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-5">
+              <section
+                ref={basicInfoRef}
+                className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-5"
+              >
                 <div className="space-y-4">
                   <div>
                     <label className="block text-[15px] font-bold text-neutral-500 mb-2.5">
@@ -1484,7 +1694,7 @@ export default function ScheduleModal({
                   </div>
 
                   {schedule && (
-                    <div ref={statusSectionRef} className="space-y-6">
+                    <div ref={statusSectionRef} className="space-y-6 scroll-mt-[70px]">
                       {statusFields}
                     </div>
                   )}
@@ -1527,9 +1737,8 @@ export default function ScheduleModal({
                     0 && (
                     <div className="mt-4 p-4 rounded-2xl bg-orange-50/30 border border-orange-100">
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-[13px] font-bold text-orange-700">
-                          📋 세부 마감일
-                        </span>
+                        <span className="">📋 </span>
+                        <span className="text-[13px] font-bold text-orange-700">세부 마감일</span>
                       </div>
                       {profileLoading ? (
                         <div className="space-y-3">
@@ -1760,7 +1969,10 @@ export default function ScheduleModal({
                 </div>
               </section>
 
-              <section className="rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-4">
+              <section
+                ref={progressInfoRef}
+                className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-4"
+              >
                 <div>
                   <div className="flex items-center justify-between">
                     <p className="text-[16px] font-semibold text-neutral-900">체험 진행 정보</p>
@@ -1785,7 +1997,7 @@ export default function ScheduleModal({
                               onClick={() => setFormData({ ...formData, platform })}
                               className={`text-[12px] px-3.5 py-1.5 rounded-[16px] font-semibold transition-colors ${
                                 isActive
-                                  ? 'bg-orange-400 text-white'
+                                  ? 'bg-orange-100 text-orange-600'
                                   : 'bg-[#F2F4F6] text-[#4E5968]'
                               }`}
                             >
@@ -1823,7 +2035,7 @@ export default function ScheduleModal({
                                 onClick={() => setFormData((prev) => ({ ...prev, category }))}
                                 className={`px-3.5 py-1.5 rounded-[16px] text-[12px] font-semibold transition-colors ${
                                   isActive
-                                    ? 'bg-orange-400 text-white'
+                                    ? 'bg-orange-100 text-orange-600'
                                     : 'bg-[#F2F4F6] text-[#4E5968]'
                                 }`}
                               >
@@ -1864,7 +2076,7 @@ export default function ScheduleModal({
                                 onClick={() => handleToggleChannel(channel)}
                                 className={`text-[12px] px-3 py-1 rounded-[16px] font-semibold transition-colors ${
                                   isSelected
-                                    ? 'bg-orange-400 text-white'
+                                    ? 'bg-orange-100 text-orange-600'
                                     : 'bg-[#F2F4F6] text-[#4E5968]'
                                 }`}
                               >
@@ -1894,7 +2106,7 @@ export default function ScheduleModal({
                       <button
                         type="button"
                         onClick={() => handleToggleVisitMode(!visitMode)}
-                        className={`relative h-8 w-16 rounded-full transition ${visitMode ? 'bg-[#FF5722]' : 'bg-neutral-300'}`}
+                        className={`relative h-8 w-16 rounded-full transition ${visitMode ? 'bg-orange-400' : 'bg-neutral-300'}`}
                         aria-pressed={visitMode}
                       >
                         <span
@@ -2235,7 +2447,10 @@ export default function ScheduleModal({
                 </div>
               </section>
 
-              <section className="rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-4">
+              <section
+                ref={assetManagementRef}
+                className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-4"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[16px] font-semibold text-neutral-900">자산 관리</p>
@@ -2430,7 +2645,10 @@ export default function ScheduleModal({
                   )}
                 </div>
               </section>
-              <section className="rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-3">
+              <section
+                ref={memoRef}
+                className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-3"
+              >
                 <p className="text-[16px] font-semibold text-neutral-900">메모장</p>
                 <div className="relative">
                   <textarea
@@ -2491,7 +2709,7 @@ export default function ScheduleModal({
               )}
             </div>
             {formData.guideFiles && formData.guideFiles.length > 0 && (
-              <div ref={guideFilesSectionRef} className="mt-6 space-y-3">
+              <div ref={guideFilesSectionRef} className="scroll-mt-[70px] mt-6 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[15px] font-bold text-neutral-500">영수증</span>
                   <span className="text-xs text-neutral-400">{formData.guideFiles.length}개</span>

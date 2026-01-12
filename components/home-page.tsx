@@ -1,35 +1,15 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import type { MouseEvent } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useMemo, useState } from 'react';
 import { usePostHog } from 'posthog-js/react';
-import { CustomOverlayMap, Map, MapMarker } from 'react-kakao-maps-sdk';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ChevronDown } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
 import type { Schedule } from '@/types';
 import ScheduleItem from '@/components/schedule-item';
-import VisitCardHeader, { getUpcomingVisits } from '@/components/visit-card-header';
-import { getDaysDiff, parseDateString } from '@/lib/date-utils';
-import { formatKoreanTime } from '@/lib/time-utils';
-import { Z_INDEX } from '@/lib/z-index';
+import { parseDateString } from '@/lib/date-utils';
 
 // --- 날짜/시간 유틸리티 ---
 const formatDateStringKST = (date: Date) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date);
-
-const getDayLabel = (dateStr: string) => {
-  const days = ['일', '월', '화', '수', '목', '금', '토'];
-  return days[new Date(dateStr).getDay()];
-};
-
-const formatVisitDate = (dateStr?: string) => {
-  if (!dateStr) return '방문일 미정';
-  const date = new Date(dateStr);
-  return `${date.getMonth() + 1}.${date.getDate()} (${getDayLabel(dateStr)})`;
-};
 
 // --- 상수 ---
 const CALENDAR_RING_COLORS: Record<string, string> = {
@@ -51,372 +31,6 @@ const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[]
 
 const getScheduleRingColor = (status: string): string | undefined => CALENDAR_RING_COLORS[status];
 
-const FULLSCREEN_MAP_BOTTOM_GAP = 'calc(env(safe-area-inset-bottom, 0px) + 74px)';
-
-function FullScreenMap({
-  schedules,
-  onClose,
-  today,
-  onCardClick,
-  onRegisterLocation,
-}: {
-  schedules: Schedule[];
-  onClose: () => void;
-  today: string;
-  onCardClick: (id: number) => void;
-  onRegisterLocation?: (id: number) => void;
-}) {
-  const [activeId, setActiveId] = useState<number | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-  const [showScrollBadge, setShowScrollBadge] = useState(false);
-
-  const [weatherMap, setWeatherMap] = useState<
-    Record<number, { code: number; min: number; max: number }>
-  >({});
-  const lastWeatherKeyRef = useRef<string | null>(null);
-
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({
-    lat: 37.5665,
-    lng: 126.978,
-  });
-  const [mapLevel, setMapLevel] = useState(4);
-  const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    setPortalElement(document.body);
-  }, []);
-
-  const mapSchedules = useMemo(
-    () => schedules.filter((s) => s.lat && s.lng && s.status !== '완료'),
-    [schedules]
-  );
-  const activeSchedules = useMemo(() => schedules.filter((s) => s.status !== '완료'), [schedules]);
-  const sortedSchedules = useMemo(
-    () =>
-      [...activeSchedules].sort((a, b) => {
-        if (!a.visit && !b.visit) return 0;
-        if (!a.visit) return 1;
-        if (!b.visit) return -1;
-        if (a.visit === b.visit) {
-          return (a.visitTime || '23:59').localeCompare(b.visitTime || '23:59');
-        }
-        return a.visit.localeCompare(b.visit);
-      }),
-    [activeSchedules]
-  );
-
-  useEffect(() => {
-    if (mapSchedules.length > 0) {
-      setMapCenter({
-        lat: Number(mapSchedules[0].lat),
-        lng: Number(mapSchedules[0].lng),
-      });
-      setActiveId(mapSchedules[0].id);
-    }
-  }, [mapSchedules]);
-
-  const updateScrollBadge = () => {
-    const element = scrollContainerRef.current;
-    if (!element) return;
-    const canScroll = element.scrollHeight > element.clientHeight + 1;
-    const scrollBottom = element.scrollTop + element.clientHeight;
-    const atBottom = Math.ceil(scrollBottom) >= element.scrollHeight - 1;
-    setShowScrollBadge(canScroll && !atBottom);
-  };
-
-  useEffect(() => {
-    updateScrollBadge();
-    const handleResize = () => updateScrollBadge();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [sortedSchedules.length]);
-
-  useEffect(() => {
-    if (mapSchedules.length === 0) {
-      setWeatherMap({});
-      return;
-    }
-    const requestKey = mapSchedules
-      .map((schedule) => `${schedule.id}:${schedule.visit ?? ''}`)
-      .join('|');
-    if (lastWeatherKeyRef.current === requestKey) return;
-    lastWeatherKeyRef.current = requestKey;
-    const fetchWeather = async () => {
-      const newWeatherMap: Record<number, { code: number; min: number; max: number }> = {};
-      await Promise.all(
-        mapSchedules.map(async (schedule) => {
-          if (!schedule.visit) return;
-          try {
-            const res = await fetch(
-              `https://api.open-meteo.com/v1/forecast?latitude=${schedule.lat}&longitude=${schedule.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&start_date=${schedule.visit}&end_date=${schedule.visit}`
-            );
-            const data = await res.json();
-            if (data.daily && data.daily.weather_code) {
-              newWeatherMap[schedule.id] = {
-                code: data.daily.weather_code[0],
-                max: Math.round(data.daily.temperature_2m_max[0]),
-                min: Math.round(data.daily.temperature_2m_min[0]),
-              };
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        })
-      );
-      setWeatherMap(newWeatherMap);
-    };
-    fetchWeather();
-  }, [mapSchedules]);
-
-  const handleMarkerClick = (id: number) => {
-    setActiveId(id);
-    const target = mapSchedules.find((s) => s.id === id);
-    if (target && target.lat && target.lng) {
-      setMapCenter({ lat: Number(target.lat), lng: Number(target.lng) });
-    }
-    const element = document.getElementById(`map-card-${id}`);
-    if (element && scrollContainerRef.current) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-    }
-  };
-
-  const handleScheduleCardClick = (schedule: Schedule) => {
-    if (!schedule.lat || !schedule.lng) {
-      toast({ title: '위치등록이 필요합니다.', variant: 'destructive', duration: 1000 });
-      return;
-    }
-    handleMarkerClick(schedule.id);
-  };
-
-  const handleRegisterLocationClick = (event: MouseEvent<HTMLButtonElement>, id: number) => {
-    event.stopPropagation();
-    onRegisterLocation?.(id);
-  };
-
-  if (!portalElement) return null;
-
-  return createPortal(
-    <motion.div
-      initial={{ opacity: 0, y: '100%' }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: '100%' }}
-      transition={{ duration: 0.3 }}
-      className="fixed left-0 right-0 top-0 flex flex-col bg-white"
-      style={{ zIndex: Z_INDEX.topLayer, bottom: FULLSCREEN_MAP_BOTTOM_GAP }}
-    >
-      <div
-        className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 bg-gradient-to-b from-black/60 to-transparent"
-        style={{ zIndex: Z_INDEX.sticky }}
-      >
-        <button
-          onClick={onClose}
-          className="ml-1 mt-1 flex h-11 w-11 items-center justify-center rounded-full border border-white/40 bg-white/85 text-neutral-900 shadow-[0_8px_20px_rgba(0,0,0,0.25)] backdrop-blur-md transition-all hover:bg-white"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-        <span className="text-white font-bold text-lg drop-shadow-md">지도 보기</span>
-        <div className="w-10" />
-      </div>
-
-      <div className="flex-1 relative min-h-0">
-        <Map
-          center={mapCenter}
-          style={{ width: '100%', height: '100%' }}
-          level={mapLevel}
-          isPanto={true}
-          draggable={true}
-          scrollwheel={true}
-          onDragEnd={(map) => {
-            const center = map.getCenter();
-            setMapCenter({ lat: center.getLat(), lng: center.getLng() });
-          }}
-          onZoomChanged={(map) => {
-            setMapLevel(map.getLevel());
-          }}
-        >
-          {mapSchedules.map((schedule) => {
-            const isActive = activeId === schedule.id;
-            const visitDateLabel = schedule.visit ? formatVisitDate(schedule.visit) : '방문일 미정';
-            const visitTimeLabel = schedule.visitTime
-              ? formatKoreanTime(schedule.visitTime)
-              : '시간 미정';
-            return (
-              <Fragment key={schedule.id}>
-                <MapMarker
-                  position={{ lat: Number(schedule.lat), lng: Number(schedule.lng) }}
-                  image={{
-                    src: isActive
-                      ? 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png'
-                      : 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png',
-                    size: isActive ? { width: 29, height: 42 } : { width: 24, height: 35 },
-                  }}
-                  zIndex={isActive ? 100 : 1}
-                  onClick={() => handleMarkerClick(schedule.id)}
-                />
-                <CustomOverlayMap
-                  position={{ lat: Number(schedule.lat), lng: Number(schedule.lng) }}
-                  yAnchor={2}
-                  xAnchor={0.5}
-                  zIndex={isActive ? 110 : 2}
-                >
-                  <div className="flex flex-col items-center">
-                    <button
-                      type="button"
-                      onClick={() => handleMarkerClick(schedule.id)}
-                      className={`flex flex-col items-center rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-[0_6px_16px_rgba(15,23,42,0.25)] transition ${
-                        isActive ? 'bg-orange-500 text-white' : 'bg-white text-neutral-800'
-                      }`}
-                    >
-                      <div className="leading-tight">{visitDateLabel}</div>
-                      <div className="leading-tight">{visitTimeLabel}</div>
-                    </button>
-                    <div
-                      className={`mt-0.5 h-1.5 w-1.5 rotate-45 shadow-[0_4px_10px_rgba(15,23,42,0.2)] ${
-                        isActive ? 'bg-orange-500' : 'bg-white'
-                      }`}
-                    />
-                  </div>
-                </CustomOverlayMap>
-              </Fragment>
-            );
-          })}
-        </Map>
-        <div className="pointer-events-none absolute top-16 right-4 z-10 flex flex-col gap-2">
-          <button
-            type="button"
-            aria-label="지도 확대"
-            onClick={() => setMapLevel((prev) => Math.max(1, prev - 1))}
-            className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-xl font-bold text-neutral-900 shadow-[0_12px_24px_rgba(15,23,42,0.25)] hover:bg-white transition-colors"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            aria-label="지도 축소"
-            onClick={() => setMapLevel((prev) => Math.min(14, prev + 1))}
-            className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-xl font-bold text-neutral-900 shadow-[0_12px_24px_rgba(15,23,42,0.25)] hover:bg-white transition-colors"
-          >
-            –
-          </button>
-        </div>
-
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-4">
-          <div className="pointer-events-auto rounded-3xl border border-neutral-200 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-md">
-            <div className="flex items-center justify-between px-4 pt-4 pb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[13px] font-bold text-neutral-900">
-                  방문 일정 ({sortedSchedules.length})
-                </span>
-              </div>
-              <div className="h-1.5 w-12 rounded-full bg-neutral-200" />
-            </div>
-            <div className="relative">
-              <div
-                ref={scrollContainerRef}
-                onScroll={updateScrollBadge}
-                className="max-h-[26vh] space-y-2 overflow-y-auto px-4 pb-8"
-              >
-                {sortedSchedules.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-neutral-200 px-4 py-6 text-center text-[12px] font-medium text-neutral-500">
-                    지도에 표시할 방문 일정이 없습니다.
-                  </div>
-                ) : (
-                  sortedSchedules.map((schedule) => {
-                    const isActive = activeId === schedule.id;
-                    const hasLocation = Boolean(schedule.lat && schedule.lng);
-                    const visitLabel = schedule.visit
-                      ? `${formatVisitDate(schedule.visit)}${
-                          schedule.visitTime ? ` · ${formatKoreanTime(schedule.visitTime)}` : ''
-                        }`
-                      : '방문일 미정';
-                    const diff = schedule.visit ? getDaysDiff(today, schedule.visit) : null;
-                    const badgeLabel =
-                      diff === null
-                        ? '미정'
-                        : diff === 0
-                          ? '오늘'
-                          : diff === 1
-                            ? '내일'
-                            : `D-${diff}`;
-                    const badgeStyle =
-                      diff !== null && diff <= 1
-                        ? 'bg-red-50 text-red-500'
-                        : 'bg-neutral-100 text-neutral-500';
-
-                    return (
-                      <div
-                        key={schedule.id}
-                        id={`map-card-${schedule.id}`}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => handleScheduleCardClick(schedule)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            handleScheduleCardClick(schedule);
-                          }
-                        }}
-                        className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition ${
-                          isActive
-                            ? 'border-orange-400 bg-orange-50/60 shadow-[0_12px_30px_rgba(249,115,22,0.18)]'
-                            : 'border-neutral-200 bg-white'
-                        }`}
-                      >
-                        <div className="flex min-w-0 items-start gap-3">
-                          <span
-                            className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${badgeStyle}`}
-                          >
-                            {badgeLabel}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="truncate text-[14px] font-bold text-neutral-900">
-                                {schedule.title}
-                              </span>
-                              <span className="shrink-0 text-[10px] font-semibold text-neutral-400">
-                                {schedule.reviewType}
-                              </span>
-                            </div>
-                            <div className="mt-0.5 truncate text-[12px] font-medium text-neutral-500">
-                              {visitLabel}
-                            </div>
-                            <div className="mt-0.5 truncate text-[11px] text-neutral-400">
-                              {schedule.regionDetail || schedule.region || '위치 미등록'}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          {!hasLocation && onRegisterLocation && (
-                            <button
-                              type="button"
-                              onClick={(event) => handleRegisterLocationClick(event, schedule.id)}
-                              className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-neutral-600 hover:border-neutral-300 hover:text-neutral-800"
-                            >
-                              위치 등록
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-              {showScrollBadge && (
-                <div className="pointer-events-none absolute bottom-2 left-1/2 flex w-fit -translate-x-1/2 items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-neutral-500 shadow-sm animate-pulse">
-                  <ChevronDown className="h-3 w-3" />
-                  <span className="text-orange-900">스크롤하여 더보기</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>,
-    portalElement
-  );
-}
-
 // --- 메인 페이지 ---
 export default function HomePage({
   schedules,
@@ -430,8 +44,6 @@ export default function HomePage({
   onCreateSchedule,
   focusDate,
   onFocusDateApplied,
-  userEmail,
-  onRegisterLocation,
 }: {
   schedules: Schedule[];
   onScheduleClick: (id: number) => void;
@@ -444,26 +56,15 @@ export default function HomePage({
   onCreateSchedule?: (dateStr: string) => void;
   focusDate?: string | null;
   onFocusDateApplied?: () => void;
-  userEmail?: string;
-  onRegisterLocation?: (id: number) => void;
 }) {
   const posthog = usePostHog();
   const today = formatDateStringKST(new Date());
-  const upcomingVisitSchedules = useMemo(
-    () => getUpcomingVisits(schedules, today),
-    [schedules, today]
-  );
   const [selectedDate, setSelectedDate] = useState<string | null>(today);
   const [selectedFilter, setSelectedFilter] = useState<
     'all' | 'active' | 'reconfirm' | 'overdue' | 'noDeadline'
   >('all');
   const [floatingPanel, setFloatingPanel] = useState<'none' | 'noDeadline' | 'reconfirm'>('none');
   const [showDemo, setShowDemo] = useState(false);
-  const [isFullScreenMapOpen, setIsFullScreenMapOpen] = useState(false);
-  const handleOpenMapApp = () => setIsFullScreenMapOpen(true);
-  const handleRegisterLocation = (id: number) => {
-    onRegisterLocation?.(id);
-  };
 
   // Demo Data
   const demoSchedules = useMemo(
@@ -688,14 +289,6 @@ export default function HomePage({
         today={today}
       />
 
-      <VisitCardHeader
-        schedules={schedules}
-        today={today}
-        onCardClick={onScheduleClick}
-        onOpenMapApp={handleOpenMapApp}
-        onRegisterLocation={handleRegisterLocation}
-      />
-
       {/* 5. 일정 리스트 헤더 */}
       <div className="flex items-start justify-between mt-4 mb-2">
         <div>
@@ -799,9 +392,7 @@ export default function HomePage({
               schedule={schedule}
               onClick={() => onScheduleClick(schedule.id)}
               onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
-              onCompletedClick={
-                onCompletedClick ? () => onCompletedClick(schedule.id) : undefined
-              }
+              onCompletedClick={onCompletedClick ? () => onCompletedClick(schedule.id) : undefined}
               onPaybackConfirm={onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined}
               onAdditionalDeadlineToggle={
                 onAdditionalDeadlineToggle
@@ -821,19 +412,6 @@ export default function HomePage({
         )}
         {shouldShowFirstScheduleTutorial && renderTutorialCard()}
       </div>
-
-      {/* 7. 전체 화면 지도 모달 */}
-      <AnimatePresence>
-        {isFullScreenMapOpen && (
-          <FullScreenMap
-            schedules={upcomingVisitSchedules}
-            onClose={() => setIsFullScreenMapOpen(false)}
-            today={today}
-            onCardClick={onScheduleClick}
-            onRegisterLocation={handleRegisterLocation}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -1075,7 +653,7 @@ function CalendarSection({
           const isInteractive = hasSchedule || Boolean(onCreateSchedule);
           const wasAlreadySelected = selectedDate === dateStr;
           const showPaybackEmoji = Boolean(dayInfo?.hasPaybackPending);
-          const handleDayClick = (event: MouseEvent<HTMLButtonElement>) => {
+          const handleDayClick = (event: React.MouseEvent<HTMLButtonElement>) => {
             onDateClick(dateStr);
             const isClickInitiated = event.detail === 1;
             const shouldReopenModal = wasAlreadySelected;
