@@ -29,98 +29,121 @@ export default function RefundPage() {
           </div>
 
           <div className="space-y-8">
-            {/* 기본 원칙 */}
+            {/* 1. 총칙 */}
             <section className="space-y-3">
-              <h2 className="text-xl font-semibold text-[#111827]">기본 원칙</h2>
+              <h2 className="text-xl font-semibold text-[#111827]">1. 총칙</h2>
               <div className="space-y-2 text-sm md:text-base leading-relaxed text-[#374151]">
                 <p>
-                  리뷰플로우는 디지털 서비스의 특성상 서비스 이용이 개시된 이후에는 원칙적으로
-                  환불이 제한됩니다.
+                  리뷰플로우 유료 플랜의 모든 구매는 Paddle.com을 통해 처리되며, Paddle은 모든
+                  거래에 대한 Merchant of Record(판매자 대행)로 작동합니다.
                 </p>
-                <p>다만, 아래의 경우 환불을 검토하며, 개별 상황에 따라 결정됩니다.</p>
+                <p>환불은 Paddle의 Buyer Terms(구매자 약관)에 따라 처리됩니다.</p>
               </div>
             </section>
 
-            {/* 환불 가능한 경우 */}
+            {/* 2. 소비자 취소 권리 */}
             <section className="space-y-3">
-              <h2 className="text-xl font-semibold text-[#111827]">환불 요청 가능한 경우</h2>
+              <h2 className="text-xl font-semibold text-[#111827]">2. 소비자 취소 권리</h2>
               <div className="space-y-2 text-sm md:text-base leading-relaxed text-[#374151]">
-                <p>다음의 경우 환불을 요청하실 수 있습니다:</p>
-                <ul className="list-disc pl-6 space-y-1">
-                  <li>서비스 장애로 인해 정상적으로 이용할 수 없었던 경우</li>
-                  <li>회사의 귀책사유로 서비스 제공이 불가능한 경우</li>
-                  <li>중복 결제가 발생한 경우</li>
-                  <li>기타 관련 법령에 따라 환불이 필요하다고 판단되는 경우</li>
-                </ul>
+                <p className="font-semibold text-[#111827]">14일 이내 전액 환불 보장</p>
+                <p>
+                  소비자인 경우, 구매 완료일로부터 14일 이내에 구매를 취소하고 전액 환불을 받을 수
+                  있는 권리가 있습니다. 별도의 사유 없이도 환불이 가능합니다.
+                </p>
+                <p>이 14일 취소 기간은 구매가 완료된 다음 날부터 시작됩니다.</p>
               </div>
             </section>
 
-            {/* 환불 절차 */}
+            {/* 3. 환불 처리 */}
             <section className="space-y-3">
-              <h2 className="text-xl font-semibold text-[#111827]">환불 절차</h2>
+              <h2 className="text-xl font-semibold text-[#111827]">3. 환불 처리</h2>
               <div className="space-y-2 text-sm md:text-base leading-relaxed text-[#374151]">
-                <p>환불을 요청하시려면:</p>
-                <ol className="list-decimal pl-6 space-y-1">
-                  <li>
-                    고객센터 이메일(
+                <p>모든 환불 요청은 Paddle에서 처리합니다.</p>
+                <p>
+                  14일 기간 내에 유효한 환불 요청이 제출되면, Paddle은 Paddle의 Buyer Terms에 따라
+                  14일 이내에 원래 결제 수단으로 환불을 처리합니다.
+                </p>
+              </div>
+            </section>
+
+            {/* 4. 환불 요청 방법 */}
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-[#111827]">4. 환불 요청 방법</h2>
+              <div className="space-y-2 text-sm md:text-base leading-relaxed text-[#374151]">
+                <p>
+                  환불을 요청하시려면 구매 영수증 이메일에 포함된 환불 링크를 사용하거나, 다음
+                  주소로 직접 Paddle에 문의해주세요:
+                </p>
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 my-2">
+                  <p className="font-medium text-[#111827]">Paddle 고객 지원</p>
+                  <p>
+                    웹사이트:{' '}
+                    <a
+                      href="https://paddle.net"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#FF5722] hover:underline"
+                    >
+                      https://paddle.net
+                    </a>
+                  </p>
+                </div>
+                <p className="text-[#EF4444] font-medium text-sm">
+                  중요: 리뷰플로우는 결제/환불을 직접 처리하지 않습니다. 환불 요청은 반드시 Paddle을
+                  통해 접수해 주세요.
+                </p>
+              </div>
+            </section>
+
+            {/* 5. 14일 기간 경과 후 */}
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-[#111827]">5. 14일 기간 경과 후</h2>
+              <div className="space-y-2 text-sm md:text-base leading-relaxed text-[#374151]">
+                <p>
+                  14일 취소 기간이 경과한 후 제출된 환불 요청은 보장되지 않으며, Paddle의 재량에
+                  따라 검토될 수 있습니다.
+                </p>
+              </div>
+            </section>
+
+            {/* 6. 추가 정보 */}
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold text-[#111827]">6. 추가 정보</h2>
+              <div className="space-y-2 text-sm md:text-base leading-relaxed text-[#374151]">
+                <p>더 자세한 정보는 Paddle의 Buyer Terms를 참조해주세요:</p>
+                <a
+                  href="https://www.paddle.com/legal/invoiced-consumer-terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#FF5722] hover:underline break-all"
+                >
+                  https://www.paddle.com/legal/invoiced-consumer-terms
+                </a>
+              </div>
+            </section>
+
+            {/* 7. 일반 문의 */}
+            <section className="space-y-3 pt-6 border-t border-gray-200">
+              <h2 className="text-xl font-semibold text-[#111827]">7. 일반 문의</h2>
+              <div className="space-y-2 text-sm md:text-base leading-relaxed text-[#374151]">
+                <p>
+                  리뷰플로우 서비스 이용(기능/계정/기술 지원 등)과 관련된 일반 문의는 아래로 연락해
+                  주세요.
+                </p>
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 my-2">
+                  <p className="font-medium text-[#111827]">리뷰플로우 고객 지원 (비결제/비환불)</p>
+                  <p>
+                    이메일:{' '}
                     <a href="mailto:admin@reviewflow.kr" className="text-[#FF5722] hover:underline">
                       admin@reviewflow.kr
                     </a>
-                    )로 환불 요청
-                  </li>
-                  <li>결제 내역 및 환불 사유를 구체적으로 작성</li>
-                  <li>회사의 검토 후 3~5 영업일 내 환불 가능 여부 안내</li>
-                  <li>승인 시 원래 결제 수단으로 환불 처리 (카드사 정책에 따라 3~7일 소요)</li>
-                </ol>
-              </div>
-            </section>
-
-            {/* 결제 대행사 */}
-            <section className="space-y-3">
-              <h2 className="text-xl font-semibold text-[#111827]">결제 대행 및 환불 처리</h2>
-              <div className="space-y-2 text-sm md:text-base leading-relaxed text-[#374151]">
-                <p>
-                  리뷰플로우의 모든 결제는 Paddle을 통해 처리됩니다. 환불 또한 Paddle을 통해
-                  진행되며, Paddle의 환불 정책도 적용될 수 있습니다.
+                  </p>
+                  <p className="text-[#6B7280] text-sm mt-1">응답 시간: 영업일 기준 24시간 이내</p>
+                </div>
+                <p className="text-[#6B7280] text-sm">
+                  ※ 결제/환불 요청은 리뷰플로우에서 처리할 수 없으며, 반드시 Paddle을 통해서만
+                  접수됩니다. (위의 Paddle 링크를 이용해 주세요.)
                 </p>
-                <p>
-                  Paddle 환불 정책:{' '}
-                  <a
-                    href="https://www.paddle.com/legal/terms"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#FF5722] hover:underline"
-                  >
-                    https://www.paddle.com/legal/terms
-                  </a>
-                </p>
-              </div>
-            </section>
-
-            {/* 자동 갱신 취소 */}
-            <section className="space-y-3">
-              <h2 className="text-xl font-semibold text-[#111827]">자동 갱신 취소</h2>
-              <div className="space-y-2 text-sm md:text-base leading-relaxed text-[#374151]">
-                <p>
-                  구독 서비스는 자동으로 갱신됩니다. 자동 갱신을 원하지 않으시는 경우, 다음 결제일
-                  최소 24시간 전에 구독을 취소하셔야 합니다.
-                </p>
-                <p>구독 취소 후에도 남은 기간 동안 서비스를 계속 이용하실 수 있습니다.</p>
-              </div>
-            </section>
-
-            {/* 문의 */}
-            <section className="space-y-3 pt-6 border-t border-gray-200">
-              <h2 className="text-xl font-semibold text-[#111827]">환불 문의</h2>
-              <div className="space-y-2 text-sm md:text-base leading-relaxed text-[#374151]">
-                <p>환불 관련 문의는 아래로 연락 주시기 바랍니다:</p>
-                <p className="font-medium">
-                  📧 이메일:{' '}
-                  <a href="mailto:admin@reviewflow.kr" className="text-[#FF5722] hover:underline">
-                    admin@reviewflow.kr
-                  </a>
-                </p>
-                <p className="text-[#6B7280] text-sm">영업일 기준 1~2일 내에 답변 드립니다.</p>
               </div>
             </section>
           </div>
