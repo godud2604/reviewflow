@@ -182,7 +182,9 @@ function PageContent() {
   };
 
   const handleConfirmPayback = async (id: number) => {
-    await updateSchedule(id, { paybackConfirmed: true });
+    const schedule = schedules.find((item) => item.id === id);
+    if (!schedule) return;
+    await updateSchedule(id, { paybackConfirmed: !schedule.paybackConfirmed });
   };
 
   const handleAdditionalDeadlineToggle = async (scheduleId: number, deadlineId: string) => {
