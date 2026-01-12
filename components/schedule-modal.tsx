@@ -1374,8 +1374,8 @@ export default function ScheduleModal({
         />
 
         <div
-          className="relative w-full bg-white rounded-t-[30px] flex flex-col shadow-2xl overflow-hidden animate-slide-up text-neutral-900"
-          style={{ maxHeight: '85%' }}
+          className="relative w-full bg-white rounded-t-[30px] flex flex-col shadow-2xl overflow-hidden animate-slide-up text-neutral-900 mx-auto"
+          style={{ maxHeight: '85%', maxWidth: '800px' }}
         >
           <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-none">
             <span className="font-bold text-[16px]">
@@ -1868,7 +1868,7 @@ export default function ScheduleModal({
                                   <button className="w-full rounded-[18px] bg-[#F2F4F6] px-4 py-2 text-[16px] font-semibold text-neutral-900 text-left">
                                     {formData.visit
                                       ? format(new Date(formData.visit), 'PPP', { locale: ko })
-                                      : '날짜를 선택해주세요'}
+                                      : '날짜 선택'}
                                   </button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
@@ -2559,8 +2559,8 @@ export default function ScheduleModal({
             style={{ zIndex: Z_INDEX.managementBackdrop }}
           />
           <div
-            className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
-            style={{ zIndex: Z_INDEX.managementModal }}
+            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+            style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
           >
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-[16px]">수익/지출 항목 관리</span>
@@ -2682,8 +2682,8 @@ export default function ScheduleModal({
             style={{ zIndex: Z_INDEX.managementBackdrop }}
           />
           <div
-            className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
-            style={{ zIndex: Z_INDEX.managementModal }}
+            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+            style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
           >
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-[16px]">플랫폼 관리</span>
@@ -2768,8 +2768,8 @@ export default function ScheduleModal({
             style={{ zIndex: Z_INDEX.managementBackdrop }}
           />
           <div
-            className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
-            style={{ zIndex: Z_INDEX.managementModal }}
+            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+            style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
           >
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-[16px]">작성할 채널 관리</span>
@@ -2854,8 +2854,8 @@ export default function ScheduleModal({
             style={{ zIndex: Z_INDEX.managementBackdrop }}
           />
           <div
-            className="fixed bottom-0 left-0 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
-            style={{ zIndex: Z_INDEX.managementModal }}
+            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+            style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
           >
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-base">카테고리 관리</span>
@@ -3164,8 +3164,8 @@ export default function ScheduleModal({
             style={{ zIndex: Z_INDEX.managementBackdrop }}
           />
           <div
-            className="fixed bottom-0 left-0 w-full h-auto max-h-[60%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
-            style={{ zIndex: Z_INDEX.managementModal }}
+            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full h-auto max-h-[60%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+            style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
           >
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-[16px]">마감일 항목 관리</span>
