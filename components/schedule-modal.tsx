@@ -1740,7 +1740,9 @@ export default function ScheduleModal({
                     <div className="mt-4 p-4 rounded-2xl bg-orange-50/30 border border-orange-100">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="">📋 </span>
-                        <span className="text-[13px] font-bold text-orange-700">세부 마감일</span>
+                        <span className="text-[13px] font-bold text-orange-700">
+                          세부 일정 관리
+                        </span>
                       </div>
                       {profileLoading ? (
                         <div className="space-y-3">
@@ -1940,12 +1942,12 @@ export default function ScheduleModal({
                         }}
                         className={MANAGE_BUTTON_CLASS}
                       >
-                        +<span>마감일 항목 관리</span>
+                        +<span>할 일 추가하기</span>
                       </button>
                       {showDeadlineManagementCta && (
                         <>
                           <span className="pointer-events-none absolute -right-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 shadow-[0_0_0_2px_rgba(255,255,255,1)] animate-pulse" />
-                          <div className="pointer-events-none absolute right-0 top-8 w-[210px] rounded-xl bg-white/95 px-3 py-2 text-[12px] text-neutral-800 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur z-10 overflow-hidden">
+                          <div className="pointer-events-none absolute right-0 top-8 w-[160px] rounded-xl bg-white/95 px-3 py-2 text-[12px] text-neutral-800 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur z-10 overflow-hidden">
                             <div
                               className="absolute inset-0 rounded-xl p-[3px] bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
                               style={{
@@ -1957,9 +1959,8 @@ export default function ScheduleModal({
                             ></div>
                             <div className="relative z-10">
                               <p className="font-semibold text-neutral-900">
-                                마감일 항목을 자유롭게 관리하세요
+                                📅 중요한 일정, 놓치지 않게!
                               </p>
-                              <p className="text-neutral-600">📅 캘린더 마감일 카운팅에 포함돼요</p>
                             </div>
                             <span className="absolute -top-[9px] right-4 h-0 w-0 border-x-[9px] border-b-[9px] border-x-transparent border-b-purple-500 z-20" />
                             <span className="absolute -top-2 right-[18px] h-0 w-0 border-x-8 border-b-8 border-x-transparent border-b-white/95 z-20" />
@@ -3435,7 +3436,7 @@ export default function ScheduleModal({
             style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
           >
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
-              <span className="font-bold text-[16px]">마감일 항목 관리</span>
+              <span className="font-bold text-[16px]">세부 할 일 관리</span>
               <button
                 onClick={() => setShowDeadlineManagement(false)}
                 className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
@@ -3448,10 +3449,10 @@ export default function ScheduleModal({
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
               <div>
                 <label className="block text-[15px] font-bold text-neutral-500 mb-1">
-                  새 항목 추가
+                  새로운 할 일
                 </label>
                 <p className="text-[13px] text-neutral-500 mb-3">
-                  추가한 마감일 항목은 캘린더의 마감일 카운팅에 포함됩니다
+                  등록하면 캘린더에도 표시돼요. 놓치지 않게 챙겨드릴게요!
                 </p>
                 <div className="flex gap-2">
                   <input
@@ -3459,7 +3460,7 @@ export default function ScheduleModal({
                     value={newDeadlineLabel}
                     onChange={(e) => setNewDeadlineLabel(e.target.value)}
                     className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
-                    placeholder="예: 초안 제출일, 수정본 제출일"
+                    placeholder="예: 초안 제출일, 수정본 제출일, 제품 구매"
                   />
                   <button
                     type="button"
@@ -3473,11 +3474,11 @@ export default function ScheduleModal({
 
               <div>
                 <label className="block text-[15px] font-bold text-neutral-500 mb-2">
-                  등록된 마감일 항목
+                  등록된 일정
                 </label>
                 {deadlineTemplates.length === 0 ? (
                   <div className="text-[15px] text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
-                    등록된 마감일 항목이 없습니다
+                    등록된 일정이 없습니다
                   </div>
                 ) : (
                   <div className="space-y-2">
