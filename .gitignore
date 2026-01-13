@@ -48,3 +48,7 @@ next-env.d.ts
 
 # supabase
 supabase/.temp/
+
+# apple jwt
+secret_gen.rb
+AuthKey_5UKWMPMP2B.p8

@@ -55,6 +55,24 @@ export default function SignInPage() {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: getRedirectUrl(),
+        },
+      });
+
+      if (error) {
+        setError('Apple 로그인에 실패했습니다.');
+      }
+    } catch (err) {
+      setError('Apple 로그인 중 오류가 발생했습니다.');
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -184,6 +202,18 @@ export default function SignInPage() {
             <path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.636 1.712 4.969 4.326 6.333-.144.522-.926 3.363-.962 3.587 0 0-.019.158.084.218.103.06.224.013.224.013.296-.04 3.432-2.261 3.97-2.645.765.112 1.559.17 2.358.17 5.523 0 10-3.463 10-7.691S17.523 3 12 3z" />
           </svg>
           카카오로 시작하기
+        </button>
+
+        {/* Apple Login */}
+        <button
+          type="button"
+          onClick={handleAppleSignIn}
+          className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-gray-800 transition flex items-center justify-center gap-2 cursor-pointer mt-3"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+          </svg>
+          Apple로 시작하기
         </button>
 
         {/* Sign Up Link */}
