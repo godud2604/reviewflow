@@ -904,11 +904,11 @@ function TrendChart({
         <div className="flex items-center gap-1.5">
           <div className="text-[16px] font-bold text-[#0f172a]">월별 성장 추이</div>
 
-          {isPro && (
+          {/* {isPro && (
             <span className="inline-flex items-center justify-center rounded-[4px] bg-[#f97316] px-1.5 py-[3px] text-[10px] font-bold text-white leading-none shadow-sm">
               PRO
             </span>
-          )}
+          )} */}
         </div>
 
         {isScrollable && (
