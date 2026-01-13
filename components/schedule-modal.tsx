@@ -56,7 +56,7 @@ import { formatKoreanTime } from '@/lib/time-utils';
 import { getSupabaseClient } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Check, Copy, Loader2, Search, X } from 'lucide-react';
+import { Check, Copy, Loader2, Minus, Plus, Search, X } from 'lucide-react';
 import NaverMapSearchModal, { MapPlaceSelection } from '@/components/naver-map-search-modal';
 import { Z_INDEX } from '@/lib/z-index';
 
@@ -1947,9 +1947,9 @@ export default function ScheduleModal({
                       {showDeadlineManagementCta && (
                         <>
                           <span className="pointer-events-none absolute -right-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 shadow-[0_0_0_2px_rgba(255,255,255,1)] animate-pulse" />
-                          <div className="pointer-events-none absolute right-0 top-8 w-[160px] rounded-xl bg-white/95 px-3 py-2 text-[12px] text-neutral-800 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur z-10 overflow-hidden">
+                          <div className="pointer-events-none absolute bottom-full right-0 mb-3 w-[168px] rounded-2xl bg-white px-3.5 py-2.5 text-[12px] text-neutral-800 shadow-[0_10px_40px_rgba(99,102,241,0.25)] z-10">
                             <div
-                              className="absolute inset-0 rounded-xl p-[3px] bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
+                              className="absolute inset-0 rounded-2xl p-[2px] bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
                               style={{
                                 WebkitMask:
                                   'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
@@ -1958,12 +1958,12 @@ export default function ScheduleModal({
                               }}
                             ></div>
                             <div className="relative z-10">
-                              <p className="font-semibold text-neutral-900">
+                              <p className="font-semibold text-neutral-900 leading-snug">
                                 📅 중요한 일정, 놓치지 않게!
                               </p>
                             </div>
-                            <span className="absolute -top-[9px] right-4 h-0 w-0 border-x-[9px] border-b-[9px] border-x-transparent border-b-purple-500 z-20" />
-                            <span className="absolute -top-2 right-[18px] h-0 w-0 border-x-8 border-b-8 border-x-transparent border-b-white/95 z-20" />
+                            <span className="absolute bottom-0 right-4 translate-y-[7px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[8px] border-t-purple-500" />
+                            <span className="absolute bottom-0 right-[18px] translate-y-[5px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[7px] border-t-white" />
                           </div>
                         </>
                       )}
@@ -2458,7 +2458,7 @@ export default function ScheduleModal({
                   <div>
                     <p className="text-[16px] font-semibold text-neutral-900">자산 관리</p>
                     <span className="text-[11px] text-neutral-400">
-                      제공(물품) + 수익(현금) - 내가 쓴 돈 = 수익
+                      제공(물품) + 현금 - 내가 쓴 돈 = 수익
                     </span>
                   </div>
                   <div className="relative">
@@ -2485,14 +2485,14 @@ export default function ScheduleModal({
                       }}
                       className={MANAGE_BUTTON_CLASS}
                     >
-                      + <span>항목 추가</span>
+                      <span className="shrink-0">내역 직접 입력</span>
                     </button>
                     {showIncomeDetailManagementCta && (
                       <>
                         <span className="pointer-events-none absolute -right-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 shadow-[0_0_0_2px_rgba(255,255,255,1)] animate-pulse" />
-                        <div className="pointer-events-none absolute right-0 top-8 w-[210px] rounded-xl bg-white/95 px-3 py-2 text-[12px] text-neutral-800 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur z-10 overflow-hidden">
+                        <div className="pointer-events-none absolute bottom-full right-0 mb-3 w-[226px] rounded-2xl bg-white px-3.5 py-2.5 text-[12px] text-neutral-800 shadow-[0_10px_40px_rgba(99,102,241,0.25)] z-10">
                           <div
-                            className="absolute inset-0 rounded-xl p-[3px] bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
+                            className="absolute inset-0 rounded-2xl p-[2px] bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
                             style={{
                               WebkitMask:
                                 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
@@ -2501,11 +2501,12 @@ export default function ScheduleModal({
                             }}
                           ></div>
                           <div className="relative z-10">
-                            <p className="font-semibold text-neutral-900">디테일한 수익 관리</p>
-                            <p className="text-neutral-600">💰 통계에서 상세하게 확인 가능해요</p>
+                            <p className="font-semibold text-neutral-900 leading-snug">
+                              🧩 상품권, 포인트... 내 방식대로 기록해요
+                            </p>
                           </div>
-                          <span className="absolute -top-[9px] right-4 h-0 w-0 border-x-[9px] border-b-[9px] border-x-transparent border-b-purple-500 z-20" />
-                          <span className="absolute -top-2 right-[18px] h-0 w-0 border-x-8 border-b-8 border-x-transparent border-b-white/95 z-20" />
+                          <span className="absolute bottom-0 right-4 translate-y-[7px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[8px] border-t-purple-500" />
+                          <span className="absolute bottom-0 right-[18px] translate-y-[5px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[7px] border-t-white" />
                         </div>
                       </>
                     )}
@@ -2831,7 +2832,7 @@ export default function ScheduleModal({
             style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
           >
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
-              <span className="font-bold text-[16px]">수익/지출 항목 관리</span>
+              <span className="font-bold text-[16px]">내역 직접 추가</span>
               <button
                 onClick={() => setShowIncomeDetailManagement(false)}
                 className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
@@ -2843,31 +2844,33 @@ export default function ScheduleModal({
 
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
               <div>
-                <label className="block text-[15px] font-bold text-neutral-500">새 항목 추가</label>
+                <label className="block text-[15px] font-bold text-neutral-500">새 내역 추가</label>
                 <p className="text-[13px] text-neutral-500 mb-4">
-                  추가한 항목은 통계에서 상세하게 확인할 수 있습니다
+                  상품권, 배송비... 내 방식대로 자유롭게 적어요
                 </p>
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-3">
                   <button
                     type="button"
                     onClick={() => setNewIncomeDetailType('INCOME')}
-                    className={`rounded-full px-3 py-1 text-[12px] font-semibold transition ${
+                    className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-semibold transition-all ${
                       newIncomeDetailType === 'INCOME'
-                        ? 'bg-[#eef5ff] text-[#2563eb]'
-                        : 'border border-neutral-200 text-neutral-500'
+                        ? 'bg-[#eef5ff] text-[#2563eb] shadow-sm scale-105'
+                        : 'border border-neutral-200 text-neutral-500 hover:border-blue-200 hover:bg-blue-50/30'
                     }`}
                   >
+                    <Plus className="w-3.5 h-3.5" />
                     수익
                   </button>
                   <button
                     type="button"
                     onClick={() => setNewIncomeDetailType('EXPENSE')}
-                    className={`rounded-full px-3 py-1 text-[12px] font-semibold transition ${
+                    className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-semibold transition-all ${
                       newIncomeDetailType === 'EXPENSE'
-                        ? 'bg-[#fee2e2]/70 text-[#ef4444]'
-                        : 'border border-neutral-200 text-neutral-500'
+                        ? 'bg-[#fee2e2]/70 text-[#ef4444] shadow-sm scale-105'
+                        : 'border border-neutral-200 text-neutral-500 hover:border-red-200 hover:bg-red-50/30'
                     }`}
                   >
+                    <Minus className="w-3.5 h-3.5" />
                     지출
                   </button>
                 </div>
@@ -2876,15 +2879,13 @@ export default function ScheduleModal({
                     type="text"
                     value={newIncomeDetailLabel}
                     onChange={(e) => setNewIncomeDetailLabel(e.target.value)}
-                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
-                    placeholder={
-                      newIncomeDetailType === 'INCOME' ? '예: 상품권 수익' : '예: 발렛비'
-                    }
+                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/40"
+                    placeholder={'예: 상품권 수익, 주차비 (자유롭게 입력)'}
                   />
                   <button
                     type="button"
                     onClick={handleAddIncomeDetailFromModal}
-                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer"
+                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-[#FF5722]/90 transition-colors"
                   >
                     추가
                   </button>
@@ -2893,11 +2894,11 @@ export default function ScheduleModal({
 
               <div>
                 <label className="block text-[15px] font-bold text-neutral-500 mb-2">
-                  등록된 추가 항목
+                  등록된 내역
                 </label>
                 {incomeDetailTemplates.length === 0 ? (
                   <div className="text-[15px] text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
-                    등록된 추가 항목이 없습니다
+                    등록된 내역 없습니다
                   </div>
                 ) : (
                   <div className="space-y-2">
