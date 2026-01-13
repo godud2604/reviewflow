@@ -1483,7 +1483,7 @@ export default function ScheduleModal({
         >
           <button
             onClick={onClose}
-            className="absolute right-5 top-3 z-50 flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-all hover:bg-neutral-200 hover:text-neutral-900 active:scale-95"
+            className="absolute right-5 top-4 z-50 flex h-8 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-all hover:bg-neutral-200 hover:text-neutral-900 active:scale-95"
             aria-label="닫기"
           >
             <X className="h-5 w-5" />
@@ -1501,106 +1501,91 @@ export default function ScheduleModal({
               </span>
             </div>
             {schedule && (
-              <div className="sticky top-0 z-40">
-                <div
-                  className="flex overflow-x-auto bg-white/95 px-4 pt-3 backdrop-blur-md scrollbar-hide shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      scrollToSection(basicInfoRef);
-                      dismissStickyCta();
-                    }}
-                    className={`relative shrink-0 px-3 py-3 text-[14px] transition-colors ${
-                      activeTab === 'basicInfo'
-                        ? 'font-bold text-[#FF5F00]'
-                        : 'font-medium text-neutral-400 hover:text-neutral-600'
-                    }`}
+              <div className="sticky top-0 z-40 relative">
+                <div className="bg-white/95 px-4 pt-3 pb-2 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+                  <div
+                    className="flex overflow-x-auto scrollbar-hide bg-neutral-100/80 rounded-full p-1 gap-1"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                   >
-                    기본 정보
-                    {activeTab === 'basicInfo' && (
-                      <span className="absolute bottom-1 left-1/2 h-[2.5px] w-[calc(100%-20px)] -translate-x-1/2 bg-[#FF5F00] rounded-full" />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      scrollToSection(progressInfoRef);
-                      dismissStickyCta();
-                    }}
-                    className={`relative shrink-0 px-3 py-3 text-[14px] transition-colors ${
-                      activeTab === 'progressInfo'
-                        ? 'font-bold text-[#FF5F00]'
-                        : 'font-medium text-neutral-400 hover:text-neutral-600'
-                    }`}
-                  >
-                    체험 진행
-                    {activeTab === 'progressInfo' && (
-                      <span className="absolute bottom-1 left-1/2 h-[2.5px] w-[calc(100%-20px)] -translate-x-1/2 bg-[#FF5F00] rounded-full" />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      scrollToSection(assetManagementRef);
-                      dismissStickyCta();
-                    }}
-                    className={`relative shrink-0 px-3 py-3 text-[14px] transition-colors ${
-                      activeTab === 'assetManagement'
-                        ? 'font-bold text-[#FF5F00]'
-                        : 'font-medium text-neutral-400 hover:text-neutral-600'
-                    }`}
-                  >
-                    자산 관리
-                    {activeTab === 'assetManagement' && (
-                      <span className="absolute bottom-1 left-1/2 h-[2.5px] w-[calc(100%-20px)] -translate-x-1/2 bg-[#FF5F00] rounded-full" />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      scrollToSection(memoRef);
-                      dismissStickyCta();
-                    }}
-                    className={`relative shrink-0 px-3 py-3 text-[14px] transition-colors ${
-                      activeTab === 'memo'
-                        ? 'font-bold text-[#FF5F00]'
-                        : 'font-medium text-neutral-400 hover:text-neutral-600'
-                    }`}
-                  >
-                    메모장
-                    {activeTab === 'memo' && (
-                      <span className="absolute bottom-1 left-1/2 h-[2.5px] w-[calc(100%-20px)] -translate-x-1/2 bg-[#FF5F00] rounded-full" />
-                    )}
-                  </button>
-                  {guideFilesCount > 0 && (
                     <button
                       type="button"
                       onClick={() => {
-                        scrollToSection(guideFilesSectionRef);
+                        scrollToSection(basicInfoRef);
                         dismissStickyCta();
                       }}
-                      className={`relative shrink-0 px-3 py-3 text-[14px] transition-colors ${
-                        activeTab === 'guideFiles'
-                          ? 'font-bold text-[#FF5F00]'
-                          : 'font-medium text-neutral-400 hover:text-neutral-600'
+                      className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
+                        activeTab === 'basicInfo'
+                          ? 'bg-white text-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                          : 'text-neutral-500 hover:text-neutral-700'
                       }`}
                     >
-                      영수증 ({guideFilesCount})
-                      {activeTab === 'guideFiles' && (
-                        <span className="absolute bottom-1 left-1/2 h-[2.5px] w-[calc(100%-20px)] -translate-x-1/2 bg-[#FF5F00] rounded-full" />
-                      )}
+                      기본 정보
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        scrollToSection(progressInfoRef);
+                        dismissStickyCta();
+                      }}
+                      className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
+                        activeTab === 'progressInfo'
+                          ? 'bg-white text-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                          : 'text-neutral-500 hover:text-neutral-700'
+                      }`}
+                    >
+                      체험 진행
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        scrollToSection(assetManagementRef);
+                        dismissStickyCta();
+                      }}
+                      className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
+                        activeTab === 'assetManagement'
+                          ? 'bg-white text-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                          : 'text-neutral-500 hover:text-neutral-700'
+                      }`}
+                    >
+                      자산 관리
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        scrollToSection(memoRef);
+                        dismissStickyCta();
+                      }}
+                      className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
+                        activeTab === 'memo'
+                          ? 'bg-white text-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                          : 'text-neutral-500 hover:text-neutral-700'
+                      }`}
+                    >
+                      메모장
+                    </button>
+                    {guideFilesCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          scrollToSection(guideFilesSectionRef);
+                          dismissStickyCta();
+                        }}
+                        className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
+                          activeTab === 'guideFiles'
+                            ? 'bg-white text-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                            : 'text-neutral-500 hover:text-neutral-700'
+                        }`}
+                      >
+                        영수증 ({guideFilesCount})
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {showStickyNavigationCta && (
-                  <div className="absolute left-4 top-[calc(100%+8px)] z-50 animate-bounce-subtle">
-                    <span className="pointer-events-none absolute -left-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-orange-400 to-red-500 shadow-[0_0_0_2px_rgba(255,255,255,1)] animate-ping" />
-                    <span className="pointer-events-none absolute -left-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-orange-400 to-red-500 shadow-[0_0_0_2px_rgba(255,255,255,1)]" />
-                    <div className="pointer-events-none relative w-[220px] rounded-xl bg-white/95 px-3 py-2 text-[12px] text-neutral-800 shadow-[0_8px_20px_rgba(15,23,42,0.15)] backdrop-blur overflow-hidden">
+                  <div className="absolute left-1/2 -translate-x-1/2 top-[40px] mt-3 z-50 pointer-events-none">
+                    <div className="relative w-[170px] rounded-2xl bg-white px-3.5 py-2.5 text-[12px] text-neutral-800 shadow-[0_10px_40px_rgba(255,87,34,0.25)]">
                       <div
-                        className="absolute inset-0 rounded-xl p-[2px] bg-gradient-to-r from-orange-400 via-red-500 to-orange-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
+                        className="absolute inset-0 rounded-2xl p-[2px] bg-gradient-to-r from-orange-400 via-red-500 to-orange-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
                         style={{
                           WebkitMask:
                             'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
@@ -1609,13 +1594,18 @@ export default function ScheduleModal({
                         }}
                       ></div>
                       <div className="relative z-10">
-                        <p className="font-bold text-[#FF5F00]">원하는 위치로 빠르게 이동!</p>
-                        <p className="text-neutral-600 mt-0.5">
-                          탭을 눌러 해당 구간으로 갈 수 있어요
+                        <p className="font-bold text-[#FF5F00] leading-snug">
+                          스크롤 내릴 필요 없어요 ✋
+                        </p>
+                        <p className="text-neutral-600 mt-0.5 leading-snug">
+                          누르면 원하는 곳으로 바로 슝!
                         </p>
                       </div>
-                      <span className="absolute -top-[5px] left-[6px] h-2.5 w-2.5 rotate-45 border-l border-t border-transparent bg-white/95 z-20" />
+                      <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[7px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[8px] border-b-red-500" />
+                      <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[5px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[7px] border-b-white" />
                     </div>
+                    <span className="absolute top-[-12px] left-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-gradient-to-r from-orange-400 to-red-500 shadow-[0_0_0_2px_rgba(255,255,255,1)] animate-ping" />
+                    <span className="absolute top-[-12px] left-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-gradient-to-r from-orange-400 to-red-500 shadow-[0_0_0_2px_rgba(255,255,255,1)]" />
                   </div>
                 )}
               </div>
