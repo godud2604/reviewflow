@@ -172,17 +172,16 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const handleDownloadActivity = () => {
     if (isMobile) {
       toast({
-        title: '활동 내역 다운로드는 웹에서만 가능해요',
-        description: 'PC 웹에서 다운로드를 진행해 주세요.',
+        title: '모바일 환경에서는 지원하지 않는 기능입니다',
+        description: 'PC에서 확인해 주세요.',
       });
       return;
     }
 
     if (isKakaoBrowserWithTightDownloadSupport()) {
       toast({
-        title: '카카오 브라우저에서는 다운로드가 제한돼요',
-        description:
-          '모바일 카카오 브라우저 환경에서는 다른 브라우저 또는 웹에서 엑셀을 내려받아 주세요.',
+        title: '이 브라우저에서는 다운로드가 제한됩니다',
+        description: '다른 브라우저 또는 PC에서 다운로드해 주세요.',
       });
       return;
     }
@@ -361,8 +360,8 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const openDownloadDialog = () => {
     if (isMobile) {
       toast({
-        title: '활동 내역 다운로드는 웹에서만 가능해요',
-        description: 'PC 웹에서 다운로드를 진행해 주세요.',
+        title: '모바일 환경에서는 지원하지 않는 기능입니다',
+        description: 'PC에서 확인해 주세요.',
         duration: 1000,
       });
       return;
@@ -440,7 +439,8 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
             ) : null}
             <p className="text-[13px] text-neutral-500">{emailLabel}</p>
           </div>
-          {isPro && (
+          {/* iOS 심사 기간 동안 임시로 숨김 */}
+          {/* {isPro && (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-neutral-500">
               <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">
                 PRO
@@ -449,11 +449,11 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
               <span className="text-neutral-300">·</span>
               <span>{tierExpiryLabel ? `만료 ${tierExpiryLabel}` : '만료 정보 없음'}</span>
             </div>
-          )}
+          )} */}
         </section>
 
         <section className="rounded-3xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
-          <p className="px-2 pb-2 text-[12px] font-semibold text-neutral-500">프로 기능</p>
+          <p className="px-2 pb-2 text-[12px] font-semibold text-neutral-500">고급 기능</p>
           {proFeatures.map((feature, idx) => {
             const isFeatureLocked = feature.isPro && !isPro;
             return (
@@ -469,11 +469,6 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-[14px] font-semibold text-neutral-900">
                     {feature.label}
-                    {feature.isPro && (
-                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-600">
-                        PRO
-                      </span>
-                    )}
                   </div>
                   {feature.description && (
                     <p className="text-[12px] text-neutral-500">{feature.description}</p>

@@ -264,10 +264,10 @@ export default function LandingPage() {
               <div className="rounded-xl border border-[#ffd6be] bg-gradient-to-r from-[#fff3ea] via-[#ffe6d6] to-[#ffd7bd] p-3">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="px-2 py-1 rounded-lg bg-white text-[11px] font-bold text-[#ff5c39] border border-white/70 shadow-sm">
-                    PRO
+                    Beta 무료
                   </span>
                   <span className="text-[12px] font-semibold text-[#c24b30]">
-                    12월 20일 오픈 예정
+                    지금 무료로 이용 가능
                   </span>
                 </div>
                 <ul className="text-[12px] text-neutral-800 space-y-1.5 list-disc list-inside">
@@ -277,7 +277,7 @@ export default function LandingPage() {
                   <span className="ml-3">(오늘 해야 할 방문/작성/발행 일정 등)</span>
                 </ul>
                 <p className="text-[11px] text-[#c24b30] font-semibold mt-2">
-                  사전신청 시 PRO 3개월 무료로 이용 가능
+                  사전신청 시 모든 고급 기능을 무료로 이용 가능
                 </p>
               </div>
             </div>
@@ -433,7 +433,7 @@ export default function LandingPage() {
             className="mt-4 text-sm font-semibold text-[#FF5722] animate-fade-in"
             style={{ animationDelay: '0.6s' }}
           >
-            회원가입 시 PRO 1개월 무료 혜택을 드려요.
+            회원가입 시 모든 기능을 무료로 이용할 수 있어요.
           </p>
         </div>
       </section>
@@ -1030,7 +1030,7 @@ export default function LandingPage() {
               <div className="absolute top-0 right-0 bg-[#FF5722] text-white text-xs font-bold px-4 py-2 rounded-bl-2xl">
                 POPULAR
               </div>
-              <h3 className="text-2xl font-bold mb-2 text-[#FF5722]">PRO</h3>
+              <h3 className="text-2xl font-bold mb-2 text-[#FF5722]">고급 기능</h3>
               <p className="text-[#6B7684] mb-6">더 깊고 편리한 리뷰 관리 기능</p>
               <ul className="text-[16px] text-[#333D4B] space-y-3 mb-9 flex-grow font-medium">
                 <li>✔ 체험단 일정 등록</li>
@@ -1047,14 +1047,14 @@ export default function LandingPage() {
               </ul>
               <div className="w-full pt-6 border-t border-gray-100">
                 <div className="flex items-end gap-2 mb-5">
-                  <span className="text-3xl font-bold text-[#191F28]">₩2,900</span>
-                  <span className="text-lg text-[#8B95A1]">/월</span>
+                  <span className="text-3xl font-bold text-[#191F28]">Beta 무료</span>
+                  <span className="text-lg text-[#8B95A1]">/ 현재 모든 기능 무료 제공</span>
                 </div>
                 <button
                   onClick={handleFreeTrial}
                   className="w-full bg-[#FF5722] text-white px-6 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition cursor-pointer"
                 >
-                  PRO 1개월 무료 혜택 받기
+                  지금 무료로 시작하기
                 </button>
               </div>
             </div>

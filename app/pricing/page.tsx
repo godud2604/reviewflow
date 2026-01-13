@@ -110,13 +110,7 @@ export default function PricingPage() {
                 지원합니다.
               </p>
             </div>
-            <div className="space-y-2">
-              <h3 className="font-semibold text-lg">언제든 해지할 수 있나요?</h3>
-              <p className="text-[#6B7280]">
-                네, 언제든지 구독을 취소하실 수 있습니다. 남은 기간 동안 서비스를 계속 이용하실 수
-                있습니다.
-              </p>
-            </div>
+
             <div className="space-y-2">
               <h3 className="font-semibold text-lg">환불 정책은 어떻게 되나요?</h3>
               <p className="text-[#6B7280]">
