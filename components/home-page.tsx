@@ -81,10 +81,6 @@ export default function HomePage({
 
   // 날짜 및 기본 필터
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState<
-    'all' | 'active' | 'reconfirm' | 'overdue' | 'noDeadline'
-  >('all');
-
   // 필터 상태
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
@@ -107,7 +103,6 @@ export default function HomePage({
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  const [floatingPanel, setFloatingPanel] = useState<'none' | 'noDeadline' | 'reconfirm'>('none');
   const [showDemo, setShowDemo] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
@@ -134,14 +129,11 @@ export default function HomePage({
     []
   );
 
-  const reconfirmSchedules = schedules.filter((s) => s.status === '재확인');
-  const reconfirmCount = reconfirmSchedules.length;
   const noDeadlineSchedules = schedules.filter((s) => !s.dead);
 
   useEffect(() => {
     if (focusDate) {
       setSelectedDate(focusDate);
-      setSelectedFilter('all');
       onFocusDateApplied?.();
     }
   }, [focusDate, onFocusDateApplied]);

@@ -27,8 +27,7 @@ export interface Schedule {
     | '방문'
     | '구매 완료'
     | '제품 배송 완료'
-    | '완료'
-    | '재확인';
+    | '완료';
   platform: string;
   reviewType: '제공형' | '구매형' | '기자단' | '미션/인증' | '방문형';
   channel: ScheduleChannel[];
@@ -64,7 +63,6 @@ export interface Schedule {
   purchaseLink: string;
   guideFiles: GuideFile[];
   memo: string;
-  reconfirmReason?: string;
   visitReviewChecklist?: {
     naverReservation: boolean;
     platformAppReview: boolean;

@@ -95,7 +95,6 @@ export function mapDbToSchedule(db: DbSchedule): Schedule {
     purchaseLink: db.purchase_link || '',
     guideFiles: db.guide_files || [],
     memo: db.memo || '',
-    reconfirmReason: db.reconfirm_reason || undefined,
     visitReviewChecklist: db.visit_review_checklist || undefined,
     paybackExpected: db.payback_expected,
     paybackConfirmed: db.payback_confirmed,
@@ -131,7 +130,6 @@ function mapScheduleToDb(schedule: Omit<Schedule, 'id'>, userId: string) {
     purchase_link: schedule.purchaseLink || '',
     guide_files: schedule.guideFiles || [],
     memo: schedule.memo || '',
-    reconfirm_reason: schedule.reconfirmReason || null,
     visit_review_checklist: schedule.visitReviewChecklist || null,
     payback_expected: schedule.paybackExpected || false,
     payback_confirmed: schedule.paybackConfirmed || false,
@@ -170,7 +168,6 @@ function mapScheduleUpdatesToDb(updates: Partial<Schedule>) {
   if (updates.purchaseLink !== undefined) dbUpdates.purchase_link = updates.purchaseLink;
   if (updates.guideFiles !== undefined) dbUpdates.guide_files = updates.guideFiles;
   if (updates.memo !== undefined) dbUpdates.memo = updates.memo;
-  if (updates.reconfirmReason !== undefined) dbUpdates.reconfirm_reason = updates.reconfirmReason;
   if (updates.visitReviewChecklist !== undefined)
     dbUpdates.visit_review_checklist = updates.visitReviewChecklist;
   if (updates.paybackExpected !== undefined) dbUpdates.payback_expected = updates.paybackExpected;

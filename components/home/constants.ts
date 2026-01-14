@@ -1,11 +1,10 @@
 export const AVAILABLE_STATUSES = [
-  '재확인',
   '선정됨',
   '방문일 예약 완료',
   '방문',
   '제품 배송 완료',
 ];
-export const DEFAULT_SELECTED_STATUSES = AVAILABLE_STATUSES.filter((s) => s !== '재확인');
+export const DEFAULT_SELECTED_STATUSES = AVAILABLE_STATUSES;
 
 export const AVAILABLE_CATEGORIES = [
   '맛집/식품',

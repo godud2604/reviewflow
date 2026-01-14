@@ -136,7 +136,6 @@ const STATUS_ORDER: Schedule['status'][] = [
   '구매 완료',
   '제품 배송 완료',
   '완료',
-  '재확인',
 ];
 
 const COMMON_STATUSES: Schedule['status'][] = ['선정됨', '완료'];
@@ -183,7 +182,6 @@ const createEmptyFormData = (): Partial<Schedule> => ({
   purchaseLink: '',
   guideFiles: [],
   memo: '',
-  reconfirmReason: '',
   visitReviewChecklist: { ...DEFAULT_VISIT_REVIEW_CHECKLIST },
   paybackExpected: false,
   paybackConfirmed: false,
@@ -240,8 +238,6 @@ export default function ScheduleModal({
   const [channelToDelete, setChannelToDelete] = useState<string | null>(null);
   const [duplicateChannelAlert, setDuplicateChannelAlert] = useState(false);
   const [emptyChannelAlert, setEmptyChannelAlert] = useState(false);
-  const [reconfirmReason, setReconfirmReason] = useState('');
-  const [customReconfirmReason, setCustomReconfirmReason] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -589,19 +585,6 @@ export default function ScheduleModal({
         paybackExpected: schedule.paybackExpected ?? false,
         paybackConfirmed: schedule.paybackExpected ? !!schedule.paybackConfirmed : false,
       });
-      if (schedule.status === '재확인' && schedule.reconfirmReason) {
-        const reason = schedule.reconfirmReason;
-        if (
-          ['입금 확인 필요', '리워드 미지급', '가이드 내용 불분명', '플랫폼 답변 대기중'].includes(
-            reason
-          )
-        ) {
-          setReconfirmReason(reason);
-        } else {
-          setReconfirmReason('기타');
-          setCustomReconfirmReason(reason);
-        }
-      }
       setVisitMode(hasVisitData(schedule));
       setLocationDetailEnabled(Boolean(schedule.regionDetail));
     } else {
@@ -610,8 +593,6 @@ export default function ScheduleModal({
         emptyForm.dead = initialDeadline;
       }
       setFormData(emptyForm);
-      setReconfirmReason('');
-      setCustomReconfirmReason('');
       setPendingFiles([]);
       setVisitMode(false);
       setNonVisitReviewType('제공형');
@@ -775,13 +756,6 @@ export default function ScheduleModal({
         updatedFormData.visitReviewChecklist = undefined;
       } else if (!updatedFormData.visitReviewChecklist) {
         updatedFormData.visitReviewChecklist = { ...DEFAULT_VISIT_REVIEW_CHECKLIST };
-      }
-
-      if (updatedFormData.status === '재확인' && reconfirmReason) {
-        const reason = reconfirmReason === '기타' ? customReconfirmReason : reconfirmReason;
-        updatedFormData.reconfirmReason = reason;
-      } else {
-        updatedFormData.reconfirmReason = '';
       }
 
       const selectedChannels = sanitizeChannels(updatedFormData.channel || [], {
@@ -1419,10 +1393,6 @@ export default function ScheduleModal({
 
   const applyStatusChange = useCallback((value: Schedule['status']) => {
     setFormData((prev) => ({ ...prev, status: value }));
-    if (value !== '재확인') {
-      setReconfirmReason('');
-      setCustomReconfirmReason('');
-    }
   }, []);
 
   const handleStatusChange = (value: Schedule['status']) => {

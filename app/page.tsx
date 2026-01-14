@@ -22,7 +22,6 @@ import type { Schedule } from '@/types';
 
 // --- Constants for Defaults ---
 const DEFAULT_AVAILABLE_STATUSES = [
-  '재확인',
   '선정됨',
   '방문일 예약 완료',
   '방문',

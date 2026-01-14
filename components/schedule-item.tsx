@@ -80,7 +80,6 @@ export default function ScheduleItem({
     },
     '제품 배송 완료': { text: '배송 완료', highlightColor: '#c09410ff' },
     완료: { class: 'bg-neutral-100 text-neutral-700 border border-neutral-200', text: '완료' },
-    재확인: { class: 'bg-amber-100 text-amber-900 border border-amber-200', text: '재확인' },
   };
 
   const visitLabel = schedule.visit
@@ -105,7 +104,6 @@ export default function ScheduleItem({
       }
     : undefined;
   const isOverdue = schedule.dead && schedule.dead < today && schedule.status !== '완료';
-  const isReconfirm = schedule.status === '재확인';
   const isCompleted = schedule.status === '완료';
   const canComplete = !!onCompleteClick;
 
@@ -256,11 +254,7 @@ export default function ScheduleItem({
   return (
     <div
       className={`p-4 rounded-3xl flex items-center shadow-sm cursor-pointer transition-transform active:scale-[0.98] ${
-        isOverdue
-          ? 'bg-red-50/70 border-red-200'
-          : isReconfirm
-            ? 'bg-amber-50/70 border-amber-200'
-            : 'bg-white border-neutral-200'
+        isOverdue ? 'bg-red-50/70 border-red-200' : 'bg-white border-neutral-200'
       }`}
       onClick={onClick}
     >
