@@ -213,16 +213,8 @@ export default function HomePage({
     onFilterChange,
   ]);
 
-  const handleClearFilters = () => {
-    setSelectedPlatforms([]); // Clear platform selection
-    setSelectedStatuses([]);
-    setSelectedCategories([]);
-    setSelectedReviewTypes([]);
-    setSearchQuery('');
-    setSortBy('deadline-asc');
-    setPaybackOnly(false);
+  const handleSelectTodo = () => {
     setCompletedOnly(false);
-    setSelectedDate(null);
   };
 
   const handleToggleCompletedOnly = () => {
@@ -423,7 +415,7 @@ export default function HomePage({
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -ml-1 pl-1">
           {/* 1. 전체 */}
           <button
-            onClick={handleClearFilters}
+            onClick={handleSelectTodo}
             className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
           >
             할 일
