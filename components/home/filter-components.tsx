@@ -22,10 +22,10 @@ export const FilterBadge = ({
       <button
         onClick={onClick}
         className={cn(
-          'flex-shrink-0 h-8 px-3 rounded-[8px] text-[13px] font-medium transition-all flex items-center gap-1 border select-none',
+          'flex-shrink-0 h-8 px-3.5 rounded-full text-[13px] font-medium transition-all flex items-center gap-1 border select-none',
           isActive
-            ? 'bg-neutral-900 text-white border-neutral-900'
-            : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300'
+            ? 'bg-white text-neutral-900 border-neutral-200 shadow-[0_2px_8px_rgba(15,23,42,0.08)]'
+            : 'bg-neutral-100/80 border-transparent text-neutral-600 hover:bg-neutral-100'
         )}
       >
         {label}

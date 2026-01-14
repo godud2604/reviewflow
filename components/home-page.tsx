@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { usePostHog } from 'posthog-js/react';
-import { Check, Search, X } from 'lucide-react';
+import { ArrowUp, Check, ChevronRight, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Schedule } from '@/types';
@@ -11,7 +11,12 @@ import { formatDateStringKST } from '@/lib/date-utils';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { Input } from '@/components/ui/input';
-import { Command as UICommand, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
+import {
+  Command as UICommand,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { CalendarSection } from '@/components/home/calendar-section';
 import { FilterBadge, FilterCheckboxItem } from '@/components/home/filter-components';
 import { AVAILABLE_STATUSES, AVAILABLE_CATEGORIES } from '@/components/home/constants';
@@ -170,8 +175,7 @@ export default function HomePage({
     const main = (container?.closest('main') ??
       document.querySelector('main')) as HTMLElement | null;
 
-    const target =
-      container && container.scrollHeight > container.clientHeight ? container : main;
+    const target = container && container.scrollHeight > container.clientHeight ? container : main;
 
     scrollTargetRef.current = target;
     if (!target) return;
@@ -412,26 +416,35 @@ export default function HomePage({
         </div>
 
         {/* 2열: 뱃지 가로 스크롤 */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -ml-1 pl-1">
+        <div className="relative">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -ml-1 pl-1 pr-8">
           {/* 1. 전체 */}
-          <button
-            onClick={handleSelectTodo}
-            className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
-          >
-            할 일
-          </button>
-
-          <button
-            onClick={handleToggleCompletedOnly}
-            className={cn(
-              'flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold border transition-colors',
-              completedOnly
-                ? 'bg-neutral-900 text-white border-neutral-900'
-                : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50'
-            )}
-          >
-            완료 상태만 보기
-          </button>
+          <div className="flex flex-shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-[#f2f4f6] p-1">
+            <button
+              onClick={handleSelectTodo}
+              aria-pressed={!completedOnly}
+              className={cn(
+                'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all',
+                !completedOnly
+                  ? 'bg-white text-neutral-800 shadow-[0_2px_6px_rgba(15,23,42,0.14)]'
+                  : 'text-neutral-500 hover:text-neutral-700'
+              )}
+            >
+              할 일
+            </button>
+            <button
+              onClick={handleToggleCompletedOnly}
+              aria-pressed={completedOnly}
+              className={cn(
+                'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all',
+                completedOnly
+                  ? 'bg-white text-neutral-800 shadow-[0_2px_6px_rgba(15,23,42,0.14)]'
+                  : 'text-neutral-500 hover:text-neutral-700'
+              )}
+            >
+              완료
+            </button>
+          </div>
 
           {/* 2. 정렬 */}
           {!selectedDate && (
@@ -617,6 +630,11 @@ export default function HomePage({
               </FilterBadge>
             </>
           )}
+          </div>
+          <div className="pointer-events-none absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-neutral-50/95 to-neutral-50/0" />
+          <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-neutral-500 shadow-sm">
+            <ChevronRight className="h-3.5 w-3.5" />
+          </div>
         </div>
       </div>
       <div className="flex flex-col gap-3">
@@ -687,9 +705,10 @@ export default function HomePage({
       {showScrollTop && (
         <button
           onClick={() => scrollTargetRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-28 right-5 z-40 h-11 px-4 rounded-full bg-neutral-900 text-white text-[13px] font-semibold shadow-xl hover:bg-neutral-800 transition-colors"
+          className="fixed bottom-28 right-5 z-40 h-11 w-11 rounded-full bg-white text-neutral-700 shadow-xl hover:bg-neutral-50 transition-colors flex items-center justify-center"
+          aria-label="위로 올라가기"
         >
-          위로 올라가기
+          <ArrowUp className="h-4 w-4" />
         </button>
       )}
     </div>
