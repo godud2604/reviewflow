@@ -143,10 +143,6 @@ export async function GET(request: NextRequest) {
     if (reviewTypes.length > 0) countQuery = countQuery.in('review_type', reviewTypes);
     if (search) countQuery = countQuery.ilike('title', `%${search}%`);
 
-    if (sortBy === 'visit-asc' || sortBy === 'visit-desc') {
-      countQuery = countQuery.neq('visit_date', '').not('visit_date', 'is', null);
-    }
-
     const { data: allSchedules, count: totalCount } = await countQuery;
 
     // 전체 플랫폼 목록 추출 (필터링되지 않은 사용자의 전체 일정 기준)
@@ -186,8 +182,8 @@ export async function GET(request: NextRequest) {
       pagination: {
         offset,
         limit,
-        total: totalCount || 0,
-        hasMore: offset + limit < (totalCount || 0),
+        total: count || 0,
+        hasMore: offset + limit < (count || 0),
       },
       counts: {
         total: totalCount || 0,
