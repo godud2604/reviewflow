@@ -310,11 +310,11 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
     setIsLoggingOut(true);
     try {
       await signOut();
-      router.push('/');
     } catch {
-      toast({ title: '로그아웃에 실패했습니다.', variant: 'destructive' });
+      // Ignore errors and force logout UX
     } finally {
       setIsLoggingOut(false);
+      router.push('/');
     }
   };
 

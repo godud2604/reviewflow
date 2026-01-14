@@ -10,25 +10,53 @@ import { parseStoredChannels, stringifyChannels } from '@/lib/schedule-channels'
 
 interface UseSchedulesOptions {
   enabled?: boolean;
+  offset?: number;
+  limit?: number;
+  selectedDate?: string | null;
+  month?: string; // YYYY-MM
+  platforms?: string[];
+  statuses?: string[];
+  categories?: string[];
+  reviewTypes?: string[];
+  search?: string;
+  sortBy?: string;
+  paybackOnly?: boolean;
+}
+
+interface SchedulePagination {
+  offset: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
+interface ScheduleCounts {
+  total: number;
+  visit: number;
+  deadline: number;
 }
 
 interface UseSchedulesReturn {
   schedules: Schedule[];
   loading: boolean;
   error: string | null;
+  pagination: SchedulePagination | null;
+  counts: ScheduleCounts | null;
+  platforms: string[];
   createSchedule: (schedule: Omit<Schedule, 'id'>) => Promise<Schedule | null>;
   updateSchedule: (id: number, updates: Partial<Schedule>) => Promise<boolean>;
   deleteSchedule: (id: number) => Promise<boolean>;
   refetch: () => Promise<void>;
+  loadMore: () => Promise<void>;
 }
 
-const toNumber = (value: unknown) => {
+export const toNumber = (value: unknown) => {
   const num = Number(value);
   return Number.isFinite(num) ? num : 0;
 };
 
 // DB -> Frontend 매핑
-function mapDbToSchedule(db: DbSchedule): Schedule {
+export function mapDbToSchedule(db: DbSchedule): Schedule {
   let additionalDeadlines: AdditionalDeadline[] = [];
   if (db.additional_deadlines) {
     try {
@@ -125,8 +153,8 @@ function mapScheduleUpdatesToDb(updates: Partial<Schedule>) {
   if (updates.channel !== undefined) dbUpdates.channel = stringifyChannels(updates.channel);
   if (updates.category !== undefined) dbUpdates.category = updates.category;
   if (updates.region !== undefined) dbUpdates.region = updates.region;
-  if (updates.visit !== undefined) dbUpdates.visit_date = updates.visit;
-  if (updates.visitTime !== undefined) dbUpdates.visit_time = updates.visitTime;
+  if (updates.visit !== undefined) dbUpdates.visit_date = updates.visit || null;
+  if (updates.visitTime !== undefined) dbUpdates.visit_time = updates.visitTime || null;
   if (updates.dead !== undefined) dbUpdates.deadline = updates.dead;
   if (updates.additionalDeadlines !== undefined) {
     dbUpdates.additional_deadlines = updates.additionalDeadlines?.length
@@ -159,12 +187,29 @@ function mapScheduleUpdatesToDb(updates: Partial<Schedule>) {
 }
 
 export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesReturn {
-  const { enabled = true } = options;
+  const {
+    enabled = true,
+    offset: initialOffset = 0,
+    limit = 20,
+    selectedDate,
+    month,
+    platforms = [],
+    statuses = [],
+    categories = [],
+    reviewTypes = [],
+    search = '',
+    sortBy = 'deadline-asc',
+    paybackOnly = false,
+  } = options;
   const { user } = useAuth();
   const { toast } = useToast();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState<SchedulePagination | null>(null);
+  const [counts, setCounts] = useState<ScheduleCounts | null>(null);
+  const [responsePlatforms, setResponsePlatforms] = useState<string[]>([]);
+  const [currentOffset, setCurrentOffset] = useState(initialOffset);
   const hasFetchedRef = React.useRef(false);
 
   const showError = useCallback(
@@ -182,8 +227,13 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
 
   const userId = user?.id;
 
+  const platformsKey = platforms.join(',');
+  const statusesKey = statuses.join(',');
+  const categoriesKey = categories.join(',');
+  const reviewTypesKey = reviewTypes.join(',');
+
   const fetchSchedules = useCallback(
-    async (force = false) => {
+    async (force = false, append = false) => {
       if (!userId) {
         setSchedules([]);
         setLoading(false);
@@ -191,27 +241,68 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
       }
 
       // Skip if already fetched and not forcing
-      if (hasFetchedRef.current && !force) {
+      if (hasFetchedRef.current && !force && !append) {
         setLoading(false);
         return;
       }
 
-      setLoading(true);
+      if (!append) {
+        setLoading(true);
+      }
       setError(null);
 
       try {
-        const supabase = getSupabaseClient();
-        const { data, error: fetchError } = await supabase
-          .from('schedules')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
+        // Build query params
+        const params = new URLSearchParams({
+          offset: append ? currentOffset.toString() : '0',
+          limit: limit.toString(),
+          userId,
+        });
 
-        if (fetchError) {
-          showError(fetchError.message);
+        if (selectedDate) params.append('selectedDate', selectedDate);
+        if (month) params.append('month', month);
+        if (platformsKey) params.append('platforms', platformsKey);
+        if (statusesKey) params.append('statuses', statusesKey);
+        if (categoriesKey) params.append('categories', categoriesKey);
+        if (reviewTypesKey) params.append('reviewTypes', reviewTypesKey);
+        if (search) params.append('search', search);
+        if (paybackOnly) params.append('paybackOnly', 'true');
+        // deadline-asc is default, so skip putting it in url to keep it clean
+        if (sortBy && sortBy !== 'deadline-asc') params.append('sortBy', sortBy);
+
+        const response = await fetch(`/api/schedules?${params.toString()}`, {
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch schedules');
+        }
+
+        const data = await response.json();
+
+        if (data.error) {
+          showError(data.error);
           setSchedules([]);
         } else {
-          setSchedules((data || []).map(mapDbToSchedule));
+          const newSchedules = (data.schedules || []).map(mapDbToSchedule);
+
+          if (append) {
+            setSchedules((prev) => {
+              const existingIds = new Set(prev.map((s) => s.id));
+              const uniqueNewSchedules = newSchedules.filter((s) => !existingIds.has(s.id));
+              return [...prev, ...uniqueNewSchedules];
+            });
+          } else {
+            setSchedules(newSchedules);
+          }
+
+          setPagination(data.pagination);
+          setCounts(data.counts);
+          if (data.platforms) setResponsePlatforms(data.platforms);
+          setCurrentOffset(append ? currentOffset + limit : limit);
           hasFetchedRef.current = true;
         }
       } catch (err) {
@@ -220,16 +311,50 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
         setLoading(false);
       }
     },
-    [userId, showError]
+    [
+      userId,
+      currentOffset,
+      limit,
+      selectedDate,
+      month,
+      platformsKey,
+      statusesKey,
+      categoriesKey,
+      reviewTypesKey,
+      paybackOnly,
+      search,
+      sortBy,
+      showError,
+    ]
   );
+
+  const loadMore = useCallback(async () => {
+    if (pagination?.hasMore) {
+      await fetchSchedules(false, true);
+    }
+  }, [pagination, fetchSchedules]);
 
   useEffect(() => {
     if (enabled) {
+      // 필터가 변경되면 offset 초기화하고 새로 fetch
+      setCurrentOffset(0);
+      hasFetchedRef.current = false;
       fetchSchedules();
     } else {
       setLoading(false);
     }
-  }, [enabled, fetchSchedules]);
+  }, [
+    enabled,
+    selectedDate,
+    month,
+    platformsKey,
+    statusesKey,
+    categoriesKey,
+    paybackOnly,
+    reviewTypesKey,
+    search,
+    sortBy,
+  ]);
 
   const createSchedule = useCallback(
     async (schedule: Omit<Schedule, 'id'>): Promise<Schedule | null> => {
@@ -317,9 +442,13 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
     schedules,
     loading,
     error,
+    pagination,
+    counts,
+    platforms: responsePlatforms,
     createSchedule,
     updateSchedule,
     deleteSchedule,
     refetch: () => fetchSchedules(true),
+    loadMore,
   };
 }

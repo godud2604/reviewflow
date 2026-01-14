@@ -1,17 +1,57 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { usePostHog } from 'posthog-js/react';
+import { Check, ChevronDown, Search, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import type { Schedule } from '@/types';
 import ScheduleItem from '@/components/schedule-item';
 import { parseDateString } from '@/lib/date-utils';
+import { useDebounce } from '@/hooks/use-debounce';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Command as UICommand, CommandGroup, CommandItem, CommandList } from './ui/command';
+const Command = UICommand;
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 // --- 날짜/시간 유틸리티 ---
 const formatDateStringKST = (date: Date) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date);
 
 // --- 상수 ---
+const AVAILABLE_STATUSES = ['재확인', '선정됨', '방문일 예약 완료', '방문', '제품 배송 완료'];
+const DEFAULT_SELECTED_STATUSES = AVAILABLE_STATUSES.filter((s) => s !== '재확인');
+
+const AVAILABLE_CATEGORIES = [
+  '맛집/식품',
+  '뷰티',
+  '생활/리빙',
+  '출산/육아',
+  '주방/가전',
+  '반려동물',
+  '여행/레저',
+  '티켓/문화생활',
+  '디지털/전자기기',
+  '건강/헬스',
+  '자동차/모빌리티',
+  '문구/오피스',
+  '기타',
+];
+
 const CALENDAR_RING_COLORS: Record<string, string> = {
   선정됨: '#f1a0b6',
   예약완료: '#61cedb',
@@ -31,9 +71,82 @@ const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[]
 
 const getScheduleRingColor = (status: string): string | undefined => CALENDAR_RING_COLORS[status];
 
+const FilterBadge = ({
+  label,
+  isActive,
+  onClick,
+  children,
+}: {
+  label: React.ReactNode;
+  isActive?: boolean;
+  onClick?: () => void;
+  children?: React.ReactNode;
+}) => (
+  <Popover>
+    <PopoverTrigger asChild>
+      <button
+        onClick={onClick}
+        className={cn(
+          'flex-shrink-0 h-8 px-3 rounded-[8px] text-[13px] font-medium transition-all flex items-center gap-1 border select-none',
+          isActive
+            ? 'bg-neutral-900 text-white border-neutral-900'
+            : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300'
+        )}
+      >
+        {label}
+        {children && (
+          <ChevronDown
+            className={cn(
+              'h-3 w-3 opacity-50 ml-0.5 transition-transform',
+              isActive && 'opacity-100'
+            )}
+          />
+        )}
+      </button>
+    </PopoverTrigger>
+    {children && (
+      <PopoverContent className="w-[200px] p-0" align="start">
+        {children}
+      </PopoverContent>
+    )}
+  </Popover>
+);
+
+const FilterCheckboxItem = ({
+  checked,
+  children,
+  onSelect,
+}: {
+  checked: boolean;
+  children: React.ReactNode;
+  onSelect: () => void;
+}) => (
+  <CommandItem onSelect={onSelect} className="py-2.5 cursor-pointer">
+    <div
+      className={cn(
+        'mr-2.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors shadow-sm',
+        checked
+          ? 'bg-neutral-900 border-neutral-900 text-white'
+          : 'bg-white border-neutral-200 hover:border-neutral-300'
+      )}
+    >
+      <Check className={cn('h-3 w-3', checked ? 'opacity-100' : 'opacity-0')} />
+    </div>
+    <span
+      className={cn(
+        'flex-1 text-[13px]',
+        checked ? 'font-semibold text-neutral-900' : 'font-medium text-neutral-600'
+      )}
+    >
+      {children}
+    </span>
+  </CommandItem>
+);
+
 // --- 메인 페이지 ---
 export default function HomePage({
   schedules,
+  calendarSchedules,
   onScheduleClick,
   onShowAllClick,
   onCompleteClick,
@@ -44,8 +157,19 @@ export default function HomePage({
   onCreateSchedule,
   focusDate,
   onFocusDateApplied,
+  loading,
+  hasMore,
+  onLoadMore,
+  totalCount,
+  visitCount: propVisitCount,
+  deadlineCount: propDeadlineCount,
+  onFilterChange,
+  onCalendarMonthChange,
+  calendarLoading = false, // Add calendarLoading prop with default (optional)
+  availablePlatforms = [], // New prop for platforms
 }: {
   schedules: Schedule[];
+  calendarSchedules?: Schedule[];
   onScheduleClick: (id: number) => void;
   onShowAllClick: () => void;
   onCompleteClick?: (id: number) => void;
@@ -56,15 +180,64 @@ export default function HomePage({
   onCreateSchedule?: (dateStr: string) => void;
   focusDate?: string | null;
   onFocusDateApplied?: () => void;
+  loading?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  totalCount?: number;
+  visitCount?: number;
+  deadlineCount?: number;
+  onFilterChange?: (filters: {
+    selectedDate?: string | null;
+    platforms?: string[];
+    statuses?: string[];
+    categories?: string[];
+    reviewTypes?: string[];
+    search?: string;
+    sortBy?: string;
+    paybackOnly?: boolean;
+  }) => void;
+  onCalendarMonthChange?: (date: Date) => void;
+  calendarLoading?: boolean; // Type definition for calendarLoading
+  availablePlatforms?: string[];
 }) {
   const posthog = usePostHog();
+  const { categories: userCategories } = useUserProfile(); // platforms removed
   const today = formatDateStringKST(new Date());
-  const [selectedDate, setSelectedDate] = useState<string | null>(today);
+
+  // 날짜 및 기본 필터
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<
     'all' | 'active' | 'reconfirm' | 'overdue' | 'noDeadline'
   >('all');
+
+  // 필터 상태
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedReviewTypes, setSelectedReviewTypes] = useState<string[]>([]);
+  const [paybackOnly, setPaybackOnly] = useState(false);
+
+  // 정렬 상태
+  const [sortBy, setSortBy] = useState<
+    | 'deadline-asc'
+    | 'deadline-desc'
+    | 'visit-asc'
+    | 'visit-desc'
+    | 'amount-asc'
+    | 'amount-desc'
+    | 'title'
+  >('deadline-asc');
+
+  // 검색 상태
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
   const [floatingPanel, setFloatingPanel] = useState<'none' | 'noDeadline' | 'reconfirm'>('none');
   const [showDemo, setShowDemo] = useState(false);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+
+  // IntersectionObserver 참조
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   // Demo Data
   const demoSchedules = useMemo(
@@ -86,12 +259,9 @@ export default function HomePage({
     []
   );
 
-  const activeSchedules = schedules.filter((s) => s.status !== '완료');
-  const activeCount = activeSchedules.length;
   const reconfirmSchedules = schedules.filter((s) => s.status === '재확인');
   const reconfirmCount = reconfirmSchedules.length;
   const noDeadlineSchedules = schedules.filter((s) => !s.dead);
-  const hasSchedules = schedules.length > 0;
 
   useEffect(() => {
     if (focusDate) {
@@ -101,131 +271,111 @@ export default function HomePage({
     }
   }, [focusDate, onFocusDateApplied]);
 
-  // Filtering Logic
-  let filteredSchedules = schedules;
-  if (selectedDate) {
-    filteredSchedules = schedules.filter(
-      (s) =>
-        s.dead === selectedDate ||
-        s.visit === selectedDate ||
-        (s.additionalDeadlines || []).some((d) => d.date === selectedDate)
-    );
-  } else if (selectedFilter === 'active') {
-    filteredSchedules = activeSchedules;
-  } else if (selectedFilter === 'reconfirm') {
-    filteredSchedules = schedules.filter((s) => s.status === '재확인');
-  } else if (selectedFilter === 'overdue') {
-    filteredSchedules = schedules.filter((s) => s.dead && s.dead < today && s.status !== '완료');
-  } else if (selectedFilter === 'noDeadline') {
-    filteredSchedules = schedules.filter((s) => !s.dead);
-  }
+  // 필터/검색 변경 시 부모에게 알림
+  useEffect(() => {
+    if (onFilterChange) {
+      onFilterChange({
+        selectedDate,
+        platforms: selectedPlatforms,
+        statuses: selectedStatuses,
+        categories: selectedCategories,
+        reviewTypes: selectedReviewTypes,
+        search: debouncedSearchQuery,
+        paybackOnly,
+        sortBy,
+      });
+    }
+  }, [
+    selectedDate,
+    selectedPlatforms,
+    selectedStatuses,
+    selectedCategories,
+    selectedReviewTypes,
+    debouncedSearchQuery,
+    sortBy,
+    paybackOnly,
+    onFilterChange,
+  ]);
 
-  const sortSchedules = (schedules: Schedule[]) => {
-    return [...schedules].sort((a, b) => {
-      const aIsCompleted = a.status === '완료';
-      const bIsCompleted = b.status === '완료';
+  // Initialize filters with defaults (All selected)
+  // Use a ref to track if we've initialized to avoid re-running on every render if schedules change
+  // Removed initializedRef useEffect since we now initialize state directly with defaults
 
-      // 추가 마감일 미완료 체크
-      const aHasIncompleteAdditionalDeadlines = (a.additionalDeadlines || []).some(
-        (d) => d.date && !d.completed
-      );
-      const bHasIncompleteAdditionalDeadlines = (b.additionalDeadlines || []).some(
-        (d) => d.date && !d.completed
-      );
+  // Set selectedPlatforms to availablePlatforms if they are loaded and we want them all selected by default?
+  // Or just let empty mean "All".
+  // The user says "Front-end constitutes values in selectbox with platform data of response".
+  // So `availablePlatforms` is the source of truth for the dropdown options.
 
-      // 완료 상태여도 추가 마감일이 미완료면 위쪽에 배치
-      if (aIsCompleted && bIsCompleted) {
-        if (aHasIncompleteAdditionalDeadlines && !bHasIncompleteAdditionalDeadlines) return -1;
-        if (!aHasIncompleteAdditionalDeadlines && bHasIncompleteAdditionalDeadlines) return 1;
-      }
+  const availableReviewTypes = ['제공형', '구매형', '기자단', '미션/인증', '방문형'];
 
-      if (aIsCompleted && !bIsCompleted) return 1;
-      if (!aIsCompleted && bIsCompleted) return -1;
-
-      if (selectedDate) {
-        const aIsSelectedVisit = a.visit === selectedDate;
-        const bIsSelectedVisit = b.visit === selectedDate;
-        const aVisitTimeKey = a.visitTime ?? '23:59';
-        const bVisitTimeKey = b.visitTime ?? '23:59';
-
-        if (aIsSelectedVisit && bIsSelectedVisit) {
-          return aVisitTimeKey.localeCompare(bVisitTimeKey);
-        }
-        if (aIsSelectedVisit && !bIsSelectedVisit) return -1;
-        if (!aIsSelectedVisit && bIsSelectedVisit) return 1;
-
-        const aDeadKey = a.dead ?? '';
-        const bDeadKey = b.dead ?? '';
-        if (aDeadKey && bDeadKey) return aDeadKey.localeCompare(bDeadKey);
-        if (aDeadKey && !bDeadKey) return -1;
-        if (!aDeadKey && bDeadKey) return 1;
-        return 0;
-      }
-
-      const aIsOverdue = a.dead && a.dead < today && a.status !== '완료';
-      const bIsOverdue = b.dead && b.dead < today && b.status !== '완료';
-      const aIsReconfirm = a.status === '재확인';
-      const bIsReconfirm = b.status === '재확인';
-      const aVisitKey = a.visit ?? '';
-      const bVisitKey = b.visit ?? '';
-      const aVisitTimeKey = a.visitTime ?? '23:59';
-      const bVisitTimeKey = b.visitTime ?? '23:59';
-
-      if (aIsOverdue && !bIsOverdue) return -1;
-      if (!aIsOverdue && bIsOverdue) return 1;
-      if (aIsReconfirm && !bIsReconfirm) return -1;
-      if (!aIsReconfirm && bIsReconfirm) return 1;
-      if (aVisitKey && bVisitKey) {
-        const visitCompare = aVisitKey.localeCompare(bVisitKey);
-        if (visitCompare !== 0) return visitCompare;
-        return aVisitTimeKey.localeCompare(bVisitTimeKey);
-      }
-      if (aVisitKey && !bVisitKey) return -1;
-      if (!aVisitKey && bVisitKey) return 1;
-      if (a.dead && b.dead) return a.dead.localeCompare(b.dead);
-      if (a.dead && !b.dead) return -1;
-      if (!a.dead && b.dead) return 1;
-      return 0;
-    });
+  const handleClearFilters = () => {
+    setSelectedPlatforms([]); // Clear platform selection
+    setSelectedStatuses([]);
+    setSelectedCategories([]);
+    setSelectedReviewTypes([]);
+    setSearchQuery('');
+    setSortBy('deadline-asc');
+    setPaybackOnly(false);
+    setSelectedDate(null);
   };
 
-  const displayedSchedules = sortSchedules(
-    selectedDate || selectedFilter !== 'all' ? filteredSchedules : activeSchedules
-  );
-  const headerSchedules =
-    selectedDate || selectedFilter !== 'all' ? filteredSchedules : activeSchedules;
-  const visitCount = selectedDate
-    ? headerSchedules.filter((s) => s.visit === selectedDate).length
-    : headerSchedules.filter((s) => s.visit).length;
+  if (loading && schedules.length === 0) {
+    return (
+      <div className="flex-1 overflow-hidden px-5 pb-24 touch-pan-y space-y-3 pt-3 bg-neutral-50/50">
+        <div className="space-y-3">
+          <Skeleton className="h-10 w-full rounded-2xl bg-white" />
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-20 rounded-xl bg-white" />
+            <Skeleton className="h-9 w-[160px] rounded-xl bg-white" />
+          </div>
+        </div>
 
-  // 마감일 카운트: 메인 마감일 + 추가 마감일 (완료 여부 무관하게 모두 카운팅)
-  const deadlineCount = selectedDate
-    ? headerSchedules.reduce((count, s) => {
-        let c = 0;
-        // 메인 마감일이 오늘인 경우 (완료 여부 무관)
-        if (s.dead === selectedDate) c++;
-        // 추가 마감일 중 오늘인 것 (completed 여부 무관)
-        const additionalCount = (s.additionalDeadlines || []).filter(
-          (d) => d.date === selectedDate
-        ).length;
-        return count + c + additionalCount;
-      }, 0)
-    : headerSchedules.reduce((count, s) => {
-        let c = 0;
-        // 메인 마감일이 있는 경우 (완료 여부 무관)
-        if (s.dead) c++;
-        // 추가 마감일 (completed 여부 무관)
-        const additionalCount = (s.additionalDeadlines || []).filter((d) => d.date).length;
-        return count + c + additionalCount;
-      }, 0);
+        {/* 캘린더 스켈레톤 */}
+        <div className="rounded-[24px] bg-white p-4 shadow-sm h-[320px] flex flex-col gap-3">
+          <div className="flex justify-between items-center mb-2">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-8 w-16 rounded-lg" />
+          </div>
+          <div className="grid grid-cols-7 gap-3">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} className="h-4 w-full rounded-md" />
+            ))}
+            {Array.from({ length: 35 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-8 rounded-full mx-auto" />
+            ))}
+          </div>
+        </div>
 
-  // 총 일정 개수: 방문일 + 마감일 개수의 합
-  const totalScheduleCount = visitCount + deadlineCount;
+        {/* 리스트 스켈레톤 */}
+        <div className="space-y-3 mt-4">
+          <div className="flex justify-between items-center mb-2">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="p-4 rounded-3xl bg-white shadow-sm flex items-center gap-3">
+              <Skeleton className="h-12 w-12 rounded-full flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+              <Skeleton className="h-6 w-16 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // 서버에서 이미 필터링/정렬된 데이터를 사용
+  const hasSchedules = totalCount ? totalCount > 0 : schedules.length > 0;
+  const visitCount = propVisitCount ?? 0;
+  const deadlineCount = propDeadlineCount ?? 0;
 
   const shouldShowFirstScheduleTutorial =
-    hasSchedules && schedules.length === 1 && displayedSchedules.length > 0;
+    hasSchedules && (totalCount ?? schedules.length) === 1 && schedules.length > 0;
   const shouldShowFilterTutorial =
-    hasSchedules && schedules.length <= 1 && displayedSchedules.length === 0;
+    hasSchedules && (totalCount ?? schedules.length) <= 1 && schedules.length === 0;
 
   const renderTutorialCard = () => (
     <div className="space-y-5 rounded-3xl border border-neutral-200 bg-gradient-to-b from-[#fff6ed] via-white to-white px-5 py-4 shadow-[0_24px_60px_rgba(15,23,42,0.09)]">
@@ -263,146 +413,312 @@ export default function HomePage({
   );
 
   const handleDateClick = (dateStr: string) => {
-    setSelectedDate(dateStr);
-    setSelectedFilter('all');
+    if (selectedDate === dateStr) setSelectedDate(null);
+    else setSelectedDate(dateStr);
   };
 
   const handleCalendarDateAdd = (dateStr: string) => {
-    handleDateClick(dateStr);
     onCreateSchedule?.(dateStr);
   };
 
   const handleGoToToday = () => {
-    setSelectedDate(today);
-    setSelectedFilter('all');
+    setSelectedDate(formatDateStringKST(new Date()));
   };
 
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3 bg-neutral-50/50">
+      {/* 검색 및 필터 섹션 */}
+      <div className="space-y-2.5">
+        {/* 검색 바 */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+          <Input
+            type="text"
+            placeholder="일정 제목 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-10 h-11 rounded-2xl border-neutral-200 bg-white shadow-sm"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors"
+            >
+              <X className="h-3.5 w-3.5 text-neutral-500" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* 3. 캘린더 */}
       <CalendarSection
-        schedules={schedules}
+        schedules={calendarSchedules || schedules} // calendarSchedules가 없으면 기존 동작 유지
         onDateClick={handleDateClick}
         onCreateSchedule={handleCalendarDateAdd}
         onGoToToday={handleGoToToday}
         selectedDate={selectedDate}
         today={today}
+        onMonthChange={onCalendarMonthChange}
+        loading={calendarLoading}
       />
 
-      {/* 5. 일정 리스트 헤더 */}
-      <div className="flex items-start justify-between mt-4 mb-2">
-        <div>
-          <h3 className="text-xl font-bold text-neutral-900 text-[16px]">
-            {selectedDate
-              ? `${selectedDate.slice(5).replace('-', '/')} 일정`
-              : selectedFilter === 'reconfirm'
-                ? '재확인 일정'
-                : selectedFilter === 'overdue'
-                  ? '마감 초과 일정'
-                  : selectedFilter === 'noDeadline'
-                    ? '마감일 미정'
-                    : '체험단 일정'}
-            <span className="ml-1.5 text-sm font-bold text-neutral-600">
-              {selectedDate
-                ? totalScheduleCount
-                : selectedFilter !== 'all'
-                  ? filteredSchedules.length
-                  : activeCount}
-              건
-            </span>
-          </h3>
-          <span className="mt-1 text-[11px] font-semibold text-neutral-500">
-            방문일 {visitCount}건 · 마감일 {deadlineCount}건
-          </span>
+      {/* 5. 일정 리스트 헤더 및 필터 (Sticky) - New Design */}
+      <div className="sticky top-0 z-10 bg-neutral-50/95 backdrop-blur-sm -mx-5 px-5 pt-3 pb-2 border-b border-neutral-200/50 shadow-sm transition-all duration-200">
+        {/* 1열: 헤더 & 상세 설정 */}
+        <div className="flex items-center justify-between mb-3">
+          {/* 좌측: 정보 */}
+          <div className="flex flex-col">
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-[16px] font-bold text-neutral-900">
+                {selectedDate ? `${selectedDate.slice(5).replace('-', '/')} 일정` : '전체 일정'}
+              </h3>
+              <span className="text-[13px] font-semibold text-neutral-500">
+                {totalCount ?? schedules.length}건
+              </span>
+            </div>
+            {!selectedDate && (
+              <p className="text-[10px] text-neutral-500 font-medium truncate mt-0.5">
+                방문 {visitCount}건 · 마감 {deadlineCount}건
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* 2열: 뱃지 가로 스크롤 */}
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -ml-1 pl-1">
+          {/* 1. 전체 */}
           <button
-            onClick={onShowAllClick}
-            className="text-[12px] font-semibold text-neutral-500 hover:text-neutral-800 transition-colors cursor-pointer"
+            onClick={handleClearFilters}
+            className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
           >
-            전체보기 ({schedules.length})
+            전체
           </button>
+
+          {/* 2. 정렬 */}
+          {!selectedDate && (
+            <>
+              <FilterBadge
+                label={
+                  sortBy === 'deadline-asc'
+                    ? '마감 임박순'
+                    : sortBy === 'visit-asc'
+                      ? '방문 임박순'
+                      : sortBy === 'deadline-desc'
+                        ? '마감일 최신순'
+                        : sortBy === 'visit-desc'
+                          ? '방문일 최신순'
+                          : '정렬'
+                }
+                isActive={true} // Default selected
+              >
+                <Command>
+                  <CommandList>
+                    <CommandGroup>
+                      <CommandItem onSelect={() => setSortBy('deadline-asc')}>
+                        <Check
+                          className={cn(
+                            'mr-2 h-4 w-4',
+                            sortBy === 'deadline-asc' ? 'opacity-100' : 'opacity-0'
+                          )}
+                        />
+                        마감일 임박순
+                      </CommandItem>
+                      <CommandItem onSelect={() => setSortBy('visit-asc')}>
+                        <Check
+                          className={cn(
+                            'mr-2 h-4 w-4',
+                            sortBy === 'visit-asc' ? 'opacity-100' : 'opacity-0'
+                          )}
+                        />
+                        방문일 임박순
+                      </CommandItem>
+                      <CommandItem onSelect={() => setSortBy('deadline-desc')}>
+                        <Check
+                          className={cn(
+                            'mr-2 h-4 w-4',
+                            sortBy === 'deadline-desc' ? 'opacity-100' : 'opacity-0'
+                          )}
+                        />
+                        마감일 최신순
+                      </CommandItem>
+                      <CommandItem onSelect={() => setSortBy('visit-desc')}>
+                        <Check
+                          className={cn(
+                            'mr-2 h-4 w-4',
+                            sortBy === 'visit-desc' ? 'opacity-100' : 'opacity-0'
+                          )}
+                        />
+                        방문일 최신순
+                      </CommandItem>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </FilterBadge>
+
+              {/* 3. 플랫폼 */}
+              <FilterBadge
+                label={
+                  selectedPlatforms.length > 0 &&
+                  selectedPlatforms.length < availablePlatforms.length
+                    ? `플랫폼 ${selectedPlatforms.length}`
+                    : '플랫폼'
+                }
+                isActive={
+                  selectedPlatforms.length > 0 &&
+                  selectedPlatforms.length < availablePlatforms.length
+                }
+              >
+                <Command>
+                  <CommandList>
+                    <CommandGroup heading="플랫폼 선택">
+                      {availablePlatforms.length > 0 ? (
+                        availablePlatforms.map((platform) => (
+                          <FilterCheckboxItem
+                            key={platform}
+                            checked={selectedPlatforms.includes(platform)}
+                            onSelect={() => {
+                              if (selectedPlatforms.includes(platform)) {
+                                setSelectedPlatforms(
+                                  selectedPlatforms.filter((p) => p !== platform)
+                                );
+                              } else {
+                                setSelectedPlatforms([...selectedPlatforms, platform]);
+                              }
+                            }}
+                          >
+                            {platform}
+                          </FilterCheckboxItem>
+                        ))
+                      ) : (
+                        <div className="py-4 px-2 text-xs text-neutral-400 text-center font-medium">
+                          등록된 플랫폼이 없습니다
+                        </div>
+                      )}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </FilterBadge>
+
+              {/* 4. 페이백 */}
+              <FilterBadge label="페이백" isActive={paybackOnly}>
+                <Command>
+                  <CommandList>
+                    <CommandGroup>
+                      <FilterCheckboxItem
+                        checked={paybackOnly}
+                        onSelect={() => setPaybackOnly(!paybackOnly)}
+                      >
+                        페이백 일정만 보기
+                      </FilterCheckboxItem>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </FilterBadge>
+
+              {/* 5. 진행상태 */}
+              <FilterBadge
+                label={
+                  selectedStatuses.length > 0 && selectedStatuses.length < AVAILABLE_STATUSES.length
+                    ? `진행상태 ${selectedStatuses.length}`
+                    : '진행상태'
+                }
+                isActive={selectedStatuses.length > 0}
+              >
+                <Command>
+                  <CommandList>
+                    <CommandGroup heading="상태 선택">
+                      {AVAILABLE_STATUSES.map((status) => (
+                        <FilterCheckboxItem
+                          key={status}
+                          checked={selectedStatuses.includes(status)}
+                          onSelect={() => {
+                            if (selectedStatuses.includes(status)) {
+                              setSelectedStatuses(selectedStatuses.filter((s) => s !== status));
+                            } else {
+                              setSelectedStatuses([...selectedStatuses, status]);
+                            }
+                          }}
+                        >
+                          {status}
+                        </FilterCheckboxItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </FilterBadge>
+
+              {/* 6. 카테고리 */}
+              <FilterBadge label="카테고리" isActive={selectedCategories.length > 0}>
+                <Command>
+                  <CommandList>
+                    <CommandGroup heading="카테고리 선택">
+                      {AVAILABLE_CATEGORIES.map((category) => (
+                        <FilterCheckboxItem
+                          key={category}
+                          checked={selectedCategories.includes(category)}
+                          onSelect={() => {
+                            if (selectedCategories.includes(category)) {
+                              setSelectedCategories(
+                                selectedCategories.filter((c) => c !== category)
+                              );
+                            } else {
+                              setSelectedCategories([...selectedCategories, category]);
+                            }
+                          }}
+                        >
+                          {category}
+                        </FilterCheckboxItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </FilterBadge>
+            </>
+          )}
         </div>
       </div>
+      <div className="flex flex-col gap-3">
+        {schedules.length > 0 ? (
+          <>
+            {schedules.map((schedule) => (
+              <ScheduleItem
+                key={schedule.id}
+                schedule={schedule}
+                onClick={() => onScheduleClick(schedule.id)}
+                onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
+                onCompletedClick={
+                  onCompletedClick ? () => onCompletedClick(schedule.id) : undefined
+                }
+                onPaybackConfirm={
+                  onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined
+                }
+                onAdditionalDeadlineToggle={
+                  onAdditionalDeadlineToggle
+                    ? (deadlineId) => onAdditionalDeadlineToggle(schedule.id, deadlineId)
+                    : undefined
+                }
+                today={today}
+                selectedDate={selectedDate}
+              />
+            ))}
 
-      {/* 6. 일정 리스트 아이템 */}
-      <div className="space-y-3">
-        {!hasSchedules ? (
-          <div className="bg-white rounded-3xl p-4 text-center shadow-sm shadow-[0_18px_40px_rgba(15,23,42,0.06)] border border-neutral-100 space-y-4">
-            <div className="space-y-1">
-              <p className="text-[13px] font-bold text-neutral-900">아직 체험단 일정이 없어요</p>
-              <p className="text-[11px] text-neutral-500 font-medium">
-                체험단을 등록하면 캘린더와 수익 리포트가 자동으로 채워져요
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  posthog?.capture('home_empty_add_clicked', {
-                    context: selectedDate ? 'date' : 'list',
-                  });
-                  onAddClick?.();
-                }}
-                className="cursor-pointer px-4 py-2.5 rounded-xl bg-[#ff6a1f] text-white text-[13px] font-bold shadow-sm active:scale-[0.98] w-full sm:w-auto"
-              >
-                체험단 등록하기
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const nextShowDemo = !showDemo;
-                  setShowDemo(nextShowDemo);
-                  posthog?.capture('home_empty_demo_toggled', { open: nextShowDemo });
-                }}
-                className="cursor-pointer px-4 py-2.5 rounded-xl bg-neutral-50 text-neutral-700 text-[13px] font-semibold border border-neutral-200 w-full sm:w-auto"
-              >
-                데모 일정 살펴보기
-              </button>
-            </div>
-            {showDemo && (
-              <div className="mt-2 space-y-3 text-left">
-                <div className="text-[11px] font-bold text-neutral-500 uppercase">샘플 일정</div>
-                <div className="space-y-2">
-                  {demoSchedules.map((demo) => (
-                    <div
-                      key={demo.title}
-                      className="flex items-center justify-between rounded-2xl border border-neutral-200 px-3 py-2.5 bg-neutral-50/70"
-                    >
-                      <div className="space-y-0.5">
-                        <div className="text-[13px] font-bold text-neutral-900">{demo.title}</div>
-                        <div className="text-[11px] text-neutral-500 font-semibold">
-                          {demo.status}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-[13px] font-bold text-[#f97316]">{demo.value}</div>
-                        <div className="text-[11px] text-neutral-500">{demo.tag}</div>
-                      </div>
-                    </div>
-                  ))}
+            {/* 무한 스크롤 트리거 */}
+            {hasMore && (
+              <div ref={observerTarget} className="flex justify-center py-4">
+                <div className="flex items-center gap-2 text-sm text-neutral-500">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-neutral-300 border-t-orange-500" />
+                  <span>더 많은 일정 로딩 중...</span>
                 </div>
               </div>
             )}
-          </div>
-        ) : displayedSchedules.length > 0 ? (
-          displayedSchedules.map((schedule) => (
-            <ScheduleItem
-              key={schedule.id}
-              schedule={schedule}
-              onClick={() => onScheduleClick(schedule.id)}
-              onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
-              onCompletedClick={onCompletedClick ? () => onCompletedClick(schedule.id) : undefined}
-              onPaybackConfirm={onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined}
-              onAdditionalDeadlineToggle={
-                onAdditionalDeadlineToggle
-                  ? (deadlineId) => onAdditionalDeadlineToggle(schedule.id, deadlineId)
-                  : undefined
-              }
-              today={today}
-              selectedDate={selectedDate}
-            />
-          ))
+
+            {/* 모든 일정 표시 완료 */}
+            {!hasMore && (totalCount ?? 0) > 20 && (
+              <div className="text-center py-4 text-sm text-neutral-500">
+                총 {totalCount}개 일정을 모두 불러왔습니다
+              </div>
+            )}
+          </>
         ) : shouldShowFilterTutorial ? (
           renderTutorialCard()
         ) : (
@@ -424,6 +740,8 @@ function CalendarSection({
   selectedDate,
   today,
   onCreateSchedule,
+  onMonthChange,
+  loading = false,
 }: {
   schedules: Schedule[];
   onDateClick: (dateStr: string) => void;
@@ -431,6 +749,8 @@ function CalendarSection({
   selectedDate: string | null;
   today: string;
   onCreateSchedule?: (dateStr: string) => void;
+  onMonthChange?: (date: Date) => void;
+  loading?: boolean;
 }) {
   const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
   const [currentDate, setCurrentDate] = useState(() => parseDateString(today));
@@ -531,11 +851,21 @@ function CalendarSection({
     return acc;
   }, {});
 
-  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
-  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+  const prevMonth = () => {
+    const newDate = new Date(year, month - 1, 1);
+    setCurrentDate(newDate);
+    onMonthChange?.(newDate);
+  };
+  const nextMonth = () => {
+    const newDate = new Date(year, month + 1, 1);
+    setCurrentDate(newDate);
+    onMonthChange?.(newDate);
+  };
   const goToToday = () => {
-    setCurrentDate(new Date());
+    const newDate = new Date();
+    setCurrentDate(newDate);
     onGoToToday();
+    onMonthChange?.(newDate);
   };
 
   const firstDay = new Date(year, month, 1);
@@ -553,7 +883,8 @@ function CalendarSection({
         <div className="flex items-center gap-3">
           <button
             onClick={prevMonth}
-            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors border border-neutral-200"
+            disabled={loading}
+            className={`w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors border border-neutral-200 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <svg
               width="20"
@@ -566,12 +897,13 @@ function CalendarSection({
               <path d="M15 18l-6-6 6-6" />
             </svg>
           </button>
-          <div className="text-[16px] font-bold text-neutral-900">
+          <div className="text-[16px] font-bold text-neutral-900 flex items-center gap-2">
             {year}년 <span className="text-orange-600">{month + 1}월</span>
           </div>
           <button
             onClick={nextMonth}
-            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors border border-neutral-200"
+            disabled={loading}
+            className={`w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors border border-neutral-200 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <svg
               width="20"
@@ -587,7 +919,8 @@ function CalendarSection({
         </div>
         <button
           onClick={goToToday}
-          className="absolute right-[-6px] top-1/2 -translate-y-1/2 px-2 py-1.5 text-[12px] font-semibold text-neutral-900 rounded-lg hover:bg-neutral-200 transition-colors"
+          disabled={loading}
+          className={`absolute right-[-6px] top-1/2 -translate-y-1/2 px-2 py-1.5 text-[12px] font-semibold text-neutral-900 rounded-lg hover:bg-neutral-200 transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           오늘로 이동
         </button>
@@ -601,131 +934,144 @@ function CalendarSection({
         ))}
       </div>
       <div className="grid grid-cols-7 gap-3 text-center">
-        {Array.from({ length: startDayOfWeek }).map((_, i) => (
-          <div key={`empty-${i}`} className="h-8" />
-        ))}
-        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-          const dayOfWeek = (startDayOfWeek + day - 1) % 7;
-          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          const isSelected = selectedDate === dateStr;
-          const dayInfo = scheduleByDate[dateStr];
-          const hasSchedule =
-            !!dayInfo &&
-            (dayInfo.deadlineCount > 0 || dayInfo.visitCount > 0 || dayInfo.hasCompleted);
-          const isTodayDate = isToday(day);
-          const indicatorType = dayInfo?.overdue
-            ? 'overdue'
-            : dayInfo?.hasDeadline
-              ? 'deadline'
-              : dayInfo?.hasCompleted
-                ? 'completedOnly'
-                : 'none';
-          const ringColors = dayInfo?.ringStatusColors ?? [];
-          const ringGradientStops =
-            ringColors.length > 0
-              ? ringColors
-                  .map((color, idx) => {
-                    const start = (idx / ringColors.length) * 100;
-                    const end = ((idx + 1) / ringColors.length) * 100;
-                    return `${color} ${start}% ${end}%`;
-                  })
-                  .join(', ')
-              : '';
-          const ringGradientStyle =
-            ringColors.length > 0
-              ? {
-                  backgroundImage: `conic-gradient(${ringGradientStops})`,
-                  WebkitMaskImage:
-                    'radial-gradient(circle, transparent 58%, black 60%, black 72%, transparent 72%)',
-                  maskImage:
-                    'radial-gradient(circle, transparent 58%, black 60%, black 72%, transparent 72%)',
+        {loading ? (
+          <>
+            {Array.from({ length: startDayOfWeek }).map((_, i) => (
+              <div key={`skel-empty-${i}`} className="h-8" />
+            ))}
+            {Array.from({ length: daysInMonth }).map((_, i) => (
+              <Skeleton key={`skel-${i}`} className="h-8 w-8 mx-auto rounded-full" />
+            ))}
+          </>
+        ) : (
+          <>
+            {Array.from({ length: startDayOfWeek }).map((_, i) => (
+              <div key={`empty-${i}`} className="h-8" />
+            ))}
+            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+              const dayOfWeek = (startDayOfWeek + day - 1) % 7;
+              const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const isSelected = selectedDate === dateStr;
+              const dayInfo = scheduleByDate[dateStr];
+              const hasSchedule =
+                !!dayInfo &&
+                (dayInfo.deadlineCount > 0 || dayInfo.visitCount > 0 || dayInfo.hasCompleted);
+              const isTodayDate = isToday(day);
+              const indicatorType = dayInfo?.overdue
+                ? 'overdue'
+                : dayInfo?.hasDeadline
+                  ? 'deadline'
+                  : dayInfo?.hasCompleted
+                    ? 'completedOnly'
+                    : 'none';
+              const ringColors = dayInfo?.ringStatusColors ?? [];
+              const ringGradientStops =
+                ringColors.length > 0
+                  ? ringColors
+                      .map((color, idx) => {
+                        const start = (idx / ringColors.length) * 100;
+                        const end = ((idx + 1) / ringColors.length) * 100;
+                        return `${color} ${start}% ${end}%`;
+                      })
+                      .join(', ')
+                  : '';
+              const ringGradientStyle =
+                ringColors.length > 0
+                  ? {
+                      backgroundImage: `conic-gradient(${ringGradientStops})`,
+                      WebkitMaskImage:
+                        'radial-gradient(circle, transparent 58%, black 60%, black 72%, transparent 72%)',
+                      maskImage:
+                        'radial-gradient(circle, transparent 58%, black 60%, black 72%, transparent 72%)',
+                    }
+                  : undefined;
+              const baseStyle =
+                indicatorType === 'overdue'
+                  ? 'text-orange-800 shadow-[inset_0_0_0_2.5px_rgba(249,115,22,0.65)]'
+                  : indicatorType === 'deadline'
+                    ? 'text-orange-700 shadow-[inset_0_0_0_2.5px_rgba(249,115,22,0.6)]'
+                    : 'text-neutral-800';
+              const hoverable = !isSelected && !isTodayDate && hasSchedule;
+              const todayHighlightClass = isTodayDate ? 'bg-orange-300 text-orange-900' : '';
+              const selectedHighlightClass = isSelected ? 'bg-orange-100 text-orange-900' : '';
+              const isInteractive = hasSchedule || Boolean(onCreateSchedule);
+              const wasAlreadySelected = selectedDate === dateStr;
+              const showPaybackEmoji = Boolean(dayInfo?.hasPaybackPending);
+              const handleDayClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+                onDateClick(dateStr);
+                const isClickInitiated = event.detail === 1;
+                const shouldReopenModal = wasAlreadySelected;
+                if (!hasSchedule && (isClickInitiated || shouldReopenModal)) {
+                  onCreateSchedule?.(dateStr);
                 }
-              : undefined;
-          const baseStyle =
-            indicatorType === 'overdue'
-              ? 'text-orange-800 shadow-[inset_0_0_0_2.5px_rgba(249,115,22,0.65)]'
-              : indicatorType === 'deadline'
-                ? 'text-orange-700 shadow-[inset_0_0_0_2.5px_rgba(249,115,22,0.6)]'
-                : 'text-neutral-800';
-          const hoverable = !isSelected && !isTodayDate && hasSchedule;
-          const todayHighlightClass = isTodayDate ? 'bg-orange-300 text-orange-900' : '';
-          const selectedHighlightClass = isSelected ? 'bg-orange-100 text-orange-900' : '';
-          const isInteractive = hasSchedule || Boolean(onCreateSchedule);
-          const wasAlreadySelected = selectedDate === dateStr;
-          const showPaybackEmoji = Boolean(dayInfo?.hasPaybackPending);
-          const handleDayClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-            onDateClick(dateStr);
-            const isClickInitiated = event.detail === 1;
-            const shouldReopenModal = wasAlreadySelected;
-            if (!hasSchedule && (isClickInitiated || shouldReopenModal)) {
-              onCreateSchedule?.(dateStr);
-            }
-            if (hasSchedule && shouldReopenModal) {
-              onCreateSchedule?.(dateStr);
-            }
-          };
+                if (hasSchedule && shouldReopenModal) {
+                  onCreateSchedule?.(dateStr);
+                }
+              };
 
-          return (
-            <button
-              key={day}
-              onClick={handleDayClick}
-              className={`relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-colors ${
-                isInteractive ? 'cursor-pointer' : 'cursor-default'
-              } ${baseStyle}
+              return (
+                <button
+                  key={day}
+                  onClick={handleDayClick}
+                  className={`relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-colors ${
+                    isInteractive ? 'cursor-pointer' : 'cursor-default'
+                  } ${baseStyle}
             ${!isSelected && todayHighlightClass}
             ${selectedHighlightClass}
             ${hoverable ? 'hover:shadow-[0_10px_20px_rgba(0,0,0,0.08)]' : ''}
             ${!isSelected && !isToday(day) && dayOfWeek === 0 ? 'text-red-500' : ''}
             ${!isSelected && !isToday(day) && dayOfWeek === 6 ? 'text-blue-500' : ''}`}
-            >
-              {ringGradientStyle && (
-                <span
-                  className="pointer-events-none absolute inset-0 rounded-full"
-                  style={ringGradientStyle}
-                />
-              )}
-              {showPaybackEmoji && (
-                <span className="pointer-events-none absolute -top-[2px] -right-[2px] text-[10px]">
-                  💸
-                </span>
-              )}
-              <span className="leading-none text-current">{day}</span>
-              {hasSchedule && dayInfo?.hasDeadline && (
-                <>
-                  <span
-                    className={`absolute bottom-[1.5px] -right-1 flex text-[9px] items-center justify-center rounded-full px-1 py-1 text-[9px] font-extrabold leading-none ${
-                      dayInfo.deadlineCount > 0
-                        ? 'shadow-[0_4px_10px_rgba(0,0,0,0.12)] bg-white text-orange-600'
-                        : 'shadow-none bg-transparent text-orange-600'
-                    }`}
-                  >
-                    {dayInfo.deadlineCount > 0 ? dayInfo.deadlineCount : ''}
-                  </span>
-                  {indicatorType === 'overdue' ? (
-                    <span className="absolute -bottom-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-[0_6px_14px_rgba(0,0,0,0.12)] text-[10px]">
-                      🔥
+                >
+                  {ringGradientStyle && (
+                    <span
+                      className="pointer-events-none absolute inset-0 rounded-full"
+                      style={ringGradientStyle}
+                    />
+                  )}
+                  {showPaybackEmoji && (
+                    <span className="pointer-events-none absolute -top-[2px] -right-[2px] text-[10px]">
+                      💸
                     </span>
-                  ) : null}
-                </>
-              )}
-              {hasSchedule && dayInfo?.hasVisit && (
-                <>
-                  <span
-                    className={`absolute ${dayInfo?.overdue ? '-top-0.5 -left-1.5' : '-bottom-1 -left-1'} flex h-4 min-w-[16px] items-center justify-center gap-0.1 rounded-full pl-0.5 pr-1 text-[9px] font-extrabold leading-none shadow-[0_4px_10px_rgba(0,0,0,0.12)] bg-sky-50 text-sky-700`}
-                  >
-                    📍
-                    <span className="text-[8.5px]">
-                      {dayInfo.visitCount > 1 ? dayInfo.visitCount : ''}
-                    </span>
-                  </span>
-                </>
-              )}
-              {hasSchedule && dayInfo?.hasCompleted && !dayInfo?.hasDeadline && (
-                <span className="absolute bottom-[3px] -right-[-1px] h-[7px] w-[7px] rounded-full bg-orange-400 shadow-[0_4px_10px_rgba(0,0,0,0.12)]" />
-              )}
-            </button>
-          );
-        })}
+                  )}
+                  <span className="leading-none text-current">{day}</span>
+                  {hasSchedule && dayInfo?.hasDeadline && (
+                    <>
+                      <span
+                        className={`absolute bottom-[1.5px] -right-1 flex text-[9px] items-center justify-center rounded-full px-1 py-1 text-[9px] font-extrabold leading-none ${
+                          dayInfo.deadlineCount > 0
+                            ? 'shadow-[0_4px_10px_rgba(0,0,0,0.12)] bg-white text-orange-600'
+                            : 'shadow-none bg-transparent text-orange-600'
+                        }`}
+                      >
+                        {dayInfo.deadlineCount > 0 ? dayInfo.deadlineCount : ''}
+                      </span>
+                      {indicatorType === 'overdue' ? (
+                        <span className="absolute -bottom-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-[0_6px_14px_rgba(0,0,0,0.12)] text-[10px]">
+                          🔥
+                        </span>
+                      ) : null}
+                    </>
+                  )}
+                  {hasSchedule && dayInfo?.hasVisit && (
+                    <>
+                      <span
+                        className={`absolute ${dayInfo?.overdue ? '-top-0.5 -left-1.5' : '-bottom-1 -left-1'} flex h-4 min-w-[16px] items-center justify-center gap-0.1 rounded-full pl-0.5 pr-1 text-[9px] font-extrabold leading-none shadow-[0_4px_10px_rgba(0,0,0,0.12)] bg-sky-50 text-sky-700`}
+                      >
+                        📍
+                        <span className="text-[8.5px]">
+                          {dayInfo.visitCount > 1 ? dayInfo.visitCount : ''}
+                        </span>
+                      </span>
+                    </>
+                  )}
+                  {hasSchedule && dayInfo?.hasCompleted && !dayInfo?.hasDeadline && (
+                    <span className="absolute bottom-[3px] -right-[-1px] h-[7px] w-[7px] rounded-full bg-orange-400 shadow-[0_4px_10px_rgba(0,0,0,0.12)]" />
+                  )}
+                </button>
+              );
+            })}
+          </>
+        )}
       </div>
       <div className="mt-4.5 flex flex-wrap items-center justify-end gap-3 text-[11px] text-neutral-600">
         {CALENDAR_STATUS_LEGEND.map((item) => (

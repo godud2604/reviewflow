@@ -1,6 +1,7 @@
 'use client';
 
 import type { Schedule } from '@/types';
+import { getDaysDiff } from '@/lib/date-utils';
 import { formatKoreanTime } from '@/lib/time-utils';
 
 const scheduleIcons: Record<Schedule['category'], string> = {
@@ -119,16 +120,33 @@ export default function ScheduleItem({
     schedule.additionalDeadlines && schedule.additionalDeadlines.length > 0
   );
 
+  const getDDayBadge = (targetDate: string) => {
+    const diff = getDaysDiff(today, targetDate);
+    if (diff >= 0 && diff <= 3) {
+      const label = diff === 0 ? 'D-Day' : `D-${diff}`;
+      return (
+        <span className="inline-flex items-center justify-center px-1.5 py-0.5 mr-1 text-[10px] font-bold rounded-md bg-orange-100 text-orange-700 border border-orange-200 leading-none">
+          {label}
+        </span>
+      );
+    }
+    return null;
+  };
+
   const dateItems: Array<{
     key: string;
     date: string;
-    label: string;
+    label: React.ReactNode;
     className?: string;
   }> = [];
   const undatedItems: Array<{ key: string; label: string; className?: string }> = [];
 
   if (schedule.reviewType === '방문형') {
     if (schedule.visit) {
+      // visit badge? User didn't ask explicitly but implied "D-1 .. confusing".
+      // User asked: "D day 뱃지의 위치릴 각각의 마감일 왼쪽? 에 놔두면 괜찮을거같아요"
+      // Referring to "Since now we only show D-day for REAL deadline, but additional deadlines also need it".
+      // It seems strictly about deadlines. But consistency is good. I will stick to deadlines for now as requested.
       dateItems.push({
         key: 'visit',
         date: schedule.visit,
@@ -140,10 +158,16 @@ export default function ScheduleItem({
     }
 
     if (schedule.dead) {
+      const badge = getDDayBadge(schedule.dead);
       dateItems.push({
         key: 'dead',
         date: schedule.dead,
-        label: deadLabel,
+        label: (
+          <span className="flex items-center">
+            {badge}
+            {deadLabel}
+          </span>
+        ),
         className: `${isDeadActive ? 'font-bold text-rose-700' : ''} ${
           isCompleted ? 'line-through opacity-50' : ''
         }`.trim(),
@@ -153,10 +177,16 @@ export default function ScheduleItem({
     }
   } else {
     if (schedule.dead) {
+      const badge = getDDayBadge(schedule.dead);
       dateItems.push({
         key: 'dead',
         date: schedule.dead,
-        label: deadLabel,
+        label: (
+          <span className="flex items-center">
+            {badge}
+            {deadLabel}
+          </span>
+        ),
         className: `${isDeadActive ? 'font-bold text-rose-700' : ''} ${
           isCompleted ? 'line-through opacity-50' : ''
         }`.trim(),
@@ -178,10 +208,19 @@ export default function ScheduleItem({
       if (!deadline.date) return;
       const isActiveDeadline = selectedDate && deadline.date === selectedDate;
       const isDeadlineCompleted = deadline.completed === true;
+      const badge = getDDayBadge(deadline.date);
       dateItems.push({
         key: `additional-${deadline.id}`,
         date: deadline.date,
-        label: `${deadline.date.slice(5)} ${deadline.label}`,
+        label: (
+          <span className="flex items-center">
+            {badge}
+            {deadline.date.slice(5)} {deadline.label}
+          </span>
+        ),
+        // Changed className application slightly in rendering if needed,
+        // but currently rendering spreads item.className to the container span.
+        // It should be fine.
         className: `${isActiveDeadline ? 'font-bold text-rose-700' : ''} ${
           isDeadlineCompleted ? 'line-through opacity-50' : ''
         }`.trim(),
@@ -207,6 +246,12 @@ export default function ScheduleItem({
       visitReviewChecklist.other)
   );
   const hasMemo = Boolean(schedule.memo?.trim());
+
+  const deadlineDiff = getDaysDiff(today, schedule.dead);
+  const visitDiff = getDaysDiff(today, schedule.visit);
+
+  const isDeadlineImminent = deadlineDiff >= 0 && deadlineDiff <= 3;
+  const isVisitImminent = visitDiff >= 0 && visitDiff <= 3;
 
   return (
     <div
@@ -307,12 +352,14 @@ export default function ScheduleItem({
             </div>
           </div>
         </div>
-        <div className="text-xs text-neutral-500 flex items-center gap-1.5 mt-1 flex-wrap">
+        <div className="text-xs text-neutral-500 flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-1">
           {timelineItems.length > 0 ? (
             timelineItems.map((item, index) => (
-              <span key={item.key} className="font-medium text-neutral-600">
-                {index > 0 && <span className="mx-1 text-neutral-400">|</span>}
-                <span className={item.className}>{item.label}</span>
+              <span key={item.key} className="flex items-center whitespace-nowrap">
+                {index > 0 && <span className="mr-1.5 text-neutral-300">|</span>}
+                <span className={`font-medium text-neutral-600 ${item.className || ''}`}>
+                  {item.label}
+                </span>
               </span>
             ))
           ) : (
@@ -362,7 +409,6 @@ export default function ScheduleItem({
             </span>
           )}
         </div>
-
       </div>
     </div>
   );

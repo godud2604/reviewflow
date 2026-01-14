@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 import { Toaster } from '@/components/ui/toaster';
 import { PostHogProvider } from '@/components/posthog-provider';
+import { UserProfileProvider } from '@/components/user-profile-provider';
 import './globals.css';
 import Script from 'next/script';
 import TokenListener from '@/components/token-listener';
@@ -89,10 +90,12 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
         <PostHogProvider>
-          <TokenListener /> {/* 👈 여기에 넣으면 됩니다 */}
-          {children}
-          <Toaster />
-          <Analytics />
+          <UserProfileProvider>
+            <TokenListener /> {/* 👈 여기에 넣으면 됩니다 */}
+            {children}
+            <Toaster />
+            <Analytics />
+          </UserProfileProvider>
         </PostHogProvider>
       </body>
     </html>
