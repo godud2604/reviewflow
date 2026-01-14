@@ -25,7 +25,11 @@ export async function GET(request: NextRequest) {
     const paybackOnly = searchParams.get('paybackOnly') === 'true';
 
     // Base query
-    let query = supabase.from('schedules').select('*', { count: 'exact' }).eq('user_id', userId);
+    let query = supabase
+      .from('schedules')
+      .select('*', { count: 'exact' })
+      .eq('user_id', userId)
+      .neq('status', '완료');
 
     // 월별 필터
     if (month) {
@@ -122,7 +126,8 @@ export async function GET(request: NextRequest) {
     let countQuery = supabase
       .from('schedules')
       .select('*', { count: 'exact' })
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .neq('status', '완료');
 
     // 동일한 필터 적용
     if (selectedDate) {

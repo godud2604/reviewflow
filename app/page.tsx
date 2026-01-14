@@ -28,8 +28,6 @@ const DEFAULT_AVAILABLE_STATUSES = [
   '방문',
   '제품 배송 완료',
 ];
-// 기본적으로 '재확인'은 제외
-const DEFAULT_SELECTED_STATUSES = DEFAULT_AVAILABLE_STATUSES.filter((s) => s !== '재확인');
 const DEFAULT_AVAILABLE_CATEGORIES = [
   '맛집/식품',
   '뷰티',
@@ -165,7 +163,7 @@ function PageContent() {
     selectedDate: null as string | null,
     platforms: [] as string[],
     paybackOnly: false,
-    statuses: DEFAULT_SELECTED_STATUSES,
+    statuses: [] as string[],
     categories: [] as string[],
     reviewTypes: [] as string[],
     search: '',
@@ -177,7 +175,7 @@ function PageContent() {
   // 날짜가 선택되지 않은 경우에만 useSchedules 활성화 (리스트용)
   // 날짜가 선택되면 캘린더 데이터를 사용
   // 또한 statuses가 설정되지 않은 초기 상태에서는 호출하지 않음
-  const shouldEnableSchedules = isLoggedIn && !isDateFiltering && filters.statuses.length > 0;
+  const shouldEnableSchedules = isLoggedIn && !isDateFiltering;
 
   const {
     schedules: serverSchedules,
