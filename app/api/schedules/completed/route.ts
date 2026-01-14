@@ -1,0 +1,200 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseAdminClient } from '@/lib/supabase-admin';
+
+export async function GET(request: NextRequest) {
+  try {
+    // Query parameters
+    const searchParams = request.nextUrl.searchParams;
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const supabase = getSupabaseAdminClient();
+    const offset = parseInt(searchParams.get('offset') || '0');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const selectedDate = searchParams.get('selectedDate');
+    const month = searchParams.get('month'); // YYYY-MM
+    const platforms = searchParams.get('platforms')?.split(',').filter(Boolean) || [];
+    const statuses = searchParams.get('statuses')?.split(',').filter(Boolean) || [];
+    const categories = searchParams.get('categories')?.split(',').filter(Boolean) || [];
+    const reviewTypes = searchParams.get('reviewTypes')?.split(',').filter(Boolean) || [];
+    const search = searchParams.get('search') || '';
+    const sortBy = searchParams.get('sortBy') || 'deadline-asc';
+    const paybackOnly = searchParams.get('paybackOnly') === 'true';
+
+    // Base query
+    let query = supabase
+      .from('schedules')
+      .select('*', { count: 'exact' })
+      .eq('user_id', userId)
+      .eq('status', '완료');
+
+    // 월별 필터
+    if (month) {
+      // month (e.g., '2026-01')
+      query = query.or(
+        `deadline.ilike.${month}%,visit_date.ilike.${month}%,additional_deadlines.cs.[{"date":"${month}-01"}]`
+      );
+      query = query.or(`deadline.ilike.${month}%,visit_date.ilike.${month}%`);
+    }
+
+    // 날짜 필터
+    if (selectedDate) {
+      query = query.or(
+        `deadline.eq.${selectedDate},visit_date.eq.${selectedDate},additional_deadlines.cs.{"date":"${selectedDate}"}`
+      );
+    }
+
+    // 플랫폼 필터
+    if (platforms.length > 0) {
+      query = query.in('platform', platforms);
+    }
+
+    // 상태 필터
+    if (statuses.length > 0) {
+      query = query.in('status', statuses);
+    }
+
+    // 카테고리 필터
+    if (categories.length > 0) {
+      query = query.in('category', categories);
+    }
+
+    // 콘텐츠 종류 필터
+    if (reviewTypes.length > 0) {
+      query = query.in('review_type', reviewTypes);
+    }
+
+    // 페이백 필터
+    if (paybackOnly) {
+      query = query.eq('payback_expected', true);
+    }
+
+    // 검색 필터
+    if (search) {
+      query = query.ilike('title', `%${search}%`);
+    }
+
+    // 정렬
+    switch (sortBy) {
+      case 'deadline-asc':
+        query = query.order('deadline', { ascending: true, nullsFirst: false });
+        break;
+      case 'deadline-desc':
+        query = query.order('deadline', { ascending: false, nullsFirst: false });
+        break;
+      case 'visit-asc':
+        query = query.neq('visit_date', '').not('visit_date', 'is', null);
+        query = query.order('visit_date', { ascending: true, nullsFirst: false });
+        break;
+      case 'visit-desc':
+        query = query.neq('visit_date', '').not('visit_date', 'is', null);
+        query = query.order('visit_date', { ascending: false, nullsFirst: false });
+        break;
+      case 'amount-asc':
+        query = query.order('benefit', { ascending: true });
+        break;
+      case 'amount-desc':
+        query = query.order('benefit', { ascending: false });
+        break;
+      case 'title':
+        query = query.order('title', { ascending: true });
+        break;
+      default:
+        query = query.order('created_at', { ascending: false });
+    }
+
+    // 페이지네이션 적용
+    query = query.range(offset, offset + limit - 1);
+
+    const { data: schedules, error: fetchError, count } = await query;
+
+    if (fetchError) {
+      console.error('Fetch error:', fetchError);
+      return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    }
+
+    // 카운트 계산을 위한 별도 쿼리 (필터링 적용된 전체 데이터)
+    let countQuery = supabase
+      .from('schedules')
+      .select('*', { count: 'exact' })
+      .eq('user_id', userId)
+      .eq('status', '완료');
+
+    // 동일한 필터 적용
+    if (selectedDate) {
+      countQuery = countQuery.or(
+        `deadline.eq.${selectedDate},visit_date.eq.${selectedDate},additional_deadlines.cs.{"date":"${selectedDate}"}`
+      );
+    }
+    if (paybackOnly) countQuery = countQuery.eq('payback_expected', true);
+
+    if (platforms.length > 0) countQuery = countQuery.in('platform', platforms);
+    if (statuses.length > 0) countQuery = countQuery.in('status', statuses);
+    if (categories.length > 0) countQuery = countQuery.in('category', categories);
+    if (reviewTypes.length > 0) countQuery = countQuery.in('review_type', reviewTypes);
+    if (search) countQuery = countQuery.ilike('title', `%${search}%`);
+
+    if (sortBy === 'visit-asc' || sortBy === 'visit-desc') {
+      countQuery = countQuery.neq('visit_date', '').not('visit_date', 'is', null);
+    }
+
+    const { data: allSchedules, count: totalCount } = await countQuery;
+
+    // 전체 플랫폼 목록 추출 (필터링되지 않은 사용자의 전체 일정 기준)
+    const { data: allUserSchedules } = await supabase
+      .from('schedules')
+      .select('platform')
+      .eq('user_id', userId);
+
+    const userPlatforms = Array.from(
+      new Set(allUserSchedules?.map((s) => s.platform).filter(Boolean))
+    );
+
+    // 방문일 카운트
+    const visitCount = allSchedules?.filter((s) => s.visit_date).length || 0;
+
+    // 마감일 카운트 (메인 마감일 + 추가 마감일)
+    let deadlineCount = 0;
+    allSchedules?.forEach((s) => {
+      if (s.deadline) deadlineCount++;
+      if (s.additional_deadlines) {
+        try {
+          const additionalDeadlines =
+            typeof s.additional_deadlines === 'string'
+              ? JSON.parse(s.additional_deadlines)
+              : s.additional_deadlines;
+          if (Array.isArray(additionalDeadlines)) {
+            deadlineCount += additionalDeadlines.filter((d: any) => d.date).length;
+          }
+        } catch (e) {
+          // ignore parse errors
+        }
+      }
+    });
+
+    return NextResponse.json({
+      schedules: schedules || [],
+      pagination: {
+        offset,
+        limit,
+        total: totalCount || 0,
+        hasMore: offset + limit < (totalCount || 0),
+      },
+      counts: {
+        total: totalCount || 0,
+        visit: visitCount,
+        deadline: deadlineCount,
+      },
+      platforms: userPlatforms || [],
+    });
+  } catch (error) {
+    console.error('API error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

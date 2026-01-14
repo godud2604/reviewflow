@@ -21,6 +21,7 @@ interface UseSchedulesOptions {
   search?: string;
   sortBy?: string;
   paybackOnly?: boolean;
+  completedOnly?: boolean;
 }
 
 interface SchedulePagination {
@@ -197,6 +198,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
     search = '',
     sortBy = 'deadline-asc',
     paybackOnly = false,
+    completedOnly = false,
   } = options;
   const { user } = useAuth();
   const { toast } = useToast();
@@ -267,7 +269,8 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
         // deadline-asc is default, so skip putting it in url to keep it clean
         if (sortBy && sortBy !== 'deadline-asc') params.append('sortBy', sortBy);
 
-        const response = await fetch(`/api/schedules?${params.toString()}`, {
+        const endpoint = completedOnly ? '/api/schedules/completed' : '/api/schedules';
+        const response = await fetch(`${endpoint}?${params.toString()}`, {
           credentials: 'same-origin',
           headers: {
             'Content-Type': 'application/json',
@@ -319,6 +322,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
       categoriesKey,
       reviewTypesKey,
       paybackOnly,
+      completedOnly,
       search,
       sortBy,
       showError,
@@ -348,6 +352,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
     statusesKey,
     categoriesKey,
     paybackOnly,
+    completedOnly,
     reviewTypesKey,
     search,
     sortBy,

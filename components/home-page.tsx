@@ -70,6 +70,7 @@ export default function HomePage({
     search?: string;
     sortBy?: string;
     paybackOnly?: boolean;
+    completedOnly?: boolean;
   }) => void;
   onCalendarMonthChange?: (date: Date) => void;
   calendarLoading?: boolean; // Type definition for calendarLoading
@@ -87,6 +88,7 @@ export default function HomePage({
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedReviewTypes, setSelectedReviewTypes] = useState<string[]>([]);
   const [paybackOnly, setPaybackOnly] = useState(false);
+  const [completedOnly, setCompletedOnly] = useState(false);
 
   // 정렬 상태
   const [sortBy, setSortBy] = useState<
@@ -150,6 +152,7 @@ export default function HomePage({
         search: debouncedSearchQuery,
         paybackOnly,
         sortBy,
+        completedOnly,
       });
     }
   }, [
@@ -161,6 +164,7 @@ export default function HomePage({
     debouncedSearchQuery,
     sortBy,
     paybackOnly,
+    completedOnly,
     onFilterChange,
   ]);
 
@@ -172,7 +176,18 @@ export default function HomePage({
     setSearchQuery('');
     setSortBy('deadline-asc');
     setPaybackOnly(false);
+    setCompletedOnly(false);
     setSelectedDate(null);
+  };
+
+  const handleToggleCompletedOnly = () => {
+    setCompletedOnly((prev) => {
+      const next = !prev;
+      if (next) {
+        setSelectedStatuses([]);
+      }
+      return next;
+    });
   };
 
   if (loading && schedules.length === 0) {
@@ -326,7 +341,11 @@ export default function HomePage({
           <div className="flex flex-col">
             <div className="flex items-baseline gap-2">
               <h3 className="text-[16px] font-bold text-neutral-900">
-                {selectedDate ? `${selectedDate.slice(5).replace('-', '/')} 일정` : '전체 일정'}
+                {selectedDate
+                  ? `${selectedDate.slice(5).replace('-', '/')} 일정`
+                  : completedOnly
+                    ? '완료'
+                    : '할 일'}
               </h3>
               <span className="text-[13px] font-semibold text-neutral-500">
                 {totalCount ?? schedules.length}건
@@ -347,7 +366,19 @@ export default function HomePage({
             onClick={handleClearFilters}
             className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
           >
-            전체
+            할 일
+          </button>
+
+          <button
+            onClick={handleToggleCompletedOnly}
+            className={cn(
+              'flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold border transition-colors',
+              completedOnly
+                ? 'bg-neutral-900 text-white border-neutral-900'
+                : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+            )}
+          >
+            완료 상태만 보기
           </button>
 
           {/* 2. 정렬 */}
@@ -472,36 +503,39 @@ export default function HomePage({
               </FilterBadge>
 
               {/* 5. 진행상태 */}
-              <FilterBadge
-                label={
-                  selectedStatuses.length > 0 && selectedStatuses.length < AVAILABLE_STATUSES.length
-                    ? `진행상태 ${selectedStatuses.length}`
-                    : '진행상태'
-                }
-                isActive={selectedStatuses.length > 0}
-              >
-                <Command>
-                  <CommandList>
-                    <CommandGroup heading="상태 선택">
-                      {AVAILABLE_STATUSES.map((status) => (
-                        <FilterCheckboxItem
-                          key={status}
-                          checked={selectedStatuses.includes(status)}
-                          onSelect={() => {
-                            if (selectedStatuses.includes(status)) {
-                              setSelectedStatuses(selectedStatuses.filter((s) => s !== status));
-                            } else {
-                              setSelectedStatuses([...selectedStatuses, status]);
-                            }
-                          }}
-                        >
-                          {status}
-                        </FilterCheckboxItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </FilterBadge>
+              {!completedOnly && (
+                <FilterBadge
+                  label={
+                    selectedStatuses.length > 0 &&
+                    selectedStatuses.length < AVAILABLE_STATUSES.length
+                      ? `진행상태 ${selectedStatuses.length}`
+                      : '진행상태'
+                  }
+                  isActive={selectedStatuses.length > 0}
+                >
+                  <Command>
+                    <CommandList>
+                      <CommandGroup heading="상태 선택">
+                        {AVAILABLE_STATUSES.map((status) => (
+                          <FilterCheckboxItem
+                            key={status}
+                            checked={selectedStatuses.includes(status)}
+                            onSelect={() => {
+                              if (selectedStatuses.includes(status)) {
+                                setSelectedStatuses(selectedStatuses.filter((s) => s !== status));
+                              } else {
+                                setSelectedStatuses([...selectedStatuses, status]);
+                              }
+                            }}
+                          >
+                            {status}
+                          </FilterCheckboxItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </FilterBadge>
+              )}
 
               {/* 6. 카테고리 */}
               <FilterBadge label="카테고리" isActive={selectedCategories.length > 0}>

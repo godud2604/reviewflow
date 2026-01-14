@@ -54,9 +54,14 @@ function filterSchedules(
     reviewTypes: string[];
     search: string;
     paybackOnly?: boolean;
+    completedOnly?: boolean;
   }
 ) {
   return schedules.filter((schedule) => {
+    if (filters.completedOnly && schedule.status !== '완료') {
+      return false;
+    }
+
     // 1. Date Check
     if (filters.selectedDate) {
       const date = filters.selectedDate;
@@ -162,6 +167,7 @@ function PageContent() {
     selectedDate: null as string | null,
     platforms: [] as string[],
     paybackOnly: false,
+    completedOnly: false,
     statuses: [] as string[],
     categories: [] as string[],
     reviewTypes: [] as string[],
@@ -196,6 +202,7 @@ function PageContent() {
     search: filters.search,
     paybackOnly: filters.paybackOnly,
     sortBy: filters.sortBy,
+    completedOnly: filters.completedOnly,
   });
 
   // 서버에서 받아온 플랫폼 목록을 filters 상태와 별개로 관리하거나,
@@ -306,6 +313,7 @@ function PageContent() {
       fetchMonthSchedules(calendarMonth);
     }
   }, [calendarMonth, fetchMonthSchedules, user]);
+
 
   // 현재 보여줄 달력 데이터 (현재 월 + 이전/다음 월 캐시 포함)
   const calendarSchedules = useMemo(() => {
