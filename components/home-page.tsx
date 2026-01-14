@@ -110,6 +110,10 @@ export default function HomePage({
 
   // IntersectionObserver 참조
   const observerTarget = useRef<HTMLDivElement>(null);
+  const isFetchingMoreRef = useRef(false);
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const scrollTargetRef = useRef<HTMLElement | null>(null);
 
   // Demo Data
   const demoSchedules = useMemo(
@@ -139,6 +143,47 @@ export default function HomePage({
       onFocusDateApplied?.();
     }
   }, [focusDate, onFocusDateApplied]);
+
+  useEffect(() => {
+    const target = observerTarget.current;
+    if (!target || !onLoadMore || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (!entry?.isIntersecting) return;
+        if (isFetchingMoreRef.current) return;
+        isFetchingMoreRef.current = true;
+        Promise.resolve(onLoadMore()).finally(() => {
+          isFetchingMoreRef.current = false;
+        });
+      },
+      { rootMargin: '240px 0px' }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMore, onLoadMore]);
+
+  useEffect(() => {
+    const container = listContainerRef.current;
+    const main = (container?.closest('main') ??
+      document.querySelector('main')) as HTMLElement | null;
+
+    const target =
+      container && container.scrollHeight > container.clientHeight ? container : main;
+
+    scrollTargetRef.current = target;
+    if (!target) return;
+
+    const handleScroll = () => {
+      setShowScrollTop(target.scrollTop > 320);
+    };
+
+    handleScroll();
+    target.addEventListener('scroll', handleScroll, { passive: true });
+    return () => target.removeEventListener('scroll', handleScroll);
+  }, [schedules.length]);
 
   // 필터/검색 변경 시 부모에게 알림
   useEffect(() => {
@@ -238,6 +283,8 @@ export default function HomePage({
     );
   }
 
+  const showListSkeleton = Boolean(loading && schedules.length > 0);
+
   // 서버에서 이미 필터링/정렬된 데이터를 사용
   const hasSchedules = totalCount ? totalCount > 0 : schedules.length > 0;
   const visitCount = propVisitCount ?? 0;
@@ -297,7 +344,10 @@ export default function HomePage({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3 bg-neutral-50/50">
+    <div
+      ref={listContainerRef}
+      className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3 bg-neutral-50/50"
+    >
       {/* 검색 및 필터 섹션 */}
       <div className="space-y-2.5">
         {/* 검색 바 */}
@@ -347,14 +397,24 @@ export default function HomePage({
                     ? '완료'
                     : '할 일'}
               </h3>
-              <span className="text-[13px] font-semibold text-neutral-500">
-                {totalCount ?? schedules.length}건
-              </span>
+              {showListSkeleton ? (
+                <Skeleton className="h-5 w-16 rounded-full bg-neutral-200/80" />
+              ) : (
+                <span className="text-[13px] font-semibold text-neutral-500">
+                  {totalCount ?? schedules.length}건
+                </span>
+              )}
             </div>
             {!selectedDate && (
-              <p className="text-[10px] text-neutral-500 font-medium truncate mt-0.5">
-                방문 {visitCount}건 · 마감 {deadlineCount}건
-              </p>
+              <>
+                {showListSkeleton ? (
+                  <Skeleton className="h-3.5 w-36 rounded-full bg-neutral-200/70 mt-1" />
+                ) : (
+                  <p className="text-[10px] text-neutral-500 font-medium truncate mt-0.5">
+                    방문 {visitCount}건 · 마감 {deadlineCount}건
+                  </p>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -568,7 +628,21 @@ export default function HomePage({
         </div>
       </div>
       <div className="flex flex-col gap-3">
-        {schedules.length > 0 ? (
+        {showListSkeleton ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={`list-skeleton-${i}`}
+              className="p-4 rounded-3xl bg-white shadow-sm flex items-center gap-3"
+            >
+              <Skeleton className="h-12 w-12 rounded-full flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+              <Skeleton className="h-6 w-16 rounded-lg" />
+            </div>
+          ))
+        ) : schedules.length > 0 ? (
           <>
             {schedules.map((schedule) => (
               <ScheduleItem
@@ -618,6 +692,14 @@ export default function HomePage({
         )}
         {shouldShowFirstScheduleTutorial && renderTutorialCard()}
       </div>
+      {showScrollTop && (
+        <button
+          onClick={() => scrollTargetRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-28 right-5 z-40 h-11 px-4 rounded-full bg-neutral-900 text-white text-[13px] font-semibold shadow-xl hover:bg-neutral-800 transition-colors"
+        >
+          위로 올라가기
+        </button>
+      )}
     </div>
   );
 }
