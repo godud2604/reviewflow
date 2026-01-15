@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { usePostHog } from 'posthog-js/react';
 import { useAuth } from '@/hooks/use-auth';
 import { Z_INDEX } from '@/lib/z-index';
+import AppDownloadBanner from '@/components/app-download-banner';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -318,7 +319,7 @@ export default function LandingPage() {
       )}
       {/* Navigation */}
       <nav
-        className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md transition-all duration-300 border-b border-transparent"
+        className="fixed top-0 left-0 left-0 right-0 bg-white/80 backdrop-blur-md transition-all duration-300 border-b border-transparent"
         style={{ zIndex: Z_INDEX.modal }}
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
@@ -367,6 +368,7 @@ export default function LandingPage() {
           </div>
         </div>
       </nav>
+
       {/* Hero Section */}
       <section className="min-h-screen flex flex-col justify-center items-center text-center pt-40 md:pt-44 pb-10 bg-gradient-to-b from-white via-orange-50/30 to-white relative overflow-hidden">
         {/* Background Animation Elements */}
