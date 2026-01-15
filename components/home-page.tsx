@@ -42,6 +42,7 @@ export default function HomePage({
   hasMore,
   onLoadMore,
   totalCount,
+  overallCount,
   visitCount: propVisitCount,
   deadlineCount: propDeadlineCount,
   onFilterChange,
@@ -66,6 +67,7 @@ export default function HomePage({
   hasMore?: boolean;
   onLoadMore?: () => void;
   totalCount?: number;
+  overallCount?: number;
   visitCount?: number;
   deadlineCount?: number;
   onFilterChange?: (filters: {
@@ -289,14 +291,14 @@ export default function HomePage({
   const showListSkeleton = Boolean(loading && schedules.length > 0);
 
   // 서버에서 이미 필터링/정렬된 데이터를 사용
-  const hasSchedules = totalCount ? totalCount > 0 : schedules.length > 0;
+  const overallScheduleCount = overallCount ?? totalCount ?? schedules.length;
   const visitCount = propVisitCount ?? 0;
   const deadlineCount = propDeadlineCount ?? 0;
 
-  const shouldShowFirstScheduleTutorial =
-    hasSchedules && (totalCount ?? schedules.length) === 1 && schedules.length > 0;
-  const shouldShowFilterTutorial =
-    hasSchedules && (totalCount ?? schedules.length) <= 1 && schedules.length === 0;
+  const isTutorialEligible = overallScheduleCount <= 2;
+  const shouldShowEmptyTutorial = overallScheduleCount === 0;
+  const shouldShowFirstScheduleTutorial = isTutorialEligible && schedules.length > 0;
+  const shouldShowFilterTutorial = isTutorialEligible && schedules.length === 0;
 
   const renderTutorialCard = () => (
     <div className="space-y-5 rounded-3xl border border-neutral-200 bg-gradient-to-b from-[#fff6ed] via-white to-white px-5 py-4 shadow-[0_24px_60px_rgba(15,23,42,0.09)]">
@@ -330,6 +332,64 @@ export default function HomePage({
           </div>
         </li>
       </ol>
+    </div>
+  );
+
+  const renderEmptyTutorialCard = () => (
+    <div className="bg-white rounded-3xl p-4 text-center shadow-sm shadow-[0_18px_40px_rgba(15,23,42,0.06)] border border-neutral-100 space-y-4">
+      <div className="space-y-1">
+        <p className="text-[13px] font-bold text-neutral-900">아직 체험단 일정이 없어요</p>
+        <p className="text-[11px] text-neutral-500 font-medium">
+          체험단을 등록하면 캘린더와 수익 리포트가 자동으로 채워져요
+        </p>
+      </div>
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            posthog?.capture('home_empty_add_clicked', {
+              context: selectedDate ? 'date' : 'list',
+            });
+            onAddClick?.();
+          }}
+          className="cursor-pointer px-4 py-2.5 rounded-xl bg-[#ff6a1f] text-white text-[13px] font-bold shadow-sm active:scale-[0.98] w-full sm:w-auto"
+        >
+          체험단 등록하기
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const nextShowDemo = !showDemo;
+            setShowDemo(nextShowDemo);
+            posthog?.capture('home_empty_demo_toggled', { open: nextShowDemo });
+          }}
+          className="cursor-pointer px-4 py-2.5 rounded-xl bg-neutral-50 text-neutral-700 text-[13px] font-semibold border border-neutral-200 w-full sm:w-auto"
+        >
+          데모 일정 살펴보기
+        </button>
+      </div>
+      {showDemo && (
+        <div className="mt-2 space-y-3 text-left">
+          <div className="text-[11px] font-bold text-neutral-500 uppercase">샘플 일정</div>
+          <div className="space-y-2">
+            {demoSchedules.map((demo) => (
+              <div
+                key={demo.title}
+                className="flex items-center justify-between rounded-2xl border border-neutral-200 px-3 py-2.5 bg-neutral-50/70"
+              >
+                <div className="space-y-0.5">
+                  <div className="text-[13px] font-bold text-neutral-900">{demo.title}</div>
+                  <div className="text-[11px] text-neutral-500 font-semibold">{demo.status}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[13px] font-bold text-[#f97316]">{demo.value}</div>
+                  <div className="text-[11px] text-neutral-500">{demo.tag}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -706,6 +766,8 @@ export default function HomePage({
               </div>
             )}
           </>
+        ) : shouldShowEmptyTutorial ? (
+          renderEmptyTutorialCard()
         ) : shouldShowFilterTutorial ? (
           renderTutorialCard()
         ) : (

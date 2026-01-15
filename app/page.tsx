@@ -223,6 +223,14 @@ function PageContent() {
     completedOnly: filters.completedOnly,
   });
 
+  const [overallScheduleCount, setOverallScheduleCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (counts?.overall !== undefined) {
+      setOverallScheduleCount(counts.overall);
+    }
+  }, [counts?.overall]);
+
   // 서버에서 받아온 플랫폼 목록을 filters 상태와 별개로 관리하거나,
   // HomePage에 전달하여 선택 옵션으로 사용하게 함.
   // 현재 구조에서는 HomePage 컴포넌트가 userProfile 훅을 내부적으로 또 호출하고 있음 (platforms, categories 가져오기 위해).
@@ -814,6 +822,7 @@ function PageContent() {
                   hasMore={effectivePagination?.hasMore}
                   onLoadMore={loadMore}
                   totalCount={effectiveCounts?.total}
+                  overallCount={overallScheduleCount ?? undefined}
                   visitCount={effectiveCounts?.visit}
                   deadlineCount={effectiveCounts?.deadline}
                   onFilterChange={handleFilterChange}

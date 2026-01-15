@@ -153,6 +153,11 @@ export async function GET(request: NextRequest) {
 
     const { data: allSchedules, count: totalCount } = await countQuery;
 
+    const { count: overallCount } = await supabase
+      .from('schedules')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
     // 전체 플랫폼 목록 추출 (필터링되지 않은 사용자의 전체 일정 기준)
     const { data: allUserSchedules } = await supabase
       .from('schedules')
@@ -215,6 +220,7 @@ export async function GET(request: NextRequest) {
         total: totalCount || 0,
         visit: visitCount,
         deadline: deadlineCount,
+        overall: overallCount || 0,
       },
       platforms: userPlatforms || [],
     });

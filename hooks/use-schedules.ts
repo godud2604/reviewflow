@@ -35,6 +35,7 @@ interface ScheduleCounts {
   total: number;
   visit: number;
   deadline: number;
+  overall?: number;
 }
 
 interface UseSchedulesReturn {
