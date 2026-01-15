@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Z_INDEX } from '@/lib/z-index';
 
-const IOS_APP_STORE_URL = 'https://apps.apple.com/kr';
+const IOS_APP_STORE_URL = 'https://apps.apple.com/kr/app/reviewflow/id6757174544';
 const BANNER_DISMISS_KEY = 'app_download_banner_dismissed';
 
 export default function AppDownloadBanner() {
