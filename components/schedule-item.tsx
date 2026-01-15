@@ -131,6 +131,19 @@ export default function ScheduleItem({
     return null;
   };
 
+  const getOverdueBadge = (targetDate: string, completed?: boolean) => {
+    if (completed) return null;
+    const diff = getDaysDiff(today, targetDate);
+    if (diff < 0) {
+      return (
+        <span className="inline-flex items-center justify-center px-1.5 py-0.5 mr-1 text-[10px] font-bold rounded-md bg-red-100 text-red-700 border border-red-200 leading-none">
+          불
+        </span>
+      );
+    }
+    return null;
+  };
+
   const dateItems: Array<{
     key: string;
     date: string;
@@ -145,29 +158,38 @@ export default function ScheduleItem({
       // User asked: "D day 뱃지의 위치릴 각각의 마감일 왼쪽? 에 놔두면 괜찮을거같아요"
       // Referring to "Since now we only show D-day for REAL deadline, but additional deadlines also need it".
       // It seems strictly about deadlines. But consistency is good. I will stick to deadlines for now as requested.
+      const badge = getDDayBadge(schedule.visit);
       dateItems.push({
         key: 'visit',
         date: schedule.visit,
-        label: visitLabel,
+        label: (
+          <span className="flex items-center">
+            {badge}
+            <span className="mr-1">📍</span>
+            {visitLabel}
+          </span>
+        ),
         className: isVisitActive ? 'font-bold text-sky-700' : undefined,
       });
     } else {
-      undatedItems.push({ key: 'visit-unknown', label: visitLabel });
+      undatedItems.push({ key: 'visit-unknown', label: `📍 ${visitLabel}` });
     }
 
     if (schedule.dead) {
       const badge = getDDayBadge(schedule.dead);
+      const overdueBadge = getOverdueBadge(schedule.dead, isCompleted);
       dateItems.push({
         key: 'dead',
         date: schedule.dead,
         label: (
           <span className="flex items-center">
+            {overdueBadge}
             {badge}
             {deadLabel}
           </span>
         ),
         className: `${isDeadActive ? 'font-bold text-rose-700' : ''} ${
-          isCompleted ? 'line-through opacity-50' : ''
+          isCompleted ? 'text-neutral-400' : ''
         }`.trim(),
       });
     } else {
@@ -176,26 +198,35 @@ export default function ScheduleItem({
   } else {
     if (schedule.dead) {
       const badge = getDDayBadge(schedule.dead);
+      const overdueBadge = getOverdueBadge(schedule.dead, isCompleted);
       dateItems.push({
         key: 'dead',
         date: schedule.dead,
         label: (
           <span className="flex items-center">
+            {overdueBadge}
             {badge}
             {deadLabel}
           </span>
         ),
         className: `${isDeadActive ? 'font-bold text-rose-700' : ''} ${
-          isCompleted ? 'line-through opacity-50' : ''
+          isCompleted ? 'text-neutral-400' : ''
         }`.trim(),
       });
     }
 
     if (!schedule.dead && schedule.visit) {
+      const badge = getDDayBadge(schedule.visit);
       dateItems.push({
         key: 'visit',
         date: schedule.visit,
-        label: visitLabel,
+        label: (
+          <span className="flex items-center">
+            {badge}
+            <span className="mr-1">📍</span>
+            {visitLabel}
+          </span>
+        ),
         className: isVisitActive ? 'font-bold text-sky-700' : undefined,
       });
     }
@@ -204,14 +235,16 @@ export default function ScheduleItem({
   if (schedule.additionalDeadlines) {
     schedule.additionalDeadlines.forEach((deadline) => {
       if (!deadline.date) return;
-      const isActiveDeadline = selectedDate && deadline.date === selectedDate;
+      const isActiveDeadline = deadline.date === activeDate;
       const isDeadlineCompleted = deadline.completed === true;
       const badge = getDDayBadge(deadline.date);
+      const overdueBadge = getOverdueBadge(deadline.date, isDeadlineCompleted);
       dateItems.push({
         key: `additional-${deadline.id}`,
         date: deadline.date,
         label: (
           <span className="flex items-center">
+            {overdueBadge}
             {badge}
             {deadline.date.slice(5)} {deadline.label}
           </span>
@@ -220,7 +253,7 @@ export default function ScheduleItem({
         // but currently rendering spreads item.className to the container span.
         // It should be fine.
         className: `${isActiveDeadline ? 'font-bold text-rose-700' : ''} ${
-          isDeadlineCompleted ? 'line-through opacity-50' : ''
+          isDeadlineCompleted ? 'text-neutral-400' : ''
         }`.trim(),
       });
     });
