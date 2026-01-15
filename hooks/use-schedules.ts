@@ -210,7 +210,18 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
   const [counts, setCounts] = useState<ScheduleCounts | null>(null);
   const [responsePlatforms, setResponsePlatforms] = useState<string[]>([]);
   const [currentOffset, setCurrentOffset] = useState(initialOffset);
-  const hasFetchedRef = React.useRef(false);
+  const cacheRef = React.useRef(
+    new Map<
+      string,
+      {
+        schedules: Schedule[];
+        pagination: SchedulePagination | null;
+        counts: ScheduleCounts | null;
+        platforms: string[];
+        currentOffset: number;
+      }
+    >()
+  );
 
   const showError = useCallback(
     (message: string) => {
@@ -232,6 +243,48 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
   const categoriesKey = categories.join(',');
   const reviewTypesKey = reviewTypes.join(',');
 
+  const cacheKey = React.useMemo(
+    () =>
+      JSON.stringify({
+        userId,
+        selectedDate,
+        month,
+        platforms: platformsKey,
+        statuses: statusesKey,
+        categories: categoriesKey,
+        reviewTypes: reviewTypesKey,
+        search,
+        sortBy,
+        paybackOnly,
+        completedOnly,
+        limit,
+      }),
+    [
+      userId,
+      selectedDate,
+      month,
+      platformsKey,
+      statusesKey,
+      categoriesKey,
+      reviewTypesKey,
+      search,
+      sortBy,
+      paybackOnly,
+      completedOnly,
+      limit,
+    ]
+  );
+
+  const updateCacheSchedules = useCallback(
+    (updater: (prev: Schedule[]) => Schedule[]) => {
+      const cached = cacheRef.current.get(cacheKey);
+      if (!cached) return;
+      const nextSchedules = updater(cached.schedules);
+      cacheRef.current.set(cacheKey, { ...cached, schedules: nextSchedules });
+    },
+    [cacheKey]
+  );
+
   const fetchSchedules = useCallback(
     async (force = false, append = false) => {
       if (!userId) {
@@ -240,8 +293,14 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
         return;
       }
 
-      // Skip if already fetched and not forcing
-      if (hasFetchedRef.current && !force && !append) {
+      const cached = cacheRef.current.get(cacheKey);
+
+      if (!force && !append && cached) {
+        setSchedules(cached.schedules);
+        setPagination(cached.pagination);
+        setCounts(cached.counts);
+        setResponsePlatforms(cached.platforms);
+        setCurrentOffset(cached.currentOffset);
         setLoading(false);
         return;
       }
@@ -290,21 +349,40 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
         } else {
           const newSchedules = (data.schedules || []).map(mapDbToSchedule);
 
+          const nextPagination = data.pagination;
+          const nextCounts = data.counts;
+          const nextPlatforms = data.platforms || responsePlatforms;
+          const nextOffset = append ? currentOffset + limit : limit;
+
           if (append) {
             setSchedules((prev) => {
               const existingIds = new Set(prev.map((s) => s.id));
               const uniqueNewSchedules = newSchedules.filter((s) => !existingIds.has(s.id));
-              return [...prev, ...uniqueNewSchedules];
+              const merged = [...prev, ...uniqueNewSchedules];
+              cacheRef.current.set(cacheKey, {
+                schedules: merged,
+                pagination: nextPagination,
+                counts: nextCounts,
+                platforms: nextPlatforms,
+                currentOffset: nextOffset,
+              });
+              return merged;
             });
           } else {
             setSchedules(newSchedules);
+            cacheRef.current.set(cacheKey, {
+              schedules: newSchedules,
+              pagination: nextPagination,
+              counts: nextCounts,
+              platforms: nextPlatforms,
+              currentOffset: nextOffset,
+            });
           }
 
-          setPagination(data.pagination);
-          setCounts(data.counts);
+          setPagination(nextPagination);
+          setCounts(nextCounts);
           if (data.platforms) setResponsePlatforms(data.platforms);
-          setCurrentOffset(append ? currentOffset + limit : limit);
-          hasFetchedRef.current = true;
+          setCurrentOffset(nextOffset);
         }
       } catch (err) {
         showError(err instanceof Error ? err.message : '알 수 없는 오류');
@@ -327,6 +405,8 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
       search,
       sortBy,
       showError,
+      responsePlatforms,
+      cacheKey,
     ]
   );
 
@@ -340,7 +420,6 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
     if (enabled) {
       // 필터가 변경되면 offset 초기화하고 새로 fetch
       setCurrentOffset(0);
-      hasFetchedRef.current = false;
       fetchSchedules();
     } else {
       setLoading(false);
@@ -378,6 +457,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
 
         const newSchedule = mapDbToSchedule(data);
         setSchedules((prev) => [newSchedule, ...prev]);
+        updateCacheSchedules((prev) => [newSchedule, ...prev]);
         return newSchedule;
       } catch (err) {
         showError(err instanceof Error ? err.message : '알 수 없는 오류');
@@ -405,6 +485,9 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
         }
 
         setSchedules((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+        updateCacheSchedules((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
+        );
         return true;
       } catch (err) {
         showError(err instanceof Error ? err.message : '알 수 없는 오류');
@@ -432,6 +515,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
         }
 
         setSchedules((prev) => prev.filter((s) => s.id !== id));
+        updateCacheSchedules((prev) => prev.filter((s) => s.id !== id));
         return true;
       } catch (err) {
         showError(err instanceof Error ? err.message : '알 수 없는 오류');
