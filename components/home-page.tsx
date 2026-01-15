@@ -677,7 +677,15 @@ export default function HomePage({
               )}
 
               {/* 6. 카테고리 */}
-              <FilterBadge label="카테고리" isActive={selectedCategories.length > 0}>
+              <FilterBadge
+                label={
+                  selectedCategories.length > 0 &&
+                  selectedCategories.length < AVAILABLE_CATEGORIES.length
+                    ? `카테고리 ${selectedCategories.length}`
+                    : '카테고리'
+                }
+                isActive={selectedCategories.length > 0}
+              >
                 <Command>
                   <CommandList>
                     <CommandGroup heading="카테고리 선택">
