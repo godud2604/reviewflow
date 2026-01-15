@@ -123,6 +123,24 @@ function filterSchedules(
   });
 }
 
+function sortSelectedDateSchedules(schedules: Schedule[]) {
+  return schedules.slice().sort((a, b) => {
+    const aCompleted = a.status === '완료';
+    const bCompleted = b.status === '완료';
+    if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
+
+    if (!aCompleted) {
+      const aVisit = a.visit || '';
+      const bVisit = b.visit || '';
+      if (aVisit && bVisit) return aVisit.localeCompare(bVisit);
+      if (aVisit) return -1;
+      if (bVisit) return 1;
+    }
+
+    return 0;
+  });
+}
+
 function PageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -242,14 +260,24 @@ function PageContent() {
   const [monthlySchedulesCache, setMonthlySchedulesCache] = useState<Record<string, Schedule[]>>(
     {}
   );
+  const [monthlyCompletedSchedulesCache, setMonthlyCompletedSchedulesCache] = useState<
+    Record<string, Schedule[]>
+  >({});
   const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarCompletedLoading, setCalendarCompletedLoading] = useState(false);
   const monthlySchedulesCacheRef = useRef(monthlySchedulesCache);
+  const monthlyCompletedSchedulesCacheRef = useRef(monthlyCompletedSchedulesCache);
   const fetchingMonthsRef = useRef<Set<string>>(new Set());
+  const fetchingCompletedMonthsRef = useRef<Set<string>>(new Set());
 
   // 최신 캐시를 ref에 동기화 (useEffect 안에서 의존성 없이 접근하기 위함)
   useEffect(() => {
     monthlySchedulesCacheRef.current = monthlySchedulesCache;
   }, [monthlySchedulesCache]);
+
+  useEffect(() => {
+    monthlyCompletedSchedulesCacheRef.current = monthlyCompletedSchedulesCache;
+  }, [monthlyCompletedSchedulesCache]);
 
   // 특정 월 데이터 fetch 함수
   const fetchMonthSchedules = useCallback(
@@ -307,12 +335,64 @@ function PageContent() {
     [user] // monthlySchedulesCache 의존성 제거
   );
 
+  const fetchMonthCompletedSchedules = useCallback(
+    async (month: string, force = false) => {
+      if (!user) return;
+
+      if (!force && monthlyCompletedSchedulesCacheRef.current[month]) {
+        return;
+      }
+
+      if (fetchingCompletedMonthsRef.current.has(month)) {
+        return;
+      }
+
+      fetchingCompletedMonthsRef.current.add(month);
+      setCalendarCompletedLoading(true);
+      try {
+        const params = new URLSearchParams({
+          limit: '1000',
+          userId: user.id,
+          month: month,
+        });
+
+        const response = await fetch(`/api/schedules/completed?${params.toString()}`, {
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const fetchedSchedules = (data.schedules || []).map(mapDbToSchedule);
+          setMonthlyCompletedSchedulesCache((prev) => ({
+            ...prev,
+            [month]: fetchedSchedules,
+          }));
+
+          if (data.platforms && data.platforms.length > 0) {
+            setAvailablePlatforms((prev) => {
+              const merged = Array.from(new Set([...prev, ...data.platforms]));
+              return merged;
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch completed month schedules', e);
+      } finally {
+        setCalendarCompletedLoading(false);
+        fetchingCompletedMonthsRef.current.delete(month);
+      }
+    },
+    [user]
+  );
+
   // 달력 월 변경 시 fetch (캐시 확인)
   useEffect(() => {
     if (calendarMonth && user) {
       fetchMonthSchedules(calendarMonth);
+      fetchMonthCompletedSchedules(calendarMonth);
     }
-  }, [calendarMonth, fetchMonthSchedules, user]);
+  }, [calendarMonth, fetchMonthSchedules, fetchMonthCompletedSchedules, user]);
 
 
   // 현재 보여줄 달력 데이터 (현재 월 + 이전/다음 월 캐시 포함)
@@ -339,21 +419,51 @@ function PageContent() {
     return Array.from(uniqueMap.values());
   }, [monthlySchedulesCache, calendarMonth]);
 
-  // 달력 점 표시용 데이터는 항상 전체(현재 월) 데이터를 사용합니다.
+  const calendarMarkerSchedules = useMemo(() => {
+    const [year, month] = calendarMonth.split('-').map(Number);
+    const formatDate = (y: number, m: number) => `${y}-${String(m).padStart(2, '0')}`;
+
+    const prevDate = new Date(year, month - 1 - 1, 1);
+    const prevMonthKey = formatDate(prevDate.getFullYear(), prevDate.getMonth() + 1);
+
+    const nextDate = new Date(year, month - 1 + 1, 1);
+    const nextMonthKey = formatDate(nextDate.getFullYear(), nextDate.getMonth() + 1);
+
+    const current = monthlySchedulesCache[calendarMonth] || [];
+    const prev = monthlySchedulesCache[prevMonthKey] || [];
+    const next = monthlySchedulesCache[nextMonthKey] || [];
+
+    const completedCurrent = monthlyCompletedSchedulesCache[calendarMonth] || [];
+    const completedPrev = monthlyCompletedSchedulesCache[prevMonthKey] || [];
+    const completedNext = monthlyCompletedSchedulesCache[nextMonthKey] || [];
+
+    const allSchedules = [
+      ...completedPrev,
+      ...completedCurrent,
+      ...completedNext,
+      ...prev,
+      ...current,
+      ...next,
+    ];
+    const uniqueMap = new Map();
+    allSchedules.forEach((s) => uniqueMap.set(s.id, s));
+    return Array.from(uniqueMap.values());
+  }, [monthlySchedulesCache, monthlyCompletedSchedulesCache, calendarMonth]);
 
   // 클라이언트 사이드 필터링 (날짜 선택 시에만)
   const filteredClientSchedules = useMemo(() => {
-    if (isDateFiltering && calendarSchedules) {
-      return filterSchedules(calendarSchedules, filters);
+    if (isDateFiltering && calendarMarkerSchedules) {
+      return sortSelectedDateSchedules(filterSchedules(calendarMarkerSchedules, filters));
     }
     return [];
-  }, [calendarSchedules, filters, isDateFiltering]);
+  }, [calendarMarkerSchedules, filters, isDateFiltering]);
 
   // 최종 표시할 데이터 결정
   const schedules = isDateFiltering ? filteredClientSchedules : serverSchedules;
 
   // 로딩 상태 결정
-  const schedulesLoading = isDateFiltering ? calendarLoading : serverLoading;
+  const calendarMarkerLoading = calendarLoading || calendarCompletedLoading;
+  const schedulesLoading = isDateFiltering ? calendarMarkerLoading : serverLoading;
 
   // 페이지네이션 정보
   const effectivePagination = isDateFiltering
@@ -466,10 +576,20 @@ function PageContent() {
         handleCloseScheduleModal();
         // 데이터 변경 시 현재 월 데이터 갱신 (캐시 무효화)
         fetchMonthSchedules(calendarMonth, true);
+        fetchMonthCompletedSchedules(calendarMonth, true);
       } else if (editingScheduleId) {
         handleCloseScheduleModal();
         // 수정 시에는 캐시 직접 업데이트 (API 재호출 방지)
         setMonthlySchedulesCache((prev) => {
+          const nextCache = { ...prev };
+          Object.keys(nextCache).forEach((monthKey) => {
+            nextCache[monthKey] = nextCache[monthKey].map((s) =>
+              s.id === editingScheduleId ? { ...s, ...schedule } : s
+            );
+          });
+          return nextCache;
+        });
+        setMonthlyCompletedSchedulesCache((prev) => {
           const nextCache = { ...prev };
           Object.keys(nextCache).forEach((monthKey) => {
             nextCache[monthKey] = nextCache[monthKey].map((s) =>
@@ -488,11 +608,13 @@ function PageContent() {
     handleCloseScheduleModal();
     // 데이터 삭제 시 현재 월 데이터 갱신
     fetchMonthSchedules(calendarMonth, true);
+    fetchMonthCompletedSchedules(calendarMonth, true);
   };
 
   const handleUpdateScheduleFiles = async (id: number, files: import('@/types').GuideFile[]) => {
     await updateSchedule(id, { guideFiles: files });
     fetchMonthSchedules(calendarMonth, true);
+    fetchMonthCompletedSchedules(calendarMonth, true);
   };
 
   const handleCompleteSchedule = async (id: number) => {
@@ -506,6 +628,7 @@ function PageContent() {
       });
       return nextCache;
     });
+    fetchMonthCompletedSchedules(calendarMonth, true);
   };
 
   const handleCompletedStatusEdit = (id: number) => {
@@ -518,6 +641,15 @@ function PageContent() {
     const nextVal = !schedule.paybackConfirmed;
     await updateSchedule(id, { paybackConfirmed: nextVal });
     setMonthlySchedulesCache((prev) => {
+      const nextCache = { ...prev };
+      Object.keys(nextCache).forEach((monthKey) => {
+        nextCache[monthKey] = nextCache[monthKey].map((s) =>
+          s.id === id ? { ...s, paybackConfirmed: nextVal } : s
+        );
+      });
+      return nextCache;
+    });
+    setMonthlyCompletedSchedulesCache((prev) => {
       const nextCache = { ...prev };
       Object.keys(nextCache).forEach((monthKey) => {
         nextCache[monthKey] = nextCache[monthKey].map((s) =>
@@ -541,6 +673,15 @@ function PageContent() {
 
     await updateSchedule(scheduleId, { additionalDeadlines: updatedDeadlines });
     setMonthlySchedulesCache((prev) => {
+      const nextCache = { ...prev };
+      Object.keys(nextCache).forEach((monthKey) => {
+        nextCache[monthKey] = nextCache[monthKey].map((s) =>
+          s.id === scheduleId ? { ...s, additionalDeadlines: updatedDeadlines } : s
+        );
+      });
+      return nextCache;
+    });
+    setMonthlyCompletedSchedulesCache((prev) => {
       const nextCache = { ...prev };
       Object.keys(nextCache).forEach((monthKey) => {
         nextCache[monthKey] = nextCache[monthKey].map((s) =>
@@ -656,6 +797,7 @@ function PageContent() {
                 <HomePage
                   schedules={schedules}
                   calendarSchedules={calendarSchedules}
+                  calendarMarkerSchedules={calendarMarkerSchedules}
                   onScheduleClick={handleOpenScheduleModal}
                   onShowAllClick={handleShowAllSchedules}
                   onCompleteClick={handleCompleteSchedule}
@@ -676,7 +818,7 @@ function PageContent() {
                   deadlineCount={effectiveCounts?.deadline}
                   onFilterChange={handleFilterChange}
                   onCalendarMonthChange={handleCalendarMonthChange}
-                  calendarLoading={calendarLoading}
+                  calendarLoading={calendarMarkerLoading}
                   availablePlatforms={availablePlatforms}
                 />
               )}

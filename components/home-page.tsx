@@ -27,6 +27,7 @@ const Command = UICommand;
 export default function HomePage({
   schedules,
   calendarSchedules,
+  calendarMarkerSchedules,
   onScheduleClick,
   onShowAllClick,
   onCompleteClick,
@@ -50,6 +51,7 @@ export default function HomePage({
 }: {
   schedules: Schedule[];
   calendarSchedules?: Schedule[];
+  calendarMarkerSchedules?: Schedule[];
   onScheduleClick: (id: number) => void;
   onShowAllClick: () => void;
   onCompleteClick?: (id: number) => void;
@@ -231,6 +233,11 @@ export default function HomePage({
     });
   };
 
+  const handleShowAllTodo = () => {
+    setSelectedDate(null);
+    setCompletedOnly(false);
+  };
+
   if (loading && schedules.length === 0) {
     return (
       <div className="flex-1 overflow-hidden px-5 pb-24 touch-pan-y space-y-3 pt-3 bg-neutral-50/50">
@@ -369,7 +376,7 @@ export default function HomePage({
 
       {/* 3. 캘린더 */}
       <CalendarSection
-        schedules={calendarSchedules || schedules} // calendarSchedules가 없으면 기존 동작 유지
+        schedules={calendarMarkerSchedules || calendarSchedules || schedules}
         onDateClick={handleDateClick}
         onCreateSchedule={handleCalendarDateAdd}
         onGoToToday={handleGoToToday}
@@ -413,42 +420,49 @@ export default function HomePage({
               </>
             )}
           </div>
+          {selectedDate && (
+            <button
+              onClick={handleShowAllTodo}
+              className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50 transition-colors"
+            >
+              할일 전체보기
+            </button>
+          )}
         </div>
 
         {/* 2열: 뱃지 가로 스크롤 */}
-        <div className="relative">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -ml-1 pl-1 pr-8">
-          {/* 1. 전체 */}
-          <div className="flex flex-shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-[#f2f4f6] p-1">
-            <button
-              onClick={handleSelectTodo}
-              aria-pressed={!completedOnly}
-              className={cn(
-                'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all',
-                !completedOnly
-                  ? 'bg-white text-neutral-800 shadow-[0_2px_6px_rgba(15,23,42,0.14)]'
-                  : 'text-neutral-500 hover:text-neutral-700'
-              )}
-            >
-              할 일
-            </button>
-            <button
-              onClick={handleToggleCompletedOnly}
-              aria-pressed={completedOnly}
-              className={cn(
-                'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all',
-                completedOnly
-                  ? 'bg-white text-neutral-800 shadow-[0_2px_6px_rgba(15,23,42,0.14)]'
-                  : 'text-neutral-500 hover:text-neutral-700'
-              )}
-            >
-              완료
-            </button>
-          </div>
+        {!selectedDate && (
+          <div className="relative">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -ml-1 pl-1 pr-8">
+            {/* 1. 전체 */}
+            <div className="flex flex-shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-[#f2f4f6] p-1">
+              <button
+                onClick={handleSelectTodo}
+                aria-pressed={!completedOnly}
+                className={cn(
+                  'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all',
+                  !completedOnly
+                    ? 'bg-white text-neutral-800 shadow-[0_2px_6px_rgba(15,23,42,0.14)]'
+                    : 'text-neutral-500 hover:text-neutral-700'
+                )}
+              >
+                할 일
+              </button>
+              <button
+                onClick={handleToggleCompletedOnly}
+                aria-pressed={completedOnly}
+                className={cn(
+                  'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all',
+                  completedOnly
+                    ? 'bg-white text-neutral-800 shadow-[0_2px_6px_rgba(15,23,42,0.14)]'
+                    : 'text-neutral-500 hover:text-neutral-700'
+                )}
+              >
+                완료
+              </button>
+            </div>
 
-          {/* 2. 정렬 */}
-          {!selectedDate && (
-            <>
+            {/* 2. 정렬 */}
               <FilterBadge
                 label={
                   sortBy === 'deadline-asc'
@@ -628,14 +642,13 @@ export default function HomePage({
                   </CommandList>
                 </Command>
               </FilterBadge>
-            </>
-          )}
+            </div>
+            <div className="pointer-events-none absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-neutral-50/95 to-neutral-50/0" />
+            <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-neutral-500 shadow-sm">
+              <ChevronRight className="h-3.5 w-3.5" />
+            </div>
           </div>
-          <div className="pointer-events-none absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-neutral-50/95 to-neutral-50/0" />
-          <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-neutral-500 shadow-sm">
-            <ChevronRight className="h-3.5 w-3.5" />
-          </div>
-        </div>
+        )}
       </div>
       <div className="flex flex-col gap-3">
         {showListSkeleton ? (

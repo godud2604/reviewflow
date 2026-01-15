@@ -24,12 +24,17 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'deadline-asc';
     const paybackOnly = searchParams.get('paybackOnly') === 'true';
 
+    const includeCompleted = Boolean(selectedDate);
+
     // Base query
     let query = supabase
       .from('schedules')
       .select('*', { count: 'exact' })
-      .eq('user_id', userId)
-      .neq('status', '완료');
+      .eq('user_id', userId);
+
+    if (!includeCompleted) {
+      query = query.neq('status', '완료');
+    }
 
     // 월별 필터
     if (month) {
@@ -126,8 +131,11 @@ export async function GET(request: NextRequest) {
     let countQuery = supabase
       .from('schedules')
       .select('*', { count: 'exact' })
-      .eq('user_id', userId)
-      .neq('status', '완료');
+      .eq('user_id', userId);
+
+    if (!includeCompleted) {
+      countQuery = countQuery.neq('status', '완료');
+    }
 
     // 동일한 필터 적용
     if (selectedDate) {
@@ -177,8 +185,26 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    const sortedSchedules = selectedDate
+      ? (schedules || []).slice().sort((a, b) => {
+          const aCompleted = a.status === '완료';
+          const bCompleted = b.status === '완료';
+          if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
+
+          if (!aCompleted) {
+            const aVisit = a.visit_date || '';
+            const bVisit = b.visit_date || '';
+            if (aVisit && bVisit) return aVisit.localeCompare(bVisit);
+            if (aVisit) return -1;
+            if (bVisit) return 1;
+          }
+
+          return 0;
+        })
+      : schedules || [];
+
     return NextResponse.json({
-      schedules: schedules || [],
+      schedules: sortedSchedules,
       pagination: {
         offset,
         limit,
