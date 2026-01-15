@@ -843,7 +843,6 @@ function PageContent() {
 
               {currentPage === 'stats' && (
                 <StatsPage
-                  schedules={schedules}
                   onScheduleItemClick={(schedule) => handleOpenScheduleModal(schedule.id)}
                   isScheduleModalOpen={isScheduleModalOpen}
                   isPro={isPro}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Schedule, ExtraIncome, MonthlyGrowth, HistoryView } from '@/types';
 import { useExtraIncomes } from '@/hooks/use-extra-incomes';
+import { useStatsMonthly } from '@/hooks/use-stats-monthly';
 import ExtraIncomeModal from './extra-income-modal';
 import IncomeHistoryModal from './income-history-modal';
 import { Z_INDEX } from '@/lib/z-index';
@@ -15,14 +16,12 @@ import {
 const incomeTutorialStorageKey = 'reviewflow-stats-income-tutorial-shown';
 
 type StatsPageProps = {
-  schedules: Schedule[];
   onScheduleItemClick: (schedule: Schedule) => void;
   isScheduleModalOpen: boolean;
   isPro: boolean;
 };
 
 export default function StatsPage({
-  schedules,
   onScheduleItemClick,
   isScheduleModalOpen,
   isPro,
@@ -52,25 +51,11 @@ export default function StatsPage({
   const currentMonth = today.getMonth();
   const currentMonthKey = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
   const [selectedMonthKey, setSelectedMonthKey] = useState(currentMonthKey);
-
-  const parseDate = (value?: string) => {
-    if (!value) return null;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-  };
+  const selectedMonthParam = selectedMonthKey.slice(0, 7);
 
   const getMonthStartDate = (monthKey: string) => {
     const date = new Date(monthKey);
     return Number.isNaN(date.getTime()) ? null : date;
-  };
-
-  const selectedMonthDate = useMemo(() => getMonthStartDate(selectedMonthKey), [selectedMonthKey]);
-  const isDateInSelectedMonth = (date: Date | null) => {
-    if (!date || !selectedMonthDate) return false;
-    return (
-      date.getFullYear() === selectedMonthDate.getFullYear() &&
-      date.getMonth() === selectedMonthDate.getMonth()
-    );
   };
 
   const formatFullMonthLabel = (key: string) => {
@@ -96,8 +81,6 @@ export default function StatsPage({
   const selectedMonthLabelShort = formatShortMonthLabel(selectedMonthKey);
   const displaySelectedMonthLabel = selectedMonthLabel || '선택한 달';
 
-  const getScheduleDate = (schedule: Schedule) =>
-    parseDate(schedule.visit) || parseDate(schedule.dead);
 
   const createCategoryMap = (): Record<Schedule['category'], number> => ({
     '맛집/식품': 0,
@@ -115,11 +98,25 @@ export default function StatsPage({
     기타: 0,
   });
 
-  const { extraIncomes, createExtraIncome, updateExtraIncome, deleteExtraIncome } =
-    useExtraIncomes();
+  const { createExtraIncome, updateExtraIncome, deleteExtraIncome } = useExtraIncomes({
+    enabled: false,
+  });
+  const {
+    schedules: monthlySchedules,
+    extraIncomes: monthlyExtraIncomes,
+    monthlyGrowth,
+    availableMonths,
+    loading: statsLoading,
+    refetch: refetchStats,
+  } = useStatsMonthly({
+    month: selectedMonthParam,
+  });
 
   const handleAddIncome = async (income: Omit<ExtraIncome, 'id'>) => {
-    await createExtraIncome(income);
+    const created = await createExtraIncome(income);
+    if (created) {
+      await refetchStats();
+    }
   };
 
   const handleOpenIncomeModal = (income?: ExtraIncome) => {
@@ -137,11 +134,21 @@ export default function StatsPage({
   };
 
   const handleUpdateExtraIncome = (id: number, updates: Omit<ExtraIncome, 'id'>) => {
-    return updateExtraIncome(id, updates);
+    return updateExtraIncome(id, updates).then(async (success) => {
+      if (success) {
+        await refetchStats();
+      }
+      return success;
+    });
   };
 
   const handleDeleteEditingIncome = (id: number) => {
-    return deleteExtraIncome(id);
+    return deleteExtraIncome(id).then(async (success) => {
+      if (success) {
+        await refetchStats();
+      }
+      return success;
+    });
   };
 
   const handleHistoryScheduleClick = (schedule: Schedule) => {
@@ -152,14 +159,11 @@ export default function StatsPage({
     handleOpenIncomeModal(income);
   };
 
-  const selectedMonthSchedules = useMemo(
-    () => schedules.filter((schedule) => isDateInSelectedMonth(getScheduleDate(schedule))),
-    [schedules, selectedMonthKey, selectedMonthDate]
-  );
+  const selectedMonthSchedules = useMemo(() => monthlySchedules, [monthlySchedules]);
 
   const selectedMonthExtraIncomes = useMemo(
-    () => extraIncomes.filter((income) => isDateInSelectedMonth(parseDate(income.date))),
-    [extraIncomes, selectedMonthKey, selectedMonthDate]
+    () => monthlyExtraIncomes,
+    [monthlyExtraIncomes]
   );
 
   const { detailIncomeTotal, detailCostTotal, incomeDetailBreakdown, costDetailBreakdown } =
@@ -282,7 +286,7 @@ export default function StatsPage({
     };
   }, [econValue]);
 
-  const hasAnyExtraIncome = extraIncomes.length > 0;
+  const hasAnyExtraIncome = monthlyExtraIncomes.length > 0;
 
   const getCategoryEntries = (categoryMap: Record<Schedule['category'], number>) =>
     (Object.entries(categoryMap) as [Schedule['category'], number][])
@@ -313,65 +317,20 @@ export default function StatsPage({
     setShowIncomeTutorial(true);
   }, [hasAnyExtraIncome]);
 
-  const monthlyGrowth: MonthlyGrowth[] = useMemo(() => {
-    const monthMap = new Map<string, MonthlyGrowth>();
-
-    const toMonthKey = (date: Date) => {
-      const year = date.getFullYear();
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      return `${year}-${month}-01`;
-    };
-
-    const ensureEntry = (key: string) => {
-      if (!monthMap.has(key)) {
-        monthMap.set(key, {
-          monthStart: key,
-          benefitTotal: 0,
-          incomeTotal: 0,
-          costTotal: 0,
-          extraIncomeTotal: 0,
-          econValue: 0,
-        });
-      }
-      return monthMap.get(key)!;
-    };
-
-    schedules.forEach((s) => {
-      const date = parseDate(s.visit) || parseDate(s.dead);
-      if (!date) return;
-      const key = toMonthKey(date);
-      const entry = ensureEntry(key);
-      entry.benefitTotal += toNumber(s.benefit);
-      entry.incomeTotal += toNumber(s.income);
-      entry.costTotal += toNumber(s.cost);
-    });
-
-    extraIncomes.forEach((income) => {
-      const date = parseDate(income.date);
-      if (!date) return;
-      const key = toMonthKey(date);
-      const entry = ensureEntry(key);
-      entry.extraIncomeTotal += toNumber(income.amount);
-    });
-
-    monthMap.forEach((entry) => {
-      entry.econValue =
-        (entry.benefitTotal || 0) +
-        (entry.incomeTotal || 0) +
-        (entry.extraIncomeTotal || 0) -
-        (entry.costTotal || 0);
-    });
-
-    return Array.from(monthMap.values()).sort(
-      (a, b) => new Date(a.monthStart).getTime() - new Date(b.monthStart).getTime()
-    );
-  }, [schedules, extraIncomes]);
+  useEffect(() => {
+    if (!availableMonths.length) return;
+    if (availableMonths.includes(selectedMonthKey)) return;
+    const latest = availableMonths
+      .slice()
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+    if (latest) {
+      setSelectedMonthKey(latest);
+    }
+  }, [availableMonths, selectedMonthKey]);
 
   const monthOptions = useMemo(() => {
-    const keys = Array.from(
-      new Set([...monthlyGrowth.map((entry) => entry.monthStart), currentMonthKey])
-    );
-    const options = keys
+    const monthKeys = availableMonths.length ? availableMonths : [currentMonthKey];
+    const options = Array.from(new Set(monthKeys))
       .map((key) => {
         const date = getMonthStartDate(key);
         if (!date) return null;
@@ -381,7 +340,7 @@ export default function StatsPage({
       .sort((a, b) => b.date.getTime() - a.date.getTime());
 
     return options;
-  }, [monthlyGrowth, currentMonthKey]);
+  }, [availableMonths, currentMonthKey]);
 
   return (
     <>
@@ -417,7 +376,103 @@ export default function StatsPage({
           </div>
         </div>
 
-        {/* Hero Card */}
+        {statsLoading ? (
+          <div className="space-y-4 mb-3.5 animate-pulse">
+            <div className="relative overflow-hidden rounded-[30px] p-6 mt-1 mb-5 bg-gradient-to-br from-[#ffe1c7] via-[#ffd1b2] to-[#ffc1a2]">
+              <div className="flex items-start justify-between mb-5">
+                <div className="space-y-3">
+                  <div className="h-3 w-40 rounded-full bg-white/60" />
+                  <div className="h-9 w-52 rounded-full bg-white/70" />
+                </div>
+                <div className="h-8 w-20 rounded-full bg-white/60" />
+              </div>
+              <div className="h-px w-full bg-white/40 mb-5" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-white/50 h-[92px] p-4 space-y-2">
+                  <div className="h-3 w-24 rounded-full bg-white/70" />
+                  <div className="h-4 w-32 rounded-full bg-white/70" />
+                  <div className="h-5 w-20 rounded-full bg-white/80" />
+                </div>
+                <div className="rounded-2xl bg-white/40 h-[92px] p-4 space-y-2">
+                  <div className="h-3 w-20 rounded-full bg-white/70" />
+                  <div className="h-4 w-28 rounded-full bg-white/70" />
+                  <div className="h-5 w-20 rounded-full bg-white/80" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mb-1">
+              <div className="h-4 w-44 rounded-full bg-[#e5e7eb]" />
+              <div className="h-3 w-20 rounded-full bg-[#e5e7eb]" />
+            </div>
+
+            <div className="bg-white rounded-[26px] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="h-4 w-28 rounded-full bg-[#e5e7eb]" />
+                <div className="h-3 w-16 rounded-full bg-[#e5e7eb]" />
+              </div>
+              <div className="h-6 w-40 rounded-full bg-[#e5e7eb]" />
+              <div className="space-y-3">
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="flex items-center gap-3">
+                    <div className="h-3 w-14 rounded-full bg-[#e5e7eb]" />
+                    <div className="flex-1 h-2 rounded-full bg-[#eef2f7]" />
+                    <div className="h-3 w-16 rounded-full bg-[#e5e7eb]" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[26px] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="h-4 w-20 rounded-full bg-[#e5e7eb]" />
+                <div className="h-3 w-16 rounded-full bg-[#e5e7eb]" />
+              </div>
+              <div className="h-6 w-36 rounded-full bg-[#e5e7eb]" />
+              <div className="space-y-3">
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="flex items-center gap-3">
+                    <div className="h-3 w-14 rounded-full bg-[#e5e7eb]" />
+                    <div className="flex-1 h-2 rounded-full bg-[#eef2f7]" />
+                    <div className="h-3 w-16 rounded-full bg-[#e5e7eb]" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[26px] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="h-4 w-20 rounded-full bg-[#e5e7eb]" />
+                <div className="h-3 w-16 rounded-full bg-[#e5e7eb]" />
+              </div>
+              <div className="h-6 w-32 rounded-full bg-[#e5e7eb]" />
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((item) => (
+                  <div key={item} className="flex items-center gap-3">
+                    <div className="h-3 w-14 rounded-full bg-[#e5e7eb]" />
+                    <div className="flex-1 h-2 rounded-full bg-[#eef2f7]" />
+                    <div className="h-3 w-16 rounded-full bg-[#e5e7eb]" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[26px] p-6 shadow-sm space-y-5">
+              <div className="h-4 w-28 rounded-full bg-[#e5e7eb]" />
+              <div className="h-3 w-40 rounded-full bg-[#eef2f7]" />
+              <div className="flex items-end gap-6 h-[150px]">
+                {[1, 2, 3, 4].map((item) => (
+                  <div key={item} className="flex flex-col items-center gap-2">
+                    <div className="h-[90px] w-8 rounded-[10px] bg-[#e5e7eb]" />
+                    <div className="h-3 w-10 rounded-full bg-[#eef2f7]" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Hero Card */}
         <div className="relative overflow-hidden rounded-[30px] p-6 mt-1 mb-5 bg-gradient-to-br from-[#ff9a3c] via-[#ff6a1f] to-[#ff3b0c]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.22),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.15),transparent_28%)]" />
           <div className="relative flex items-start justify-between mb-5">
@@ -786,6 +841,8 @@ export default function StatsPage({
           selectedMonthLabel={selectedMonthLabelShort || displaySelectedMonthLabel}
           isPro={isPro}
         />
+          </>
+        )}
       </div>
 
       <ExtraIncomeModal
