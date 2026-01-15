@@ -313,6 +313,19 @@ export default function HomePage({
   const visitCount = propVisitCount ?? 0;
   const deadlineCount = propDeadlineCount ?? 0;
 
+  const hasSearchQuery = Boolean(debouncedSearchQuery);
+  const isSearchMode = showSearchInput && !hasSearchQuery;
+  const headerTitle = hasSearchQuery
+    ? '검색 결과'
+    : isSearchMode
+      ? '전체'
+      : selectedDate
+        ? `${selectedDate.slice(5).replace('-', '/')} 일정`
+        : completedOnly
+          ? '완료'
+          : '할 일';
+  const headerCount = isSearchMode ? overallScheduleCount : totalCount ?? schedules.length;
+
   const isTutorialEligible = overallScheduleCount <= 2;
   const shouldShowEmptyTutorial = overallScheduleCount === 0;
   const shouldShowFirstScheduleTutorial = isTutorialEligible && schedules.length > 0;
@@ -448,26 +461,18 @@ export default function HomePage({
           {/* 좌측: 정보 */}
           <div className="flex flex-col">
             <div className="flex items-baseline gap-2">
-              <h3 className="text-[16px] font-bold text-neutral-900">
-                {debouncedSearchQuery
-                  ? '검색 결과'
-                  : selectedDate
-                    ? `${selectedDate.slice(5).replace('-', '/')} 일정`
-                    : completedOnly
-                      ? '완료'
-                      : '할 일'}
-              </h3>
+              <h3 className="text-[16px] font-bold text-neutral-900">{headerTitle}</h3>
               {showListSkeleton ? (
                 <Skeleton className="h-5 w-16 rounded-full bg-neutral-200/80" />
               ) : (
                 <span className="text-[13px] font-semibold text-neutral-500">
-                  {totalCount ?? schedules.length}건
+                  {headerCount}건
                 </span>
               )}
             </div>
             {showListSkeleton ? (
               <Skeleton className="h-3.5 w-32 rounded-full bg-neutral-200/70 mt-1" />
-            ) : (
+            ) : isSearchMode ? null : (
               <p className="text-[10px] text-neutral-500 font-medium truncate mt-0.5">
                 방문 {visitCount}건 · 마감 {deadlineCount}건
               </p>
@@ -487,7 +492,7 @@ export default function HomePage({
                 검색
               </button>
             )}
-            {selectedDate && (
+            {selectedDate && !isSearchMode && (
               <button
                 onClick={handleShowAllTodo}
                 className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50 transition-colors"
