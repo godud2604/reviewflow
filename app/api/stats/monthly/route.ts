@@ -4,6 +4,11 @@ import type { DbSchedule, DbExtraIncome } from '@/types/database';
 import type { MonthlyGrowth } from '@/types';
 
 const monthRegex = /^\d{4}-\d{2}$/;
+const monthlyGrowthCache = new Map<
+  string,
+  { cachedAt: number; monthlyGrowth: MonthlyGrowth[]; availableMonths: string[] }
+>();
+const MONTHLY_GROWTH_TTL_MS = 5 * 60 * 1000;
 
 const toNumber = (value: unknown) => {
   const num = Number(value);
@@ -47,53 +52,73 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseAdminClient();
 
-    let scheduleQuery = supabase
+    const scheduleQuery = supabase
       .from('schedules')
       .select('*')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .or(
+        `deadline.ilike.${monthParam}%,visit_date.ilike.${monthParam}%,additional_deadlines.cs.[{"date":"${monthParam}-01"}]`
+      );
 
-    scheduleQuery = scheduleQuery.or(
-      `deadline.ilike.${monthParam}%,visit_date.ilike.${monthParam}%,additional_deadlines.cs.[{"date":"${monthParam}-01"}]`
-    );
-    scheduleQuery = scheduleQuery.or(`deadline.ilike.${monthParam}%,visit_date.ilike.${monthParam}%`);
+    const extraIncomeQuery = supabase
+      .from('extra_incomes')
+      .select('*')
+      .eq('user_id', userId)
+      .ilike('date', `${monthParam}%`);
 
-    const { data: schedules, error: schedulesError } = await scheduleQuery;
+    const cachedGrowth = monthlyGrowthCache.get(userId);
+    const now = Date.now();
+    const shouldRefreshGrowth =
+      !cachedGrowth || now - cachedGrowth.cachedAt > MONTHLY_GROWTH_TTL_MS;
+
+    const growthSchedulesQuery = shouldRefreshGrowth
+      ? supabase
+          .from('schedules')
+          .select('visit_date,deadline,benefit,income,cost')
+          .eq('user_id', userId)
+      : null;
+
+    const growthExtraQuery = shouldRefreshGrowth
+      ? supabase.from('extra_incomes').select('date,amount').eq('user_id', userId)
+      : null;
+
+    const [schedulesResult, extraIncomeResult, growthSchedulesResult, growthExtraResult] =
+      await Promise.all([
+        scheduleQuery,
+        extraIncomeQuery,
+        growthSchedulesQuery,
+        growthExtraQuery,
+      ]);
+
+    const schedulesError = schedulesResult?.error;
+    const extraIncomeError = extraIncomeResult?.error;
+    const allSchedulesError = growthSchedulesResult?.error;
+    const allExtraIncomesError = growthExtraResult?.error;
 
     if (schedulesError) {
       console.error('stats-monthly schedules error:', schedulesError);
       return NextResponse.json({ error: schedulesError.message }, { status: 500 });
     }
 
-    const { data: extraIncomes, error: extraIncomeError } = await supabase
-      .from('extra_incomes')
-      .select('*')
-      .eq('user_id', userId)
-      .ilike('date', `${monthParam}%`);
-
     if (extraIncomeError) {
       console.error('stats-monthly extra incomes error:', extraIncomeError);
       return NextResponse.json({ error: extraIncomeError.message }, { status: 500 });
     }
-
-    const { data: allSchedules, error: allSchedulesError } = await supabase
-      .from('schedules')
-      .select('visit_date,deadline,benefit,income,cost')
-      .eq('user_id', userId);
 
     if (allSchedulesError) {
       console.error('stats-monthly growth schedules error:', allSchedulesError);
       return NextResponse.json({ error: allSchedulesError.message }, { status: 500 });
     }
 
-    const { data: allExtraIncomes, error: allExtraIncomesError } = await supabase
-      .from('extra_incomes')
-      .select('date,amount')
-      .eq('user_id', userId);
-
     if (allExtraIncomesError) {
       console.error('stats-monthly growth extra incomes error:', allExtraIncomesError);
       return NextResponse.json({ error: allExtraIncomesError.message }, { status: 500 });
     }
+
+    const schedules = schedulesResult?.data || [];
+    const extraIncomes = extraIncomeResult?.data || [];
+    const allSchedules = growthSchedulesResult?.data || [];
+    const allExtraIncomes = growthExtraResult?.data || [];
 
     const monthMap = new Map<string, MonthlyGrowthInternal>();
 
@@ -122,48 +147,60 @@ export async function GET(request: NextRequest) {
       return monthMap.get(key)!;
     };
 
-    (allSchedules || []).forEach((schedule) => {
-      const date = parseDate(schedule.visit_date) || parseDate(schedule.deadline);
-      if (!date) return;
-      const key = toMonthKey(date);
-      const entry = ensureEntry(key);
-      entry.benefitTotal += toNumber(schedule.benefit);
-      entry.incomeTotal += toNumber(schedule.income);
-      entry.costTotal += toNumber(schedule.cost);
-      entry.itemCount += 1;
-    });
+    let monthlyGrowth = cachedGrowth?.monthlyGrowth || [];
+    let availableMonths = cachedGrowth?.availableMonths || [];
 
-    (allExtraIncomes || []).forEach((income) => {
-      const date = parseDate(income.date);
-      if (!date) return;
-      const key = toMonthKey(date);
-      const entry = ensureEntry(key);
-      entry.extraIncomeTotal += toNumber(income.amount);
-      entry.itemCount += 1;
-    });
+    if (shouldRefreshGrowth) {
+      allSchedules.forEach((schedule) => {
+        const date = parseDate(schedule.visit_date) || parseDate(schedule.deadline);
+        if (!date) return;
+        const key = toMonthKey(date);
+        const entry = ensureEntry(key);
+        entry.benefitTotal += toNumber(schedule.benefit);
+        entry.incomeTotal += toNumber(schedule.income);
+        entry.costTotal += toNumber(schedule.cost);
+        entry.itemCount += 1;
+      });
 
-    const monthlyGrowth = Array.from(monthMap.values())
-      .map((entry) => ({
-        monthStart: entry.monthStart,
-        benefitTotal: entry.benefitTotal,
-        incomeTotal: entry.incomeTotal,
-        costTotal: entry.costTotal,
-        extraIncomeTotal: entry.extraIncomeTotal,
-        econValue:
-          entry.benefitTotal + entry.incomeTotal + entry.extraIncomeTotal - entry.costTotal,
-        itemCount: entry.itemCount,
-      }))
-      .sort((a, b) => new Date(a.monthStart).getTime() - new Date(b.monthStart).getTime());
+      allExtraIncomes.forEach((income) => {
+        const date = parseDate(income.date);
+        if (!date) return;
+        const key = toMonthKey(date);
+        const entry = ensureEntry(key);
+        entry.extraIncomeTotal += toNumber(income.amount);
+        entry.itemCount += 1;
+      });
 
-    const availableMonths = monthlyGrowth
-      .filter((entry) => entry.itemCount > 0)
-      .map((entry) => entry.monthStart);
+      const growthWithCounts = Array.from(monthMap.values())
+        .map((entry) => ({
+          monthStart: entry.monthStart,
+          benefitTotal: entry.benefitTotal,
+          incomeTotal: entry.incomeTotal,
+          costTotal: entry.costTotal,
+          extraIncomeTotal: entry.extraIncomeTotal,
+          econValue:
+            entry.benefitTotal + entry.incomeTotal + entry.extraIncomeTotal - entry.costTotal,
+          itemCount: entry.itemCount,
+        }))
+        .sort((a, b) => new Date(a.monthStart).getTime() - new Date(b.monthStart).getTime());
+
+      monthlyGrowth = growthWithCounts.map(({ itemCount, ...rest }) => rest);
+      availableMonths = growthWithCounts
+        .filter((entry) => entry.itemCount > 0)
+        .map((entry) => entry.monthStart);
+
+      monthlyGrowthCache.set(userId, {
+        cachedAt: now,
+        monthlyGrowth,
+        availableMonths,
+      });
+    }
 
     return NextResponse.json({
       monthStart: `${monthParam}-01`,
       schedules: filteredSchedules as DbSchedule[],
       extraIncomes: (extraIncomes || []) as DbExtraIncome[],
-      monthlyGrowth: monthlyGrowth.map(({ itemCount, ...rest }) => rest),
+      monthlyGrowth,
       availableMonths,
     });
   } catch (error) {

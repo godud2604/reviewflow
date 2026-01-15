@@ -3,6 +3,30 @@ import { getSupabaseAdminClient } from '@/lib/supabase-admin';
 
 export async function GET(request: NextRequest) {
   try {
+    const metaCache = (globalThis as typeof globalThis & {
+      __schedulesMetaCache?: Map<
+        string,
+        {
+          cachedAt: number;
+          counts: { total: number; visit: number; deadline: number; overall: number };
+          platforms: string[];
+        }
+      >;
+    }).__schedulesMetaCache;
+    const schedulesMetaCache =
+      metaCache ||
+      ((globalThis as typeof globalThis & {
+        __schedulesMetaCache?: Map<
+          string,
+          {
+            cachedAt: number;
+            counts: { total: number; visit: number; deadline: number; overall: number };
+            platforms: string[];
+          }
+        >;
+      }).__schedulesMetaCache = new Map());
+    const META_TTL_MS = 3 * 60 * 1000;
+
     // Query parameters
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('userId');
@@ -16,6 +40,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const selectedDate = searchParams.get('selectedDate');
     const month = searchParams.get('month'); // YYYY-MM
+    const includeMeta = searchParams.get('meta') !== '0';
     const platforms = searchParams.get('platforms')?.split(',').filter(Boolean) || [];
     const statuses = searchParams.get('statuses')?.split(',').filter(Boolean) || [];
     const categories = searchParams.get('categories')?.split(',').filter(Boolean) || [];
@@ -29,7 +54,7 @@ export async function GET(request: NextRequest) {
     // Base query
     let query = supabase
       .from('schedules')
-      .select('*', { count: 'exact' })
+      .select('*', includeMeta ? { count: 'exact' } : undefined)
       .eq('user_id', userId);
 
     if (!includeCompleted) {
@@ -127,10 +152,70 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: fetchError.message }, { status: 500 });
     }
 
+    const sortedSchedules = selectedDate
+      ? (schedules || []).slice().sort((a, b) => {
+          const aCompleted = a.status === '완료';
+          const bCompleted = b.status === '완료';
+          if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
+
+          if (!aCompleted) {
+            const aVisit = a.visit_date || '';
+            const bVisit = b.visit_date || '';
+            if (aVisit && bVisit) return aVisit.localeCompare(bVisit);
+            if (aVisit) return -1;
+            if (bVisit) return 1;
+          }
+
+          return 0;
+        })
+      : schedules || [];
+
+    if (!includeMeta) {
+      return NextResponse.json({
+        schedules: sortedSchedules,
+        pagination: {
+          offset,
+          limit,
+          total: sortedSchedules.length,
+          hasMore: false,
+        },
+      });
+    }
+
+    const metaCacheKey = JSON.stringify({
+      userId,
+      selectedDate,
+      month,
+      platforms,
+      statuses,
+      categories,
+      reviewTypes,
+      search,
+      paybackOnly,
+    });
+
+    const cachedMeta = schedulesMetaCache.get(metaCacheKey);
+    const now = Date.now();
+    const canUseCache = cachedMeta && now - cachedMeta.cachedAt < META_TTL_MS;
+
+    if (canUseCache) {
+      return NextResponse.json({
+        schedules: sortedSchedules,
+        pagination: {
+          offset,
+          limit,
+          total: count || 0,
+          hasMore: offset + limit < (count || 0),
+        },
+        counts: cachedMeta.counts,
+        platforms: cachedMeta.platforms,
+      });
+    }
+
     // 카운트 계산을 위한 별도 쿼리 (필터링 적용된 전체 데이터)
     let countQuery = supabase
       .from('schedules')
-      .select('*', { count: 'exact' })
+      .select('visit_date,deadline,additional_deadlines', { count: 'exact' })
       .eq('user_id', userId);
 
     if (!includeCompleted) {
@@ -151,18 +236,18 @@ export async function GET(request: NextRequest) {
     if (reviewTypes.length > 0) countQuery = countQuery.in('review_type', reviewTypes);
     if (search) countQuery = countQuery.ilike('title', `%${search}%`);
 
-    const { data: allSchedules, count: totalCount } = await countQuery;
+    const [countResult, overallResult, platformsResult] = await Promise.all([
+      countQuery,
+      supabase
+        .from('schedules')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId),
+      supabase.from('schedules').select('platform').eq('user_id', userId),
+    ]);
 
-    const { count: overallCount } = await supabase
-      .from('schedules')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId);
-
-    // 전체 플랫폼 목록 추출 (필터링되지 않은 사용자의 전체 일정 기준)
-    const { data: allUserSchedules } = await supabase
-      .from('schedules')
-      .select('platform')
-      .eq('user_id', userId);
+    const { data: allSchedules, count: totalCount } = countResult;
+    const { count: overallCount } = overallResult;
+    const { data: allUserSchedules } = platformsResult;
 
     const userPlatforms = Array.from(
       new Set(allUserSchedules?.map((s) => s.platform).filter(Boolean))
@@ -192,25 +277,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const sortedSchedules = selectedDate
-      ? (schedules || []).slice().sort((a, b) => {
-          const aCompleted = a.status === '완료';
-          const bCompleted = b.status === '완료';
-          if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
-
-          if (!aCompleted) {
-            const aVisit = a.visit_date || '';
-            const bVisit = b.visit_date || '';
-            if (aVisit && bVisit) return aVisit.localeCompare(bVisit);
-            if (aVisit) return -1;
-            if (bVisit) return 1;
-          }
-
-          return 0;
-        })
-      : schedules || [];
-
-    return NextResponse.json({
+    const response = {
       schedules: sortedSchedules,
       pagination: {
         offset,
@@ -225,7 +292,15 @@ export async function GET(request: NextRequest) {
         overall: overallCount || 0,
       },
       platforms: userPlatforms || [],
+    };
+
+    schedulesMetaCache.set(metaCacheKey, {
+      cachedAt: now,
+      counts: response.counts,
+      platforms: response.platforms,
     });
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json(

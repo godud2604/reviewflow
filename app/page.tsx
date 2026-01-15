@@ -310,6 +310,7 @@ function PageContent() {
           limit: '1000',
           userId: user.id,
           month: month,
+          meta: '0',
         });
 
         const response = await fetch(`/api/schedules?${params.toString()}`, {
@@ -363,6 +364,7 @@ function PageContent() {
           limit: '1000',
           userId: user.id,
           month: month,
+          meta: '0',
         });
 
         const response = await fetch(`/api/schedules/completed?${params.toString()}`, {
