@@ -34,6 +34,14 @@ const parseDate = (value?: string | null) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const toMonthKeyFromValue = (value?: string | null) => {
+  if (!value) return null;
+  const match = value.match(/^(\d{4}-\d{2})/);
+  if (match) return `${match[1]}-01`;
+  const parsed = parseDate(value);
+  return parsed ? toMonthKey(parsed) : null;
+};
+
 type MonthlyGrowthInternal = MonthlyGrowth & { itemCount: number };
 
 export async function GET(request: NextRequest) {
@@ -41,6 +49,9 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('userId');
     const monthParam = searchParams.get('month') || buildMonthParam();
+    const refreshParam = searchParams.get('refresh');
+    const forceRefresh =
+      refreshParam === '1' || refreshParam === 'true' || refreshParam === 'yes';
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -69,7 +80,7 @@ export async function GET(request: NextRequest) {
     const cachedGrowth = monthlyGrowthCache.get(userId);
     const now = Date.now();
     const shouldRefreshGrowth =
-      !cachedGrowth || now - cachedGrowth.cachedAt > MONTHLY_GROWTH_TTL_MS;
+      forceRefresh || !cachedGrowth || now - cachedGrowth.cachedAt > MONTHLY_GROWTH_TTL_MS;
 
     const growthSchedulesQuery = shouldRefreshGrowth
       ? supabase
@@ -152,9 +163,10 @@ export async function GET(request: NextRequest) {
 
     if (shouldRefreshGrowth) {
       allSchedules.forEach((schedule) => {
-        const date = parseDate(schedule.visit_date) || parseDate(schedule.deadline);
-        if (!date) return;
-        const key = toMonthKey(date);
+        const key =
+          toMonthKeyFromValue(schedule.visit_date) ||
+          toMonthKeyFromValue(schedule.deadline);
+        if (!key) return;
         const entry = ensureEntry(key);
         entry.benefitTotal += toNumber(schedule.benefit);
         entry.incomeTotal += toNumber(schedule.income);
@@ -163,9 +175,8 @@ export async function GET(request: NextRequest) {
       });
 
       allExtraIncomes.forEach((income) => {
-        const date = parseDate(income.date);
-        if (!date) return;
-        const key = toMonthKey(date);
+        const key = toMonthKeyFromValue(income.date);
+        if (!key) return;
         const entry = ensureEntry(key);
         entry.extraIncomeTotal += toNumber(income.amount);
         entry.itemCount += 1;

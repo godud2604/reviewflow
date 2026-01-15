@@ -109,6 +109,7 @@ export function useStatsMonthly(options: UseStatsMonthlyOptions = {}): UseStatsM
     try {
       const params = new URLSearchParams({ userId });
       if (month) params.append('month', month);
+      if (force) params.append('refresh', '1');
 
       const response = await fetch(`/api/stats/monthly?${params.toString()}`, {
         credentials: 'same-origin',
