@@ -58,10 +58,6 @@ function filterSchedules(
   }
 ) {
   return schedules.filter((schedule) => {
-    if (filters.completedOnly && schedule.status !== '완료') {
-      return false;
-    }
-
     // 1. Date Check
     if (filters.selectedDate) {
       const date = filters.selectedDate;
@@ -74,6 +70,11 @@ function filterSchedules(
       const hasAdditionalRaw = schedule.additionalDeadlines?.some((d) => d.date === date);
 
       if (!hasDead && !hasVisit && !hasAdditionalRaw) return false;
+      return true;
+    }
+
+    if (filters.completedOnly && schedule.status !== '완료') {
+      return false;
     }
 
     // 2. Platform Check
