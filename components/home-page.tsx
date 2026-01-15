@@ -113,6 +113,9 @@ export default function HomePage({
   // 검색 상태
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const [searchInput, setSearchInput] = useState('');
+  const [showSearchInput, setShowSearchInput] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [showDemo, setShowDemo] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -193,19 +196,33 @@ export default function HomePage({
     return () => target.removeEventListener('scroll', handleScroll);
   }, [schedules.length]);
 
+  useEffect(() => {
+    if (showSearchInput) {
+      searchInputRef.current?.focus();
+    }
+  }, [showSearchInput]);
+
   // 필터/검색 변경 시 부모에게 알림
   useEffect(() => {
     if (onFilterChange) {
+      const effectiveSelectedDate = showSearchInput ? null : selectedDate;
+      const effectivePlatforms = showSearchInput ? [] : selectedPlatforms;
+      const effectiveStatuses = showSearchInput ? [] : selectedStatuses;
+      const effectiveCategories = showSearchInput ? [] : selectedCategories;
+      const effectiveReviewTypes = showSearchInput ? [] : selectedReviewTypes;
+      const effectivePaybackOnly = showSearchInput ? false : paybackOnly;
+      const effectiveCompletedOnly = showSearchInput ? false : completedOnly;
+
       onFilterChange({
-        selectedDate,
-        platforms: selectedPlatforms,
-        statuses: selectedStatuses,
-        categories: selectedCategories,
-        reviewTypes: selectedReviewTypes,
+        selectedDate: effectiveSelectedDate,
+        platforms: effectivePlatforms,
+        statuses: effectiveStatuses,
+        categories: effectiveCategories,
+        reviewTypes: effectiveReviewTypes,
         search: debouncedSearchQuery,
-        paybackOnly,
+        paybackOnly: effectivePaybackOnly,
         sortBy,
-        completedOnly,
+        completedOnly: effectiveCompletedOnly,
       });
     }
   }, [
@@ -218,6 +235,7 @@ export default function HomePage({
     sortBy,
     paybackOnly,
     completedOnly,
+    showSearchInput,
     onFilterChange,
   ]);
 
@@ -411,29 +429,6 @@ export default function HomePage({
       ref={listContainerRef}
       className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3 bg-neutral-50/50"
     >
-      {/* 검색 및 필터 섹션 */}
-      <div className="space-y-2.5">
-        {/* 검색 바 */}
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-          <Input
-            type="text"
-            placeholder="일정 제목 검색..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-10 h-11 rounded-2xl border-neutral-200 bg-white shadow-sm"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors"
-            >
-              <X className="h-3.5 w-3.5 text-neutral-500" />
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* 3. 캘린더 */}
       <CalendarSection
         schedules={calendarMarkerSchedules || calendarSchedules || schedules}
@@ -449,16 +444,18 @@ export default function HomePage({
       {/* 5. 일정 리스트 헤더 및 필터 (Sticky) - New Design */}
       <div className="sticky top-0 z-10 bg-neutral-50/95 backdrop-blur-sm -mx-5 px-5 pt-3 pb-2 border-b border-neutral-200/50 shadow-sm transition-all duration-200">
         {/* 1열: 헤더 & 상세 설정 */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 gap-3">
           {/* 좌측: 정보 */}
           <div className="flex flex-col">
             <div className="flex items-baseline gap-2">
               <h3 className="text-[16px] font-bold text-neutral-900">
-                {selectedDate
-                  ? `${selectedDate.slice(5).replace('-', '/')} 일정`
-                  : completedOnly
-                    ? '완료'
-                    : '할 일'}
+                {debouncedSearchQuery
+                  ? '검색 결과'
+                  : selectedDate
+                    ? `${selectedDate.slice(5).replace('-', '/')} 일정`
+                    : completedOnly
+                      ? '완료'
+                      : '할 일'}
               </h3>
               {showListSkeleton ? (
                 <Skeleton className="h-5 w-16 rounded-full bg-neutral-200/80" />
@@ -480,49 +477,110 @@ export default function HomePage({
               </>
             )}
           </div>
-          {selectedDate && (
-            <button
-              onClick={handleShowAllTodo}
-              className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50 transition-colors"
-            >
-              할일 전체보기
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {!showSearchInput && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSearchInput(true);
+                  setSearchInput(searchQuery);
+                }}
+                className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50 transition-colors"
+              >
+                <Search className="h-3.5 w-3.5" />
+                검색
+              </button>
+            )}
+            {selectedDate && (
+              <button
+                onClick={handleShowAllTodo}
+                className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50 transition-colors"
+              >
+                할일 전체보기
+              </button>
+            )}
+          </div>
         </div>
 
         {/* 2열: 뱃지 가로 스크롤 */}
-        {!selectedDate && (
+        {showSearchInput ? (
           <div className="relative">
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -ml-1 pl-1 pr-8">
-            {/* 1. 전체 */}
-            <div className="flex flex-shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-[#f2f4f6] p-1">
-              <button
-                onClick={handleSelectTodo}
-                aria-pressed={!completedOnly}
-                className={cn(
-                  'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all',
-                  !completedOnly
-                    ? 'bg-white text-neutral-800 shadow-[0_2px_6px_rgba(15,23,42,0.14)]'
-                    : 'text-neutral-500 hover:text-neutral-700'
+            <div className="flex items-center gap-2 mb-1">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                <Input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="일정 제목 검색..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      setSearchQuery(searchInput.trim());
+                    }
+                  }}
+                  className="pl-10 pr-10 h-10 w-full rounded-2xl border-neutral-200 bg-white shadow-sm text-[12px]"
+                />
+                {(searchInput || searchQuery) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchInput('');
+                      setSearchQuery('');
+                    }}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 h-10 w-6 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors"
+                    aria-label="검색 초기화"
+                  >
+                    <X className="h-4 w-4 text-neutral-500" />
+                  </button>
                 )}
-              >
-                할 일
-              </button>
+              </div>
               <button
-                onClick={handleToggleCompletedOnly}
-                aria-pressed={completedOnly}
-                className={cn(
-                  'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all',
-                  completedOnly
-                    ? 'bg-white text-neutral-800 shadow-[0_2px_6px_rgba(15,23,42,0.14)]'
-                    : 'text-neutral-500 hover:text-neutral-700'
-                )}
+                type="button"
+                onClick={() => {
+                  setShowSearchInput(false);
+                  setSearchInput('');
+                  setSearchQuery('');
+                }}
+                className="h-10 flex-shrink-0 rounded-full border border-neutral-200 bg-white px-3 py-2 text-[11px] font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50 transition-colors"
               >
-                완료
+                검색 닫기
               </button>
             </div>
+          </div>
+        ) : !selectedDate ? (
+          <div className="relative">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -ml-1 pl-1 pr-8">
+              {/* 1. 전체 */}
+              <div className="flex flex-shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-[#f2f4f6] p-1">
+                <button
+                  onClick={handleSelectTodo}
+                  aria-pressed={!completedOnly}
+                  className={cn(
+                    'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all',
+                    !completedOnly
+                      ? 'bg-white text-neutral-800 shadow-[0_2px_6px_rgba(15,23,42,0.14)]'
+                      : 'text-neutral-500 hover:text-neutral-700'
+                  )}
+                >
+                  할 일
+                </button>
+                <button
+                  onClick={handleToggleCompletedOnly}
+                  aria-pressed={completedOnly}
+                  className={cn(
+                    'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all',
+                    completedOnly
+                      ? 'bg-white text-neutral-800 shadow-[0_2px_6px_rgba(15,23,42,0.14)]'
+                      : 'text-neutral-500 hover:text-neutral-700'
+                  )}
+                >
+                  완료
+                </button>
+              </div>
 
-            {/* 2. 정렬 */}
+              {/* 2. 정렬 */}
               <FilterBadge
                 label={
                   sortBy === 'deadline-asc'
@@ -716,7 +774,7 @@ export default function HomePage({
               <ChevronRight className="h-3.5 w-3.5" />
             </div>
           </div>
-        )}
+        ) : null}
       </div>
       <div className="flex flex-col gap-3">
         {showListSkeleton ? (

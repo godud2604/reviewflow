@@ -318,18 +318,27 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
           userId,
         });
 
-        if (selectedDate) params.append('selectedDate', selectedDate);
-        if (month) params.append('month', month);
-        if (platformsKey) params.append('platforms', platformsKey);
-        if (statusesKey) params.append('statuses', statusesKey);
-        if (categoriesKey) params.append('categories', categoriesKey);
-        if (reviewTypesKey) params.append('reviewTypes', reviewTypesKey);
-        if (search) params.append('search', search);
-        if (paybackOnly) params.append('paybackOnly', 'true');
-        // deadline-asc is default, so skip putting it in url to keep it clean
-        if (sortBy && sortBy !== 'deadline-asc') params.append('sortBy', sortBy);
+        const isSearchRequest = Boolean(search);
 
-        const endpoint = completedOnly ? '/api/schedules/completed' : '/api/schedules';
+        if (isSearchRequest) {
+          params.append('search', search);
+        } else {
+          if (selectedDate) params.append('selectedDate', selectedDate);
+          if (month) params.append('month', month);
+          if (platformsKey) params.append('platforms', platformsKey);
+          if (statusesKey) params.append('statuses', statusesKey);
+          if (categoriesKey) params.append('categories', categoriesKey);
+          if (reviewTypesKey) params.append('reviewTypes', reviewTypesKey);
+          if (paybackOnly) params.append('paybackOnly', 'true');
+          // deadline-asc is default, so skip putting it in url to keep it clean
+          if (sortBy && sortBy !== 'deadline-asc') params.append('sortBy', sortBy);
+        }
+
+        const endpoint = isSearchRequest
+          ? '/api/schedules/search'
+          : completedOnly
+            ? '/api/schedules/completed'
+            : '/api/schedules';
         const response = await fetch(`${endpoint}?${params.toString()}`, {
           credentials: 'same-origin',
           headers: {
