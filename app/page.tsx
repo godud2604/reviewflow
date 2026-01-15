@@ -483,8 +483,16 @@ function PageContent() {
   const effectiveCounts = isDateFiltering
     ? {
         total: schedules.length,
-        visit: schedules.filter((s) => !!s.visit).length,
-        deadline: schedules.filter((s) => !!s.dead).length,
+        visit: schedules.filter((s) => s.visit === filters.selectedDate).length,
+        deadline: schedules.reduce((sum, schedule) => {
+          if (schedule.dead === filters.selectedDate) sum += 1;
+          if (schedule.additionalDeadlines && schedule.additionalDeadlines.length > 0) {
+            sum += schedule.additionalDeadlines.filter(
+              (deadline) => deadline.date === filters.selectedDate
+            ).length;
+          }
+          return sum;
+        }, 0),
       }
     : counts;
 

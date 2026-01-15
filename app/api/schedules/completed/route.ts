@@ -154,8 +154,10 @@ export async function GET(request: NextRequest) {
       new Set(allUserSchedules?.map((s) => s.platform).filter(Boolean))
     );
 
-    // 방문일 카운트
-    const visitCount = allSchedules?.filter((s) => s.visit_date).length || 0;
+    // 방문일 카운트 (선택된 날짜가 있으면 해당 날짜 방문만 집계)
+    const visitCount = selectedDate
+      ? allSchedules?.filter((s) => s.visit_date === selectedDate).length || 0
+      : allSchedules?.filter((s) => s.visit_date).length || 0;
 
     // 마감일 카운트 (메인 마감일 + 추가 마감일)
     let deadlineCount = 0;

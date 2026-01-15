@@ -465,16 +465,12 @@ export default function HomePage({
                 </span>
               )}
             </div>
-            {!selectedDate && (
-              <>
-                {showListSkeleton ? (
-                  <Skeleton className="h-3.5 w-36 rounded-full bg-neutral-200/70 mt-1" />
-                ) : (
-                  <p className="text-[10px] text-neutral-500 font-medium truncate mt-0.5">
-                    방문 {visitCount}건 · 마감 {deadlineCount}건
-                  </p>
-                )}
-              </>
+            {showListSkeleton ? (
+              <Skeleton className="h-3.5 w-32 rounded-full bg-neutral-200/70 mt-1" />
+            ) : (
+              <p className="text-[10px] text-neutral-500 font-medium truncate mt-0.5">
+                방문 {visitCount}건 · 마감 {deadlineCount}건
+              </p>
             )}
           </div>
           <div className="flex items-center gap-2">
