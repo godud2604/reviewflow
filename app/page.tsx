@@ -524,6 +524,7 @@ function PageContent() {
   const mapSearchRequested = searchParams.get('mapSearch') === 'true';
   const mapSearchAutoSaveRequested = searchParams.get('mapSearchAutoSave') === 'true';
   const [statusChangeIntent, setStatusChangeIntent] = useState(false);
+  const [scheduleOverride, setScheduleOverride] = useState<Schedule | null>(null);
 
   const isNewSchedule = searchParams.get('new') === 'true';
   const showAllSchedules = view === 'all';
@@ -537,6 +538,7 @@ function PageContent() {
       openMapSearch?: boolean;
       autoSaveMapLocation?: boolean;
       statusChangeIntent?: boolean;
+      scheduleOverride?: Schedule;
     }
   ) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -545,6 +547,11 @@ function PageContent() {
       params.set('schedule', scheduleId.toString());
       params.delete('new');
       params.delete('date');
+      if (options?.scheduleOverride) {
+        setScheduleOverride(options.scheduleOverride);
+      } else {
+        setScheduleOverride(null);
+      }
     } else {
       params.delete('schedule');
       params.set('new', 'true');
@@ -553,6 +560,7 @@ function PageContent() {
       } else {
         params.delete('date');
       }
+      setScheduleOverride(null);
     }
     if (options?.openMapSearch) {
       params.set('mapSearch', 'true');
@@ -576,6 +584,7 @@ function PageContent() {
     params.delete('mapSearchAutoSave');
     router.push(`?${params.toString()}`);
     setStatusChangeIntent(false);
+    setScheduleOverride(null);
   };
 
   const handleSaveSchedule = async (schedule: Schedule) => {
@@ -584,6 +593,9 @@ function PageContent() {
     if (editingScheduleId) {
       const { id, ...updates } = schedule;
       success = await updateSchedule(editingScheduleId, updates);
+      if (scheduleOverride?.id === editingScheduleId) {
+        setScheduleOverride({ ...scheduleOverride, ...schedule });
+      }
     } else {
       const { id, ...newSchedule } = schedule;
       createdSchedule = await createSchedule(newSchedule);
@@ -845,7 +857,9 @@ function PageContent() {
 
               {currentPage === 'stats' && (
                 <StatsPage
-                  onScheduleItemClick={(schedule) => handleOpenScheduleModal(schedule.id)}
+                  onScheduleItemClick={(schedule) =>
+                    handleOpenScheduleModal(schedule.id, { scheduleOverride: schedule })
+                  }
                   isScheduleModalOpen={isScheduleModalOpen}
                   isPro={isPro}
                 />
@@ -872,7 +886,10 @@ function PageContent() {
             onDelete={handleDeleteSchedule}
             onUpdateFiles={handleUpdateScheduleFiles}
             schedule={
-              editingScheduleId ? schedules.find((s) => s.id === editingScheduleId) : undefined
+              editingScheduleId
+                ? schedules.find((s) => s.id === editingScheduleId) ??
+                  (scheduleOverride?.id === editingScheduleId ? scheduleOverride : undefined)
+                : undefined
             }
             initialDeadline={initialDeadline}
             initialMapSearchOpen={mapSearchRequested}

@@ -245,6 +245,7 @@ export default function StatsPage({
   const animatedValueRef = useRef(0);
   const animationRef = useRef<number | null>(null);
   const lastAnimatedValueRef = useRef<number | null>(null);
+  const wasScheduleModalOpenRef = useRef(isScheduleModalOpen);
 
   useEffect(() => {
     const target = econValue;
@@ -316,6 +317,13 @@ export default function StatsPage({
     }
     setShowIncomeTutorial(true);
   }, [hasAnyExtraIncome]);
+
+  useEffect(() => {
+    if (wasScheduleModalOpenRef.current && !isScheduleModalOpen) {
+      refetchStats();
+    }
+    wasScheduleModalOpenRef.current = isScheduleModalOpen;
+  }, [isScheduleModalOpen, refetchStats]);
 
   useEffect(() => {
     if (!availableMonths.length) return;
