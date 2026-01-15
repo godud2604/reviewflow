@@ -435,6 +435,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
     }
   }, [
     enabled,
+    userId,
     selectedDate,
     month,
     platformsKey,
