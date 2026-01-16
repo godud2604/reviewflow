@@ -210,6 +210,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
   const [counts, setCounts] = useState<ScheduleCounts | null>(null);
   const [responsePlatforms, setResponsePlatforms] = useState<string[]>([]);
   const [currentOffset, setCurrentOffset] = useState(initialOffset);
+  const mutationTokenRef = React.useRef(0);
   const cacheRef = React.useRef(
     new Map<
       string,
@@ -219,6 +220,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
         counts: ScheduleCounts | null;
         platforms: string[];
         currentOffset: number;
+        mutationToken: number;
       }
     >()
   );
@@ -278,7 +280,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
   const updateCacheSchedules = useCallback(
     (updater: (prev: Schedule[]) => Schedule[]) => {
       const cached = cacheRef.current.get(cacheKey);
-      if (!cached) return;
+      if (!cached || cached.mutationToken !== mutationTokenRef.current) return;
       const nextSchedules = updater(cached.schedules);
       cacheRef.current.set(cacheKey, { ...cached, schedules: nextSchedules });
     },
@@ -294,8 +296,10 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
       }
 
       const cached = cacheRef.current.get(cacheKey);
+      const isCacheValid = cached && cached.mutationToken === mutationTokenRef.current;
+      const shouldAppend = append && Boolean(isCacheValid);
 
-      if (!force && !append && cached) {
+      if (!force && !shouldAppend && isCacheValid) {
         setSchedules(cached.schedules);
         setPagination(cached.pagination);
         setCounts(cached.counts);
@@ -305,7 +309,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
         return;
       }
 
-      if (!append) {
+      if (!shouldAppend) {
         setLoading(true);
       }
       setError(null);
@@ -313,7 +317,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
       try {
         // Build query params
         const params = new URLSearchParams({
-          offset: append ? currentOffset.toString() : '0',
+          offset: shouldAppend ? currentOffset.toString() : '0',
           limit: limit.toString(),
           userId,
         });
@@ -333,7 +337,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
           // deadline-asc is default, so skip putting it in url to keep it clean
           if (sortBy && sortBy !== 'deadline-asc') params.append('sortBy', sortBy);
         }
-        if (force) params.append('refresh', '1');
+        if (force || !isCacheValid) params.append('refresh', '1');
 
         const endpoint = isSearchRequest
           ? '/api/schedules/search'
@@ -362,9 +366,9 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
           const nextPagination = data.pagination;
           const nextCounts = data.counts;
           const nextPlatforms = data.platforms || responsePlatforms;
-          const nextOffset = append ? currentOffset + limit : limit;
+          const nextOffset = shouldAppend ? currentOffset + limit : limit;
 
-          if (append) {
+          if (shouldAppend) {
             setSchedules((prev) => {
               const existingIds = new Set(prev.map((s) => s.id));
               const uniqueNewSchedules = newSchedules.filter((s) => !existingIds.has(s.id));
@@ -375,6 +379,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
                 counts: nextCounts,
                 platforms: nextPlatforms,
                 currentOffset: nextOffset,
+                mutationToken: mutationTokenRef.current,
               });
               return merged;
             });
@@ -386,6 +391,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
               counts: nextCounts,
               platforms: nextPlatforms,
               currentOffset: nextOffset,
+              mutationToken: mutationTokenRef.current,
             });
           }
 
@@ -427,7 +433,8 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
   }, [pagination, fetchSchedules]);
 
   const refreshAfterMutation = useCallback(() => {
-    cacheRef.current.delete(cacheKey);
+    mutationTokenRef.current += 1;
+    cacheRef.current.clear();
     if (enabled) {
       fetchSchedules(true);
     }
