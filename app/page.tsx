@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import HomePage from '@/components/home-page';
-import AllSchedulesPage from '@/components/all-schedules-page';
 import StatsPage from '@/components/stats-page';
 import ProfilePage from '@/components/profile-page';
 import PortfolioPage from '@/components/portfolio-page';
@@ -104,7 +103,6 @@ function PageContent() {
   const mapSearchAutoSaveRequested = searchParams.get('mapSearchAutoSave') === 'true';
   const [statusChangeIntent, setStatusChangeIntent] = useState(false);
 
-  const showAllSchedules = view === 'all';
   const isScheduleModalOpen = scheduleId !== null || isNewSchedule;
   const editingScheduleId = scheduleId ? parseInt(scheduleId) : null;
 
@@ -237,18 +235,6 @@ function PageContent() {
     router.push('?page=profile');
   };
 
-  const handleShowAllSchedules = () => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('view', 'all');
-    router.push(`?${params.toString()}`);
-  };
-
-  const handleBackFromAll = () => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('view');
-    router.push(`?${params.toString()}`);
-  };
-
   const handleShowPortfolio = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('view', 'portfolio');
@@ -299,8 +285,7 @@ function PageContent() {
     );
   }
 
-  const showGlobalHeader =
-    !showPortfolio && !showAllSchedules && (currentPage === 'home' || currentPage === 'stats');
+  const showGlobalHeader = !showPortfolio && (currentPage === 'home' || currentPage === 'stats');
 
   return (
     // 1. 최상단 컨테이너를 fixed로 고정하여 사파리 바운스(튕김)를 방지
@@ -321,23 +306,12 @@ function PageContent() {
               featuredPosts={featuredPosts}
               onBack={handleBackFromPortfolio}
             />
-          ) : showAllSchedules ? (
-            <AllSchedulesPage
-              schedules={schedules}
-              onScheduleClick={handleOpenScheduleModal}
-              onBack={handleBackFromAll}
-              onCompleteClick={handleCompleteSchedule}
-              onCompletedClick={handleCompletedStatusEdit}
-              onPaybackConfirm={handleConfirmPayback}
-              onAdditionalDeadlineToggle={handleAdditionalDeadlineToggle}
-            />
           ) : (
             <>
               {currentPage === 'home' && (
                 <HomePage
                   schedules={schedules}
                   onScheduleClick={handleOpenScheduleModal}
-                  onShowAllClick={handleShowAllSchedules}
                   onCompleteClick={handleCompleteSchedule}
                   onCompletedClick={handleCompletedStatusEdit}
                   onPaybackConfirm={handleConfirmPayback}

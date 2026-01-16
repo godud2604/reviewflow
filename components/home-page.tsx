@@ -11,6 +11,37 @@ import { parseDateString } from '@/lib/date-utils';
 const formatDateStringKST = (date: Date) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date);
 
+const getNowInKST = () => {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(new Date());
+  const values = parts.reduce<Record<string, string>>((acc, part) => {
+    if (part.type !== 'literal') {
+      acc[part.type] = part.value;
+    }
+    return acc;
+  }, {});
+  const date = `${values.year}-${values.month}-${values.day}`;
+  const time = `${values.hour}:${values.minute}`;
+  return { date, time };
+};
+
+const toMinutes = (timeStr?: string, fallback = 0) => {
+  if (!timeStr) return fallback;
+  const [rawHour, rawMinute] = timeStr.split(':');
+  const hour = Number(rawHour);
+  const minute = Number(rawMinute);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return fallback;
+  return hour * 60 + minute;
+};
+
 // --- 상수 ---
 const CALENDAR_RING_COLORS: Record<string, string> = {
   선정됨: '#f1a0b6',
@@ -31,11 +62,39 @@ const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[]
 
 const getScheduleRingColor = (status: string): string | undefined => CALENDAR_RING_COLORS[status];
 
+const platformLabelMap: Record<string, string> = {
+  instagram: '인스타그램',
+  youtube: '유튜브',
+  tiktok: '틱톡',
+  facebook: '페이스북',
+  'naver blog': '네이버 블로그',
+  naverpost: '네이버 포스트',
+  'naver post': '네이버 포스트',
+  naver쇼핑: '네이버 쇼핑',
+  stylec: '스타일씨',
+  blog: '블로그',
+  insta: '인스타',
+  tiktokshop: '틱톡',
+};
+
+const getPlatformDisplayName = (platform: string) => {
+  const normalized = platform.trim().toLowerCase();
+  return platformLabelMap[normalized] ?? platform;
+};
+
+type ViewFilter = 'TODO' | 'DONE';
+type SortOption =
+  | 'DEADLINE_SOON'
+  | 'DEADLINE_LATE'
+  | 'VISIT_SOON'
+  | 'VISIT_LATE'
+  | 'AMOUNT_HIGH'
+  | 'AMOUNT_LOW';
+
 // --- 메인 페이지 ---
 export default function HomePage({
   schedules,
   onScheduleClick,
-  onShowAllClick,
   onCompleteClick,
   onCompletedClick,
   onPaybackConfirm,
@@ -47,7 +106,6 @@ export default function HomePage({
 }: {
   schedules: Schedule[];
   onScheduleClick: (id: number) => void;
-  onShowAllClick: () => void;
   onCompleteClick?: (id: number) => void;
   onCompletedClick?: (id: number) => void;
   onPaybackConfirm?: (id: number) => void;
@@ -58,12 +116,16 @@ export default function HomePage({
   onFocusDateApplied?: () => void;
 }) {
   const posthog = usePostHog();
-  const today = formatDateStringKST(new Date());
-  const [selectedDate, setSelectedDate] = useState<string | null>(today);
-  const [selectedFilter, setSelectedFilter] = useState<
-    'all' | 'active' | 'reconfirm' | 'overdue' | 'noDeadline'
-  >('all');
-  const [floatingPanel, setFloatingPanel] = useState<'none' | 'noDeadline' | 'reconfirm'>('none');
+  const now = getNowInKST();
+  const today = now.date;
+  const nowMinutes = toMinutes(now.time, 0);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [viewFilter, setViewFilter] = useState<ViewFilter>('TODO');
+  const [sortOption, setSortOption] = useState<SortOption>('DEADLINE_SOON');
+  const [platformFilter, setPlatformFilter] = useState('전체');
+  const [statusFilter, setStatusFilter] = useState('전체');
+  const [categoryFilter, setCategoryFilter] = useState('전체');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showDemo, setShowDemo] = useState(false);
 
   // Demo Data
@@ -86,141 +148,173 @@ export default function HomePage({
     []
   );
 
-  const activeSchedules = schedules.filter((s) => s.status !== '완료');
-  const activeCount = activeSchedules.length;
-  const reconfirmSchedules = schedules.filter((s) => s.status === '재확인');
-  const reconfirmCount = reconfirmSchedules.length;
-  const noDeadlineSchedules = schedules.filter((s) => !s.dead);
   const hasSchedules = schedules.length > 0;
+
+  const hasIncompleteAdditionalDeadlines = (schedule: Schedule) =>
+    (schedule.additionalDeadlines || []).some((deadline) => deadline.date && !deadline.completed);
+
+  const isVisitUpcoming = (schedule: Schedule) => {
+    if (!schedule.visit) return false;
+    if (schedule.visit > today) return true;
+    if (schedule.visit < today) return false;
+    const visitMinutes = toMinutes(schedule.visitTime, 23 * 60 + 59);
+    return visitMinutes >= nowMinutes;
+  };
+
+  const isTodoSchedule = (schedule: Schedule) =>
+    schedule.status !== '완료' ||
+    hasIncompleteAdditionalDeadlines(schedule) ||
+    isVisitUpcoming(schedule);
+
+  const isDoneSchedule = (schedule: Schedule) =>
+    schedule.status === '완료' &&
+    !hasIncompleteAdditionalDeadlines(schedule) &&
+    !isVisitUpcoming(schedule);
 
   useEffect(() => {
     if (focusDate) {
       setSelectedDate(focusDate);
-      setSelectedFilter('all');
+      setViewFilter('TODO');
       onFocusDateApplied?.();
     }
   }, [focusDate, onFocusDateApplied]);
 
-  // Filtering Logic
-  let filteredSchedules = schedules;
-  if (selectedDate) {
-    filteredSchedules = schedules.filter(
-      (s) =>
-        s.dead === selectedDate ||
-        s.visit === selectedDate ||
-        (s.additionalDeadlines || []).some((d) => d.date === selectedDate)
-    );
-  } else if (selectedFilter === 'active') {
-    filteredSchedules = activeSchedules;
-  } else if (selectedFilter === 'reconfirm') {
-    filteredSchedules = schedules.filter((s) => s.status === '재확인');
-  } else if (selectedFilter === 'overdue') {
-    filteredSchedules = schedules.filter((s) => s.dead && s.dead < today && s.status !== '완료');
-  } else if (selectedFilter === 'noDeadline') {
-    filteredSchedules = schedules.filter((s) => !s.dead);
-  }
+  const platformOptions = useMemo(() => {
+    const values = schedules
+      .map((schedule) => schedule.platform)
+      .filter((platform) => platform && platform.trim().length > 0);
+    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+  }, [schedules]);
 
-  const sortSchedules = (schedules: Schedule[]) => {
-    return [...schedules].sort((a, b) => {
-      const aIsCompleted = a.status === '완료';
-      const bIsCompleted = b.status === '완료';
+  const statusOptions = useMemo(() => {
+    const values = schedules
+      .map((schedule) => schedule.status)
+      .filter((status) => status && status !== '재확인');
+    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+  }, [schedules]);
 
-      // 추가 마감일 미완료 체크
-      const aHasIncompleteAdditionalDeadlines = (a.additionalDeadlines || []).some(
-        (d) => d.date && !d.completed
-      );
-      const bHasIncompleteAdditionalDeadlines = (b.additionalDeadlines || []).some(
-        (d) => d.date && !d.completed
-      );
+  const categoryOptions = useMemo(() => {
+    const values = schedules
+      .map((schedule) => schedule.category)
+      .filter((category) => category && category.length > 0);
+    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+  }, [schedules]);
 
-      // 완료 상태여도 추가 마감일이 미완료면 위쪽에 배치
-      if (aIsCompleted && bIsCompleted) {
-        if (aHasIncompleteAdditionalDeadlines && !bHasIncompleteAdditionalDeadlines) return -1;
-        if (!aHasIncompleteAdditionalDeadlines && bHasIncompleteAdditionalDeadlines) return 1;
-      }
+  const baseList = selectedDate
+    ? schedules.filter(
+        (schedule) =>
+          schedule.dead === selectedDate ||
+          schedule.visit === selectedDate ||
+          (schedule.additionalDeadlines || []).some((deadline) => deadline.date === selectedDate)
+      )
+    : schedules;
 
-      if (aIsCompleted && !bIsCompleted) return 1;
-      if (!aIsCompleted && bIsCompleted) return -1;
+  const viewBaseList =
+    viewFilter === 'TODO'
+      ? baseList.filter((schedule) => isTodoSchedule(schedule))
+      : baseList.filter((schedule) => isDoneSchedule(schedule));
 
-      if (selectedDate) {
-        const aIsSelectedVisit = a.visit === selectedDate;
-        const bIsSelectedVisit = b.visit === selectedDate;
-        const aVisitTimeKey = a.visitTime ?? '23:59';
-        const bVisitTimeKey = b.visitTime ?? '23:59';
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredSchedules = viewBaseList.filter((schedule) => {
+    if (platformFilter !== '전체' && schedule.platform !== platformFilter) return false;
+    if (statusFilter !== '전체' && schedule.status !== statusFilter) return false;
+    if (categoryFilter !== '전체' && schedule.category !== categoryFilter) return false;
+    if (!normalizedQuery) return true;
 
-        if (aIsSelectedVisit && bIsSelectedVisit) {
-          return aVisitTimeKey.localeCompare(bVisitTimeKey);
-        }
-        if (aIsSelectedVisit && !bIsSelectedVisit) return -1;
-        if (!aIsSelectedVisit && bIsSelectedVisit) return 1;
+    const searchTarget = [
+      schedule.title,
+      schedule.phone,
+      schedule.ownerPhone,
+      schedule.memo,
+      schedule.region,
+      schedule.regionDetail,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
 
-        const aDeadKey = a.dead ?? '';
-        const bDeadKey = b.dead ?? '';
-        if (aDeadKey && bDeadKey) return aDeadKey.localeCompare(bDeadKey);
-        if (aDeadKey && !bDeadKey) return -1;
-        if (!aDeadKey && bDeadKey) return 1;
-        return 0;
-      }
+    return searchTarget.includes(normalizedQuery);
+  });
 
-      const aIsOverdue = a.dead && a.dead < today && a.status !== '완료';
-      const bIsOverdue = b.dead && b.dead < today && b.status !== '완료';
-      const aIsReconfirm = a.status === '재확인';
-      const bIsReconfirm = b.status === '재확인';
-      const aVisitKey = a.visit ?? '';
-      const bVisitKey = b.visit ?? '';
-      const aVisitTimeKey = a.visitTime ?? '23:59';
-      const bVisitTimeKey = b.visitTime ?? '23:59';
-
-      if (aIsOverdue && !bIsOverdue) return -1;
-      if (!aIsOverdue && bIsOverdue) return 1;
-      if (aIsReconfirm && !bIsReconfirm) return -1;
-      if (!aIsReconfirm && bIsReconfirm) return 1;
-      if (aVisitKey && bVisitKey) {
-        const visitCompare = aVisitKey.localeCompare(bVisitKey);
-        if (visitCompare !== 0) return visitCompare;
-        return aVisitTimeKey.localeCompare(bVisitTimeKey);
-      }
-      if (aVisitKey && !bVisitKey) return -1;
-      if (!aVisitKey && bVisitKey) return 1;
-      if (a.dead && b.dead) return a.dead.localeCompare(b.dead);
-      if (a.dead && !b.dead) return -1;
-      if (!a.dead && b.dead) return 1;
-      return 0;
-    });
+  const getDeadlineDates = (schedule: Schedule) => {
+    const additionalDates = (schedule.additionalDeadlines || [])
+      .filter((deadline) => deadline.date && !deadline.completed)
+      .map((deadline) => deadline.date);
+    return [schedule.dead, ...additionalDates].filter(Boolean) as string[];
   };
 
-  const displayedSchedules = sortSchedules(
-    selectedDate || selectedFilter !== 'all' ? filteredSchedules : activeSchedules
-  );
-  const headerSchedules =
-    selectedDate || selectedFilter !== 'all' ? filteredSchedules : activeSchedules;
-  const visitCount = selectedDate
-    ? headerSchedules.filter((s) => s.visit === selectedDate).length
-    : headerSchedules.filter((s) => s.visit).length;
+  const getNearestDeadline = (schedule: Schedule) => {
+    const dates = getDeadlineDates(schedule).sort((a, b) => a.localeCompare(b));
+    return dates[0];
+  };
 
-  // 마감일 카운트: 메인 마감일 + 추가 마감일 (완료 여부 무관하게 모두 카운팅)
+  const getLatestDeadline = (schedule: Schedule) => {
+    const dates = getDeadlineDates(schedule).sort((a, b) => a.localeCompare(b));
+    return dates[dates.length - 1];
+  };
+
+  const getVisitKey = (schedule: Schedule) => {
+    if (!schedule.visit) return null;
+    return {
+      date: schedule.visit,
+      minutes: toMinutes(schedule.visitTime, 0),
+    };
+  };
+
+  const displayedSchedules = [...filteredSchedules].sort((a, b) => {
+    if (sortOption === 'DEADLINE_SOON' || sortOption === 'DEADLINE_LATE') {
+      const aKey = sortOption === 'DEADLINE_SOON' ? getNearestDeadline(a) : getLatestDeadline(a);
+      const bKey = sortOption === 'DEADLINE_SOON' ? getNearestDeadline(b) : getLatestDeadline(b);
+      if (!aKey && !bKey) return a.id - b.id;
+      if (!aKey) return 1;
+      if (!bKey) return -1;
+      const comparison = aKey.localeCompare(bKey);
+      if (comparison !== 0) return sortOption === 'DEADLINE_SOON' ? comparison : -comparison;
+      return a.id - b.id;
+    }
+
+    if (sortOption === 'VISIT_SOON' || sortOption === 'VISIT_LATE') {
+      const aVisit = getVisitKey(a);
+      const bVisit = getVisitKey(b);
+      if (!aVisit && !bVisit) return a.id - b.id;
+      if (!aVisit) return 1;
+      if (!bVisit) return -1;
+      const dateCompare = aVisit.date.localeCompare(bVisit.date);
+      if (dateCompare !== 0) return sortOption === 'VISIT_SOON' ? dateCompare : -dateCompare;
+      const timeCompare = aVisit.minutes - bVisit.minutes;
+      if (timeCompare !== 0) return sortOption === 'VISIT_SOON' ? timeCompare : -timeCompare;
+      return a.id - b.id;
+    }
+
+    const aTotal = a.benefit + a.income - a.cost;
+    const bTotal = b.benefit + b.income - b.cost;
+    if (aTotal === bTotal) return a.id - b.id;
+    return sortOption === 'AMOUNT_HIGH' ? bTotal - aTotal : aTotal - bTotal;
+  });
+
+  const todoCount = baseList.filter((schedule) => isTodoSchedule(schedule)).length;
+  const doneCount = baseList.filter((schedule) => isDoneSchedule(schedule)).length;
+  const visitCount = selectedDate
+    ? filteredSchedules.filter((schedule) => schedule.visit === selectedDate).length
+    : filteredSchedules.filter((schedule) => schedule.visit).length;
+
   const deadlineCount = selectedDate
-    ? headerSchedules.reduce((count, s) => {
+    ? filteredSchedules.reduce((count, schedule) => {
         let c = 0;
-        // 메인 마감일이 오늘인 경우 (완료 여부 무관)
-        if (s.dead === selectedDate) c++;
-        // 추가 마감일 중 오늘인 것 (completed 여부 무관)
-        const additionalCount = (s.additionalDeadlines || []).filter(
-          (d) => d.date === selectedDate
+        if (schedule.dead === selectedDate) c++;
+        const additionalCount = (schedule.additionalDeadlines || []).filter(
+          (deadline) => deadline.date === selectedDate
         ).length;
         return count + c + additionalCount;
       }, 0)
-    : headerSchedules.reduce((count, s) => {
+    : filteredSchedules.reduce((count, schedule) => {
         let c = 0;
-        // 메인 마감일이 있는 경우 (완료 여부 무관)
-        if (s.dead) c++;
-        // 추가 마감일 (completed 여부 무관)
-        const additionalCount = (s.additionalDeadlines || []).filter((d) => d.date).length;
+        if (schedule.dead) c++;
+        const additionalCount = (schedule.additionalDeadlines || []).filter(
+          (deadline) => deadline.date
+        ).length;
         return count + c + additionalCount;
       }, 0);
-
-  // 총 일정 개수: 방문일 + 마감일 개수의 합
-  const totalScheduleCount = visitCount + deadlineCount;
 
   const shouldShowFirstScheduleTutorial =
     hasSchedules && schedules.length === 1 && displayedSchedules.length > 0;
@@ -264,7 +358,7 @@ export default function HomePage({
 
   const handleDateClick = (dateStr: string) => {
     setSelectedDate(dateStr);
-    setSelectedFilter('all');
+    setViewFilter('TODO');
   };
 
   const handleCalendarDateAdd = (dateStr: string) => {
@@ -289,39 +383,127 @@ export default function HomePage({
         today={today}
       />
 
-      {/* 5. 일정 리스트 헤더 */}
-      <div className="flex items-start justify-between mt-4 mb-2">
-        <div>
-          <h3 className="text-xl font-bold text-neutral-900 text-[16px]">
-            {selectedDate
-              ? `${selectedDate.slice(5).replace('-', '/')} 일정`
-              : selectedFilter === 'reconfirm'
-                ? '재확인 일정'
-                : selectedFilter === 'overdue'
-                  ? '마감 초과 일정'
-                  : selectedFilter === 'noDeadline'
-                    ? '마감일 미정'
-                    : '체험단 일정'}
-            <span className="ml-1.5 text-sm font-bold text-neutral-600">
+      {/* 5. 필터 & 검색 */}
+      <div className="mt-4 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-[16px] font-bold text-neutral-900">
               {selectedDate
-                ? totalScheduleCount
-                : selectedFilter !== 'all'
-                  ? filteredSchedules.length
-                  : activeCount}
-              건
+                ? `${selectedDate.slice(5).replace('-', '/')} ${
+                    viewFilter === 'TODO' ? '할 일' : '완료'
+                  }`
+                : viewFilter === 'TODO'
+                  ? '할 일'
+                  : '완료'}
+              <span className="ml-1.5 text-sm font-bold text-neutral-600">
+                {filteredSchedules.length}건
+              </span>
+            </h3>
+            <span className="mt-1 text-[11px] font-semibold text-neutral-500">
+              방문일 {visitCount}건 · 마감일 {deadlineCount}건
             </span>
-          </h3>
-          <span className="mt-1 text-[11px] font-semibold text-neutral-500">
-            방문일 {visitCount}건 · 마감일 {deadlineCount}건
-          </span>
+          </div>
+          <div className="w-[150px]">
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="제목, 연락처, 메모, 방문위치"
+              className="w-full rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[12px] font-medium text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-orange-100"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="grid grid-cols-2 gap-2.5">
           <button
-            onClick={onShowAllClick}
-            className="text-[12px] font-semibold text-neutral-500 hover:text-neutral-800 transition-colors cursor-pointer"
+            onClick={() => setViewFilter('TODO')}
+            className={`flex flex-col items-center justify-center py-3 px-1 rounded-xl border transition-all duration-200 ${
+              viewFilter === 'TODO'
+                ? 'bg-white border-orange-100 shadow-sm ring-1 ring-orange-100'
+                : 'bg-neutral-50 border-transparent hover:bg-neutral-100'
+            }`}
           >
-            전체보기 ({schedules.length})
+            <span
+              className={`text-[11px] font-medium mb-1 ${viewFilter === 'TODO' ? 'text-orange-500/80' : 'text-neutral-400'}`}
+            >
+              할 일
+            </span>
+            <span
+              className={`text-[22px] font-bold leading-none ${viewFilter === 'TODO' ? 'text-orange-500' : 'text-neutral-400'}`}
+            >
+              {todoCount}
+            </span>
           </button>
+          <button
+            onClick={() => setViewFilter('DONE')}
+            className={`flex flex-col items-center justify-center py-3 px-1 rounded-xl border transition-all duration-200 ${
+              viewFilter === 'DONE'
+                ? 'bg-white border-green-100 shadow-sm ring-1 ring-green-100'
+                : 'bg-neutral-50 border-transparent hover:bg-neutral-100'
+            }`}
+          >
+            <span
+              className={`text-[11px] font-medium mb-1 ${viewFilter === 'DONE' ? 'text-[#4CAF50]/80' : 'text-neutral-400'}`}
+            >
+              완료
+            </span>
+            <span
+              className={`text-[22px] font-bold leading-none ${viewFilter === 'DONE' ? 'text-[#4CAF50]' : 'text-neutral-400'}`}
+            >
+              {doneCount}
+            </span>
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <select
+            value={sortOption}
+            onChange={(event) => setSortOption(event.target.value as SortOption)}
+            className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-neutral-700"
+          >
+            <option value="DEADLINE_SOON">마감임박순</option>
+            <option value="DEADLINE_LATE">마감최신순</option>
+            <option value="VISIT_SOON">방문임박순</option>
+            <option value="VISIT_LATE">방문최신순</option>
+            <option value="AMOUNT_HIGH">금액높은순</option>
+            <option value="AMOUNT_LOW">금액낮은순</option>
+          </select>
+          <select
+            value={platformFilter}
+            onChange={(event) => setPlatformFilter(event.target.value)}
+            className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-neutral-700"
+          >
+            <option value="전체">플랫폼</option>
+            {platformOptions.map((platform) => (
+              <option key={platform} value={platform}>
+                {getPlatformDisplayName(platform)}
+              </option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-neutral-700"
+          >
+            <option value="전체">진행상태</option>
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+          <select
+            value={categoryFilter}
+            onChange={(event) => setCategoryFilter(event.target.value)}
+            className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-neutral-700"
+          >
+            <option value="전체">카테고리</option>
+            {categoryOptions.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
