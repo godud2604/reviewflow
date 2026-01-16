@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react';
 import { usePostHog } from 'posthog-js/react';
 import { useAuth } from '@/hooks/use-auth';
 import { Z_INDEX } from '@/lib/z-index';
-import AppDownloadBanner from '@/components/app-download-banner';
 
 export default function LandingPage() {
   const router = useRouter();

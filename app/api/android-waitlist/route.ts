@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseClient } from '@/lib/supabase';
 import { getSupabaseAdminClient } from '@/lib/supabase-admin';
 import { sendFeedbackToGoogleChat } from '@/lib/google-chat';
 
@@ -11,17 +12,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '유효한 이메일 주소를 입력해주세요.' }, { status: 400 });
     }
 
-    const fallbackUserId = '7bc27f27-1dd7-4612-a734-25b797d18e39';
-    if (!fallbackUserId) {
-      return NextResponse.json(
-        { error: 'ANDROID_WAITLIST_USER_ID 환경변수가 필요합니다.' },
-        { status: 500 }
-      );
+    const authHeader = request.headers.get('authorization')?.trim();
+    const tokenMatch = authHeader?.match(/^Bearer\s+(.+)$/i);
+
+    if (!tokenMatch) {
+      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+    }
+
+    const token = tokenMatch[1];
+    const supabase = getSupabaseClient();
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+
+    if (userError || !userData?.user?.id) {
+      return NextResponse.json({ error: '세션 정보를 확인할 수 없습니다.' }, { status: 401 });
     }
 
     const supabaseAdmin = getSupabaseAdminClient();
     const { error } = await supabaseAdmin.from('feedback_messages').insert({
-      user_id: fallbackUserId,
+      user_id: userData.user.id,
       feedback_type: 'android_waitlist',
       content: `Android 신청: ${trimmedEmail}`,
       metadata: {
@@ -37,7 +45,7 @@ export async function POST(request: NextRequest) {
     await sendFeedbackToGoogleChat({
       feedbackType: 'android_waitlist',
       content: `Android 신청: ${trimmedEmail}`,
-      author: trimmedEmail,
+      author: userData.user.email ?? userData.user.id,
     });
 
     return NextResponse.json({ success: true });

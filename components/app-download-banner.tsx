@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { Z_INDEX } from '@/lib/z-index';
+import { useAuth } from '@/hooks/use-auth';
 
 const IOS_APP_STORE_URL = 'https://apps.apple.com/kr/app/reviewflow/id6757174544';
 const BANNER_DISMISS_KEY = 'app_download_banner_dismissed';
 
 export default function AppDownloadBanner() {
+  const { isAuthenticated, loading: authLoading, session } = useAuth();
   const [isAndroidModalOpen, setIsAndroidModalOpen] = useState(false);
   const [androidEmail, setAndroidEmail] = useState('');
   const [androidConsent, setAndroidConsent] = useState(false);
@@ -55,6 +57,9 @@ export default function AppDownloadBanner() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
         },
         body: JSON.stringify({ email: androidEmail }),
       });
@@ -76,6 +81,10 @@ export default function AppDownloadBanner() {
       setIsSubmitting(false);
     }
   };
+
+  if (authLoading || !isAuthenticated) {
+    return null;
+  }
 
   if (isDismissed === null || isDismissed) {
     return null;
