@@ -6,11 +6,15 @@ import { useEffect, useState } from 'react';
 import { usePostHog } from 'posthog-js/react';
 import { useAuth } from '@/hooks/use-auth';
 import { Z_INDEX } from '@/lib/z-index';
+import { isAppEnvironment } from '@/lib/app-environment';
+
+const IOS_APP_STORE_URL = 'https://apps.apple.com/kr/app/reviewflow/id6757174544';
 
 export default function LandingPage() {
   const router = useRouter();
   const posthog = usePostHog();
   const { user, isAuthenticated, signOut, loading: authLoading } = useAuth();
+  const [isAppClient, setIsAppClient] = useState<boolean | null>(null);
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -32,15 +36,6 @@ export default function LandingPage() {
     }
   };
 
-  const handleFreeTrial = () => {
-    if (isProd) {
-      posthog?.capture('free_trial_clicked', {
-        source: 'landing_page',
-      });
-    }
-    router.push('/signin');
-  };
-
   const handlePreRegister = () => {
     if (isProd) {
       posthog?.capture('pre_register_clicked', {
@@ -49,6 +44,10 @@ export default function LandingPage() {
     }
     setMessage(null);
     setIsWaitlistModalOpen(true);
+  };
+
+  const handleAppStart = () => {
+    router.push('/signin');
   };
 
   const handleCloseWaitlistModal = () => {
@@ -100,6 +99,10 @@ export default function LandingPage() {
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    setIsAppClient(isAppEnvironment());
+  }, []);
 
   useEffect(() => {
     const observerOptions = {
@@ -264,10 +267,10 @@ export default function LandingPage() {
               <div className="rounded-xl border border-[#ffd6be] bg-gradient-to-r from-[#fff3ea] via-[#ffe6d6] to-[#ffd7bd] p-3">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="px-2 py-1 rounded-lg bg-white text-[11px] font-bold text-[#ff5c39] border border-white/70 shadow-sm">
-                    Beta 무료
+                    PRO 1개월 무료
                   </span>
                   <span className="text-[12px] font-semibold text-[#c24b30]">
-                    지금 무료로 이용 가능
+                    회원가입 시 1개월 무료 혜택
                   </span>
                 </div>
                 <ul className="text-[12px] text-neutral-800 space-y-1.5 list-disc list-inside">
@@ -277,7 +280,7 @@ export default function LandingPage() {
                   <span className="ml-3">(오늘 해야 할 방문/작성/발행 일정 등)</span>
                 </ul>
                 <p className="text-[11px] text-[#c24b30] font-semibold mt-2">
-                  사전신청 시 모든 고급 기능을 무료로 이용 가능
+                  회원가입 시 PRO 1개월 무료로 이용 가능
                 </p>
               </div>
             </div>
@@ -409,32 +412,57 @@ export default function LandingPage() {
             className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center animate-fade-in"
             style={{ animationDelay: '0.4s' }}
           >
-            <button
-              onClick={handleFreeTrial}
-              className="group bg-gradient-to-r from-orange-600 to-orange-500 text-white px-5 md:px-8 py-2.5 md:py-4 rounded-full text-xs md:text-lg font-bold shadow-2xl shadow-orange-500/40 hover:shadow-orange-500/60 hover:scale-105 transition-all duration-300 flex items-center gap-2 cursor-pointer whitespace-nowrap"
-            >
-              <span className="md:hidden">무료 체험하기</span>
-              <span className="hidden md:inline">지금 무료로 체험하기</span>
-              <svg
-                className="w-3.5 h-3.5 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            {isAppClient ? (
+              <button
+                onClick={handleAppStart}
+                className="group bg-gradient-to-r from-orange-600 to-orange-500 text-white px-5 md:px-8 py-2.5 md:py-4 rounded-full text-xs md:text-lg font-bold shadow-2xl shadow-orange-500/40 hover:shadow-orange-500/60 hover:scale-105 transition-all duration-300 flex items-center gap-2 cursor-pointer whitespace-nowrap"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
+                <span className="md:hidden">무료로 시작하기</span>
+                <span className="hidden md:inline">무료로 시작하기</span>
+                <svg
+                  className="w-3.5 h-3.5 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            ) : (
+              <a
+                href={IOS_APP_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group bg-gradient-to-r from-orange-600 to-orange-500 text-white px-5 md:px-8 py-2.5 md:py-4 rounded-full text-xs md:text-lg font-bold shadow-2xl shadow-orange-500/40 hover:shadow-orange-500/60 hover:scale-105 transition-all duration-300 flex items-center gap-2 cursor-pointer whitespace-nowrap"
+              >
+                <span className="md:hidden">iOS 앱 다운로드</span>
+                <span className="hidden md:inline">iOS 앱 다운로드</span>
+                <svg
+                  className="w-3.5 h-3.5 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </a>
+            )}
           </div>
           <p
             className="mt-4 text-sm font-semibold text-[#FF5722] animate-fade-in"
             style={{ animationDelay: '0.6s' }}
           >
-            회원가입 시 모든 기능을 무료로 이용할 수 있어요.
+            회원가입 시 PRO 1개월 무료 혜택을 받을 수 있어요.
           </p>
         </div>
       </section>
@@ -996,7 +1024,7 @@ export default function LandingPage() {
             필요한 만큼만, 간단하게.
           </h2>
           <p className="text-base md:text-lg text-[#6B7684] mb-12">
-            누구나 무료로 시작할 수 있어요.
+            회원가입 시 PRO 1개월 무료로 시작할 수 있어요.
             <br />더 강력한 기능이 필요하다면 PRO를 선택하세요.
           </p>
 
@@ -1017,12 +1045,23 @@ export default function LandingPage() {
               </ul>
               <div className="w-full pt-6 border-t border-gray-200">
                 <div className="text-3xl font-bold mb-6 text-[#191F28]">₩0</div>
-                <button
-                  onClick={handleFreeTrial}
-                  className="w-full bg-[#F9FAFB] border border-gray-300 text-[#191F28] px-6 py-4 rounded-2xl text-lg font-semibold hover:bg-gray-50 transition cursor-pointer"
-                >
-                  무료 체험하기
-                </button>
+                {isAppClient ? (
+                  <button
+                    onClick={handleAppStart}
+                    className="w-full bg-[#F9FAFB] border border-gray-300 text-[#191F28] px-6 py-4 rounded-2xl text-lg font-semibold hover:bg-gray-50 transition cursor-pointer text-center"
+                  >
+                    무료로 시작하기
+                  </button>
+                ) : (
+                  <a
+                    href={IOS_APP_STORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-[#F9FAFB] border border-gray-300 text-[#191F28] px-6 py-4 rounded-2xl text-lg font-semibold hover:bg-gray-50 transition cursor-pointer text-center"
+                  >
+                    iOS 앱 다운로드
+                  </a>
+                )}
               </div>
             </div>
 
@@ -1048,15 +1087,25 @@ export default function LandingPage() {
               </ul>
               <div className="w-full pt-6 border-t border-gray-100">
                 <div className="flex items-end gap-2 mb-5">
-                  <span className="text-3xl font-bold text-[#191F28]">Beta 무료</span>
-                  <span className="text-lg text-[#8B95A1]">/ 현재 모든 기능 무료 제공</span>
+                  <span className="text-3xl font-bold text-[#191F28]">PRO 1개월 무료</span>
                 </div>
-                <button
-                  onClick={handleFreeTrial}
-                  className="w-full bg-[#FF5722] text-white px-6 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition cursor-pointer"
-                >
-                  지금 무료로 시작하기
-                </button>
+                {isAppClient ? (
+                  <button
+                    onClick={handleAppStart}
+                    className="w-full bg-[#FF5722] text-white px-6 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition cursor-pointer text-center"
+                  >
+                    무료로 시작하기
+                  </button>
+                ) : (
+                  <a
+                    href={IOS_APP_STORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-[#FF5722] text-white px-6 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition cursor-pointer text-center"
+                  >
+                    iOS 앱 다운로드
+                  </a>
+                )}
               </div>
             </div>
           </div>
