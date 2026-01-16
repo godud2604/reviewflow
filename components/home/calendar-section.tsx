@@ -5,6 +5,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { parseDateString } from '@/lib/date-utils';
 import type { Schedule } from '@/types';
 import { CALENDAR_STATUS_LEGEND, getScheduleRingColor } from './constants';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 
 export function CalendarSection({
   schedules,
@@ -31,6 +39,8 @@ export function CalendarSection({
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const lastSelectedDateRef = useRef<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerDate, setDrawerDate] = useState<string | null>(null);
 
   const scheduleByDate = schedules.reduce<
     Record<
@@ -164,6 +174,10 @@ export function CalendarSection({
     todayDate.getDate() === day &&
     todayDate.getMonth() === month &&
     todayDate.getFullYear() === year;
+  const formatSheetDate = (dateStr: string) => {
+    const date = parseDateString(dateStr);
+    return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+  };
 
   return (
     <div className="rounded-[24px] p-4 shadow-sm bg-gradient-to-b from-white to-neutral-100 mt-2">
@@ -283,30 +297,39 @@ export function CalendarSection({
               const todayHighlightClass = isTodayDate ? 'bg-orange-300 text-orange-900' : '';
               const selectedHighlightClass = isSelected ? 'bg-orange-100 text-orange-900' : '';
               const isInteractive = hasSchedule || Boolean(onCreateSchedule);
-              const wasAlreadySelected = selectedDate === dateStr;
               const showPaybackEmoji = Boolean(dayInfo?.hasPaybackPending);
-              const handleDayClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-                onDateClick(dateStr);
-                const isClickInitiated = event.detail === 1;
-                const shouldReopenModal = wasAlreadySelected;
-                if (!hasSchedule && (isClickInitiated || shouldReopenModal)) {
-                  onCreateSchedule?.(dateStr);
+              const tooltipLabel = `${month + 1}월 ${day}일`;
+              const handleDayClick = () => {
+                if (!isInteractive) return;
+                if (!hasSchedule) {
+                  setDrawerDate(dateStr);
+                  setDrawerOpen(true);
+                  return;
                 }
-                if (hasSchedule && shouldReopenModal) {
-                  onCreateSchedule?.(dateStr);
+                onDateClick(dateStr);
+              };
+              const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleDayClick();
                 }
               };
 
               return (
-                <button
+                <div
                   key={day}
                   onClick={handleDayClick}
-                  className={`relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-colors ${
+                  onKeyDown={handleKeyDown}
+                  role="button"
+                  tabIndex={isInteractive ? 0 : -1}
+                  title={!hasSchedule ? `클릭하여 ${tooltipLabel} 마감 체험단 등록` : undefined}
+                  className={`group relative h-8 w-8 mx-auto flex flex-col items-center justify-center text-[11px] font-semibold rounded-full transition-colors ${
                     isInteractive ? 'cursor-pointer' : 'cursor-default'
                   } ${baseStyle}
             ${!isSelected && todayHighlightClass}
             ${selectedHighlightClass}
             ${hoverable ? 'hover:shadow-[0_10px_20px_rgba(0,0,0,0.08)]' : ''}
+            ${!hasSchedule ? 'hover:bg-neutral-100' : ''}
             ${!isSelected && !isToday(day) && dayOfWeek === 0 ? 'text-red-500' : ''}
             ${!isSelected && !isToday(day) && dayOfWeek === 6 ? 'text-blue-500' : ''}`}
                 >
@@ -355,7 +378,7 @@ export function CalendarSection({
                   {hasSchedule && dayInfo?.hasCompleted && !dayInfo?.hasDeadline && (
                     <span className="absolute bottom-[3px] -right-[-1px] h-[7px] w-[7px] rounded-full bg-orange-400 shadow-[0_4px_10px_rgba(0,0,0,0.12)]" />
                   )}
-                </button>
+                </div>
               );
             })}
           </>
@@ -372,6 +395,34 @@ export function CalendarSection({
           </div>
         ))}
       </div>
+      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <DrawerContent className="bg-white data-[vaul-drawer-direction=bottom]:left-1/2 data-[vaul-drawer-direction=bottom]:right-auto data-[vaul-drawer-direction=bottom]:-translate-x-1/2 data-[vaul-drawer-direction=bottom]:w-full data-[vaul-drawer-direction=bottom]:max-w-[800px]">
+          <DrawerHeader>
+            <DrawerTitle className="text-[15px] font-semibold text-neutral-900">
+              {drawerDate ? `${formatSheetDate(drawerDate)} 일정` : '일정'}
+            </DrawerTitle>
+            <DrawerDescription className="text-[13px] text-neutral-600">
+              {drawerDate
+                ? `${formatSheetDate(drawerDate)} 마감 체험단을 등록하시겠어요?`
+                : '체험단을 등록하시겠어요?'}
+            </DrawerDescription>
+          </DrawerHeader>
+          <DrawerFooter className="pt-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (drawerDate) {
+                  onCreateSchedule?.(drawerDate);
+                }
+                setDrawerOpen(false);
+              }}
+              className="w-full rounded-xl bg-orange-500 px-4 py-3 text-[14px] font-semibold text-white shadow-[0_12px_24px_rgba(249,115,22,0.35)]"
+            >
+              등록하기
+            </button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

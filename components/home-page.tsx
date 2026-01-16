@@ -404,6 +404,9 @@ export default function HomePage({
           ? '완료'
           : '할 일';
   const headerCount = isSearchMode ? overallScheduleCount : totalCount ?? schedules.length;
+  const selectedDateLabel = selectedDate
+    ? `${Number(selectedDate.slice(5, 7))}/${Number(selectedDate.slice(8, 10))}일`
+    : '';
 
   const isTutorialEligible = overallScheduleCount <= 2;
   const shouldShowEmptyTutorial = overallScheduleCount === 0;
@@ -581,6 +584,16 @@ export default function HomePage({
             )}
           </div>
         </div>
+        {selectedDate && !isSearchMode && (
+          <button
+            type="button"
+            onClick={() => onCreateSchedule?.(selectedDate)}
+            className="mb-3 inline-flex w-full items-center justify-center gap-1.5 rounded-2xl border border-[#ffe2c2] bg-[#fff0e0] px-4 py-2.5 text-[12px] font-bold text-[#f09a00] shadow-sm transition-colors hover:bg-[#ffe8d1]"
+          >
+            {selectedDateLabel} 일정으로 체험단 등록하기
+            <ChevronRight className="h-3 w-3" />
+          </button>
+        )}
 
         {/* 2열: 뱃지 가로 스크롤 */}
         {showSearchInput ? (
