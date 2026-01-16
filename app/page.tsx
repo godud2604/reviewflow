@@ -166,6 +166,7 @@ function PageContent() {
   const isLandingPage = page === 'landing';
   const currentPage = page === 'home' || page === 'stats' || page === 'profile' ? page : 'home';
   const showPortfolio = view === 'portfolio';
+  const showAllSchedules = view === 'all';
 
   // Auth Hook
   const { user, loading: authLoading } = useAuth();
@@ -199,7 +200,8 @@ function PageContent() {
   // 날짜가 선택되지 않은 경우에만 useSchedules 활성화 (리스트용)
   // 날짜가 선택되면 캘린더 데이터를 사용
   // 또한 statuses가 설정되지 않은 초기 상태에서는 호출하지 않음
-  const shouldEnableSchedules = isLoggedIn && !isDateFiltering;
+  const shouldEnableSchedules =
+    isLoggedIn && !isDateFiltering && (currentPage === 'home' || showAllSchedules || showPortfolio);
 
   const {
     schedules: serverSchedules,
@@ -399,11 +401,22 @@ function PageContent() {
 
   // 달력 월 변경 시 fetch (캐시 확인)
   useEffect(() => {
+    if (currentPage !== 'home' || showAllSchedules || showPortfolio) {
+      return;
+    }
     if (calendarMonth && user) {
       fetchMonthSchedules(calendarMonth);
       fetchMonthCompletedSchedules(calendarMonth);
     }
-  }, [calendarMonth, fetchMonthSchedules, fetchMonthCompletedSchedules, user]);
+  }, [
+    calendarMonth,
+    fetchMonthSchedules,
+    fetchMonthCompletedSchedules,
+    user,
+    currentPage,
+    showAllSchedules,
+    showPortfolio,
+  ]);
 
 
   // 현재 보여줄 달력 데이터 (현재 월 + 이전/다음 월 캐시 포함)
@@ -527,7 +540,6 @@ function PageContent() {
   const [scheduleOverride, setScheduleOverride] = useState<Schedule | null>(null);
 
   const isNewSchedule = searchParams.get('new') === 'true';
-  const showAllSchedules = view === 'all';
   const isScheduleModalOpen = scheduleId !== null || isNewSchedule;
   const editingScheduleId = scheduleId ? parseInt(scheduleId) : null;
 
