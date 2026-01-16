@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     const categories = searchParams.get('categories')?.split(',').filter(Boolean) || [];
     const reviewTypes = searchParams.get('reviewTypes')?.split(',').filter(Boolean) || [];
     const search = searchParams.get('search') || '';
-    const sortBy = searchParams.get('sortBy') || 'deadline-asc';
+    const sortBy = searchParams.get('sortBy') || 'deadline-desc';
     const paybackOnly = searchParams.get('paybackOnly') === 'true';
 
     // Base query

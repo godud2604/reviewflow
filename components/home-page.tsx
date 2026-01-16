@@ -320,6 +320,7 @@ export default function HomePage({
 
   const handleSelectTodo = () => {
     setCompletedOnly(false);
+    setSortBy('deadline-asc');
   };
 
   const handleToggleCompletedOnly = () => {
@@ -327,6 +328,9 @@ export default function HomePage({
       const next = !prev;
       if (next) {
         setSelectedStatuses([]);
+        setSortBy('deadline-desc');
+      } else {
+        setSortBy('deadline-asc');
       }
       return next;
     });
@@ -335,6 +339,7 @@ export default function HomePage({
   const handleShowAllTodo = () => {
     setSelectedDate(null);
     setCompletedOnly(false);
+    setSortBy('deadline-asc');
   };
 
   if (loading && schedules.length === 0) {
