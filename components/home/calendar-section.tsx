@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { parseDateString } from '@/lib/date-utils';
 import type { Schedule } from '@/types';
@@ -30,6 +30,7 @@ export function CalendarSection({
   const todayDate = parseDateString(today);
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+  const lastSelectedDateRef = useRef<string | null>(null);
 
   const scheduleByDate = schedules.reduce<
     Record<
@@ -141,6 +142,19 @@ export function CalendarSection({
   useEffect(() => {
     onMonthChange?.(currentDate);
   }, [currentDate, onMonthChange]);
+
+  useEffect(() => {
+    if (lastSelectedDateRef.current === selectedDate) return;
+    lastSelectedDateRef.current = selectedDate;
+    if (!selectedDate) return;
+    const nextDate = parseDateString(selectedDate);
+    if (
+      nextDate.getFullYear() !== currentDate.getFullYear() ||
+      nextDate.getMonth() !== currentDate.getMonth()
+    ) {
+      setCurrentDate(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
+    }
+  }, [selectedDate, currentDate]);
 
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);

@@ -612,12 +612,44 @@ function PageContent() {
       success = Boolean(createdSchedule);
     }
     if (success) {
-      if (!editingScheduleId && createdSchedule?.dead) {
-        setHomeCalendarFocusDate(createdSchedule.dead);
+      if (!editingScheduleId && createdSchedule) {
+        const focusDate = createdSchedule.dead || createdSchedule.visit || null;
+        if (focusDate) {
+          setHomeCalendarFocusDate(focusDate);
+        }
         handleCloseScheduleModal();
-        // 데이터 변경 시 현재 월 데이터 갱신 (캐시 무효화)
-        fetchMonthSchedules(calendarMonth, true);
-        fetchMonthCompletedSchedules(calendarMonth, true);
+        const createdMonth = createdSchedule.dead?.slice(0, 7) || createdSchedule.visit?.slice(0, 7);
+        if (createdMonth) {
+          setMonthlySchedulesCache((prev) => {
+            const nextCache = { ...prev };
+            const existing = nextCache[createdMonth] || [];
+            const merged = existing.some((s) => s.id === createdSchedule.id)
+              ? existing
+              : [createdSchedule, ...existing];
+            nextCache[createdMonth] = merged;
+            return nextCache;
+          });
+          if (createdSchedule.status === '완료') {
+            setMonthlyCompletedSchedulesCache((prev) => {
+              const nextCache = { ...prev };
+              const existing = nextCache[createdMonth] || [];
+              const merged = existing.some((s) => s.id === createdSchedule.id)
+                ? existing
+                : [createdSchedule, ...existing];
+              nextCache[createdMonth] = merged;
+              return nextCache;
+            });
+          }
+        }
+        // 데이터 변경 시 관련 월 데이터 갱신 (캐시 무효화)
+        const refreshTargets = [calendarMonth, createdMonth];
+        const uniqueTargets = Array.from(
+          new Set(refreshTargets.filter((m): m is string => Boolean(m)))
+        );
+        uniqueTargets.forEach((monthKey) => {
+          fetchMonthSchedules(monthKey, true);
+          fetchMonthCompletedSchedules(monthKey, true);
+        });
       } else if (editingScheduleId) {
         handleCloseScheduleModal();
         const prevMonth =
