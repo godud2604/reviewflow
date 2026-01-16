@@ -122,7 +122,7 @@ function mapScheduleToDb(schedule: Omit<Schedule, 'id'>, userId: string) {
     visit_time: schedule.visitTime || null,
     deadline: schedule.dead || null,
     additional_deadlines: schedule.additionalDeadlines?.length
-      ? JSON.stringify(schedule.additionalDeadlines)
+      ? schedule.additionalDeadlines
       : null,
     benefit: schedule.benefit || 0,
     income: schedule.income || 0,
@@ -158,7 +158,7 @@ function mapScheduleUpdatesToDb(updates: Partial<Schedule>) {
   if (updates.dead !== undefined) dbUpdates.deadline = updates.dead;
   if (updates.additionalDeadlines !== undefined) {
     dbUpdates.additional_deadlines = updates.additionalDeadlines?.length
-      ? JSON.stringify(updates.additionalDeadlines)
+      ? updates.additionalDeadlines
       : null;
   }
   if (updates.benefit !== undefined) dbUpdates.benefit = updates.benefit;

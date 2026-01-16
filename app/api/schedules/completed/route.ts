@@ -59,19 +59,29 @@ export async function GET(request: NextRequest) {
       .eq('user_id', userId)
       .eq('status', '완료');
 
+    const shouldFilterMonthInMemory = Boolean(month) && !includeMeta && !selectedDate;
+
     // 월별 필터
-    if (month) {
+    if (month && !shouldFilterMonthInMemory) {
       // month (e.g., '2026-01')
-      query = query.or(
-        `deadline.ilike.${month}%,visit_date.ilike.${month}%,additional_deadlines.cs.[{"date":"${month}-01"}]`
-      );
-      query = query.or(`deadline.ilike.${month}%,visit_date.ilike.${month}%`);
+      const [yearStr, monthStr] = month.split('-');
+      const daysInMonth = new Date(Number(yearStr), Number(monthStr), 0).getDate();
+      const additionalDeadlineFilters = Array.from({ length: daysInMonth }, (_, idx) => {
+        const day = String(idx + 1).padStart(2, '0');
+        return `additional_deadlines.cs.[{"date":"${month}-${day}"}]`;
+      });
+      const monthFilters = [
+        `deadline.ilike.${month}%`,
+        `visit_date.ilike.${month}%`,
+        ...additionalDeadlineFilters,
+      ];
+      query = query.or(monthFilters.join(','));
     }
 
     // 날짜 필터
     if (selectedDate) {
       query = query.or(
-        `deadline.eq.${selectedDate},visit_date.eq.${selectedDate},additional_deadlines.cs.{"date":"${selectedDate}"}`
+        `deadline.eq.${selectedDate},visit_date.eq.${selectedDate},additional_deadlines.cs.[{"date":"${selectedDate}"}]`
       );
     }
 
@@ -146,13 +156,35 @@ export async function GET(request: NextRequest) {
 
     const sortedSchedules = schedules || [];
 
+    const monthPrefix = month ? `${month}-` : '';
+    const monthFilteredSchedules = shouldFilterMonthInMemory
+      ? sortedSchedules.filter((schedule) => {
+          const hasDeadline = schedule.deadline?.startsWith(monthPrefix);
+          const hasVisit = schedule.visit_date?.startsWith(monthPrefix);
+          if (hasDeadline || hasVisit) return true;
+          if (!schedule.additional_deadlines) return false;
+          try {
+            const additionalDeadlines =
+              typeof schedule.additional_deadlines === 'string'
+                ? JSON.parse(schedule.additional_deadlines)
+                : schedule.additional_deadlines;
+            if (!Array.isArray(additionalDeadlines)) return false;
+            return additionalDeadlines.some((deadline: { date?: string }) =>
+              deadline?.date?.startsWith(monthPrefix)
+            );
+          } catch (e) {
+            return false;
+          }
+        })
+      : sortedSchedules;
+
     if (!includeMeta) {
       return NextResponse.json({
-        schedules: sortedSchedules,
+        schedules: monthFilteredSchedules,
         pagination: {
           offset,
           limit,
-          total: sortedSchedules.length,
+          total: monthFilteredSchedules.length,
           hasMore: false,
         },
       });
@@ -199,7 +231,7 @@ export async function GET(request: NextRequest) {
     // 동일한 필터 적용
     if (selectedDate) {
       countQuery = countQuery.or(
-        `deadline.eq.${selectedDate},visit_date.eq.${selectedDate},additional_deadlines.cs.{"date":"${selectedDate}"}`
+        `deadline.eq.${selectedDate},visit_date.eq.${selectedDate},additional_deadlines.cs.[{"date":"${selectedDate}"}]`
       );
     }
     if (paybackOnly) countQuery = countQuery.eq('payback_expected', true);
