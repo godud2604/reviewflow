@@ -590,6 +590,16 @@ function PageContent() {
   const handleSaveSchedule = async (schedule: Schedule) => {
     let success = true;
     let createdSchedule: Schedule | null = null;
+    const refreshMonths = (months: Array<string | null | undefined>) => {
+      const unique = Array.from(new Set(months.filter((m): m is string => Boolean(m))));
+      unique.forEach((monthKey) => {
+        fetchMonthSchedules(monthKey, true);
+        fetchMonthCompletedSchedules(monthKey, true);
+      });
+    };
+    const previousSchedule = editingScheduleId
+      ? schedules.find((item) => item.id === editingScheduleId) ?? scheduleOverride ?? null
+      : null;
     if (editingScheduleId) {
       const { id, ...updates } = schedule;
       success = await updateSchedule(editingScheduleId, updates);
@@ -610,25 +620,40 @@ function PageContent() {
         fetchMonthCompletedSchedules(calendarMonth, true);
       } else if (editingScheduleId) {
         handleCloseScheduleModal();
-        // 수정 시에는 캐시 직접 업데이트 (API 재호출 방지)
-        setMonthlySchedulesCache((prev) => {
-          const nextCache = { ...prev };
-          Object.keys(nextCache).forEach((monthKey) => {
-            nextCache[monthKey] = nextCache[monthKey].map((s) =>
-              s.id === editingScheduleId ? { ...s, ...schedule } : s
-            );
+        const prevMonth =
+          previousSchedule?.dead?.slice(0, 7) || previousSchedule?.visit?.slice(0, 7);
+        const nextMonth = schedule.dead?.slice(0, 7) || schedule.visit?.slice(0, 7);
+        const statusChanged =
+          previousSchedule?.status && previousSchedule.status !== schedule.status;
+        const dateChanged =
+          previousSchedule?.dead !== schedule.dead || previousSchedule?.visit !== schedule.visit;
+        const deadlinesChanged =
+          JSON.stringify(previousSchedule?.additionalDeadlines ?? []) !==
+          JSON.stringify(schedule.additionalDeadlines ?? []);
+
+        if (statusChanged || dateChanged || deadlinesChanged) {
+          refreshMonths([calendarMonth, prevMonth, nextMonth]);
+        } else {
+          // 빠른 반영용: 변경 폭이 작을 때만 캐시 직접 업데이트
+          setMonthlySchedulesCache((prev) => {
+            const nextCache = { ...prev };
+            Object.keys(nextCache).forEach((monthKey) => {
+              nextCache[monthKey] = nextCache[monthKey].map((s) =>
+                s.id === editingScheduleId ? { ...s, ...schedule } : s
+              );
+            });
+            return nextCache;
           });
-          return nextCache;
-        });
-        setMonthlyCompletedSchedulesCache((prev) => {
-          const nextCache = { ...prev };
-          Object.keys(nextCache).forEach((monthKey) => {
-            nextCache[monthKey] = nextCache[monthKey].map((s) =>
-              s.id === editingScheduleId ? { ...s, ...schedule } : s
-            );
+          setMonthlyCompletedSchedulesCache((prev) => {
+            const nextCache = { ...prev };
+            Object.keys(nextCache).forEach((monthKey) => {
+              nextCache[monthKey] = nextCache[monthKey].map((s) =>
+                s.id === editingScheduleId ? { ...s, ...schedule } : s
+              );
+            });
+            return nextCache;
           });
-          return nextCache;
-        });
+        }
       }
     }
     return success;

@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
     // Query parameters
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('userId');
+    const refreshParam = searchParams.get('refresh');
+    const forceRefresh =
+      refreshParam === '1' || refreshParam === 'true' || refreshParam === 'yes';
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -169,7 +172,8 @@ export async function GET(request: NextRequest) {
 
     const cachedMeta = completedMetaCache.get(metaCacheKey);
     const now = Date.now();
-    const canUseCache = cachedMeta && now - cachedMeta.cachedAt < META_TTL_MS;
+    const canUseCache =
+      !forceRefresh && cachedMeta && now - cachedMeta.cachedAt < META_TTL_MS;
 
     if (canUseCache) {
       return NextResponse.json({

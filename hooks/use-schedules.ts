@@ -333,6 +333,7 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
           // deadline-asc is default, so skip putting it in url to keep it clean
           if (sortBy && sortBy !== 'deadline-asc') params.append('sortBy', sortBy);
         }
+        if (force) params.append('refresh', '1');
 
         const endpoint = isSearchRequest
           ? '/api/schedules/search'
@@ -425,6 +426,13 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
     }
   }, [pagination, fetchSchedules]);
 
+  const refreshAfterMutation = useCallback(() => {
+    cacheRef.current.delete(cacheKey);
+    if (enabled) {
+      fetchSchedules(true);
+    }
+  }, [cacheKey, enabled, fetchSchedules]);
+
   useEffect(() => {
     if (enabled) {
       // 필터가 변경되면 offset 초기화하고 새로 fetch
@@ -468,13 +476,14 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
         const newSchedule = mapDbToSchedule(data);
         setSchedules((prev) => [newSchedule, ...prev]);
         updateCacheSchedules((prev) => [newSchedule, ...prev]);
+        refreshAfterMutation();
         return newSchedule;
       } catch (err) {
         showError(err instanceof Error ? err.message : '알 수 없는 오류');
         return null;
       }
     },
-    [user, showError]
+    [user, showError, refreshAfterMutation, updateCacheSchedules]
   );
 
   const updateSchedule = useCallback(
@@ -498,13 +507,14 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
         updateCacheSchedules((prev) =>
           prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
         );
+        refreshAfterMutation();
         return true;
       } catch (err) {
         showError(err instanceof Error ? err.message : '알 수 없는 오류');
         return false;
       }
     },
-    [user, showError]
+    [user, showError, refreshAfterMutation, updateCacheSchedules]
   );
 
   const deleteSchedule = useCallback(
@@ -526,13 +536,14 @@ export function useSchedules(options: UseSchedulesOptions = {}): UseSchedulesRet
 
         setSchedules((prev) => prev.filter((s) => s.id !== id));
         updateCacheSchedules((prev) => prev.filter((s) => s.id !== id));
+        refreshAfterMutation();
         return true;
       } catch (err) {
         showError(err instanceof Error ? err.message : '알 수 없는 오류');
         return false;
       }
     },
-    [user, showError]
+    [user, showError, refreshAfterMutation, updateCacheSchedules]
   );
 
   return {
