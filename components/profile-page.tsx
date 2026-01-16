@@ -7,9 +7,11 @@ import * as XLSX from 'xlsx';
 
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { useSchedules } from '@/hooks/use-schedules';
+import { mapDbToSchedule } from '@/hooks/use-schedules';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { UserProfile } from '@/hooks/use-user-profile';
+import type { Schedule } from '@/types';
+import type { DbSchedule } from '@/types/database';
 import { getSupabaseClient } from '@/lib/supabase';
 import { resolveTier } from '@/lib/tier';
 import FeedbackModal from '@/components/feedback-modal';
@@ -34,38 +36,9 @@ const formatMonthLabel = (monthKey: string) => {
   return `${year}년 ${month}월`;
 };
 
-const getMonthKeyFromDate = (raw?: string) => {
-  if (!raw) return null;
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-
-  const hyphenMatch = trimmed.match(/^(\d{4})-(\d{1,2})/);
-  if (hyphenMatch) {
-    return `${hyphenMatch[1]}-${hyphenMatch[2].padStart(2, '0')}`;
-  }
-
-  const dotMatch = trimmed.match(/^(\d{4})\.(\d{1,2})/);
-  if (dotMatch) {
-    return `${dotMatch[1]}-${dotMatch[2].padStart(2, '0')}`;
-  }
-
-  const parts = trimmed.split(/[^\d]/).filter(Boolean);
-  if (parts.length >= 2 && parts[0].length === 4) {
-    return `${parts[0]}-${parts[1].padStart(2, '0')}`;
-  }
-
-  const parsed = new Date(trimmed);
-  if (!Number.isNaN(parsed.getTime())) {
-    const year = parsed.getFullYear().toString();
-    const month = (parsed.getMonth() + 1).toString().padStart(2, '0');
-    return `${year}-${month}`;
-  }
-
-  return null;
-};
-
 const PRO_TIER_DURATION_MONTHS = 3;
 const COUPON_TIER_DURATION_MONTHS = 3;
+const DOWNLOAD_PAGE_SIZE = 200;
 
 const formatExpiryLabel = (value?: string | null) => {
   if (!value) return null;
@@ -81,6 +54,55 @@ const getDeadlineTimestamp = (schedule: { dead?: string; visit?: string }) => {
   return Number.isNaN(parsed.getTime()) ? Number.POSITIVE_INFINITY : parsed.getTime();
 };
 
+const fetchSchedulePages = async (
+  endpoint: string,
+  userId: string,
+  options: { month?: string } = {}
+) => {
+  const schedules: DbSchedule[] = [];
+  let offset = 0;
+
+  while (true) {
+    const params = new URLSearchParams({
+      userId,
+      offset: offset.toString(),
+      limit: DOWNLOAD_PAGE_SIZE.toString(),
+      refresh: '1',
+    });
+    if (options.month) {
+      params.append('month', options.month);
+      params.append('meta', '0');
+    }
+
+    const response = await fetch(`${endpoint}?${params.toString()}`, {
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch schedules');
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    schedules.push(...(data.schedules ?? []));
+
+    if (!data.pagination?.hasMore) {
+      break;
+    }
+
+    offset += DOWNLOAD_PAGE_SIZE;
+  }
+
+  return schedules;
+};
+
 type ProfilePageProps = {
   profile: UserProfile | null;
   refetchUserProfile: () => Promise<void>;
@@ -90,12 +112,19 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const router = useRouter();
   const { toast } = useToast();
   const { user: authUser, session, signOut } = useAuth();
-  const { schedules } = useSchedules();
   const isMobile = useIsMobile();
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [downloadScope, setDownloadScope] = useState('all');
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
+  const [downloadSchedules, setDownloadSchedules] = useState<Schedule[]>([]);
+  const [isDownloadLoading, setIsDownloadLoading] = useState(false);
+  const [loadedDownloadScope, setLoadedDownloadScope] = useState<string | null>(null);
+  const [downloadErrorMessage, setDownloadErrorMessage] = useState<string | null>(null);
+  const [downloadMonthOptions, setDownloadMonthOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [isMonthOptionsLoading, setIsMonthOptionsLoading] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [isRedeemingCoupon, setIsRedeemingCoupon] = useState(false);
   const [isWithdrawalDialogOpen, setIsWithdrawalDialogOpen] = useState(false);
@@ -115,50 +144,136 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const displayName = profile?.nickname ?? '';
   const emailLabel = authUser?.email ?? '등록된 이메일이 없습니다';
 
-  const scheduleMonthOptions = useMemo(() => {
-    const monthMap = new Map<string, string>();
-    schedules.forEach((schedule) => {
-      const monthKey = getMonthKeyFromDate(schedule.visit) ?? getMonthKeyFromDate(schedule.dead);
-      if (monthKey) {
-        monthMap.set(monthKey, formatMonthLabel(monthKey));
-      }
-    });
+  const loadMonthOptions = async () => {
+    if (!authUser?.id) {
+      return;
+    }
 
-    return Array.from(monthMap.entries())
-      .sort(([a], [b]) => b.localeCompare(a))
-      .map(([value, label]) => ({ value, label }));
-  }, [schedules]);
+    if (isMonthOptionsLoading) {
+      return;
+    }
+
+    setIsMonthOptionsLoading(true);
+    try {
+      const response = await fetch(`/api/schedules/months?userId=${authUser.id}`, {
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch schedule months');
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      const options = (data.months || []).map((month: string) => ({
+        value: month,
+        label: formatMonthLabel(month),
+      }));
+      setDownloadMonthOptions(options);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '활동 기간을 불러오지 못했습니다.';
+      toast({
+        title: '활동 기간을 불러오지 못했습니다.',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsMonthOptionsLoading(false);
+    }
+  };
+
+  const loadDownloadSchedules = async (scope: string, force = false) => {
+    if (!authUser?.id) {
+      return;
+    }
+
+    if (isDownloadLoading) {
+      return;
+    }
+
+    if (!force && loadedDownloadScope === scope) {
+      return;
+    }
+
+    setIsDownloadLoading(true);
+    setDownloadErrorMessage(null);
+    if (loadedDownloadScope !== scope) {
+      setDownloadSchedules([]);
+      setLoadedDownloadScope(null);
+    }
+
+    try {
+      const monthParam = scope === 'all' ? undefined : scope;
+      const [activeSchedules, completedSchedules] = await Promise.all([
+        fetchSchedulePages('/api/schedules', authUser.id, { month: monthParam }),
+        fetchSchedulePages('/api/schedules/completed', authUser.id, { month: monthParam }),
+      ]);
+      const mappedSchedules = [...activeSchedules, ...completedSchedules].map(mapDbToSchedule);
+      setDownloadSchedules(mappedSchedules);
+      setLoadedDownloadScope(scope);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '활동 내역을 불러오지 못했습니다.';
+      setDownloadErrorMessage(message);
+      toast({
+        title: '활동 내역을 불러오지 못했습니다.',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloadLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (
       downloadScope !== 'all' &&
-      !scheduleMonthOptions.some((option) => option.value === downloadScope)
+      !downloadMonthOptions.some((option) => option.value === downloadScope)
     ) {
       setDownloadScope('all');
     }
-  }, [downloadScope, scheduleMonthOptions]);
+  }, [downloadScope, downloadMonthOptions]);
 
   const filteredSchedules = useMemo(() => {
-    if (downloadScope === 'all') {
-      return schedules;
-    }
-
-    return schedules.filter((schedule) => {
-      const visitKey = getMonthKeyFromDate(schedule.visit);
-      const deadKey = getMonthKeyFromDate(schedule.dead);
-      return visitKey === downloadScope || deadKey === downloadScope;
-    });
-  }, [schedules, downloadScope]);
+    return downloadSchedules;
+  }, [downloadSchedules]);
 
   const schedulesSortedByDeadline = useMemo(() => {
     return [...filteredSchedules].sort((a, b) => getDeadlineTimestamp(a) - getDeadlineTimestamp(b));
   }, [filteredSchedules]);
 
+  const additionalDeadlineLabels = useMemo(() => {
+    const labels: string[] = [];
+    const seen = new Set<string>();
+    schedulesSortedByDeadline.forEach((schedule) => {
+      schedule.additionalDeadlines?.forEach((deadline) => {
+        const label = deadline?.label?.trim();
+        if (!label || seen.has(label)) return;
+        seen.add(label);
+        labels.push(label);
+      });
+    });
+    return labels;
+  }, [schedulesSortedByDeadline]);
+
   const downloadScopeLabel =
     downloadScope === 'all' ? '전체 활동' : formatMonthLabel(downloadScope);
-  const downloadSummaryMessage = filteredSchedules.length
-    ? `${downloadScopeLabel} 기준 ${filteredSchedules.length}건을 준비합니다.`
-    : '활동 기록을 추가하면 다운로드를 사용할 수 있습니다.';
+  const hasLoadedData = loadedDownloadScope === downloadScope;
+  const downloadSummaryMessage = isDownloadLoading
+    ? '다운로드를 준비 중입니다.'
+    : downloadErrorMessage
+      ? '활동 내역을 불러오지 못했습니다.'
+      : !hasLoadedData
+        ? '기간을 선택하면 데이터를 불러옵니다.'
+        : filteredSchedules.length
+        ? `${downloadScopeLabel} 기준 ${filteredSchedules.length}건을 준비합니다.`
+        : '활동 기록을 추가하면 다운로드를 사용할 수 있습니다.';
 
   const isKakaoBrowserWithTightDownloadSupport = () => {
     if (typeof window === 'undefined') return false;
@@ -170,6 +285,19 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   };
 
   const handleDownloadActivity = () => {
+    if (isDownloadLoading) {
+      toast({
+        title: '다운로드를 준비 중입니다.',
+        description: '잠시만 기다려 주세요.',
+      });
+      return;
+    }
+
+    if (loadedDownloadScope !== downloadScope) {
+      void loadDownloadSchedules(downloadScope, true);
+      return;
+    }
+
     if (isMobile) {
       toast({
         title: '모바일 환경에서는 지원하지 않는 기능입니다',
@@ -192,19 +320,33 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
     }
 
     const scopeLabel = downloadScope === 'all' ? '전체' : formatMonthLabel(downloadScope);
-    const rows = schedulesSortedByDeadline.map((schedule, index) => ({
-      번호: index + 1,
-      플랫폼: schedule.platform || '-',
-      제목: schedule.title,
-      상태: schedule.status,
-      방문일: schedule.visit || '-',
-      마감일: schedule.dead || '-',
-      채널: schedule.channel.join(', '),
-      혜택: schedule.benefit,
-      수익: schedule.income,
-      비용: schedule.cost,
-      순수익: schedule.benefit + schedule.income - schedule.cost,
-    }));
+    const rows = schedulesSortedByDeadline.map((schedule, index) => {
+      const row: Record<string, string | number> = {
+        번호: index + 1,
+        플랫폼: schedule.platform || '-',
+        제목: schedule.title,
+        상태: schedule.status,
+        방문일: schedule.visit || '-',
+        마감일: schedule.dead || '-',
+      };
+
+      const deadlineMap = new Map(
+        (schedule.additionalDeadlines || [])
+          .filter((deadline) => deadline?.label)
+          .map((deadline) => [deadline.label.trim(), deadline.date || ''])
+      );
+      additionalDeadlineLabels.forEach((label) => {
+        row[label] = deadlineMap.get(label) || '-';
+      });
+
+      row['채널'] = schedule.channel.join(', ');
+      row['혜택'] = schedule.benefit;
+      row['수익'] = schedule.income;
+      row['비용'] = schedule.cost;
+      row['순수익'] = schedule.benefit + schedule.income - schedule.cost;
+
+      return row;
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
@@ -367,17 +509,21 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
       return;
     }
 
-    if (!filteredSchedules.length) {
-      toast({
-        title: '저장된 일정이 없어요.',
-        description: '먼저 일정을 추가해 주세요.',
-        duration: 1000,
-      });
+    void loadMonthOptions();
+    setIsDownloadDialogOpen(true);
+  };
+
+  useEffect(() => {
+    if (!isDownloadDialogOpen || !authUser?.id) {
       return;
     }
 
-    setIsDownloadDialogOpen(true);
-  };
+    if (downloadScope === 'all') {
+      return;
+    }
+
+    void loadDownloadSchedules(downloadScope);
+  }, [isDownloadDialogOpen, downloadScope, authUser?.id]);
 
   const handleFeatureClick = (feature: { onClick: () => void; isPro?: boolean }) => {
     if (feature.isPro && !isPro) {
@@ -551,6 +697,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
                   <SelectTrigger
                     className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 shadow-sm"
                     aria-label="조회할 활동 기간"
+                    disabled={isMonthOptionsLoading}
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -558,7 +705,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
                     <SelectItem value="all" className="text-sm text-neutral-900">
                       전체 활동 내역
                     </SelectItem>
-                    {scheduleMonthOptions.map((option) => (
+                    {downloadMonthOptions.map((option) => (
                       <SelectItem
                         key={option.value}
                         value={option.value}
@@ -576,7 +723,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
               <button
                 type="button"
                 onClick={handleDownloadActivity}
-                disabled={!filteredSchedules.length}
+                disabled={isDownloadLoading || (hasLoadedData && !filteredSchedules.length)}
                 className="w-full rounded-2xl bg-neutral-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neutral-900"
               >
                 엑셀 다운로드
