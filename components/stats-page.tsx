@@ -19,12 +19,14 @@ type StatsPageProps = {
   onScheduleItemClick: (schedule: Schedule) => void;
   isScheduleModalOpen: boolean;
   isPro: boolean;
+  statsRefetchKey: number;
 };
 
 export default function StatsPage({
   onScheduleItemClick,
   isScheduleModalOpen,
   isPro,
+  statsRefetchKey,
 }: StatsPageProps) {
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -111,6 +113,15 @@ export default function StatsPage({
   } = useStatsMonthly({
     month: selectedMonthParam,
   });
+
+  const lastStatsRefetchKey = useRef(statsRefetchKey);
+
+  useEffect(() => {
+    if (statsRefetchKey === lastStatsRefetchKey.current) return;
+    lastStatsRefetchKey.current = statsRefetchKey;
+    if (!statsRefetchKey) return;
+    refetchStats();
+  }, [statsRefetchKey, refetchStats]);
 
   const handleAddIncome = async (income: Omit<ExtraIncome, 'id'>) => {
     const created = await createExtraIncome(income);
@@ -245,7 +256,6 @@ export default function StatsPage({
   const animatedValueRef = useRef(0);
   const animationRef = useRef<number | null>(null);
   const lastAnimatedValueRef = useRef<number | null>(null);
-  const wasScheduleModalOpenRef = useRef(isScheduleModalOpen);
 
   useEffect(() => {
     const target = econValue;
@@ -317,13 +327,6 @@ export default function StatsPage({
     }
     setShowIncomeTutorial(true);
   }, [hasAnyExtraIncome]);
-
-  useEffect(() => {
-    if (wasScheduleModalOpenRef.current && !isScheduleModalOpen) {
-      refetchStats();
-    }
-    wasScheduleModalOpenRef.current = isScheduleModalOpen;
-  }, [isScheduleModalOpen, refetchStats]);
 
   useEffect(() => {
     if (!availableMonths.length) return;

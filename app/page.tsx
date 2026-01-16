@@ -538,6 +538,7 @@ function PageContent() {
   const mapSearchAutoSaveRequested = searchParams.get('mapSearchAutoSave') === 'true';
   const [statusChangeIntent, setStatusChangeIntent] = useState(false);
   const [scheduleOverride, setScheduleOverride] = useState<Schedule | null>(null);
+  const [statsRefetchKey, setStatsRefetchKey] = useState(0);
 
   const isNewSchedule = searchParams.get('new') === 'true';
   const isScheduleModalOpen = scheduleId !== null || isNewSchedule;
@@ -699,6 +700,9 @@ function PageContent() {
           });
         }
       }
+    }
+    if (success) {
+      setStatsRefetchKey((prev) => prev + 1);
     }
     return success;
   };
@@ -931,6 +935,7 @@ function PageContent() {
                   }
                   isScheduleModalOpen={isScheduleModalOpen}
                   isPro={isPro}
+                  statsRefetchKey={statsRefetchKey}
                 />
               )}
 
