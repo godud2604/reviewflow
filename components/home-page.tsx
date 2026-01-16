@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { usePostHog } from 'posthog-js/react';
-import { ArrowUp, Check, ChevronRight, Search, X } from 'lucide-react';
+import { ArrowLeftRight, ArrowUp, Check, ChevronRight, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Schedule } from '@/types';
@@ -119,6 +119,8 @@ export default function HomePage({
 
   const [showDemo, setShowDemo] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [showFilterScrollArrow, setShowFilterScrollArrow] = useState(false);
+  const [showFilterScrollHint, setShowFilterScrollHint] = useState(false);
 
   // IntersectionObserver 참조
   const observerTarget = useRef<HTMLDivElement>(null);
@@ -126,6 +128,26 @@ export default function HomePage({
   const listContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const scrollTargetRef = useRef<HTMLElement | null>(null);
+  const filterScrollRef = useRef<HTMLDivElement>(null);
+  const filterHintTimeoutRef = useRef<number | null>(null);
+  const hasAutoHintedRef = useRef(false);
+
+  const updateFilterScrollArrow = useCallback(() => {
+    if (showSearchInput || selectedDate) {
+      setShowFilterScrollArrow(false);
+      return;
+    }
+
+    const target = filterScrollRef.current;
+    if (!target) {
+      setShowFilterScrollArrow(false);
+      return;
+    }
+
+    const canScroll = target.scrollWidth > target.clientWidth + 1;
+    const atEnd = target.scrollLeft + target.clientWidth >= target.scrollWidth - 1;
+    setShowFilterScrollArrow(canScroll && !atEnd);
+  }, [showSearchInput, selectedDate]);
 
   // Demo Data
   const demoSchedules = useMemo(
@@ -201,6 +223,63 @@ export default function HomePage({
       searchInputRef.current?.focus();
     }
   }, [showSearchInput]);
+
+  useEffect(() => {
+    const rafId = requestAnimationFrame(updateFilterScrollArrow);
+    window.addEventListener('resize', updateFilterScrollArrow);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', updateFilterScrollArrow);
+    };
+  }, [
+    updateFilterScrollArrow,
+    completedOnly,
+    selectedPlatforms.length,
+    selectedStatuses.length,
+    selectedCategories.length,
+    availablePlatforms.length,
+    sortBy,
+  ]);
+
+  useEffect(() => {
+    if (!showFilterScrollArrow || hasAutoHintedRef.current) return;
+
+    const target = filterScrollRef.current;
+    if (!target) return;
+
+    const hintKey = 'home-filter-scroll-hint';
+    if (typeof window !== 'undefined' && sessionStorage.getItem(hintKey)) {
+      hasAutoHintedRef.current = true;
+      return;
+    }
+
+    hasAutoHintedRef.current = true;
+    setShowFilterScrollHint(true);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(hintKey, '1');
+    }
+
+    const start = target.scrollLeft;
+    const remaining = target.scrollWidth - target.clientWidth - start;
+    const nudge = Math.min(48, Math.max(0, remaining));
+
+    if (nudge > 0) {
+      target.scrollTo({ left: start + nudge, behavior: 'smooth' });
+      window.setTimeout(() => {
+        target.scrollTo({ left: start, behavior: 'smooth' });
+      }, 600);
+    }
+
+    filterHintTimeoutRef.current = window.setTimeout(() => {
+      setShowFilterScrollHint(false);
+    }, 2200);
+
+    return () => {
+      if (filterHintTimeoutRef.current) {
+        window.clearTimeout(filterHintTimeoutRef.current);
+      }
+    };
+  }, [showFilterScrollArrow]);
 
   // 필터/검색 변경 시 부모에게 알림
   useEffect(() => {
@@ -551,8 +630,12 @@ export default function HomePage({
             </div>
           </div>
         ) : !selectedDate ? (
-          <div className="relative">
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -ml-1 pl-1 pr-8">
+          <div className="relative overflow-hidden">
+            <div
+              ref={filterScrollRef}
+              onScroll={updateFilterScrollArrow}
+              className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 -ml-1 pl-1 pr-10"
+            >
               {/* 1. 전체 */}
               <div className="flex flex-shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-[#f2f4f6] p-1">
                 <button
@@ -770,10 +853,20 @@ export default function HomePage({
                 </Command>
               </FilterBadge>
             </div>
-            <div className="pointer-events-none absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-neutral-50/95 to-neutral-50/0" />
-            <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-neutral-500 shadow-sm">
-              <ChevronRight className="h-3.5 w-3.5" />
-            </div>
+            {showFilterScrollArrow && (
+              <>
+                <div className="pointer-events-none absolute right-0 top-0 h-full w-14 bg-gradient-to-l from-neutral-50/95 via-neutral-50/70 to-neutral-50/0" />
+                <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-neutral-500 shadow-sm animate-[pulse_1.8s_ease-in-out_infinite]">
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </div>
+                {showFilterScrollHint && (
+                  <div className="pointer-events-none absolute right-10 top-1/2 -translate-y-1/2 flex items-center gap-1.5 rounded-full bg-neutral-900/80 px-2.5 py-1 text-[10px] font-medium text-white shadow-sm">
+                    <ArrowLeftRight className="h-3 w-3" />
+                    옆으로 밀어보기
+                  </div>
+                )}
+              </>
+            )}
           </div>
         ) : null}
       </div>
