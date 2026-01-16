@@ -1118,9 +1118,9 @@ export default function LandingPage() {
             <Link href="/privacy" className="hover:text-[#333]">
               개인정보처리방침
             </Link>
-            <a href="#" className="hover:text-[#333]">
-              문의하기
-            </a>
+            <Link href="/refund" className="hover:text-[#333]">
+              환불정책
+            </Link>
           </div>
         </div>
       </footer>
