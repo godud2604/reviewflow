@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase-admin';
 
+const getTodayInKST = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+
 export async function GET(request: NextRequest) {
   try {
     const metaCache = (globalThis as typeof globalThis & {
@@ -61,7 +64,8 @@ export async function GET(request: NextRequest) {
       .eq('user_id', userId);
 
     if (!includeCompleted) {
-      query = query.neq('status', '완료');
+      const today = getTodayInKST();
+      query = query.or(`status.neq.완료,and(status.eq.완료,visit_date.gte.${today})`);
     }
 
     const shouldFilterMonthInMemory = Boolean(month) && !includeMeta && !selectedDate;
@@ -129,11 +133,9 @@ export async function GET(request: NextRequest) {
         query = query.order('deadline', { ascending: false, nullsFirst: false });
         break;
       case 'visit-asc':
-        query = query.neq('visit_date', '').not('visit_date', 'is', null);
         query = query.order('visit_date', { ascending: true, nullsFirst: false });
         break;
       case 'visit-desc':
-        query = query.neq('visit_date', '').not('visit_date', 'is', null);
         query = query.order('visit_date', { ascending: false, nullsFirst: false });
         break;
       case 'amount-asc':
@@ -249,7 +251,8 @@ export async function GET(request: NextRequest) {
       .eq('user_id', userId);
 
     if (!includeCompleted) {
-      countQuery = countQuery.neq('status', '완료');
+      const today = getTodayInKST();
+      countQuery = countQuery.or(`status.neq.완료,and(status.eq.완료,visit_date.gte.${today})`);
     }
 
     // 동일한 필터 적용
