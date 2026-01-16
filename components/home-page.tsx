@@ -688,7 +688,11 @@ export default function HomePage({
                         ? '마감일 최신순'
                         : sortBy === 'visit-desc'
                           ? '방문일 최신순'
-                          : '정렬'
+                          : sortBy === 'amount-desc'
+                            ? '금액 높은순'
+                            : sortBy === 'amount-asc'
+                              ? '금액 낮은순'
+                              : '정렬'
                 }
                 isActive={true} // Default selected
               >
@@ -730,6 +734,24 @@ export default function HomePage({
                           )}
                         />
                         방문일 최신순
+                      </CommandItem>
+                      <CommandItem onSelect={() => setSortBy('amount-desc')}>
+                        <Check
+                          className={cn(
+                            'mr-2 h-4 w-4',
+                            sortBy === 'amount-desc' ? 'opacity-100' : 'opacity-0'
+                          )}
+                        />
+                        금액 높은순
+                      </CommandItem>
+                      <CommandItem onSelect={() => setSortBy('amount-asc')}>
+                        <Check
+                          className={cn(
+                            'mr-2 h-4 w-4',
+                            sortBy === 'amount-asc' ? 'opacity-100' : 'opacity-0'
+                          )}
+                        />
+                        금액 낮은순
                       </CommandItem>
                     </CommandGroup>
                   </CommandList>
