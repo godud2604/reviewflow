@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Bell, Settings } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Bell, Rocket, Settings } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
+import { isAppEnvironment } from '@/lib/app-environment';
+import { openAppDownloadBanner } from '@/lib/app-download-banner';
 
 const KAKAO_TUTORIAL_KEY = 'kakao-alimtalk-notifications-cta';
 
@@ -15,6 +17,9 @@ type GlobalHeaderProps = {
 
 export default function GlobalHeader({ title, onNotifications, onProfile }: GlobalHeaderProps) {
   const [showKakaoCta, setShowKakaoCta] = useState(false);
+  const [showAppLaunchCta, setShowAppLaunchCta] = useState(false);
+  const [appLaunchActive, setAppLaunchActive] = useState(false);
+  const appLaunchTimeoutRef = useRef<number | null>(null);
   const { user } = useAuth();
   const userId = user?.id;
 
@@ -50,6 +55,18 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
     };
   }, [userId]);
 
+  useEffect(() => {
+    setShowAppLaunchCta(!isAppEnvironment());
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (appLaunchTimeoutRef.current) {
+        window.clearTimeout(appLaunchTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleNotificationsClick = async () => {
     if (showKakaoCta && userId) {
       const supabase = getSupabaseClient();
@@ -70,6 +87,17 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
     onNotifications();
   };
 
+  const handleAppLaunchClick = () => {
+    openAppDownloadBanner();
+    setAppLaunchActive(true);
+    if (appLaunchTimeoutRef.current) {
+      window.clearTimeout(appLaunchTimeoutRef.current);
+    }
+    appLaunchTimeoutRef.current = window.setTimeout(() => {
+      setAppLaunchActive(false);
+    }, 900);
+  };
+
   return (
     <div className="sticky top-0 z-30 border-b border-neutral-200/70 bg-[#F7F7F8]/90 backdrop-blur">
       <div className="flex items-center justify-between px-5 pb-3 pt-3">
@@ -77,6 +105,20 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
           <h1 className="text-[20px] font-semibold text-neutral-900">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
+          {showAppLaunchCta && (
+            <button
+              type="button"
+              onClick={handleAppLaunchClick}
+              className={`relative inline-flex items-center justify-center gap-1.5 rounded-full px-3.5 py-2 text-[12px] font-semibold text-white shadow-md transition ${
+                appLaunchActive
+                  ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.18)]'
+                  : 'bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 hover:brightness-105'
+              }`}
+              aria-label="앱 출시 안내 보기"
+            >
+              <Rocket className="h-3.5 w-3.5" />앱 출시
+            </button>
+          )}
           <div className="relative">
             <button
               type="button"

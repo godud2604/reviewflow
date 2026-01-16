@@ -123,7 +123,7 @@ export default function ScheduleItem({
     if (diff >= 0 && diff <= 3) {
       const label = diff === 0 ? 'D-Day' : `D-${diff}`;
       return (
-        <span className="inline-flex items-center justify-center px-1.5 py-0.5 mr-1 text-[10px] font-bold rounded-md bg-orange-100 text-orange-700 border border-orange-200 leading-none">
+        <span className="inline-flex items-center justify-center px-1.5 py-1 mr-1 text-[11px] font-bold rounded-md bg-orange-100 text-orange-700 leading-none">
           {label}
         </span>
       );
@@ -165,8 +165,8 @@ export default function ScheduleItem({
         label: (
           <span className="flex items-center">
             {badge}
-            <span className="mr-1">📍</span>
-            {visitLabel}
+            <span className="mr-0.5">📍</span>
+            <span className="font-bold">{visitLabel}</span>
           </span>
         ),
         className: isVisitActive ? 'font-bold text-sky-700' : undefined,
@@ -185,7 +185,7 @@ export default function ScheduleItem({
           <span className="flex items-center">
             {overdueBadge}
             {badge}
-            {deadLabel}
+            <span className="font-bold">{deadLabel}</span>
           </span>
         ),
         className: `${isDeadActive ? 'font-bold text-rose-700' : ''} ${
@@ -206,7 +206,7 @@ export default function ScheduleItem({
           <span className="flex items-center">
             {overdueBadge}
             {badge}
-            {deadLabel}
+            <span className="font-bold">{deadLabel}</span>
           </span>
         ),
         className: `${isDeadActive ? 'font-bold text-rose-700' : ''} ${
@@ -223,7 +223,7 @@ export default function ScheduleItem({
         label: (
           <span className="flex items-center">
             {badge}
-            <span className="mr-1">📍</span>
+            <span className="mr-0.5">📍</span>
             {visitLabel}
           </span>
         ),
@@ -314,7 +314,7 @@ export default function ScheduleItem({
               : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100'
           }`}
         >
-          <span className="flex justify-center items-center gap-1 px-2 text-[9px] font-bold">
+          <span className="flex justify-center items-center gap-1 px-2 text-[10px] font-bold">
             <span className="translate-y-[-0.5px] truncate">{isCompleted ? '완료' : '완료'}</span>
           </span>
         </button>
@@ -340,7 +340,7 @@ export default function ScheduleItem({
                     : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100'
                 }`}
               >
-                <span className="flex justify-center items-center gap-1 px-2 text-[9px] font-bold">
+                <span className="flex justify-center items-center gap-1 px-2 text-[10px] font-bold">
                   <span className="translate-y-[-0.5px] truncate">{deadline.label}</span>
                 </span>
               </button>
@@ -356,7 +356,7 @@ export default function ScheduleItem({
                 onPaybackConfirm?.();
               }
             }}
-            className={`px-2 py-1 rounded-full text-[9px] font-bold border transition-all active:scale-95 w-full text-center ${
+            className={`px-2 py-1 rounded-full text-[10px] font-bold border transition-all active:scale-95 w-full text-center ${
               isPaid
                 ? 'bg-orange-600/70 text-white border-orange-600 shadow-sm'
                 : 'bg-white text-gray-400 border-gray-200 hover:text-orange-400 hover:border-orange-200'
@@ -374,12 +374,12 @@ export default function ScheduleItem({
             <span className="text-[15px] block truncate max-w-[150px]">{schedule.title}</span>
           </div>
           <div className="text-right min-w-fit pl-2">
-            <div className="font-bold text-[15px] text-neutral-900 leading-tight">
-              ₩{total.toLocaleString()}
+            <div className="text-[13px] text-neutral-500 leading-tight">
+              ₩ {total.toLocaleString()}
             </div>
           </div>
         </div>
-        <div className="text-xs text-neutral-500 flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-1">
+        <div className="text-xs text-neutral-500 flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-1.5">
           {timelineItems.length > 0 ? (
             timelineItems.map((item, index) => (
               <span key={item.key} className="flex items-center whitespace-nowrap">

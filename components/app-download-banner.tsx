@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Z_INDEX } from '@/lib/z-index';
 import { useAuth } from '@/hooks/use-auth';
+import { APP_DOWNLOAD_BANNER_OPEN_EVENT } from '@/lib/app-download-banner';
+import { isAppEnvironment } from '@/lib/app-environment';
 
 const IOS_APP_STORE_URL = 'https://apps.apple.com/kr/app/reviewflow/id6757174544';
 const BANNER_DISMISS_KEY = 'app_download_banner_dismissed';
@@ -15,10 +17,27 @@ export default function AppDownloadBanner() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isDismissed, setIsDismissed] = useState<boolean | null>(null);
+  const [forceVisible, setForceVisible] = useState(false);
+  const [isAppClient, setIsAppClient] = useState<boolean | null>(null);
 
   useEffect(() => {
     const storedValue = window.localStorage.getItem(BANNER_DISMISS_KEY);
     setIsDismissed(storedValue === 'true');
+  }, []);
+
+  useEffect(() => {
+    setIsAppClient(isAppEnvironment());
+  }, []);
+
+  useEffect(() => {
+    const handleOpen = () => {
+      setForceVisible(true);
+    };
+
+    window.addEventListener(APP_DOWNLOAD_BANNER_OPEN_EVENT, handleOpen);
+    return () => {
+      window.removeEventListener(APP_DOWNLOAD_BANNER_OPEN_EVENT, handleOpen);
+    };
   }, []);
 
   const handleOpenAndroidModal = () => {
@@ -34,6 +53,7 @@ export default function AppDownloadBanner() {
     window.localStorage.setItem(BANNER_DISMISS_KEY, 'true');
     setIsDismissed(true);
     setIsAndroidModalOpen(false);
+    setForceVisible(false);
   };
 
   const handleAndroidSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -86,7 +106,15 @@ export default function AppDownloadBanner() {
     return null;
   }
 
-  if (isDismissed === null || isDismissed) {
+  if (isAppClient === null) {
+    return null;
+  }
+
+  if (isAppClient) {
+    return null;
+  }
+
+  if (isDismissed === null || (isDismissed && !forceVisible)) {
     return null;
   }
 
