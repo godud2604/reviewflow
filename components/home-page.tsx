@@ -847,7 +847,7 @@ export default function HomePage({
       {showScrollTop && (
         <button
           onClick={() => scrollTargetRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-28 right-5 z-40 h-11 w-11 rounded-full bg-white text-neutral-700 shadow-xl hover:bg-neutral-50 transition-colors flex items-center justify-center"
+          className="fixed bottom-28 right-5 md:right-[calc(50%-400px+20px)] z-40 h-11 w-11 rounded-full bg-white/90 text-orange-500 shadow-[0_10px_24px_rgba(17,24,39,0.14)] ring-2 ring-orange-200/90 backdrop-blur hover:bg-orange-50 transition-colors flex items-center justify-center"
           aria-label="위로 올라가기"
         >
           <ArrowUp className="h-4 w-4" />
