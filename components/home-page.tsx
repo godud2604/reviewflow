@@ -342,6 +342,34 @@ export default function HomePage({
     setSortBy('deadline-asc');
   };
 
+  const isDefaultSort = sortBy === 'deadline-asc';
+  const hasActiveFilters = Boolean(
+    selectedDate ||
+      selectedPlatforms.length ||
+      selectedStatuses.length ||
+      selectedCategories.length ||
+      selectedReviewTypes.length ||
+      paybackOnly ||
+      completedOnly ||
+      !isDefaultSort ||
+      searchQuery ||
+      searchInput
+  );
+
+  const handleResetFilters = () => {
+    setSelectedDate(null);
+    setSelectedPlatforms([]);
+    setSelectedStatuses([]);
+    setSelectedCategories([]);
+    setSelectedReviewTypes([]);
+    setPaybackOnly(false);
+    setCompletedOnly(false);
+    setSortBy('deadline-asc');
+    setSearchInput('');
+    setSearchQuery('');
+    setShowSearchInput(false);
+  };
+
   if (loading && schedules.length === 0) {
     return (
       <div className="flex-1 overflow-hidden px-5 pb-24 touch-pan-y space-y-3 pt-3 bg-neutral-50/50">
@@ -577,6 +605,16 @@ export default function HomePage({
               >
                 <Search className="h-3.5 w-3.5" />
                 검색
+              </button>
+            )}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+                초기화
               </button>
             )}
             {selectedDate && !isSearchMode && (
