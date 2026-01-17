@@ -755,7 +755,7 @@ export default function HomePage({
       <div className="mt-6">
         {/* 헤더 섹션 */}
         <div className="flex items-start justify-between">
-          <div>
+          <div className="mb-3">
             {/* 5. 타이틀 (수정됨) */}
             <h1 className="text-xl font-bold text-neutral-900 flex items-center gap-1.5">
               {getPageTitle()}
@@ -784,7 +784,7 @@ export default function HomePage({
 
         {/* 검색창 */}
         {!selectedDate && (
-          <div className="mt-3 mb-1 rounded-[22px] border border-neutral-200 bg-white p-1">
+          <div className="mb-1 rounded-[22px] border border-neutral-200 bg-white p-1">
             <div className="h-8 flex items-center gap-2 rounded-[18px] bg-white px-3 py-1.5">
               <span className="text-[14px] text-neutral-400">🔍</span>
               <Input
@@ -832,7 +832,7 @@ export default function HomePage({
                 className="flex items-center gap-2 overflow-x-auto py-0.5 pr-6 scrollbar-hide"
               >
                 {!selectedDate && (
-                  <div className="flex flex-shrink-0 items-center rounded-full bg-neutral-200/60 p-0.5 mr-1 h-7">
+                  <div className="flex flex-shrink-0 items-center rounded-full bg-neutral-200/60 p-1 mr-1 h-7">
                     {/* 1. View Filter 버튼 (클릭 시 정렬 로직 적용) */}
                     <button
                       onClick={() => handleViewFilterChange('TODO')}
