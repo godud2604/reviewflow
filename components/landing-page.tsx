@@ -15,14 +15,21 @@ export default function LandingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isWaitlistModalOpen, setIsWaitlistModalOpen] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState<boolean | null>(null);
 
   const isProd = process.env.NODE_ENV === 'production';
+  const IOS_APP_STORE_URL = 'https://apps.apple.com/kr/app/reviewflow/id6757174544';
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       router.replace('/?page=home');
     }
   }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    setIsMobileDevice(/iPhone|iPad|iPod|Android/i.test(userAgent));
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -429,12 +436,22 @@ export default function LandingPage() {
                 />
               </svg>
             </button>
+            {isMobileDevice === false && (
+              <a
+                href={IOS_APP_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white text-[#191F28] border border-neutral-300 px-5 md:px-8 py-2.5 md:py-4 rounded-full text-xs md:text-lg font-bold shadow-sm hover:bg-neutral-50 transition-all duration-300 flex items-center gap-2 cursor-pointer whitespace-nowrap"
+              >
+                iOS 다운로드
+              </a>
+            )}
           </div>
           <p
             className="mt-4 text-sm font-semibold text-[#FF5722] animate-fade-in"
             style={{ animationDelay: '0.6s' }}
           >
-            회원가입 시 모든 기능을 무료로 이용할 수 있어요.
+            회원가입 시 모든 기능을 1개월 무료로 이용할 수 있어요.
           </p>
         </div>
       </section>
@@ -1048,8 +1065,7 @@ export default function LandingPage() {
               </ul>
               <div className="w-full pt-6 border-t border-gray-100">
                 <div className="flex items-end gap-2 mb-5">
-                  <span className="text-3xl font-bold text-[#191F28]">Beta 무료</span>
-                  <span className="text-lg text-[#8B95A1]">/ 현재 모든 기능 무료 제공</span>
+                  <span className="text-3xl font-bold text-[#191F28]">Beta 1개월 무료</span>
                 </div>
                 <button
                   onClick={handleFreeTrial}
