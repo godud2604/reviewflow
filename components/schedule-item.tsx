@@ -89,8 +89,11 @@ export default function ScheduleItem({
     : '방문일 미정';
   const deadLabel = schedule.dead ? `${schedule.dead.slice(5)} 마감` : '마감 미정';
   const activeDate = selectedDate ?? today;
+  const isListView = !selectedDate;
   const isVisitActive = Boolean(schedule.visit && schedule.visit === activeDate);
   const isDeadActive = Boolean(schedule.dead && schedule.dead === activeDate);
+  const visitDateClass = isListView ? 'text-sky-700' : isVisitActive ? 'font-bold text-sky-700' : '';
+  const deadDateClass = isListView ? 'text-rose-700' : isDeadActive ? 'font-bold text-rose-700' : '';
 
   const total = schedule.benefit + schedule.income - schedule.cost;
   const fallbackStatus = {
@@ -133,7 +136,7 @@ export default function ScheduleItem({
         key: 'visit',
         date: schedule.visit,
         label: visitLabel,
-        className: isVisitActive ? 'font-bold text-sky-700' : undefined,
+        className: visitDateClass || undefined,
       });
     } else {
       undatedItems.push({ key: 'visit-unknown', label: visitLabel });
@@ -144,9 +147,7 @@ export default function ScheduleItem({
         key: 'dead',
         date: schedule.dead,
         label: deadLabel,
-        className: `${isDeadActive ? 'font-bold text-rose-700' : ''} ${
-          isCompleted ? 'line-through opacity-50' : ''
-        }`.trim(),
+        className: `${deadDateClass} ${isCompleted ? 'line-through opacity-50' : ''}`.trim(),
       });
     } else {
       undatedItems.push({ key: 'dead-unknown', label: deadLabel });
@@ -157,9 +158,7 @@ export default function ScheduleItem({
         key: 'dead',
         date: schedule.dead,
         label: deadLabel,
-        className: `${isDeadActive ? 'font-bold text-rose-700' : ''} ${
-          isCompleted ? 'line-through opacity-50' : ''
-        }`.trim(),
+        className: `${deadDateClass} ${isCompleted ? 'line-through opacity-50' : ''}`.trim(),
       });
     }
 
@@ -168,7 +167,7 @@ export default function ScheduleItem({
         key: 'visit',
         date: schedule.visit,
         label: visitLabel,
-        className: isVisitActive ? 'font-bold text-sky-700' : undefined,
+        className: visitDateClass || undefined,
       });
     }
   }
@@ -182,7 +181,7 @@ export default function ScheduleItem({
         key: `additional-${deadline.id}`,
         date: deadline.date,
         label: `${deadline.date.slice(5)} ${deadline.label}`,
-        className: `${isActiveDeadline ? 'font-bold text-rose-700' : ''} ${
+        className: `${isListView ? 'text-rose-700' : isActiveDeadline ? 'font-bold text-rose-700' : ''} ${
           isDeadlineCompleted ? 'line-through opacity-50' : ''
         }`.trim(),
       });
