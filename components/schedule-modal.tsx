@@ -1479,7 +1479,7 @@ export default function ScheduleModal({
 
         <div
           className="relative w-full bg-white rounded-t-[30px] flex flex-col shadow-2xl overflow-hidden animate-slide-up text-neutral-900 mx-auto"
-          style={{ maxHeight: '85%', maxWidth: '800px' }}
+          style={{ maxHeight: '96%', maxWidth: '800px' }}
         >
           <button
             onClick={onClose}
