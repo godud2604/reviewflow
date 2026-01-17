@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Z_INDEX } from '@/lib/z-index';
 import { useAuth } from '@/hooks/use-auth';
+import { APP_LAUNCH_EVENT } from '@/lib/app-launch';
 
 const IOS_APP_STORE_URL = 'https://apps.apple.com/kr/app/reviewflow/id6757174544';
 const BANNER_DISMISS_KEY = 'app_download_banner_dismissed';
@@ -15,10 +16,25 @@ export default function AppDownloadBanner() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isDismissed, setIsDismissed] = useState<boolean | null>(null);
+  const [isManuallyOpen, setIsManuallyOpen] = useState(false);
 
   useEffect(() => {
     const storedValue = window.localStorage.getItem(BANNER_DISMISS_KEY);
     setIsDismissed(storedValue === 'true');
+  }, []);
+
+  useEffect(() => {
+    const handleManualOpen = () => {
+      setMessage(null);
+      setIsAndroidModalOpen(false);
+      setIsManuallyOpen(true);
+      setIsDismissed(false);
+    };
+
+    window.addEventListener(APP_LAUNCH_EVENT, handleManualOpen);
+    return () => {
+      window.removeEventListener(APP_LAUNCH_EVENT, handleManualOpen);
+    };
   }, []);
 
   const handleOpenAndroidModal = () => {
@@ -34,6 +50,7 @@ export default function AppDownloadBanner() {
     window.localStorage.setItem(BANNER_DISMISS_KEY, 'true');
     setIsDismissed(true);
     setIsAndroidModalOpen(false);
+    setIsManuallyOpen(false);
   };
 
   const handleAndroidSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -86,7 +103,9 @@ export default function AppDownloadBanner() {
     return null;
   }
 
-  if (isDismissed === null || isDismissed) {
+  const shouldHideBanner = (isDismissed === null || isDismissed) && !isManuallyOpen;
+
+  if (shouldHideBanner) {
     return null;
   }
 

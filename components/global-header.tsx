@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, Settings } from 'lucide-react';
+import { Bell, Rocket, Settings } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
+import { openAppLaunchModal } from '@/lib/app-launch';
 
 const KAKAO_TUTORIAL_KEY = 'kakao-alimtalk-notifications-cta';
 
@@ -77,6 +78,15 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
           <h1 className="text-[20px] font-semibold text-neutral-900">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={openAppLaunchModal}
+            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#ff7a18] via-[#ff5b6b] to-[#ff3b9f] px-4 py-2 text-[12px] font-semibold text-white shadow-[0_10px_24px_rgba(255,90,90,0.35)] transition hover:brightness-105"
+            aria-label="앱 출시 안내 열기"
+          >
+            <Rocket className="h-4 w-4" />
+            앱출시
+          </button>
           <div className="relative">
             <button
               type="button"

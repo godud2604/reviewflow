@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePostHog } from 'posthog-js/react';
-import { X } from 'lucide-react';
+import { ArrowUp, X } from 'lucide-react';
 
 import type { Schedule } from '@/types';
 import ScheduleItem from '@/components/schedule-item';
@@ -159,6 +159,8 @@ export default function HomePage({
   const [isFeedbackSubmitting, setIsFeedbackSubmitting] = useState(false);
   const filterScrollRef = useRef<HTMLDivElement | null>(null);
   const [showFilterScrollHint, setShowFilterScrollHint] = useState(false);
+  const contentScrollRef = useRef<HTMLDivElement | null>(null);
+  const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -246,6 +248,21 @@ export default function HomePage({
       observer.disconnect();
     };
   }, [updateFilterScrollHint]);
+
+  useEffect(() => {
+    const container = contentScrollRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      setShowScrollTopButton(container.scrollTop > 240);
+    };
+
+    handleScroll();
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   // Options
   const platformOptions = useMemo(() => {
@@ -630,15 +647,15 @@ export default function HomePage({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3 bg-neutral-50/50">
+    <div
+      ref={contentScrollRef}
+      className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3 bg-neutral-50/50"
+    >
       {/* 5. 공지 카드 */}
-      <div className="mt-2 space-y-4">
-        <div className="rounded-[28px] border border-[#FFE3D6] bg-gradient-to-br from-[#FFF5F0] via-white to-[#FFF9F6] px-5 py-4 text-neutral-900 shadow-[0_18px_60px_rgba(255,115,79,0.18)]">
+      <div className="space-y-4">
+        <div className="rounded-[28px] border border-[#FFE3D6] bg-gradient-to-br from-[#FFF5F0] via-white to-[#FFF9F6] px-5 py-4 text-neutral-900">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <span className="shrink-0 rounded-full bg-[#FF5722]/20 px-2 py-1 text-[11px] font-semibold text-[#FFB59E]">
-                공지
-              </span>
               <div>
                 <p className="text-[15px] font-semibold">검색·필터가 더 똑똑해졌어요</p>
                 <p className="mt-1 text-[12px] text-neutral-600">
@@ -1136,6 +1153,17 @@ export default function HomePage({
         )}
         {shouldShowFirstScheduleTutorial && renderTutorialCard()}
       </div>
+
+      {showScrollTopButton && (
+        <button
+          type="button"
+          onClick={() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-24 right-5 md:right-[calc(50%-380px)] z-30 flex h-11 w-11 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-[0_12px_30px_rgba(15,23,42,0.15)] transition hover:scale-[1.02] hover:bg-neutral-50"
+          aria-label="위로 이동"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </button>
+      )}
     </div>
   );
 }
