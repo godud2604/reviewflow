@@ -13,6 +13,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { getSupabaseClient } from '@/lib/supabase';
 import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -104,6 +112,16 @@ const normalizeStatus = (status: string) => {
   return status;
 };
 
+const formatKoreanMonthDay = (dateStr: string) => {
+  const [, month, day] = dateStr.split('-');
+  return `${Number(month)}월 ${Number(day)}일`;
+};
+
+const formatSlashMonthDay = (dateStr: string) => {
+  const [, month, day] = dateStr.split('-');
+  return `${Number(month)}/${Number(day)}일`;
+};
+
 type ViewFilter = 'TODO' | 'DONE';
 type SortOption =
   | 'DEADLINE_SOON'
@@ -162,6 +180,8 @@ export default function HomePage({
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
+  const [calendarCtaDate, setCalendarCtaDate] = useState<string | null>(null);
+  const [isCalendarCtaOpen, setIsCalendarCtaOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -219,6 +239,8 @@ export default function HomePage({
     if (focusDate) {
       setSelectedDate(focusDate);
       setViewFilter('TODO');
+      setCalendarCtaDate(null);
+      setIsCalendarCtaOpen(false);
       onFocusDateApplied?.();
     }
   }, [focusDate, onFocusDateApplied]);
@@ -469,6 +491,8 @@ export default function HomePage({
         return count + c + additionalCount;
       }, 0);
 
+  const selectedDateHasSchedule = selectedDate ? baseList.length > 0 : false;
+
   const isFilterActive =
     sortOption !== 'DEADLINE_SOON' ||
     platformFilter !== 'ALL' ||
@@ -514,9 +538,16 @@ export default function HomePage({
     </div>
   );
 
-  const handleDateClick = (dateStr: string) => {
+  const handleDateClick = (dateStr: string, hasSchedule: boolean) => {
     setSelectedDate(dateStr);
     setViewFilter('TODO');
+    if (hasSchedule) {
+      setCalendarCtaDate(null);
+      setIsCalendarCtaOpen(false);
+    } else {
+      setCalendarCtaDate(dateStr);
+      setIsCalendarCtaOpen(true);
+    }
   };
 
   const resetFilters = () => {
@@ -529,16 +560,19 @@ export default function HomePage({
     setCategoryFilter('ALL');
     setSearchQuery('');
     setSearchInput('');
+    setCalendarCtaDate(null);
+    setIsCalendarCtaOpen(false);
   };
 
   const handleCalendarDateAdd = (dateStr: string) => {
-    handleDateClick(dateStr);
     onCreateSchedule?.(dateStr);
   };
 
   const handleGoToToday = () => {
     setSelectedDate(today);
     setViewFilter('TODO');
+    setCalendarCtaDate(null);
+    setIsCalendarCtaOpen(false);
   };
 
   const applySearch = () => {
@@ -745,11 +779,25 @@ export default function HomePage({
       <CalendarSection
         schedules={schedules}
         onDateClick={handleDateClick}
-        onCreateSchedule={handleCalendarDateAdd}
         onGoToToday={handleGoToToday}
         selectedDate={selectedDate}
         today={today}
       />
+
+      {selectedDate && onCreateSchedule && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => onCreateSchedule(selectedDate)}
+            className="w-full rounded-2xl border border-[#FFD9C2] bg-[#FFE8D8] px-4 py-3 text-[14px] font-semibold text-[#FF8A2A] transition hover:bg-[#FFE0CC]"
+          >
+            <span className="mr-1">
+              {formatSlashMonthDay(selectedDate)} 일정으로 체험단 등록하기
+            </span>
+            <span aria-hidden="true">›</span>
+          </button>
+        </div>
+      )}
 
       {/* 6. 검색 + 필터 컨트롤 */}
       <div className="mt-6">
@@ -862,7 +910,11 @@ export default function HomePage({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setSelectedDate(null)}
+                    onClick={() => {
+                      setSelectedDate(null);
+                      setCalendarCtaDate(null);
+                      setIsCalendarCtaOpen(false);
+                    }}
                     className="h-7 rounded-full border-neutral-200 text-[12px] font-semibold text-neutral-600"
                   >
                     ← 전체 목록 보기
@@ -1176,6 +1228,43 @@ export default function HomePage({
         {shouldShowFirstScheduleTutorial && renderTutorialCard()}
       </div>
 
+      <Drawer
+        open={isCalendarCtaOpen}
+        onOpenChange={(open) => {
+          setIsCalendarCtaOpen(open);
+          if (!open) {
+            setCalendarCtaDate(null);
+          }
+        }}
+      >
+        <DrawerContent className="rounded-t-[28px] border-t border-neutral-200 bg-white px-6 pb-6 pt-3 shadow-[0_-18px_40px_rgba(15,23,42,0.12)]">
+          <DrawerHeader className="items-center text-center">
+            <DrawerTitle className="text-[18px] font-bold text-neutral-900">
+              {calendarCtaDate ? `${formatKoreanMonthDay(calendarCtaDate)} 일정` : '일정'}
+            </DrawerTitle>
+            <DrawerDescription className="mt-2 text-[13px] font-medium text-neutral-500">
+              {calendarCtaDate
+                ? `${formatKoreanMonthDay(calendarCtaDate)}에 등록된 일정이 없어요.`
+                : '등록된 일정이 없어요.'}
+            </DrawerDescription>
+          </DrawerHeader>
+          <DrawerFooter className="pt-3">
+            <Button
+              type="button"
+              className="h-12 rounded-2xl bg-[#FF6A1F] text-[14px] font-bold text-white shadow-[0_14px_34px_rgba(255,106,31,0.35)] hover:bg-[#F25D12]"
+              onClick={() => {
+                if (calendarCtaDate) {
+                  handleCalendarDateAdd(calendarCtaDate);
+                }
+                setIsCalendarCtaOpen(false);
+              }}
+            >
+              등록하기
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
       {showScrollTopButton && (
         <button
           type="button"
@@ -1197,14 +1286,12 @@ function CalendarSection({
   onGoToToday,
   selectedDate,
   today,
-  onCreateSchedule,
 }: {
   schedules: Schedule[];
-  onDateClick: (dateStr: string) => void;
+  onDateClick: (dateStr: string, hasSchedule: boolean) => void;
   onGoToToday: () => void;
   selectedDate: string | null;
   today: string;
-  onCreateSchedule?: (dateStr: string) => void;
 }) {
   const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
   const [currentDate, setCurrentDate] = useState(() => parseDateString(today));
@@ -1417,22 +1504,13 @@ function CalendarSection({
               : indicatorType === 'deadline'
                 ? 'text-orange-700 shadow-[inset_0_0_0_2.5px_rgba(249,115,22,0.6)]'
                 : 'text-neutral-800';
-          const hoverable = !isSelected && !isTodayDate && hasSchedule;
+          const hoverable = !isSelected && !isTodayDate;
           const todayHighlightClass = isTodayDate ? 'bg-orange-300 text-orange-900' : '';
           const selectedHighlightClass = isSelected ? 'bg-orange-100 text-orange-900' : '';
-          const isInteractive = hasSchedule || Boolean(onCreateSchedule);
-          const wasAlreadySelected = selectedDate === dateStr;
+          const isInteractive = true;
           const showPaybackEmoji = Boolean(dayInfo?.hasPaybackPending);
-          const handleDayClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-            onDateClick(dateStr);
-            const isClickInitiated = event.detail === 1;
-            const shouldReopenModal = wasAlreadySelected;
-            if (!hasSchedule && (isClickInitiated || shouldReopenModal)) {
-              onCreateSchedule?.(dateStr);
-            }
-            if (hasSchedule && shouldReopenModal) {
-              onCreateSchedule?.(dateStr);
-            }
+          const handleDayClick = () => {
+            onDateClick(dateStr, hasSchedule);
           };
 
           return (
