@@ -1502,7 +1502,7 @@ export default function ScheduleModal({
             </div>
             {schedule && (
               <div className="sticky top-0 z-40 relative">
-                <div className="bg-white/95 px-4 pt-3 pb-2 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+                <div className="bg-white/95 px-3 pt-3 pb-2 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
                   <div
                     className="flex overflow-x-auto scrollbar-hide bg-neutral-100/80 rounded-full p-1 gap-1"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -1513,7 +1513,7 @@ export default function ScheduleModal({
                         scrollToSection(basicInfoRef);
                         dismissStickyCta();
                       }}
-                      className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
+                      className={`shrink-0 px-2.5 py-2 rounded-full text-[13px] font-semibold transition-all ${
                         activeTab === 'basicInfo'
                           ? 'bg-white text-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
                           : 'text-neutral-500 hover:text-neutral-700'
@@ -1527,7 +1527,7 @@ export default function ScheduleModal({
                         scrollToSection(progressInfoRef);
                         dismissStickyCta();
                       }}
-                      className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
+                      className={`shrink-0 px-2.5 py-2 rounded-full text-[13px] font-semibold transition-all ${
                         activeTab === 'progressInfo'
                           ? 'bg-white text-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
                           : 'text-neutral-500 hover:text-neutral-700'
@@ -1541,7 +1541,7 @@ export default function ScheduleModal({
                         scrollToSection(assetManagementRef);
                         dismissStickyCta();
                       }}
-                      className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
+                      className={`shrink-0 px-2.5 py-2 rounded-full text-[13px] font-semibold transition-all ${
                         activeTab === 'assetManagement'
                           ? 'bg-white text-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
                           : 'text-neutral-500 hover:text-neutral-700'
@@ -1555,7 +1555,7 @@ export default function ScheduleModal({
                         scrollToSection(memoRef);
                         dismissStickyCta();
                       }}
-                      className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
+                      className={`shrink-0 px-2.5 py-2 rounded-full text-[13px] font-semibold transition-all ${
                         activeTab === 'memo'
                           ? 'bg-white text-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
                           : 'text-neutral-500 hover:text-neutral-700'
@@ -1563,22 +1563,6 @@ export default function ScheduleModal({
                     >
                       메모장
                     </button>
-                    {guideFilesCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          scrollToSection(guideFilesSectionRef);
-                          dismissStickyCta();
-                        }}
-                        className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
-                          activeTab === 'guideFiles'
-                            ? 'bg-white text-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
-                            : 'text-neutral-500 hover:text-neutral-700'
-                        }`}
-                      >
-                        영수증 ({guideFilesCount})
-                      </button>
-                    )}
                   </div>
                 </div>
                 {showStickyNavigationCta && (

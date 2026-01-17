@@ -714,7 +714,7 @@ export default function HomePage({
             <div className="flex items-start gap-3">
               <div>
                 <p className="text-[15px] font-semibold">검색·필터가 더 똑똑해졌어요</p>
-                <p className="mt-1 text-[13px] text-neutral-600">
+                <p className="mt-1 text-[12px] text-neutral-600">
                   이번에 추가된 기능을 확인하고 의견을 남겨주세요
                 </p>
               </div>
