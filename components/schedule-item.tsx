@@ -205,15 +205,13 @@ export default function ScheduleItem({
     schedule.additionalDeadlines.forEach((deadline) => {
       if (!deadline.date) return;
       const isActiveDeadline = selectedDate && deadline.date === selectedDate;
-      const isDeadlineCompleted = deadline.completed === true;
       dateItems.push({
         key: `additional-${deadline.id}`,
         date: deadline.date,
         label: `${deadline.date.slice(5)} ${deadline.label}`,
-        className:
-          `${isListView ? 'text-rose-700' : isActiveDeadline ? 'font-bold text-rose-700' : ''} ${
-            isDeadlineCompleted ? 'line-through opacity-50' : ''
-          }`.trim(),
+        className: `${
+          isListView ? 'text-rose-700' : isActiveDeadline ? 'font-bold text-rose-700' : ''
+        }`.trim(),
         ddayLabel: getDdayLabel(deadline.date, today),
       });
     });
