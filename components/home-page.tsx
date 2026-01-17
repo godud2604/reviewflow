@@ -160,6 +160,7 @@ export default function HomePage({
   const filterScrollRef = useRef<HTMLDivElement | null>(null);
   const [showFilterScrollHint, setShowFilterScrollHint] = useState(false);
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -250,17 +251,38 @@ export default function HomePage({
   }, [updateFilterScrollHint]);
 
   useEffect(() => {
-    const container = contentScrollRef.current;
-    if (!container) return;
+    const node = contentScrollRef.current;
+    if (!node) return;
+
+    const findScrollableParent = (element: HTMLElement) => {
+      let current: HTMLElement | null = element;
+      while (current && current !== document.body) {
+        const style = window.getComputedStyle(current);
+        const hasScroll =
+          (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+          current.scrollHeight > current.clientHeight;
+        if (hasScroll) return current;
+        current = current.parentElement;
+      }
+      const fallback = document.scrollingElement;
+      return fallback instanceof HTMLElement ? fallback : element;
+    };
+
+    scrollContainerRef.current = findScrollableParent(node);
+    const target = scrollContainerRef.current;
+    if (!target) return;
 
     const handleScroll = () => {
-      setShowScrollTopButton(container.scrollTop > 240);
+      setShowScrollTopButton(target.scrollTop > 240);
     };
 
     handleScroll();
-    container.addEventListener('scroll', handleScroll, { passive: true });
+    target.addEventListener('scroll', handleScroll, { passive: true });
+    const resizeObserver = new ResizeObserver(handleScroll);
+    resizeObserver.observe(target);
     return () => {
-      container.removeEventListener('scroll', handleScroll);
+      target.removeEventListener('scroll', handleScroll);
+      resizeObserver.disconnect();
     };
   }, []);
 
@@ -776,7 +798,7 @@ export default function HomePage({
                   }
                 }}
                 placeholder="제목, 연락처, 메모, 위치로 검색"
-                className="h-6 border-0 bg-transparent p-0 text-[16px] font-medium text-neutral-700 shadow-none placeholder:text-neutral-400 focus-visible:ring-0"
+                className="border-0 bg-transparent px-0 pt-1 text-[16px] font-medium text-neutral-700 shadow-none placeholder:text-neutral-400 focus-visible:ring-0 placeholder:text-[13px]"
               />
               {searchInput && (
                 <button
@@ -1157,8 +1179,8 @@ export default function HomePage({
       {showScrollTopButton && (
         <button
           type="button"
-          onClick={() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-24 right-5 md:right-[calc(50%-380px)] z-30 flex h-11 w-11 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-[0_12px_30px_rgba(15,23,42,0.15)] transition hover:scale-[1.02] hover:bg-neutral-50"
+          onClick={() => scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-24 right-5 md:right-[calc(50%-380px)] z-30 flex h-11 w-11 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-[0_12px_30px_rgba(15,23,42,0.15)] transition hover:scale-[1.02] hover:bg-neutral-50 animate-float-bob"
           aria-label="위로 이동"
         >
           <ArrowUp className="h-5 w-5" />
