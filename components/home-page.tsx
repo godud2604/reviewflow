@@ -9,6 +9,9 @@ import ScheduleItem from '@/components/schedule-item';
 import { parseDateString } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { getSupabaseClient } from '@/lib/supabase';
 import {
   Select,
   SelectContent,
@@ -153,6 +156,9 @@ export default function HomePage({
   const [isNoticeOpen, setIsNoticeOpen] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [isFeedbackSubmitting, setIsFeedbackSubmitting] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
 
   // Demo Data
   const demoSchedules = useMemo(
@@ -485,13 +491,88 @@ export default function HomePage({
 
   const featureDescriptions = [
     '검색창에서 제목, 연락처, 메모, 위치까지 한 번에 찾을 수 있어요.',
-    '마감초과 필터로 급한 일정만 빠르게 모아볼 수 있어요.',
-    '카테고리·플랫폼·페이백 필터를 조합해서 원하는 일정만 남겨요.',
+    '할일, 완료 상태에 따라 일정을 빠르게 확인해요',
+    '카테고리·플랫폼·진행상태·페이백 필터를 조합해서 원하는 일정만 남겨요.',
   ];
 
-  const handleFeedbackSubmit = () => {
-    if (!feedbackText.trim()) return;
-    setFeedbackSubmitted(true);
+  const handleFeedbackSubmit = async () => {
+    const trimmedFeedback = feedbackText.trim();
+    if (!trimmedFeedback) {
+      toast({
+        title: '내용을 입력해주세요',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: '로그인이 필요합니다.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+
+    setIsFeedbackSubmitting(true);
+
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.from('feedback_messages').insert({
+        user_id: user.id,
+        feedback_type: 'feedback',
+        content: trimmedFeedback,
+        metadata: {
+          source: 'home_notice_card',
+          email: user.email ?? null,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      try {
+        const userMetadata = user.user_metadata as { full_name?: string; name?: string } | null;
+
+        await fetch('/api/feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            feedbackType: 'feedback',
+            content: trimmedFeedback,
+            author: {
+              id: user.id,
+              email: user.email ?? null,
+              name: userMetadata?.full_name ?? userMetadata?.name ?? null,
+            },
+          }),
+          keepalive: true,
+        });
+      } catch (notifyError) {
+        console.error('Failed to notify Google Chat:', notifyError);
+      }
+
+      toast({
+        title: '피드백을 전송하였습니다.',
+        description: '검토 후 빠른 시일 내에 반영하겠습니다.',
+        duration: 1500,
+      });
+
+      setFeedbackText('');
+      setFeedbackSubmitted(true);
+    } catch (err) {
+      toast({
+        title: '피드백 전송에 실패했습니다.',
+        description: err instanceof Error ? err.message : '다시 시도해 주세요.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsFeedbackSubmitting(false);
+    }
   };
 
   // 5. 타이틀 생성 로직 (수정됨)
@@ -521,27 +602,17 @@ export default function HomePage({
 
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3 bg-neutral-50/50">
-      {/* 3. 캘린더 */}
-      <CalendarSection
-        schedules={schedules}
-        onDateClick={handleDateClick}
-        onCreateSchedule={handleCalendarDateAdd}
-        onGoToToday={handleGoToToday}
-        selectedDate={selectedDate}
-        today={today}
-      />
-
       {/* 5. 공지 카드 */}
-      <div className="mt-6 space-y-4">
-        <div className="rounded-[28px] bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-900 px-5 py-4 text-white shadow-[0_18px_60px_rgba(15,23,42,0.45)]">
+      <div className="mt-2 space-y-4">
+        <div className="rounded-[28px] border border-[#FFE3D6] bg-gradient-to-br from-[#FFF5F0] via-white to-[#FFF9F6] px-5 py-4 text-neutral-900 shadow-[0_18px_60px_rgba(255,115,79,0.18)]">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <span className="rounded-full bg-blue-500/20 px-2 py-1 text-[11px] font-semibold text-blue-200">
+              <span className="shrink-0 rounded-full bg-[#FF5722]/20 px-2 py-1 text-[11px] font-semibold text-[#FFB59E]">
                 공지
               </span>
               <div>
                 <p className="text-[15px] font-semibold">검색·필터가 더 똑똑해졌어요</p>
-                <p className="mt-1 text-[12px] text-neutral-300">
+                <p className="mt-1 text-[12px] text-neutral-600">
                   이번에 추가된 기능을 확인하고 의견을 남겨주세요
                 </p>
               </div>
@@ -549,28 +620,28 @@ export default function HomePage({
             <button
               type="button"
               onClick={() => setIsNoticeOpen((prev) => !prev)}
-              className="h-8 rounded-full border border-white/10 bg-white/10 px-3 text-[12px] font-semibold text-white hover:bg-white/20"
+              className="shrink-0 h-8 rounded-full border border-[#FF5722]/30 bg-[#FF5722]/10 px-3 text-[12px] font-semibold text-[#E64A19] hover:bg-[#FF5722]/20"
             >
               {isNoticeOpen ? '닫기' : '보기'}
             </button>
           </div>
           {isNoticeOpen && (
             <div className="mt-4 space-y-4">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-[12px] font-semibold text-blue-200">기능 설명</p>
-                <ul className="mt-2 space-y-2 text-[12px] text-neutral-200">
+              <div className="rounded-2xl border border-[#FFE3D6] bg-white p-4">
+                <p className="text-[12px] font-semibold text-[#FFB59E]">기능 설명</p>
+                <ul className="mt-2 space-y-2 text-[12px] text-neutral-600">
                   {featureDescriptions.map((desc) => (
                     <li key={desc} className="flex items-start gap-2">
-                      <span className="mt-0.5 text-blue-300">•</span>
+                      <span className="mt-0.5 text-[#FF8A65]">•</span>
                       <span>{desc}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
+              <div className="rounded-2xl border border-[#FFE3D6] bg-white p-4 space-y-3">
                 <div>
-                  <p className="text-[12px] font-semibold text-blue-200">피드백 제출하기</p>
-                  <p className="mt-1 text-[11px] text-neutral-300">
+                  <p className="text-[12px] font-semibold text-[#FFB59E]">피드백 제출하기</p>
+                  <p className="mt-1 text-[11px] text-neutral-600">
                     개선에 도움이 될 의견을 한 글자도 놓치지 않고 읽을게요.
                   </p>
                 </div>
@@ -581,17 +652,18 @@ export default function HomePage({
                     if (feedbackSubmitted) setFeedbackSubmitted(false);
                   }}
                   placeholder="입력하기"
-                  className="min-h-[90px] w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-[13px] text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  className="min-h-[90px] w-full resize-none rounded-2xl border border-[#FFE3D6] bg-[#FFF7F2] px-4 py-3 text-[13px] text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#FF5722]/40"
                 />
                 <button
                   type="button"
                   onClick={handleFeedbackSubmit}
-                  className="w-full rounded-2xl bg-[#3b82f6] py-3 text-[13px] font-semibold text-white shadow-[0_10px_30px_rgba(59,130,246,0.35)] hover:bg-[#2563eb]"
+                  disabled={isFeedbackSubmitting}
+                  className="w-full rounded-2xl bg-[#FF5722] py-3 text-[13px] font-semibold text-white shadow-[0_10px_30px_rgba(255,87,34,0.35)] hover:bg-[#E64A19] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  제출하기
+                  {isFeedbackSubmitting ? '전송 중...' : '제출하기'}
                 </button>
                 {feedbackSubmitted && (
-                  <p className="text-[11px] font-medium text-blue-200">
+                  <p className="text-[11px] font-medium text-[#E64A19]">
                     의견이 접수되었어요. 고마워요!
                   </p>
                 )}
@@ -600,6 +672,16 @@ export default function HomePage({
           )}
         </div>
       </div>
+
+      {/* 3. 캘린더 */}
+      <CalendarSection
+        schedules={schedules}
+        onDateClick={handleDateClick}
+        onCreateSchedule={handleCalendarDateAdd}
+        onGoToToday={handleGoToToday}
+        selectedDate={selectedDate}
+        today={today}
+      />
 
       {/* 6. 검색 + 필터 컨트롤 */}
       <div className="mt-6">
@@ -623,7 +705,7 @@ export default function HomePage({
                   variant="ghost"
                   size="sm"
                   onClick={resetFilters}
-                  className="h-8 rounded-full px-2 text-[11px] font-medium text-neutral-500 hover:bg-neutral-100"
+                  className="h-7 rounded-full border border-neutral-200 bg-white px-2 text-[11px] font-medium text-neutral-500 shadow-sm hover:bg-neutral-50"
                 >
                   ↺ 초기화
                 </Button>
@@ -635,7 +717,7 @@ export default function HomePage({
         {/* 검색창 */}
         {!selectedDate && (
           <div className="mt-3 mb-1 rounded-[22px] border border-neutral-200 bg-white p-1">
-            <div className="flex items-center gap-2 rounded-[18px] bg-white px-3 py-1.5">
+            <div className="h-8 flex items-center gap-2 rounded-[18px] bg-white px-3 py-1.5">
               <span className="text-[14px] text-neutral-400">🔍</span>
               <Input
                 type="text"
@@ -665,7 +747,7 @@ export default function HomePage({
               <button
                 type="button"
                 onClick={applySearch}
-                className="shrink-0 h-6 w-10 rounded-full bg-neutral-900 text-[10px] font-semibold text-white shadow-sm hover:bg-neutral-800"
+                className="shrink-0 h-6 w-10 rounded-full bg-neutral-700 text-[10px] font-semibold text-white shadow-sm hover:bg-neutral-600"
               >
                 검색
               </button>
@@ -674,11 +756,11 @@ export default function HomePage({
         )}
 
         {/* 필터 행 */}
-        <div className="sticky top-0 z-20 -mx-5 bg-neutral-50/95 px-5 py-1.5 backdrop-blur-md">
-          <div className="rounded-[22px] border border-neutral-200 bg-white px-3 py-1.5 shadow-[0_10px_26px_rgba(15,23,42,0.08)]">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="sticky top-0 z-20 -mx-5 bg-neutral-50/95 px-5 py-1 backdrop-blur-md">
+          <div className="rounded-[22px] border border-neutral-200 bg-white px-3 py-1 shadow-[0_10px_26px_rgba(15,23,42,0.08)]">
+            <div className="flex items-center gap-2 overflow-x-auto py-0.5 scrollbar-hide">
               {!selectedDate && (
-                <div className="flex flex-shrink-0 items-center rounded-full bg-neutral-200/60 p-0.5 mr-1 h-8">
+                <div className="flex flex-shrink-0 items-center rounded-full bg-neutral-200/60 p-0.5 mr-1 h-7">
                   {/* 1. View Filter 버튼 (클릭 시 정렬 로직 적용) */}
                   <button
                     onClick={() => handleViewFilterChange('TODO')}
@@ -709,7 +791,7 @@ export default function HomePage({
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedDate(null)}
-                  className="h-8 rounded-full border-neutral-200 text-[12px] font-semibold text-neutral-600"
+                  className="h-7 rounded-full border-neutral-200 text-[12px] font-semibold text-neutral-600"
                 >
                   ← 전체 목록 보기
                 </Button>
@@ -720,7 +802,10 @@ export default function HomePage({
                     value={sortOption}
                     onValueChange={(value) => setSortOption(value as SortOption)}
                   >
-                    <SelectTrigger className="h-8 w-fit gap-2 rounded-full border-neutral-200 bg-white px-3 text-[12px] font-semibold text-neutral-700 shadow-sm focus:ring-0">
+                    <SelectTrigger
+                      size="sm"
+                      className="h-7w-fit gap-2 rounded-full border-neutral-200 bg-white px-3 text-[12px] font-semibold text-neutral-700 shadow-sm focus:ring-0"
+                    >
                       <SelectValue placeholder="정렬" />
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
@@ -761,7 +846,8 @@ export default function HomePage({
                   {/* 플랫폼 필터 */}
                   <Select value={platformFilter} onValueChange={setPlatformFilter}>
                     <SelectTrigger
-                      className={`h-8 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
+                      size="sm"
+                      className={`h-7 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
                         platformFilter !== 'ALL'
                           ? 'border-orange-200 bg-orange-50 text-orange-800'
                           : 'border-neutral-200 bg-white text-neutral-700'
@@ -796,7 +882,8 @@ export default function HomePage({
                   {viewFilter !== 'DONE' && (
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger
-                        className={`h-8 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
+                        size="sm"
+                        className={`h-7 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
                           statusFilter !== 'ALL'
                             ? 'border-orange-200 bg-orange-50 text-orange-800'
                             : 'border-neutral-200 bg-white text-neutral-700'
@@ -845,7 +932,8 @@ export default function HomePage({
                   {/* 카테고리 필터 */}
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                     <SelectTrigger
-                      className={`h-8 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
+                      size="sm"
+                      className={`h-7 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
                         categoryFilter !== 'ALL'
                           ? 'border-orange-200 bg-orange-50 text-orange-800'
                           : 'border-neutral-200 bg-white text-neutral-700'
@@ -879,7 +967,8 @@ export default function HomePage({
                     onValueChange={(val) => setPaybackFilter(val as any)}
                   >
                     <SelectTrigger
-                      className={`h-8 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
+                      size="sm"
+                      className={`h-7 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
                         paybackFilter !== 'ALL'
                           ? 'border-orange-200 bg-orange-50 text-orange-800'
                           : 'border-neutral-200 bg-white text-neutral-700'
