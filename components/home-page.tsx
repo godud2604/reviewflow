@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePostHog } from 'posthog-js/react';
+import { X } from 'lucide-react';
 
 import type { Schedule } from '@/types';
 import ScheduleItem from '@/components/schedule-item';
@@ -15,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 // --- 날짜/시간 유틸리티 ---
 const formatDateStringKST = (date: Date) =>
@@ -129,14 +129,17 @@ export default function HomePage({
   const now = getNowInKST();
   const today = now.date;
   const nowMinutes = toMinutes(now.time, 0);
+
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewFilter, setViewFilter] = useState<ViewFilter>('TODO');
   const [sortOption, setSortOption] = useState<SortOption>('DEADLINE_SOON');
-  const [platformFilter, setPlatformFilter] = useState('전체');
-  const [statusFilter, setStatusFilter] = useState('전체');
-  const [categoryFilter, setCategoryFilter] = useState('전체');
+  const [platformFilter, setPlatformFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [paybackFilter, setPaybackFilter] = useState<'ALL' | 'ONLY'>('ALL');
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [showOverdueOnly, setShowOverdueOnly] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
 
   // Demo Data
@@ -197,6 +200,7 @@ export default function HomePage({
     }
   }, [focusDate, onFocusDateApplied]);
 
+  // Options
   const platformOptions = useMemo(() => {
     const values = schedules
       .map((schedule) => schedule.platform)
@@ -218,6 +222,7 @@ export default function HomePage({
     return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
   }, [schedules]);
 
+  // --- Filtering Logic ---
   const baseList = selectedDate
     ? schedules.filter(
         (schedule) =>
@@ -234,13 +239,29 @@ export default function HomePage({
       : baseList.filter((schedule) => isDoneSchedule(schedule));
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
+
   const filteredSchedules = selectedDate
     ? viewBaseList
     : viewBaseList.filter((schedule) => {
-        if (platformFilter !== '전체' && schedule.platform !== platformFilter) return false;
-        if (statusFilter !== '전체' && schedule.status !== statusFilter) return false;
-        if (categoryFilter !== '전체' && schedule.category !== categoryFilter) return false;
-        if (showOverdueOnly && !isOverdueSchedule(schedule)) return false;
+        // 1. 플랫폼
+        if (platformFilter !== 'ALL' && schedule.platform !== platformFilter) return false;
+
+        // 2. 페이백
+        if (paybackFilter === 'ONLY' && !schedule.paybackExpected) return false;
+
+        // 3. 진행상태 (마감초과 포함)
+        if (statusFilter === 'OVERDUE') {
+          if (!isOverdueSchedule(schedule)) return false;
+        } else if (statusFilter === 'HIDE_OVERDUE') {
+          if (isOverdueSchedule(schedule)) return false;
+        } else if (statusFilter !== 'ALL' && schedule.status !== statusFilter) {
+          return false;
+        }
+
+        // 4. 카테고리
+        if (categoryFilter !== 'ALL' && schedule.category !== categoryFilter) return false;
+
+        // 5. 검색
         if (!normalizedQuery) return true;
 
         const searchTarget = [
@@ -258,6 +279,7 @@ export default function HomePage({
         return searchTarget.includes(normalizedQuery);
       });
 
+  // --- Sorting Logic ---
   const getDeadlineDates = (schedule: Schedule) => {
     const additionalDates = (schedule.additionalDeadlines || [])
       .filter((deadline) => deadline.date && !deadline.completed)
@@ -340,10 +362,10 @@ export default function HomePage({
 
   const isFilterActive =
     sortOption !== 'DEADLINE_SOON' ||
-    platformFilter !== '전체' ||
-    statusFilter !== '전체' ||
-    categoryFilter !== '전체' ||
-    showOverdueOnly ||
+    platformFilter !== 'ALL' ||
+    paybackFilter !== 'ALL' ||
+    statusFilter !== 'ALL' ||
+    categoryFilter !== 'ALL' ||
     Boolean(searchQuery.trim());
 
   const shouldShowFirstScheduleTutorial =
@@ -351,8 +373,10 @@ export default function HomePage({
   const shouldShowFilterTutorial =
     hasSchedules && schedules.length <= 1 && displayedSchedules.length === 0;
 
+  // --- Helpers ---
   const renderTutorialCard = () => (
     <div className="space-y-5 rounded-3xl border border-neutral-200 bg-gradient-to-b from-[#fff6ed] via-white to-white px-5 py-4 shadow-[0_24px_60px_rgba(15,23,42,0.09)]">
+      {/* ... Tutorial content ... */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffecd1] to-[#ffe1cc] text-[#ff6a1f] shadow-inner">
@@ -374,11 +398,6 @@ export default function HomePage({
                 <span className="font-bold text-orange-600">하단 네비게이션 바</span>에서{' '}
                 <b className="text-orange-500">"통계"</b>를 누르면 바로 이동할 수 있어요.
               </p>
-              <p className="text-[12px] text-neutral-500 leading-relaxed">
-                체험단에 <span className="font-bold text-orange-600">금액</span>을 입력하면 이번 달{' '}
-                <span className="font-bold text-orange-600">예상 수익</span>을 자동으로 확인할 수
-                있어요.
-              </p>
             </div>
           </div>
         </li>
@@ -395,11 +414,11 @@ export default function HomePage({
     setSelectedDate(null);
     setViewFilter('TODO');
     setSortOption('DEADLINE_SOON');
-    setPlatformFilter('전체');
-    setStatusFilter('전체');
-    setCategoryFilter('전체');
+    setPlatformFilter('ALL');
+    setPaybackFilter('ALL');
+    setStatusFilter('ALL');
+    setCategoryFilter('ALL');
     setSearchQuery('');
-    setShowOverdueOnly(false);
   };
 
   const handleCalendarDateAdd = (dateStr: string) => {
@@ -410,6 +429,48 @@ export default function HomePage({
   const handleGoToToday = () => {
     setSelectedDate(today);
     setViewFilter('TODO');
+  };
+
+  const closeSearch = () => {
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const getStatusFilterLabel = () => {
+    if (statusFilter === 'ALL') return '진행상태';
+    if (statusFilter === 'OVERDUE') return '마감초과';
+    if (statusFilter === 'HIDE_OVERDUE') return '마감초과 제외';
+    return statusFilter;
+  };
+
+  const getPaybackFilterLabel = () => {
+    if (paybackFilter === 'ONLY') return '페이백 있음';
+    return '페이백';
+  };
+
+  // 5. 타이틀 생성 로직 (수정됨)
+  const getPageTitle = () => {
+    const statusText = viewFilter === 'TODO' ? '할 일' : '완료';
+
+    if (selectedDate) {
+      // YYYY-MM-DD -> M월 D일
+      const [_, m, d] = selectedDate.split('-');
+      return `${Number(m)}월 ${Number(d)}일 ${statusText}`;
+    }
+
+    return statusText;
+  };
+
+  // 1. 뷰 필터 변경 핸들러 (수정됨: 완료 시 정렬 변경)
+  const handleViewFilterChange = (filter: ViewFilter) => {
+    setViewFilter(filter);
+    if (filter === 'DONE') {
+      // 완료 탭 -> 마감 최신순 디폴트
+      setSortOption('DEADLINE_LATE');
+    } else {
+      // 할 일 탭 -> 마감 임박순 디폴트 (복귀 시 리셋이 필요하다면)
+      setSortOption('DEADLINE_SOON');
+    }
   };
 
   return (
@@ -424,45 +485,112 @@ export default function HomePage({
         today={today}
       />
 
-      {/* 5. 검색 + 컨트롤 */}
-      <div className="mt-4 space-y-3">
-        {!selectedDate && (
-          <div className="rounded-2xl border border-neutral-200 bg-white p-2 shadow-[0_10px_20px_rgba(15,23,42,0.05)]">
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-[14px]">
-                🔍
-              </span>
-              <Input
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="제목, 연락처, 메모 등으로 검색"
-                className="h-10 rounded-full border-neutral-200 bg-neutral-50/80 pl-8 text-[12px] font-medium text-neutral-700 placeholder:text-neutral-400"
-              />
+      {/* 5. 검색 + 필터 컨트롤 */}
+      <div className="mt-6 space-y-4">
+        {/* 헤더 섹션 */}
+        <div className="flex items-start justify-between">
+          <div>
+            {/* 5. 타이틀 (수정됨) */}
+            <h1 className="text-xl font-bold text-neutral-900 flex items-center gap-1.5">
+              {getPageTitle()}
+              <span className="text-neutral-900">{filteredSchedules.length}건</span>
+            </h1>
+            <p className="mt-1 text-[12px] font-medium text-neutral-500">
+              방문 {visitCount}건 · 마감 {deadlineCount}건
+            </p>
+          </div>
+          {!selectedDate && (
+            <div className="flex items-center gap-2">
+              {isFilterActive && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="h-8 rounded-full px-2 text-[11px] font-medium text-neutral-500 hover:bg-neutral-100"
+                >
+                  ↺ 초기화
+                </Button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                className={`flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium transition-all shadow-sm active:scale-95 ${
+                  isSearchOpen || searchQuery
+                    ? 'border-orange-200 bg-orange-50 text-orange-700'
+                    : 'border-neutral-200 bg-white text-neutral-600'
+                }`}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <span>검색</span>
+              </button>
             </div>
+          )}
+        </div>
+
+        {/* 확장형 검색창 */}
+        {isSearchOpen && !selectedDate && (
+          <div className="relative animate-in slide-in-from-top-2 fade-in duration-200">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-[14px]">
+              🔍
+            </span>
+            <Input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="제목, 플랫폼, 메모 등으로 검색"
+              className="h-10 rounded-2xl border-neutral-200 bg-white pl-9 pr-10 text-[13px] font-medium text-neutral-700 shadow-sm placeholder:text-neutral-400 focus:border-orange-300 focus:ring-orange-100"
+              autoFocus
+            />
+            <button
+              onClick={closeSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 p-1"
+            >
+              <X size={16} />
+            </button>
           </div>
         )}
 
-        <div className="sticky top-0 z-20 -mx-5 bg-neutral-50/95 px-5 pb-3 pt-2 backdrop-blur-md">
-          <div className="flex items-center justify-between gap-3">
-            <ToggleGroup
-              type="single"
-              value={viewFilter}
-              onValueChange={(value) => {
-                if (value) setViewFilter(value as ViewFilter);
-              }}
-              disabled={Boolean(selectedDate)}
-              variant="outline"
-              size="sm"
-              className="rounded-full overflow-hidden border border-neutral-200 bg-white"
-            >
-              <ToggleGroupItem value="TODO" className="px-3 text-[12px] font-semibold">
-                할 일 {todoCount}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="DONE" className="px-3 text-[12px] font-semibold">
-                완료 {doneCount}
-              </ToggleGroupItem>
-            </ToggleGroup>
+        {/* 필터 행 */}
+        <div className="sticky top-0 z-20 -mx-5 bg-neutral-50/95 px-5 py-2 backdrop-blur-md">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {!selectedDate && (
+              <div className="flex flex-shrink-0 items-center rounded-full bg-neutral-200/60 p-0.5 mr-1 h-8">
+                {/* 1. View Filter 버튼 (클릭 시 정렬 로직 적용) */}
+                <button
+                  onClick={() => handleViewFilterChange('TODO')}
+                  className={`rounded-full px-3 h-full flex items-center text-[12px] font-bold transition-all ${
+                    viewFilter === 'TODO'
+                      ? 'bg-white text-neutral-900 shadow-sm'
+                      : 'text-neutral-500 hover:text-neutral-700'
+                  }`}
+                >
+                  할 일
+                </button>
+                <button
+                  onClick={() => handleViewFilterChange('DONE')}
+                  className={`rounded-full px-3 h-full flex items-center text-[12px] font-bold transition-all ${
+                    viewFilter === 'DONE'
+                      ? 'bg-white text-neutral-900 shadow-sm'
+                      : 'text-neutral-500 hover:text-neutral-700'
+                  }`}
+                >
+                  완료
+                </button>
+              </div>
+            )}
 
             {selectedDate ? (
               <Button
@@ -472,114 +600,197 @@ export default function HomePage({
                 onClick={() => setSelectedDate(null)}
                 className="h-8 rounded-full border-neutral-200 text-[12px] font-semibold text-neutral-600"
               >
-                전체보기
+                ← 전체 목록 보기
               </Button>
             ) : (
-              <Select
-                value={sortOption}
-                onValueChange={(value) => setSortOption(value as SortOption)}
-              >
-                <SelectTrigger className="h-8 rounded-full border-neutral-200 bg-white text-[12px] font-semibold text-neutral-700">
-                  <SelectValue placeholder="정렬" />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl border border-neutral-200 bg-white shadow-lg">
-                  <SelectItem value="DEADLINE_SOON">마감임박순</SelectItem>
-                  <SelectItem value="DEADLINE_LATE">마감최신순</SelectItem>
-                  <SelectItem value="VISIT_SOON">방문임박순</SelectItem>
-                  <SelectItem value="VISIT_LATE">방문최신순</SelectItem>
-                  <SelectItem value="AMOUNT_HIGH">금액높은순</SelectItem>
-                  <SelectItem value="AMOUNT_LOW">금액낮은순</SelectItem>
-                </SelectContent>
-              </Select>
+              <>
+                {/* 정렬 필터 */}
+                <Select
+                  value={sortOption}
+                  onValueChange={(value) => setSortOption(value as SortOption)}
+                >
+                  <SelectTrigger className="h-8 w-fit gap-2 rounded-full border-neutral-200 bg-white px-3 text-[12px] font-semibold text-neutral-700 shadow-sm focus:ring-0">
+                    <SelectValue placeholder="정렬" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
+                    <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
+                      정렬 기준
+                    </div>
+                    <SelectItem
+                      value="DEADLINE_SOON"
+                      className="rounded-xl text-[13px] font-medium"
+                    >
+                      마감 임박순
+                    </SelectItem>
+                    <SelectItem
+                      value="DEADLINE_LATE"
+                      className="rounded-xl text-[13px] font-medium"
+                    >
+                      마감 최신순
+                    </SelectItem>
+                    <SelectItem value="VISIT_SOON" className="rounded-xl text-[13px] font-medium">
+                      방문 임박순
+                    </SelectItem>
+                    <SelectItem value="VISIT_LATE" className="rounded-xl text-[13px] font-medium">
+                      방문 최신순
+                    </SelectItem>
+                    <div className="my-1 h-[1px] bg-neutral-100" />
+                    <SelectItem value="AMOUNT_HIGH" className="rounded-xl text-[13px] font-medium">
+                      금액 높은순
+                    </SelectItem>
+                    <SelectItem value="AMOUNT_LOW" className="rounded-xl text-[13px] font-medium">
+                      금액 낮은순
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* 플랫폼 필터 */}
+                <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                  <SelectTrigger
+                    className={`h-8 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
+                      platformFilter !== 'ALL'
+                        ? 'border-orange-200 bg-orange-50 text-orange-800'
+                        : 'border-neutral-200 bg-white text-neutral-700'
+                    }`}
+                  >
+                    <span>
+                      {platformFilter === 'ALL' ? '플랫폼' : getPlatformDisplayName(platformFilter)}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px] rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
+                    <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
+                      플랫폼 선택
+                    </div>
+                    <SelectItem value="ALL" className="rounded-xl text-[13px] font-medium">
+                      전체 보기
+                    </SelectItem>
+                    {platformOptions.map((platform) => (
+                      <SelectItem
+                        key={platform}
+                        value={platform}
+                        className="rounded-xl text-[13px] font-medium"
+                      >
+                        {getPlatformDisplayName(platform)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* 4. 진행상태 필터 (완료 탭에서는 숨김) & 3. 마감초과 아래로 이동 */}
+                {viewFilter !== 'DONE' && (
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger
+                      className={`h-8 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
+                        statusFilter !== 'ALL'
+                          ? 'border-orange-200 bg-orange-50 text-orange-800'
+                          : 'border-neutral-200 bg-white text-neutral-700'
+                      }`}
+                    >
+                      <span>{getStatusFilterLabel()}</span>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
+                      <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
+                        진행상태 선택
+                      </div>
+                      <SelectItem value="ALL" className="rounded-xl text-[13px] font-medium">
+                        전체 보기
+                      </SelectItem>
+                      <div className="my-1 h-[1px] bg-neutral-100" />
+
+                      {/* 기본 상태 옵션들 */}
+                      {statusOptions.map((status) => (
+                        <SelectItem
+                          key={status}
+                          value={status}
+                          className="rounded-xl text-[13px] font-medium"
+                        >
+                          {status}
+                        </SelectItem>
+                      ))}
+
+                      <div className="my-1 h-[1px] bg-neutral-100" />
+                      {/* 마감초과 관련 (맨 아래로 이동) */}
+                      <SelectItem
+                        value="OVERDUE"
+                        className="rounded-xl text-[13px] font-medium text-orange-600"
+                      >
+                        🔥 마감초과만 보기
+                      </SelectItem>
+                      <SelectItem
+                        value="HIDE_OVERDUE"
+                        className="rounded-xl text-[13px] font-medium text-neutral-500"
+                      >
+                        🚫 마감초과 안보기
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {/* 카테고리 필터 */}
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger
+                    className={`h-8 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
+                      categoryFilter !== 'ALL'
+                        ? 'border-orange-200 bg-orange-50 text-orange-800'
+                        : 'border-neutral-200 bg-white text-neutral-700'
+                    }`}
+                  >
+                    <span>{categoryFilter === 'ALL' ? '카테고리' : categoryFilter}</span>
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
+                    {/* 2. 카테고리 선택 타이틀 추가 */}
+                    <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
+                      카테고리 선택
+                    </div>
+                    <SelectItem value="ALL" className="rounded-xl text-[13px] font-medium">
+                      전체 보기
+                    </SelectItem>
+                    {categoryOptions.map((category) => (
+                      <SelectItem
+                        key={category}
+                        value={category}
+                        className="rounded-xl text-[13px] font-medium"
+                      >
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* 2. 페이백 필터 (카테고리 오른쪽 = 제일 오른쪽으로 이동) */}
+                <Select value={paybackFilter} onValueChange={(val) => setPaybackFilter(val as any)}>
+                  <SelectTrigger
+                    className={`h-8 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
+                      paybackFilter !== 'ALL'
+                        ? 'border-orange-200 bg-orange-50 text-orange-800'
+                        : 'border-neutral-200 bg-white text-neutral-700'
+                    }`}
+                  >
+                    <span>{getPaybackFilterLabel()}</span>
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
+                    <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
+                      페이백 여부
+                    </div>
+                    <SelectItem value="ALL" className="rounded-xl text-[13px] font-medium">
+                      전체 보기
+                    </SelectItem>
+                    <SelectItem
+                      value="ONLY"
+                      className="rounded-xl text-[13px] font-medium text-orange-600"
+                    >
+                      💰 페이백 있는 건만
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
             )}
           </div>
-
-          {!selectedDate && (
-            <div className="mt-2 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              {isFilterActive && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={resetFilters}
-                  className="rounded-full text-[12px] font-semibold text-neutral-700"
-                >
-                  ↺ 초기화
-                </Button>
-              )}
-              <button
-                type="button"
-                onClick={() => setShowOverdueOnly((prev) => !prev)}
-                className={`h-8 whitespace-nowrap rounded-full border px-3 text-[12px] font-semibold transition-colors ${
-                  showOverdueOnly
-                    ? 'border-transparent bg-[#ff6a1f] text-white'
-                    : 'border-neutral-200 bg-white text-neutral-700'
-                }`}
-                aria-pressed={showOverdueOnly}
-              >
-                마감초과
-              </button>
-              <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger
-                  className={`h-8 rounded-full border-neutral-200 text-[12px] font-semibold ${
-                    platformFilter !== '전체' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-700'
-                  }`}
-                >
-                  <SelectValue placeholder="플랫폼" />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl border border-neutral-200 bg-white shadow-lg">
-                  <SelectItem value="전체">플랫폼</SelectItem>
-                  {platformOptions.map((platform) => (
-                    <SelectItem key={platform} value={platform}>
-                      {getPlatformDisplayName(platform)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger
-                  className={`h-8 rounded-full border-neutral-200 text-[12px] font-semibold ${
-                    statusFilter !== '전체' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-700'
-                  }`}
-                >
-                  <SelectValue placeholder="진행상태" />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl border border-neutral-200 bg-white shadow-lg">
-                  <SelectItem value="전체">진행상태</SelectItem>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger
-                  className={`h-8 rounded-full border-neutral-200 text-[12px] font-semibold ${
-                    categoryFilter !== '전체' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-700'
-                  }`}
-                >
-                  <SelectValue placeholder="카테고리" />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl border border-neutral-200 bg-white shadow-lg">
-                  <SelectItem value="전체">카테고리</SelectItem>
-                  {categoryOptions.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* 6. 일정 리스트 아이템 */}
+      {/* 6. 일정 리스트 아이템 (기존 로직 유지) */}
       <div className="space-y-3">
-        <div className="text-[11px] font-semibold text-neutral-500">
-          방문일 {visitCount}건 · 마감일 {deadlineCount}건
-        </div>
         {!hasSchedules ? (
           <div className="bg-white rounded-3xl p-4 text-center shadow-sm shadow-[0_18px_40px_rgba(15,23,42,0.06)] border border-neutral-100 space-y-4">
             <div className="space-y-1">
@@ -746,14 +957,11 @@ function CalendarSection({
       }
     }
 
-    // 추가 마감일 (additionalDeadlines)
     if (schedule.additionalDeadlines && schedule.additionalDeadlines.length > 0) {
       schedule.additionalDeadlines.forEach((deadline) => {
         if (deadline.date) {
           const info = ensureDayInfo(deadline.date);
-
           if (!deadline.completed) {
-            // 미완료인 경우 기존 로직
             info.hasDeadline = true;
             if (deadline.date < today) {
               info.deadlineCount += 1;
@@ -765,7 +973,6 @@ function CalendarSection({
               info.ringStatusColors.push(statusColor);
             }
           } else {
-            // 완료된 경우 주황색 점 표시를 위해 hasCompleted 설정
             info.hasCompleted = true;
           }
         }
