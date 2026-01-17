@@ -108,8 +108,16 @@ export default function ScheduleItem({
   const isListView = !selectedDate;
   const isVisitActive = Boolean(schedule.visit && schedule.visit === activeDate);
   const isDeadActive = Boolean(schedule.dead && schedule.dead === activeDate);
-  const visitDateClass = isListView ? 'text-sky-700' : isVisitActive ? 'font-bold text-sky-700' : '';
-  const deadDateClass = isListView ? 'text-rose-700' : isDeadActive ? 'font-bold text-rose-700' : '';
+  const visitDateClass = isListView
+    ? 'text-sky-700'
+    : isVisitActive
+      ? 'font-bold text-sky-700'
+      : '';
+  const deadDateClass = isListView
+    ? 'text-rose-700'
+    : isDeadActive
+      ? 'font-bold text-rose-700'
+      : '';
 
   const total = schedule.benefit + schedule.income - schedule.cost;
   const fallbackStatus = {
@@ -202,9 +210,10 @@ export default function ScheduleItem({
         key: `additional-${deadline.id}`,
         date: deadline.date,
         label: `${deadline.date.slice(5)} ${deadline.label}`,
-        className: `${isListView ? 'text-rose-700' : isActiveDeadline ? 'font-bold text-rose-700' : ''} ${
-          isDeadlineCompleted ? 'line-through opacity-50' : ''
-        }`.trim(),
+        className:
+          `${isListView ? 'text-rose-700' : isActiveDeadline ? 'font-bold text-rose-700' : ''} ${
+            isDeadlineCompleted ? 'line-through opacity-50' : ''
+          }`.trim(),
         ddayLabel: getDdayLabel(deadline.date, today),
       });
     });
@@ -388,7 +397,6 @@ export default function ScheduleItem({
             </span>
           )}
         </div>
-
       </div>
     </div>
   );

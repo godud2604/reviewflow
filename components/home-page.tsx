@@ -92,6 +92,21 @@ const getPlatformDisplayName = (platform: string) => {
   return platformLabelMap[normalized] ?? platform;
 };
 
+const STATUS_OPTION_SEED = [
+  '선정됨',
+  '방문일 예약 완료',
+  '방문',
+  '배송완료',
+  '완료',
+];
+
+const normalizeStatus = (status: string) => {
+  if (status === '제품 배송 완료' || status === '배송 완료' || status === '배송완료') {
+    return '배송완료';
+  }
+  return status;
+};
+
 type ViewFilter = 'TODO' | 'DONE';
 type SortOption =
   | 'DEADLINE_SOON'
@@ -209,9 +224,9 @@ export default function HomePage({
   }, [schedules]);
 
   const statusOptions = useMemo(() => {
-    const values = schedules
-      .map((schedule) => schedule.status)
-      .filter((status) => status && status !== '재확인');
+    const values = [...STATUS_OPTION_SEED, ...schedules.map((schedule) => schedule.status)]
+      .filter((status) => status && status !== '재확인')
+      .map((status) => normalizeStatus(status));
     return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
   }, [schedules]);
 
@@ -254,7 +269,10 @@ export default function HomePage({
           if (!isOverdueSchedule(schedule)) return false;
         } else if (statusFilter === 'HIDE_OVERDUE') {
           if (isOverdueSchedule(schedule)) return false;
-        } else if (statusFilter !== 'ALL' && schedule.status !== statusFilter) {
+        } else if (
+          statusFilter !== 'ALL' &&
+          normalizeStatus(schedule.status) !== normalizeStatus(statusFilter)
+        ) {
           return false;
         }
 

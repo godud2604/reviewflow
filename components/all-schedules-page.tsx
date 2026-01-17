@@ -56,6 +56,21 @@ const getPlatformDisplayName = (platform: string) => {
   return platformLabelMap[normalized] ?? platform;
 };
 
+const STATUS_OPTION_SEED = [
+  '선정됨',
+  '방문일 예약 완료',
+  '방문',
+  '배송완료',
+  '완료',
+];
+
+const normalizeStatus = (status: string) => {
+  if (status === '제품 배송 완료' || status === '배송 완료' || status === '배송완료') {
+    return '배송완료';
+  }
+  return status;
+};
+
 type ViewFilter = 'TODO' | 'DONE';
 type SortOption =
   | 'DEADLINE_SOON'
@@ -120,9 +135,9 @@ export default function AllSchedulesPage({
   }, [schedules]);
 
   const statusOptions = useMemo(() => {
-    const values = schedules
-      .map((schedule) => schedule.status)
-      .filter((status) => status && status !== '재확인');
+    const values = [...STATUS_OPTION_SEED, ...schedules.map((schedule) => schedule.status)]
+      .filter((status) => status && status !== '재확인')
+      .map((status) => normalizeStatus(status));
     return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
   }, [schedules]);
 
@@ -141,7 +156,9 @@ export default function AllSchedulesPage({
 
   const filteredList = baseList.filter((schedule) => {
     if (platformFilter !== '전체' && schedule.platform !== platformFilter) return false;
-    if (statusFilter !== '전체' && schedule.status !== statusFilter) return false;
+    if (statusFilter !== '전체' && normalizeStatus(schedule.status) !== normalizeStatus(statusFilter)) {
+      return false;
+    }
     if (categoryFilter !== '전체' && schedule.category !== categoryFilter) return false;
     if (!normalizedQuery) return true;
 
@@ -361,9 +378,7 @@ export default function AllSchedulesPage({
               schedule={schedule}
               onClick={() => onScheduleClick(schedule.id)}
               onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
-              onCompletedClick={
-                onCompletedClick ? () => onCompletedClick(schedule.id) : undefined
-              }
+              onCompletedClick={onCompletedClick ? () => onCompletedClick(schedule.id) : undefined}
               onPaybackConfirm={onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined}
               onAdditionalDeadlineToggle={
                 onAdditionalDeadlineToggle
