@@ -47,6 +47,22 @@ const toRgba = (hex: string, alpha = 0.15) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+const getDayDiff = (dateStr: string, todayStr: string) => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [todayYear, todayMonth, todayDay] = todayStr.split('-').map(Number);
+  const target = new Date(year, month - 1, day);
+  const today = new Date(todayYear, todayMonth - 1, todayDay);
+  const diffMs = target.getTime() - today.getTime();
+  return Math.round(diffMs / (24 * 60 * 60 * 1000));
+};
+
+const getDdayLabel = (dateStr: string, todayStr: string) => {
+  const diff = getDayDiff(dateStr, todayStr);
+  if (diff === 0) return 'D-day';
+  if (diff > 0) return `D-${diff}`;
+  return `D+${Math.abs(diff)}`;
+};
+
 export default function ScheduleItem({
   schedule,
   onClick,
@@ -127,6 +143,7 @@ export default function ScheduleItem({
     date: string;
     label: string;
     className?: string;
+    ddayLabel?: string;
   }> = [];
   const undatedItems: Array<{ key: string; label: string; className?: string }> = [];
 
@@ -137,6 +154,7 @@ export default function ScheduleItem({
         date: schedule.visit,
         label: visitLabel,
         className: visitDateClass || undefined,
+        ddayLabel: getDdayLabel(schedule.visit, today),
       });
     } else {
       undatedItems.push({ key: 'visit-unknown', label: visitLabel });
@@ -147,7 +165,8 @@ export default function ScheduleItem({
         key: 'dead',
         date: schedule.dead,
         label: deadLabel,
-        className: `${deadDateClass} ${isCompleted ? 'line-through opacity-50' : ''}`.trim(),
+        className: `${deadDateClass}`.trim(),
+        ddayLabel: getDdayLabel(schedule.dead, today),
       });
     } else {
       undatedItems.push({ key: 'dead-unknown', label: deadLabel });
@@ -158,7 +177,8 @@ export default function ScheduleItem({
         key: 'dead',
         date: schedule.dead,
         label: deadLabel,
-        className: `${deadDateClass} ${isCompleted ? 'line-through opacity-50' : ''}`.trim(),
+        className: `${deadDateClass}`.trim(),
+        ddayLabel: getDdayLabel(schedule.dead, today),
       });
     }
 
@@ -168,6 +188,7 @@ export default function ScheduleItem({
         date: schedule.visit,
         label: visitLabel,
         className: visitDateClass || undefined,
+        ddayLabel: getDdayLabel(schedule.visit, today),
       });
     }
   }
@@ -184,6 +205,7 @@ export default function ScheduleItem({
         className: `${isListView ? 'text-rose-700' : isActiveDeadline ? 'font-bold text-rose-700' : ''} ${
           isDeadlineCompleted ? 'line-through opacity-50' : ''
         }`.trim(),
+        ddayLabel: getDdayLabel(deadline.date, today),
       });
     });
   }
@@ -311,6 +333,11 @@ export default function ScheduleItem({
             timelineItems.map((item, index) => (
               <span key={item.key} className="font-medium text-neutral-600">
                 {index > 0 && <span className="mx-1 text-neutral-400">|</span>}
+                {item.ddayLabel && (
+                  <span className="mr-1 inline-flex items-center rounded-full border border-neutral-200 bg-white px-1.5 py-[1px] text-[9px] font-bold text-neutral-500">
+                    {item.ddayLabel}
+                  </span>
+                )}
                 <span className={item.className}>{item.label}</span>
               </span>
             ))
