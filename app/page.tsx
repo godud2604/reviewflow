@@ -19,6 +19,7 @@ import { useChannels } from '@/hooks/use-channels';
 import { useFeaturedPosts } from '@/hooks/use-featured-posts';
 import { useExtraIncomes } from '@/hooks/use-extra-incomes';
 import { resolveTier } from '@/lib/tier';
+import { isInPwaDisplayMode, isNativeAppWebView } from '@/lib/app-launch';
 import type { Schedule } from '@/types';
 
 function PageContent() {
@@ -38,6 +39,22 @@ function PageContent() {
       router.replace(redirectPath);
     }
   }, [router]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (searchParams.get('page')) return;
+
+    const hash = window.location.hash.replace(/^#/, '');
+    const hashParams = new URLSearchParams(hash);
+    const recoveryType = hashParams.get('type') || searchParams.get('type');
+    if (recoveryType === 'recovery') return;
+
+    if (isNativeAppWebView() || isInPwaDisplayMode()) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('page', 'home');
+      router.replace(`?${params.toString()}`);
+    }
+  }, [router, searchParams]);
 
   // URL 기반 상태 관리
   const page = searchParams.get('page') || 'landing';
