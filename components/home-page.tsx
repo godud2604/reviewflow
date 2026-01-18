@@ -358,6 +358,12 @@ export default function HomePage({
 
     const handleScroll = () => {
       setShowScrollTopButton(target.scrollTop > 240);
+      if (!isMobile) {
+        setIsFilterSticky(false);
+        setFilterStickyStyle(null);
+        setFilterStickyHeight(0);
+        return;
+      }
       const sentinel = filterStickySentinelRef.current;
       const stickyNode = filterStickyRef.current;
       if (!sentinel || !stickyNode) return;
@@ -390,7 +396,7 @@ export default function HomePage({
       target.removeEventListener('scroll', handleScroll);
       resizeObserver.disconnect();
     };
-  }, [filterStickyTop]);
+  }, [filterStickyTop, isMobile]);
 
   // Options
   const platformOptions = useMemo(() => {
@@ -769,15 +775,19 @@ export default function HomePage({
 
         <div
           ref={filterStickyRef}
-          className={`z-20 ${isFilterSticky ? 'fixed' : 'sticky -mx-[20px]'}`}
+          className={`z-20 ${
+            isMobile ? (isFilterSticky ? 'fixed' : 'sticky -mx-[20px]') : ''
+          }`}
           style={
-            isFilterSticky && filterStickyStyle
+            isMobile && isFilterSticky && filterStickyStyle
               ? {
                   top: filterStickyTop,
                   left: filterStickyStyle.left,
                   width: filterStickyStyle.width,
                 }
-              : { top: filterStickyTop }
+              : isMobile
+                ? { top: filterStickyTop }
+                : undefined
           }
         >
           <div className="bg-neutral-50/95 px-5 pt-2 backdrop-blur-md">
@@ -1092,7 +1102,10 @@ export default function HomePage({
         </div>
       </div>
 
-      <div aria-hidden="true" style={{ height: isFilterSticky ? filterStickyHeight : 0 }} />
+      <div
+        aria-hidden="true"
+        style={{ height: isMobile && isFilterSticky ? filterStickyHeight : 0 }}
+      />
 
       {/* 6. 일정 리스트 아이템 */}
       <div className="space-y-3">
