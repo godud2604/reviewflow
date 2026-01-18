@@ -312,6 +312,7 @@ export default function HomePage({
     if (focusDate) {
       setSelectedDate(focusDate);
       setViewFilter('TODO');
+      setSortOption('VISIT_SOON');
       setCalendarCtaDate(null);
       setIsCalendarCtaOpen(false);
       onFocusDateApplied?.();
@@ -627,6 +628,12 @@ export default function HomePage({
     const hasTodoForDate = schedulesForDate.some((schedule) => isTodoSchedule(schedule));
     const hasDoneForDate = schedulesForDate.some((schedule) => isDoneSchedule(schedule));
     const nextFilter = hasTodoForDate ? 'TODO' : hasDoneForDate ? 'DONE' : 'TODO';
+    setPlatformFilter('ALL');
+    setPaybackFilter('ALL');
+    setStatusFilter('ALL');
+    setCategoryFilter('ALL');
+    setSearchQuery('');
+    setSearchInput('');
     setSelectedDate(dateStr);
     handleViewFilterChange(nextFilter);
     setSortOption('VISIT_SOON');
@@ -759,6 +766,10 @@ export default function HomePage({
 
   const handleViewFilterChange = (filter: ViewFilter) => {
     setViewFilter(filter);
+    if (selectedDate) {
+      setSortOption('VISIT_SOON');
+      return;
+    }
     if (filter === 'DONE') {
       setSortOption('DEADLINE_LATE');
     } else {
@@ -849,26 +860,17 @@ export default function HomePage({
           </div>
           {(isFilterActive || selectedDate) && (
             <div className="flex items-center gap-2">
-              {selectedDate && (
+              {!selectedDate && isFilterActive && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={clearSelectedDate}
-                  className="h-8 rounded-full border border-neutral-200 bg-white px-3 text-[12px] font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50"
+                  onClick={resetFilters}
+                  className="h-8 rounded-full border border-orange-500 bg-orange-500 px-3 text-[12px] font-semibold text-white shadow-[0_8px_16px_rgba(255,106,31,0.25)] hover:bg-orange-600"
                 >
-                  전체 할일보기
+                  ↺ 초기화
                 </Button>
               )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={resetFilters}
-                className="h-8 rounded-full border border-orange-500 bg-orange-500 px-3 text-[12px] font-semibold text-white shadow-[0_8px_16px_rgba(255,106,31,0.25)] hover:bg-orange-600"
-              >
-                ↺ 초기화
-              </Button>
             </div>
           )}
         </div>
@@ -892,44 +894,48 @@ export default function HomePage({
         >
           <div className="bg-neutral-50/95 px-5 pt-2 backdrop-blur-md">
             {/* 검색창 */}
-            <div className="mb-1.5 rounded-[22px] border border-neutral-200 bg-white p-1">
-              <div className="h-8 flex items-center gap-2 rounded-[18px] bg-white px-3 py-1.5">
-                <span className="text-[14px] text-neutral-400">🔍</span>
-                <Input
-                  type="text"
-                  ref={searchInputRef}
-                  value={searchInput}
+            {!selectedDate && (
+              <div className="mb-1.5 rounded-[22px] border border-neutral-200 bg-white p-1">
+                <div className="h-8 flex items-center gap-2 rounded-[18px] bg-white px-3 py-1.5">
+                  <span className="text-[14px] text-neutral-400">🔍</span>
+                  <Input
+                    type="text"
+                    ref={searchInputRef}
+                    value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
+                      if ((event.nativeEvent as KeyboardEvent).isComposing) return;
                       event.preventDefault();
                       applySearch();
+                      event.currentTarget.blur();
                     }
                   }}
-                  placeholder="제목, 연락처, 메모, 위치로 검색"
-                  className="border-0 bg-transparent px-0 pt-1 text-[16px] font-medium text-neutral-700 shadow-none placeholder:text-neutral-400 focus-visible:ring-0 placeholder:text-[13px]"
-                />
-                {searchInput && (
+                    placeholder="제목, 연락처, 메모, 위치로 검색"
+                    className="border-0 bg-transparent px-0 pt-1 text-[16px] font-medium text-neutral-700 shadow-none placeholder:text-neutral-400 focus-visible:ring-0 placeholder:text-[13px]"
+                  />
+                  {searchInput && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchInput('');
+                        setSearchQuery('');
+                      }}
+                      className="text-neutral-400 hover:text-neutral-600 p-1"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => {
-                      setSearchInput('');
-                      setSearchQuery('');
-                    }}
-                    className="text-neutral-400 hover:text-neutral-600 p-1"
+                    onClick={applySearch}
+                    className="shrink-0 h-6 w-10 rounded-full bg-neutral-700 text-[10px] font-semibold text-white shadow-sm hover:bg-neutral-600"
                   >
-                    <X size={16} />
+                    검색
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={applySearch}
-                  className="shrink-0 h-6 w-10 rounded-full bg-neutral-700 text-[10px] font-semibold text-white shadow-sm hover:bg-neutral-600"
-                >
-                  검색
-                </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* 필터 행 */}
             <div className="rounded-[22px] border border-neutral-200 bg-white px-3 py-1 shadow-[0_10px_26px_rgba(15,23,42,0.08)]">
@@ -976,214 +982,214 @@ export default function HomePage({
                     </button>
                   </div>
 
-                  {/* 2. 날짜 필터 칩 */}
-                  {selectedDate && (
-                    <button
-                      onClick={clearSelectedDate}
-                      className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-neutral-600 bg-white px-3 text-[12px] font-bold text-neutral-900 shadow-sm hover:bg-neutral-50 animate-in fade-in zoom-in-95 duration-200"
-                    >
-                      <span className="text-orange-600">📅</span>
-                      <span>{formatDotMonthDay(selectedDate)}</span>
-                      <X size={13} className="ml-0.5 text-neutral-400" />
-                    </button>
-                  )}
-
                   {/* 나머지 필터들 */}
-                  <>
-                    <Select
-                      value={sortOption}
-                      onValueChange={(value) => setSortOption(value as SortOption)}
-                    >
-                      <SelectTrigger
-                        size="sm"
-                        className="h-7 w-fit gap-2 rounded-full border-neutral-200 bg-white px-3 text-[12px] font-semibold text-neutral-700 shadow-sm focus:ring-0"
+                  {!selectedDate ? (
+                    <>
+                      <Select
+                        value={sortOption}
+                        onValueChange={(value) => setSortOption(value as SortOption)}
                       >
-                        <SelectValue placeholder="정렬" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
-                        <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
-                          정렬 기준
-                        </div>
-                        <SelectItem
-                          value="DEADLINE_SOON"
-                          className="rounded-xl text-[13px] font-medium"
+                        <SelectTrigger
+                          size="sm"
+                          className="h-7 w-fit gap-2 rounded-full border-neutral-200 bg-white px-3 text-[12px] font-semibold text-neutral-700 shadow-sm focus:ring-0"
                         >
-                          마감 임박순
-                        </SelectItem>
-                        <SelectItem
-                          value="DEADLINE_LATE"
-                          className="rounded-xl text-[13px] font-medium"
-                        >
-                          마감 최신순
-                        </SelectItem>
-                        <SelectItem
-                          value="VISIT_SOON"
-                          className="rounded-xl text-[13px] font-medium"
-                        >
-                          방문 임박순
-                        </SelectItem>
-                        <SelectItem
-                          value="VISIT_LATE"
-                          className="rounded-xl text-[13px] font-medium"
-                        >
-                          방문 최신순
-                        </SelectItem>
-                        <div className="my-1 h-[1px] bg-neutral-100" />
-                        <SelectItem
-                          value="AMOUNT_HIGH"
-                          className="rounded-xl text-[13px] font-medium"
-                        >
-                          금액 높은순
-                        </SelectItem>
-                        <SelectItem
-                          value="AMOUNT_LOW"
-                          className="rounded-xl text-[13px] font-medium"
-                        >
-                          금액 낮은순
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                      <SelectTrigger
-                        size="sm"
-                        className={`h-7 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
-                          platformFilter !== 'ALL'
-                            ? 'border-orange-200 bg-orange-50 text-orange-800'
-                            : 'border-neutral-200 bg-white text-neutral-700'
-                        }`}
-                      >
-                        <span>
-                          {platformFilter === 'ALL'
-                            ? '플랫폼'
-                            : getPlatformDisplayName(platformFilter)}
-                        </span>
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[300px] rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
-                        <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
-                          플랫폼 선택
-                        </div>
-                        <SelectItem value="ALL" className="rounded-xl text-[13px] font-medium">
-                          전체 보기
-                        </SelectItem>
-                        {platformOptions.map((platform) => (
+                          <SelectValue placeholder="정렬" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
+                          <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
+                            정렬 기준
+                          </div>
                           <SelectItem
-                            key={platform}
-                            value={platform}
+                            value="DEADLINE_SOON"
                             className="rounded-xl text-[13px] font-medium"
                           >
-                            {getPlatformDisplayName(platform)}
+                            마감 임박순
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          <SelectItem
+                            value="DEADLINE_LATE"
+                            className="rounded-xl text-[13px] font-medium"
+                          >
+                            마감 최신순
+                          </SelectItem>
+                          <SelectItem
+                            value="VISIT_SOON"
+                            className="rounded-xl text-[13px] font-medium"
+                          >
+                            방문 임박순
+                          </SelectItem>
+                          <SelectItem
+                            value="VISIT_LATE"
+                            className="rounded-xl text-[13px] font-medium"
+                          >
+                            방문 최신순
+                          </SelectItem>
+                          <div className="my-1 h-[1px] bg-neutral-100" />
+                          <SelectItem
+                            value="AMOUNT_HIGH"
+                            className="rounded-xl text-[13px] font-medium"
+                          >
+                            금액 높은순
+                          </SelectItem>
+                          <SelectItem
+                            value="AMOUNT_LOW"
+                            className="rounded-xl text-[13px] font-medium"
+                          >
+                            금액 낮은순
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
 
-                    {viewFilter !== 'DONE' && (
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <Select value={platformFilter} onValueChange={setPlatformFilter}>
                         <SelectTrigger
                           size="sm"
                           className={`h-7 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
-                            statusFilter !== 'ALL'
+                            platformFilter !== 'ALL'
                               ? 'border-orange-200 bg-orange-50 text-orange-800'
                               : 'border-neutral-200 bg-white text-neutral-700'
                           }`}
                         >
-                          <span>{getStatusFilterLabel()}</span>
+                          <span>
+                            {platformFilter === 'ALL'
+                              ? '플랫폼'
+                              : getPlatformDisplayName(platformFilter)}
+                          </span>
                         </SelectTrigger>
-                        <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
+                        <SelectContent className="max-h-[300px] rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
                           <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
-                            진행상태 선택
+                            플랫폼 선택
                           </div>
                           <SelectItem value="ALL" className="rounded-xl text-[13px] font-medium">
                             전체 보기
                           </SelectItem>
-                          <div className="my-1 h-[1px] bg-neutral-100" />
-                          {statusOptions.map((status) => (
+                          {platformOptions.map((platform) => (
                             <SelectItem
-                              key={status}
-                              value={status}
+                              key={platform}
+                              value={platform}
                               className="rounded-xl text-[13px] font-medium"
                             >
-                              {status}
+                              {getPlatformDisplayName(platform)}
                             </SelectItem>
                           ))}
-                          <div className="my-1 h-[1px] bg-neutral-100" />
-                          <SelectItem
-                            value="OVERDUE"
-                            className="rounded-xl text-[13px] font-medium text-orange-600"
+                        </SelectContent>
+                      </Select>
+
+                      {viewFilter !== 'DONE' && (
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger
+                            size="sm"
+                            className={`h-7 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
+                              statusFilter !== 'ALL'
+                                ? 'border-orange-200 bg-orange-50 text-orange-800'
+                                : 'border-neutral-200 bg-white text-neutral-700'
+                            }`}
                           >
-                            🔥 마감초과만 보기
+                            <span>{getStatusFilterLabel()}</span>
+                          </SelectTrigger>
+                          <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
+                            <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
+                              진행상태 선택
+                            </div>
+                            <SelectItem value="ALL" className="rounded-xl text-[13px] font-medium">
+                              전체 보기
+                            </SelectItem>
+                            <div className="my-1 h-[1px] bg-neutral-100" />
+                            {statusOptions.map((status) => (
+                              <SelectItem
+                                key={status}
+                                value={status}
+                                className="rounded-xl text-[13px] font-medium"
+                              >
+                                {status}
+                              </SelectItem>
+                            ))}
+                            <div className="my-1 h-[1px] bg-neutral-100" />
+                            <SelectItem
+                              value="OVERDUE"
+                              className="rounded-xl text-[13px] font-medium text-orange-600"
+                            >
+                              🔥 마감초과만 보기
+                            </SelectItem>
+                            <SelectItem
+                              value="HIDE_OVERDUE"
+                              className="rounded-xl text-[13px] font-medium text-neutral-500"
+                            >
+                              🚫 마감초과 안보기
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger
+                          size="sm"
+                          className={`h-7 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
+                            categoryFilter !== 'ALL'
+                              ? 'border-orange-200 bg-orange-50 text-orange-800'
+                              : 'border-neutral-200 bg-white text-neutral-700'
+                          }`}
+                        >
+                          <span>{categoryFilter === 'ALL' ? '카테고리' : categoryFilter}</span>
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
+                          <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
+                            카테고리 선택
+                          </div>
+                          <SelectItem value="ALL" className="rounded-xl text-[13px] font-medium">
+                            전체 보기
+                          </SelectItem>
+                          {categoryOptions.map((category) => (
+                            <SelectItem
+                              key={category}
+                              value={category}
+                              className="rounded-xl text-[13px] font-medium"
+                            >
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select
+                        value={paybackFilter}
+                        onValueChange={(val) => setPaybackFilter(val as any)}
+                      >
+                        <SelectTrigger
+                          size="sm"
+                          className={`h-7 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
+                            paybackFilter !== 'ALL'
+                              ? 'border-orange-200 bg-orange-50 text-orange-800'
+                              : 'border-neutral-200 bg-white text-neutral-700'
+                          }`}
+                        >
+                          <span>{getPaybackFilterLabel()}</span>
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
+                          <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
+                            페이백 여부
+                          </div>
+                          <SelectItem value="ALL" className="rounded-xl text-[13px] font-medium">
+                            전체 보기
                           </SelectItem>
                           <SelectItem
-                            value="HIDE_OVERDUE"
-                            className="rounded-xl text-[13px] font-medium text-neutral-500"
+                            value="ONLY"
+                            className="rounded-xl text-[13px] font-medium text-orange-600"
                           >
-                            🚫 마감초과 안보기
+                            💰 페이백 있는 건만
                           </SelectItem>
                         </SelectContent>
                       </Select>
-                    )}
-
-                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                      <SelectTrigger
-                        size="sm"
-                        className={`h-7 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
-                          categoryFilter !== 'ALL'
-                            ? 'border-orange-200 bg-orange-50 text-orange-800'
-                            : 'border-neutral-200 bg-white text-neutral-700'
-                        }`}
-                      >
-                        <span>{categoryFilter === 'ALL' ? '카테고리' : categoryFilter}</span>
-                      </SelectTrigger>
-                      <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
-                        <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
-                          카테고리 선택
-                        </div>
-                        <SelectItem value="ALL" className="rounded-xl text-[13px] font-medium">
-                          전체 보기
-                        </SelectItem>
-                        {categoryOptions.map((category) => (
-                          <SelectItem
-                            key={category}
-                            value={category}
-                            className="rounded-xl text-[13px] font-medium"
-                          >
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Select
-                      value={paybackFilter}
-                      onValueChange={(val) => setPaybackFilter(val as any)}
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={resetFilters}
+                      className="h-7 rounded-full border border-orange-200 bg-orange-50 px-3 text-[12px] font-semibold text-orange-700 shadow-sm hover:border-orange-300 hover:bg-orange-100"
                     >
-                      <SelectTrigger
-                        size="sm"
-                        className={`h-7 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
-                          paybackFilter !== 'ALL'
-                            ? 'border-orange-200 bg-orange-50 text-orange-800'
-                            : 'border-neutral-200 bg-white text-neutral-700'
-                        }`}
-                      >
-                        <span>{getPaybackFilterLabel()}</span>
-                      </SelectTrigger>
-                      <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
-                        <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
-                          페이백 여부
-                        </div>
-                        <SelectItem value="ALL" className="rounded-xl text-[13px] font-medium">
-                          전체 보기
-                        </SelectItem>
-                        <SelectItem
-                          value="ONLY"
-                          className="rounded-xl text-[13px] font-medium text-orange-600"
-                        >
-                          💰 페이백 있는 건만
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </>
+                      전체 할일보기
+                    </Button>
+                  )}
                 </div>
                 {showFilterScrollHint && (
                   <>
