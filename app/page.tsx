@@ -19,6 +19,7 @@ import { useChannels } from '@/hooks/use-channels';
 import { useFeaturedPosts } from '@/hooks/use-featured-posts';
 import { useExtraIncomes } from '@/hooks/use-extra-incomes';
 import { resolveTier } from '@/lib/tier';
+import { isInPwaDisplayMode, isNativeAppWebView } from '@/lib/app-launch';
 import type { Schedule } from '@/types';
 
 function PageContent() {
@@ -40,7 +41,9 @@ function PageContent() {
   }, [router]);
 
   // URL 기반 상태 관리
-  const page = searchParams.get('page') || 'landing';
+  const isAppEntry =
+    typeof window !== 'undefined' && (isNativeAppWebView() || isInPwaDisplayMode());
+  const page = searchParams.get('page') || (isAppEntry ? 'home' : 'landing');
   const view = searchParams.get('view');
   const isLandingPage = page === 'landing';
   const currentPage = page === 'home' || page === 'stats' || page === 'profile' ? page : 'home';
@@ -48,6 +51,29 @@ function PageContent() {
 
   // Auth Hook
   const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isAppEntry) return;
+    if (authLoading) return;
+
+    const hash = window.location.hash.replace(/^#/, '');
+    const hashParams = new URLSearchParams(hash);
+    const recoveryType = hashParams.get('type') || searchParams.get('type');
+    if (recoveryType === 'recovery') return;
+
+    if (!user) {
+      router.replace('/signin');
+      return;
+    }
+
+    const pageParam = searchParams.get('page');
+    if (!pageParam || pageParam === 'landing') {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('page', 'home');
+      router.replace(`?${params.toString()}`);
+    }
+  }, [authLoading, isAppEntry, router, searchParams, user]);
 
   const isLoggedIn = !!user && !isLandingPage;
   const { profile, refetch: refetchUserProfile } = useUserProfile({ enabled: isLoggedIn });
@@ -272,6 +298,10 @@ function PageContent() {
         </div>
       </div>
     );
+  }
+
+  if (isAppEntry && !user) {
+    return null;
   }
 
   if (isLandingPage || !user) {
