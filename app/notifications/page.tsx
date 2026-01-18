@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 
-import { Clock, Smartphone, BellRing, X, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Clock, Smartphone, BellRing, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -45,6 +45,7 @@ export default function NotificationsPage() {
 
   const [dailySummaryEnabled, setDailySummaryEnabled] = useState(false);
   const [dailySummaryTime, setDailySummaryTime] = useState(formatTimeInputValue(8, 0));
+  const [profileTier, setProfileTier] = useState('free');
 
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [isSendingCode, setIsSendingCode] = useState(false);
@@ -164,14 +165,13 @@ export default function NotificationsPage() {
   const handleSendVerification = async () => {
     if (!session?.access_token) return;
 
-    // [Debounce Logic] 이미 전송 중이면 클릭 무시 (즉시 차단)
     if (sendLock.current) return;
-    sendLock.current = true; // 락 걸기
+    sendLock.current = true;
 
     const cleaned = cleanPhoneNumber(phoneInput);
     if (!cleaned) {
       toast({ title: '휴대폰 번호를 입력해주세요.', variant: 'destructive', duration: 1000 });
-      sendLock.current = false; // 실패 시 락 해제
+      sendLock.current = false;
       return;
     }
     if (savedPhoneNumber && cleaned === cleanPhoneNumber(savedPhoneNumber)) {
@@ -180,12 +180,12 @@ export default function NotificationsPage() {
         description: '새로운 번호를 입력해주세요.',
         duration: 1000,
       });
-      sendLock.current = false; // 실패 시 락 해제
+      sendLock.current = false;
       return;
     }
 
     try {
-      setIsSendingCode(true); // UI 상태 업데이트
+      setIsSendingCode(true);
       setVerificationCode('');
 
       const res = await fetch('/api/notifications/phone/send-code', {
@@ -214,7 +214,7 @@ export default function NotificationsPage() {
       });
     } finally {
       setIsSendingCode(false);
-      sendLock.current = false; // ✅ API 응답 후 락 해제 (다시 클릭 가능)
+      sendLock.current = false;
     }
   };
 
@@ -246,6 +246,7 @@ export default function NotificationsPage() {
       setVerificationExpiresAt(null);
       setVerificationCode('');
 
+      // 번호 변경 완료 시, Pro 유저라면 자동으로 알림 켜기 (옵션)
       if (!dailySummaryEnabled) {
         setDailySummaryEnabled(true);
         await updateDailySummarySettings({ enabled: true });
@@ -270,6 +271,19 @@ export default function NotificationsPage() {
   };
 
   const handleToggleDailySummary = async (nextEnabled: boolean) => {
+    // [Pro Check] UI는 활성화되어 보이지만, 클릭 시 권한 체크
+    if (profileTier !== 'pro') {
+      toast({
+        title: 'PRO 멤버십 전용 기능이에요 🔒',
+        description: '구독을 시작하고 스마트한 아침 브리핑을 받아보세요!',
+        variant: 'default', // 필요하다면 별도 스타일 적용
+        duration: 1000,
+      });
+      // 강제로 false 유지 (토글 UI가 잠깐 켜지는 것 방지)
+      setDailySummaryEnabled(false);
+      return;
+    }
+
     const previous = dailySummaryEnabled;
     setDailySummaryEnabled(nextEnabled);
     const saved = await updateDailySummarySettings({ enabled: nextEnabled });
@@ -319,9 +333,7 @@ export default function NotificationsPage() {
   const isVerificationSent = Boolean(verificationExpiresAt);
   const isViewMode = !!savedPhoneNumber && !isEditingPhone;
 
-  // ------------------------------------------------------------------
-  // ✅ [Loading UI] 데이터 로딩 중 보여줄 스켈레톤 화면
-  // ------------------------------------------------------------------
+  // --- Loading Skeleton ---
   if (isProfileLoading) {
     return (
       <div className="min-h-screen bg-neutral-50/50 text-neutral-900 font-sans tracking-tight px-2">
@@ -381,7 +393,7 @@ export default function NotificationsPage() {
         </header>
 
         <div className="flex flex-col gap-4">
-          {/* 1. 휴대폰 인증/관리 카드 */}
+          {/* 1. 휴대폰 인증 카드 */}
           <section
             className={cn(
               'relative overflow-hidden rounded-[24px] bg-white p-5 shadow-sm border transition-all duration-300',
@@ -407,7 +419,6 @@ export default function NotificationsPage() {
               )}
             </div>
 
-            {/* A. 보기 모드 */}
             {isViewMode ? (
               <div className="flex items-center justify-between rounded-xl bg-neutral-50 border border-neutral-100 p-3">
                 <div className="flex flex-col">
@@ -428,9 +439,8 @@ export default function NotificationsPage() {
                 </Button>
               </div>
             ) : (
-              /* B. 편집/입력 모드 */
+              // ... 편집 모드 UI (기존과 동일) ...
               <div className="space-y-3">
-                {/* 안내 문구 */}
                 <p className="text-[15px] text-orange-600 font-medium">
                   📢 휴대폰 번호를 등록해야 카카오 알림톡 설정을 켤 수 있어요.
                 </p>
@@ -536,7 +546,7 @@ export default function NotificationsPage() {
             )}
           </section>
 
-          {/* 2. 설정 카드 */}
+          {/* 2. 설정 카드 (수정됨: Pro UI 적용) */}
           {savedPhoneNumber && (
             <section
               className={cn(
@@ -547,19 +557,28 @@ export default function NotificationsPage() {
               {isEditingPhone && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[24px] bg-white/10 backdrop-blur-[1px]"></div>
               )}
-
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-orange-600">
                     <BellRing size={16} />
                   </div>
-                  <div className="mr-4">
-                    <p className="text-[15px] font-bold text-neutral-800">요약 알림 받기</p>
-                    <p className="text-[14px] text-neutral-500">
-                      방문・마감 일정・마감 초과가 있는 날에 알림을 보내드려요.
+                  <div className="mr-1">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <p className="text-[15px] font-bold text-neutral-800">요약 알림 받기</p>
+                      {/* [UI 수정] PRO 배지 추가 */}
+                      <span className="inline-flex items-center justify-center rounded-[4px] bg-[#FFF0E6] px-1.5 py-[2px] text-[10px] font-extrabold text-[#FF7626]">
+                        PRO
+                      </span>
+                    </div>
+                    {/* [UI 수정] 설명 문구 변경: 혜택 강조 */}
+                    <p className="text-[14px] text-neutral-500 leading-snug">
+                      <span className="hidden sm:inline">방문・마감 일정 등 </span>
+                      PRO 회원님을 위해 매일 아침 브리핑해 드려요.
                     </p>
                   </div>
                 </div>
+
+                {/* [Logic 수정] Switch에서 disabled 제거 -> 클릭 시 핸들러에서 제어 */}
                 <Switch
                   checked={dailySummaryEnabled}
                   onCheckedChange={handleToggleDailySummary}
@@ -567,6 +586,7 @@ export default function NotificationsPage() {
                 />
               </div>
 
+              {/* 시간 설정 영역: 꺼져있으면(비Pro 포함) 흐리게 처리 */}
               <div
                 className={cn(
                   'transition-all duration-300 space-y-3 pt-2 border-t border-neutral-100',

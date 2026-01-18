@@ -7,6 +7,7 @@ import ExtraIncomeModal from './extra-income-modal';
 import IncomeHistoryModal from './income-history-modal';
 import { Z_INDEX } from '@/lib/z-index';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 import {
   buildIncomeDetailsFromLegacy,
   parseIncomeDetailsJson,
@@ -30,7 +31,7 @@ export function StatsPageSkeleton() {
           <Skeleton key={`month-${idx}`} className="h-8 w-20 rounded-full" />
         ))}
       </div>
-
+      {/* ... 스켈레톤 나머지 부분 ... */}
       <div className="rounded-[30px] bg-white p-6 shadow-sm shadow-[0_14px_40px_rgba(18,34,64,0.08)]">
         <Skeleton className="h-4 w-44 rounded-full" />
         <Skeleton className="mt-3 h-8 w-32 rounded-full" />
@@ -39,13 +40,11 @@ export function StatsPageSkeleton() {
           <Skeleton className="h-16 rounded-2xl" />
         </div>
       </div>
-
       <div className="mt-5 rounded-[26px] bg-white p-6 shadow-sm shadow-[0_14px_40px_rgba(18,34,64,0.08)]">
         <Skeleton className="h-4 w-40 rounded-full" />
         <Skeleton className="mt-3 h-3 w-28 rounded-full" />
         <Skeleton className="mt-6 h-36 w-full rounded-2xl" />
       </div>
-
       <div className="mt-5 space-y-3">
         {Array.from({ length: 3 }).map((_, idx) => (
           <div key={`list-${idx}`} className="rounded-2xl border border-neutral-100 bg-white p-4">
@@ -65,6 +64,7 @@ export default function StatsPage({
   isScheduleModalOpen,
   isPro,
 }: StatsPageProps) {
+  const { toast } = useToast();
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showIncomeTutorial, setShowIncomeTutorial] = useState(false);
@@ -89,6 +89,7 @@ export default function StatsPage({
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
+  // YYYY-MM-01 형식 (문자열 비교 가능)
   const currentMonthKey = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
   const [selectedMonthKey, setSelectedMonthKey] = useState(currentMonthKey);
 
@@ -134,6 +135,13 @@ export default function StatsPage({
   const selectedMonthLabel = formatFullMonthLabel(selectedMonthKey);
   const selectedMonthLabelShort = formatShortMonthLabel(selectedMonthKey);
   const displaySelectedMonthLabel = selectedMonthLabel || '선택한 달';
+
+  // [Logic 수정] Pro가 아니고 && 선택된 달이 과거(currentMonthKey보다 작음)일 때만 현재 달로 튕겨내기
+  useEffect(() => {
+    if (!isPro && selectedMonthKey < currentMonthKey) {
+      setSelectedMonthKey(currentMonthKey);
+    }
+  }, [isPro, selectedMonthKey, currentMonthKey]);
 
   const getScheduleDate = (schedule: Schedule) =>
     parseDate(schedule.visit) || parseDate(schedule.dead);
@@ -445,26 +453,43 @@ export default function StatsPage({
             className="flex gap-2 overflow-x-auto pb-1 px-5 -mx-5 scrollbar-hide snap-x"
           >
             {monthOptions.map((option) => {
-              const isMonthLocked = !isPro && option.key !== currentMonthKey;
+              // YYYY-MM-01 문자열 비교: 과거인지 확인
+              const isPastMonth = option.key < currentMonthKey;
+
+              // 과거 데이터이면서 Pro가 아니면 잠금
+              const isLocked = !isPro && isPastMonth;
+
               return (
                 <button
                   key={option.key}
                   onClick={() => {
-                    if (isMonthLocked) return;
+                    // 잠금 상태일 때만 제한
+                    if (isLocked) {
+                      toast({
+                        title: '지난 달 분석은 PRO 전용이에요 🔒',
+                        description: 'PRO 플랜으로 업그레이드하고 과거 데이터를 분석해보세요.',
+                        duration: 1000,
+                      });
+                      return;
+                    }
                     setSelectedMonthKey(option.key);
                   }}
-                  disabled={isMonthLocked}
-                  className={`mt-1 flex-none snap-start rounded-full px-4 py-2 text-xs font-semibold transition whitespace-nowrap ${
+                  className={`mt-1 flex-none snap-start rounded-full px-4 py-2 text-xs font-semibold transition whitespace-nowrap flex items-center gap-1 ${
                     selectedMonthKey === option.key
                       ? 'bg-[#0f172a] text-white shadow-md'
                       : 'bg-white text-[#1f2937] border border-[#e5e7eb]'
-                  } ${isMonthLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  } ${isLocked ? 'opacity-60' : ''}`}
                 >
-                  {option.label}
+                  <span>{option.label}</span>
+                  {/* 과거 달에만 PRO 뱃지 표시 */}
+                  {isPastMonth && (
+                    <span className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[9px] font-semibold text-neutral-500">
+                      PRO
+                    </span>
+                  )}
                 </button>
               );
             })}
-            {/* 오른쪽 끝 여백 확보용 더미 div */}
             <div className="w-2 flex-none" />
           </div>
         </div>
@@ -491,17 +516,6 @@ export default function StatsPage({
               >
                 부수입 추가
               </button>
-              {/* {showIncomeTutorial && (
-                <div className="absolute -right-10 top-full mt-1 w-[160px] rounded-2xl border border-[#ebeef2] bg-white px-3 py-2.5 text-[11px] leading-snug text-[#111827] shadow-md">
-                  <div className="text-[10px] font-semibold uppercase text-[#f97316] mb-1">
-                    혹시 깜빡한 부수입, 없으신가요?
-                  </div>
-                  <p className="text-[11px] leading-tight">
-                    부수입 입력하고 이번 달 총 가치를 높여보세요!
-                  </p>
-                  <span className="absolute -right-[-80px] top-[-7px] h-3 w-3 rotate-45 border-t border-r border-[#ebeef2] bg-white" />
-                </div>
-              )} */}
             </div>
           </div>
           <div className="relative mt-3 mb-5 border-t border-white/20" />
@@ -830,7 +844,7 @@ export default function StatsPage({
           </div>
         )}
 
-        {/* Trend Chart (이전에 수정된 PRO 뱃지 로직 포함) */}
+        {/* Trend Chart */}
         <TrendChart
           currentMonthValue={econValue}
           monthlyGrowth={monthlyGrowth}
@@ -955,12 +969,6 @@ function TrendChart({
       <div className="flex justify-between items-start mb-1">
         <div className="flex items-center gap-1.5">
           <div className="text-[16px] font-bold text-[#0f172a]">월별 성장 추이</div>
-
-          {/* {isPro && (
-            <span className="inline-flex items-center justify-center rounded-[4px] bg-[#f97316] px-1.5 py-[3px] text-[10px] font-bold text-white leading-none shadow-sm">
-              PRO
-            </span>
-          )} */}
         </div>
 
         {isScrollable && (

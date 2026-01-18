@@ -142,7 +142,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   const metadata = (authUser?.user_metadata ?? {}) as Record<string, unknown>;
-  const { tier, isPro } = resolveTier({
+  const { isPro } = resolveTier({
     profileTier: profile?.tier ?? undefined,
     metadata,
   });
@@ -150,6 +150,14 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const displayTierDuration =
     tierDurationMonths > 0 ? tierDurationMonths : PRO_TIER_DURATION_MONTHS;
   const tierExpiryLabel = formatExpiryLabel(profile?.tierExpiresAt);
+  const tierLabel = isPro ? 'PRO' : 'FREE';
+  const tierDurationLabel = isPro ? `${displayTierDuration}개월` : '기본 플랜';
+  const tierExpiryText = isPro
+    ? tierExpiryLabel
+      ? `만료 ${tierExpiryLabel}`
+      : '만료 정보 없음'
+    : '만료 없음';
+  const tierBadgeStyle = isPro ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600';
 
   const displayName = profile?.nickname ?? '';
   const emailLabel = authUser?.email ?? '등록된 이메일이 없습니다';
@@ -213,6 +221,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
       toast({
         title: '모바일 환경에서는 지원하지 않는 기능입니다',
         description: 'PC에서 확인해 주세요.',
+        duration: 1000,
       });
       return;
     }
@@ -221,12 +230,13 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
       toast({
         title: '이 브라우저에서는 다운로드가 제한됩니다',
         description: '다른 브라우저 또는 PC에서 다운로드해 주세요.',
+        duration: 1000,
       });
       return;
     }
 
     if (!filteredSchedules.length) {
-      toast({ title: '선택한 기간의 활동 내역이 없어요.', variant: 'destructive' });
+      toast({ title: '선택한 기간의 활동 내역이 없어요.', variant: 'destructive', duration: 1000 });
       return;
     }
 
@@ -263,87 +273,10 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
     link.remove();
     URL.revokeObjectURL(url);
 
-    toast({ title: '엑셀 다운로드가 준비되었습니다.' });
-  };
-
-  const handleApplyCoupon = async () => {
-    const code = couponCode.trim();
-
-    if (!code) {
-      toast({ title: '쿠폰 코드를 입력해 주세요.', variant: 'destructive' });
-      return;
-    }
-
-    const hasCouponDuration = isPro && tierDurationMonths === COUPON_TIER_DURATION_MONTHS;
-
-    if (hasCouponDuration) {
-      toast({
-        title: '이미 쿠폰 프로 등급입니다.',
-        description: `${COUPON_TIER_DURATION_MONTHS}개월 프로가 이미 적용되어 있습니다.`,
-      });
-      return;
-    }
-
-    if (code.toUpperCase() !== 'HELLO_EARLY') {
-      toast({ title: '유효하지 않은 쿠폰입니다.', variant: 'destructive' });
-      return;
-    }
-
-    if (!authUser?.id) {
-      toast({ title: '로그인이 필요합니다.', variant: 'destructive' });
-      return;
-    }
-
-    setIsRedeemingCoupon(true);
-
-    try {
-      const supabase = getSupabaseClient();
-      const expiresAt = new Date();
-      expiresAt.setMonth(expiresAt.getMonth() + COUPON_TIER_DURATION_MONTHS);
-      const expiresAtIso = expiresAt.toISOString();
-
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .update({
-          tier: 'pro',
-          tier_duration_months: COUPON_TIER_DURATION_MONTHS,
-          tier_expires_at: expiresAtIso,
-        })
-        .eq('id', authUser.id);
-
-      if (profileError) {
-        throw profileError;
-      }
-
-      const { error: metadataError } = await supabase.auth.updateUser({
-        data: {
-          tier: 'pro',
-        },
-      });
-
-      if (metadataError) {
-        throw metadataError;
-      }
-
-      await refetchUserProfile();
-      toast({
-        title: '쿠폰이 적용되었습니다.',
-        description: `${COUPON_TIER_DURATION_MONTHS}개월 동안 PRO 기능을 이용할 수 있습니다.`,
-      });
-      setCouponCode('');
-    } catch (err) {
-      toast({
-        title: '쿠폰 적용에 실패했습니다.',
-        description: err instanceof Error ? err.message : '다시 시도해 주세요.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsRedeemingCoupon(false);
-    }
+    toast({ title: '엑셀 다운로드가 준비되었습니다.', duration: 1000 });
   };
 
   const handleGotoNotifications = () => router.push('/notifications');
-  const handleGotoMonthlyReport = () => router.push('/monthlyReport');
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -351,7 +284,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
       await signOut();
       router.push('/');
     } catch {
-      toast({ title: '로그아웃에 실패했습니다.', variant: 'destructive' });
+      toast({ title: '로그아웃에 실패했습니다.', variant: 'destructive', duration: 1000 });
     } finally {
       setIsLoggingOut(false);
     }
@@ -359,7 +292,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
 
   const handleWithdrawAccount = async () => {
     if (!authUser || !session?.access_token) {
-      toast({ title: '로그인이 필요합니다.', variant: 'destructive' });
+      toast({ title: '로그인이 필요합니다.', variant: 'destructive', duration: 1000 });
       return;
     }
 
@@ -381,6 +314,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
       toast({
         title: '회원 탈퇴가 완료되었습니다.',
         description: '모든 정보가 삭제되었으며 다시 로그인할 수 없습니다.',
+        duration: 1000,
       });
       setIsWithdrawalDialogOpen(false);
       await signOut();
@@ -390,6 +324,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
         title: '회원 탈퇴에 실패했습니다.',
         description: err instanceof Error ? err.message : '다시 시도해 주세요.',
         variant: 'destructive',
+        duration: 1000,
       });
     } finally {
       setIsDeletingAccount(false);
@@ -423,6 +358,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
       toast({
         title: 'PRO 전용 기능입니다.',
         variant: 'destructive',
+        duration: 1000,
       });
       return;
     }
@@ -478,17 +414,16 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
             ) : null}
             <p className="text-[13px] text-neutral-500">{emailLabel}</p>
           </div>
-          {/* iOS 심사 기간 동안 임시로 숨김 */}
-          {/* {isPro && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-neutral-500">
-              <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">
-                PRO
-              </span>
-              <span>{`${displayTierDuration}개월`}</span>
-              <span className="text-neutral-300">·</span>
-              <span>{tierExpiryLabel ? `만료 ${tierExpiryLabel}` : '만료 정보 없음'}</span>
-            </div>
-          )} */}
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-neutral-500">
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${tierBadgeStyle}`}
+            >
+              {tierLabel}
+            </span>
+            <span>{tierDurationLabel}</span>
+            <span className="text-neutral-300">·</span>
+            <span>{tierExpiryText}</span>
+          </div>
         </section>
 
         <section className="rounded-3xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
@@ -508,6 +443,11 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-[14px] font-semibold text-neutral-900">
                     {feature.label}
+                    {feature.isPro && (
+                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-600">
+                        PRO
+                      </span>
+                    )}
                   </div>
                   {feature.description && (
                     <p className="text-[12px] text-neutral-500">{feature.description}</p>
