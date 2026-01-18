@@ -244,6 +244,7 @@ export default function HomePage({
   const filterHeaderRef = useRef<HTMLDivElement | null>(null);
   const scrollEffectRanRef = useRef(false);
   const skipFilterScrollRef = useRef(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const [calendarCtaDate, setCalendarCtaDate] = useState<string | null>(null);
   const [isCalendarCtaOpen, setIsCalendarCtaOpen] = useState(false);
@@ -619,9 +620,11 @@ export default function HomePage({
         (schedule.additionalDeadlines || []).some((deadline) => deadline.date === dateStr)
     );
     const hasTodoForDate = schedulesForDate.some((schedule) => isTodoSchedule(schedule));
-    const nextFilter = hasSchedule && !hasTodoForDate ? 'DONE' : 'TODO';
+    const hasDoneForDate = schedulesForDate.some((schedule) => isDoneSchedule(schedule));
+    const nextFilter = hasTodoForDate ? 'TODO' : hasDoneForDate ? 'DONE' : 'TODO';
     setSelectedDate(dateStr);
     handleViewFilterChange(nextFilter);
+    setSortOption('VISIT_SOON');
     if (hasSchedule) {
       setCalendarCtaDate(null);
       setIsCalendarCtaOpen(false);
@@ -656,14 +659,25 @@ export default function HomePage({
   };
 
   const handleGoToToday = () => {
+    const schedulesForToday = schedules.filter(
+      (schedule) =>
+        schedule.dead === today ||
+        schedule.visit === today ||
+        (schedule.additionalDeadlines || []).some((deadline) => deadline.date === today)
+    );
+    const hasTodoForToday = schedulesForToday.some((schedule) => isTodoSchedule(schedule));
+    const hasDoneForToday = schedulesForToday.some((schedule) => isDoneSchedule(schedule));
+    const nextFilter = hasTodoForToday ? 'TODO' : hasDoneForToday ? 'DONE' : 'TODO';
     setSelectedDate(today);
-    setViewFilter('TODO');
+    handleViewFilterChange(nextFilter);
+    setSortOption('VISIT_SOON');
     setCalendarCtaDate(null);
     setIsCalendarCtaOpen(false);
   };
 
   const applySearch = () => {
     setSearchQuery(searchInput.trim());
+    searchInputRef.current?.blur();
   };
 
   const scrollToFilterHeader = useCallback(() => {
@@ -798,9 +812,9 @@ export default function HomePage({
           <button
             type="button"
             onClick={() => onCreateSchedule(selectedDate)}
-            className="group w-full rounded-2xl border border-dashed border-orange-300 bg-orange-50/30 px-4 py-3 text-[13px] font-bold text-orange-700 transition-all hover:bg-orange-50 hover:border-orange-400 flex items-center justify-center gap-1.5 active:scale-[0.99]"
+            className="group mx-auto flex w-full items-center justify-center gap-1.5 rounded-full border border-orange-200 bg-white px-3 py-2 text-[12px] font-semibold text-orange-600 shadow-sm transition-all hover:bg-orange-50/70 hover:border-orange-300 active:scale-[0.99]"
           >
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-orange-100 text-orange-600">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-orange-100 text-orange-600">
               <Plus size={12} strokeWidth={3} />
             </span>
             <span>{formatSlashMonthDay(selectedDate)} 일정 추가하기</span>
@@ -828,7 +842,7 @@ export default function HomePage({
                 variant="ghost"
                 size="sm"
                 onClick={resetFilters}
-                className="h-7 rounded-full border border-neutral-200 bg-white px-2 text-[11px] font-medium text-neutral-500 shadow-sm hover:bg-neutral-50"
+                className="h-8 rounded-full border border-orange-500 bg-orange-500 px-3 text-[12px] font-semibold text-white shadow-[0_8px_16px_rgba(255,106,31,0.25)] hover:bg-orange-600"
               >
                 ↺ 초기화
               </Button>
@@ -860,6 +874,7 @@ export default function HomePage({
                 <span className="text-[14px] text-neutral-400">🔍</span>
                 <Input
                   type="text"
+                  ref={searchInputRef}
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                   onKeyDown={(event) => {
