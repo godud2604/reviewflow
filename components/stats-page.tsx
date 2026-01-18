@@ -6,6 +6,7 @@ import { useExtraIncomes } from '@/hooks/use-extra-incomes';
 import ExtraIncomeModal from './extra-income-modal';
 import IncomeHistoryModal from './income-history-modal';
 import { Z_INDEX } from '@/lib/z-index';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   buildIncomeDetailsFromLegacy,
   parseIncomeDetailsJson,
@@ -20,6 +21,43 @@ type StatsPageProps = {
   isScheduleModalOpen: boolean;
   isPro: boolean;
 };
+
+export function StatsPageSkeleton() {
+  return (
+    <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y relative pt-4.5">
+      <div className="mb-4 flex gap-2 overflow-hidden">
+        {Array.from({ length: 4 }).map((_, idx) => (
+          <Skeleton key={`month-${idx}`} className="h-8 w-20 rounded-full" />
+        ))}
+      </div>
+
+      <div className="rounded-[30px] bg-white p-6 shadow-sm shadow-[0_14px_40px_rgba(18,34,64,0.08)]">
+        <Skeleton className="h-4 w-44 rounded-full" />
+        <Skeleton className="mt-3 h-8 w-32 rounded-full" />
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <Skeleton className="h-16 rounded-2xl" />
+          <Skeleton className="h-16 rounded-2xl" />
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-[26px] bg-white p-6 shadow-sm shadow-[0_14px_40px_rgba(18,34,64,0.08)]">
+        <Skeleton className="h-4 w-40 rounded-full" />
+        <Skeleton className="mt-3 h-3 w-28 rounded-full" />
+        <Skeleton className="mt-6 h-36 w-full rounded-2xl" />
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {Array.from({ length: 3 }).map((_, idx) => (
+          <div key={`list-${idx}`} className="rounded-2xl border border-neutral-100 bg-white p-4">
+            <Skeleton className="h-4 w-36 rounded-full" />
+            <Skeleton className="mt-2 h-3 w-24 rounded-full" />
+            <Skeleton className="mt-4 h-3 w-full rounded-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function StatsPage({
   schedules,

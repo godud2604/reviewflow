@@ -3,8 +3,8 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import HomePage, { HomePageSkeleton } from '@/components/home-page';
-import StatsPage from '@/components/stats-page';
-import ProfilePage from '@/components/profile-page';
+import StatsPage, { StatsPageSkeleton } from '@/components/stats-page';
+import ProfilePage, { ProfilePageSkeleton } from '@/components/profile-page';
 import PortfolioPage from '@/components/portfolio-page';
 import NavigationBar from '@/components/navigation-bar';
 import ScheduleModal from '@/components/schedule-modal';
@@ -289,6 +289,41 @@ function PageContent() {
               onProfile={handleGoProfile}
             />
             <HomePageSkeleton />
+            <NavigationBar
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              onAddClick={() => handleOpenScheduleModal()}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (currentPage === 'stats') {
+      return (
+        <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
+          <div className="w-full md:max-w-[800px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
+            <GlobalHeader
+              title="통계"
+              onNotifications={handleGoNotifications}
+              onProfile={handleGoProfile}
+            />
+            <StatsPageSkeleton />
+            <NavigationBar
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              onAddClick={() => handleOpenScheduleModal()}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (currentPage === 'profile') {
+      return (
+        <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
+          <div className="w-full md:max-w-[800px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
+            <ProfilePageSkeleton />
             <NavigationBar
               currentPage={currentPage}
               onPageChange={handlePageChange}

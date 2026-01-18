@@ -13,6 +13,7 @@ import type { UserProfile } from '@/hooks/use-user-profile';
 import { getSupabaseClient } from '@/lib/supabase';
 import { resolveTier } from '@/lib/tier';
 import FeedbackModal from '@/components/feedback-modal';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -85,6 +86,44 @@ type ProfilePageProps = {
   profile: UserProfile | null;
   refetchUserProfile: () => Promise<void>;
 };
+
+export function ProfilePageSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#F7F7F8] pb-24 font-sans tracking-tight">
+      <div className="mx-auto max-w-[520px] space-y-6 px-5 pt-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <Skeleton className="h-5 w-24 rounded-full" />
+        </div>
+
+        <section className="rounded-3xl border border-neutral-200 bg-white px-5 py-4 shadow-sm">
+          <Skeleton className="h-4 w-32 rounded-full" />
+          <Skeleton className="mt-2 h-3 w-48 rounded-full" />
+        </section>
+
+        <section className="rounded-3xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
+          <Skeleton className="h-3 w-20 rounded-full" />
+          <div className="mt-3 space-y-3">
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <div key={`feature-${idx}`} className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-36 rounded-full" />
+                  <Skeleton className="h-3 w-56 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-4 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="rounded-3xl border border-neutral-200 bg-white px-6 py-4 shadow-sm">
+          <Skeleton className="h-4 w-40 rounded-full" />
+          <Skeleton className="mt-2 h-3 w-56 rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ProfilePage({ profile, refetchUserProfile }: ProfilePageProps) {
   const router = useRouter();
