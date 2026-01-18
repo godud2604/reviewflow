@@ -529,6 +529,11 @@ export default function HomePage({
     if (sortOption === 'VISIT_SOON' || sortOption === 'VISIT_LATE') {
       const aVisit = getVisitKey(a);
       const bVisit = getVisitKey(b);
+      if (selectedDate) {
+        const aSelectedVisit = a.visit === selectedDate;
+        const bSelectedVisit = b.visit === selectedDate;
+        if (aSelectedVisit !== bSelectedVisit) return aSelectedVisit ? -1 : 1;
+      }
       if (!aVisit && !bVisit) return a.id - b.id;
       if (!aVisit) return 1;
       if (!bVisit) return -1;
@@ -691,7 +696,7 @@ export default function HomePage({
       targetTop -
       containerTop +
       container.scrollTop -
-      (isMobile ? stickyHeight + filterStickyTop + 8 : 8);
+      (isMobile ? stickyHeight + filterStickyTop + 8 : filterStickyTop + 8);
     container.scrollTo({ top: offset, behavior: 'smooth' });
   }, [filterStickyTop, isMobile]);
 
@@ -760,6 +765,13 @@ export default function HomePage({
       setSortOption('DEADLINE_SOON');
     }
   };
+
+  const clearSelectedDate = useCallback(() => {
+    setSelectedDate(null);
+    setCalendarCtaDate(null);
+    setIsCalendarCtaOpen(false);
+    setSortOption(viewFilter === 'DONE' ? 'DEADLINE_LATE' : 'DEADLINE_SOON');
+  }, [viewFilter]);
 
   useEffect(() => {
     if (!resetSignal) return;
@@ -837,6 +849,17 @@ export default function HomePage({
           </div>
           {(isFilterActive || selectedDate) && (
             <div className="flex items-center gap-2">
+              {selectedDate && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSelectedDate}
+                  className="h-8 rounded-full border border-neutral-200 bg-white px-3 text-[12px] font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50"
+                >
+                  전체 할일보기
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
@@ -956,11 +979,7 @@ export default function HomePage({
                   {/* 2. 날짜 필터 칩 */}
                   {selectedDate && (
                     <button
-                      onClick={() => {
-                        setSelectedDate(null);
-                        setCalendarCtaDate(null);
-                        setIsCalendarCtaOpen(false);
-                      }}
+                      onClick={clearSelectedDate}
                       className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-neutral-600 bg-white px-3 text-[12px] font-bold text-neutral-900 shadow-sm hover:bg-neutral-50 animate-in fade-in zoom-in-95 duration-200"
                     >
                       <span className="text-orange-600">📅</span>
