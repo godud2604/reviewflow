@@ -707,74 +707,6 @@ export default function HomePage({
       ref={contentScrollRef}
       className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y space-y-3 pt-3 bg-neutral-50/50"
     >
-      {/* 5. 공지 카드 */}
-      <div className="space-y-4">
-        <div className="rounded-[28px] border border-[#FFE3D6] bg-gradient-to-br from-[#FFF5F0] via-white to-[#FFF9F6] px-5 py-4 text-neutral-900">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div>
-                <p className="text-[15px] font-semibold">검색·필터가 더 똑똑해졌어요</p>
-                <p className="mt-1 text-[12px] text-neutral-600">
-                  이번에 추가된 기능을 확인하고 의견을 남겨주세요
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsNoticeOpen((prev) => !prev)}
-              className="shrink-0 h-8 rounded-full border border-[#FF5722]/30 bg-[#FF5722]/10 px-3 text-[12px] font-semibold text-[#E64A19] hover:bg-[#FF5722]/20"
-            >
-              {isNoticeOpen ? '닫기' : '보기'}
-            </button>
-          </div>
-          {isNoticeOpen && (
-            <div className="mt-4 space-y-4">
-              <div className="rounded-2xl border border-[#FFE3D6] bg-white p-4">
-                <p className="text-[12px] font-semibold text-[#FFB59E]">기능 설명</p>
-                <ul className="mt-2 space-y-2 text-[12px] text-neutral-600">
-                  {featureDescriptions.map((desc) => (
-                    <li key={desc} className="flex items-start gap-2">
-                      <span className="mt-0.5 text-[#FF8A65]">•</span>
-                      <span>{desc}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="rounded-2xl border border-[#FFE3D6] bg-white p-4 space-y-3">
-                <div>
-                  <p className="text-[12px] font-semibold text-[#FFB59E]">피드백 제출하기</p>
-                  <p className="mt-1 text-[11px] text-neutral-600">
-                    개선에 도움이 될 의견을 한 글자도 놓치지 않고 읽을게요.
-                  </p>
-                </div>
-                <textarea
-                  value={feedbackText}
-                  onChange={(event) => {
-                    setFeedbackText(event.target.value);
-                    if (feedbackSubmitted) setFeedbackSubmitted(false);
-                  }}
-                  placeholder="입력하기"
-                  className="min-h-[90px] w-full resize-none rounded-2xl border border-[#FFE3D6] bg-[#FFF7F2] px-4 py-3 text-[13px] text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#FF5722]/40"
-                />
-                <button
-                  type="button"
-                  onClick={handleFeedbackSubmit}
-                  disabled={isFeedbackSubmitting}
-                  className="w-full rounded-2xl bg-[#FF5722] py-3 text-[13px] font-semibold text-white shadow-[0_10px_30px_rgba(255,87,34,0.35)] hover:bg-[#E64A19] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isFeedbackSubmitting ? '전송 중...' : '제출하기'}
-                </button>
-                {feedbackSubmitted && (
-                  <p className="text-[11px] font-medium text-[#E64A19]">
-                    의견이 접수되었어요. 고마워요!
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* 3. 캘린더 */}
       <CalendarSection
         schedules={schedules}
@@ -789,7 +721,7 @@ export default function HomePage({
           <button
             type="button"
             onClick={() => onCreateSchedule(selectedDate)}
-            className="w-full rounded-2xl border border-[#FFD9C2] bg-[#FFE8D8] px-4 py-3 text-[14px] font-semibold text-[#FF8A2A] transition hover:bg-[#FFE0CC]"
+            className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-[13px] font-semibold text-neutral-600 shadow-sm transition hover:bg-neutral-50"
           >
             <span className="mr-1">
               {formatSlashMonthDay(selectedDate)} 일정으로 체험단 등록하기
@@ -915,7 +847,7 @@ export default function HomePage({
                       setCalendarCtaDate(null);
                       setIsCalendarCtaOpen(false);
                     }}
-                    className="h-7 rounded-full border-neutral-200 text-[12px] font-semibold text-neutral-600"
+                    className="h-8 rounded-full border-transparent bg-neutral-900 px-4 text-[12px] font-semibold text-white shadow-[0_10px_22px_rgba(15,23,42,0.25)] hover:bg-neutral-800"
                   >
                     ← 전체 목록 보기
                   </Button>
