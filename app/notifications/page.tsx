@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import * as React from 'react';
 import { useAuth } from '@/hooks/use-auth';
 
 import { Clock, Smartphone, BellRing, ArrowLeft, RefreshCw } from 'lucide-react';
@@ -33,30 +33,30 @@ export default function NotificationsPage() {
   const { toast } = useToast();
 
   // --- State ---
-  const [savedPhoneNumber, setSavedPhoneNumber] = useState<string | null>(null);
+  const [savedPhoneNumber, setSavedPhoneNumber] = React.useState<string | null>(null);
 
-  const [phoneInput, setPhoneInput] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [phoneInput, setPhoneInput] = React.useState('');
+  const [verificationCode, setVerificationCode] = React.useState('');
+  const [isEditingPhone, setIsEditingPhone] = React.useState(false);
 
-  const [phoneVerifiedAt, setPhoneVerifiedAt] = useState<string | null>(null);
-  const [verificationExpiresAt, setVerificationExpiresAt] = useState<string | null>(null);
-  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [phoneVerifiedAt, setPhoneVerifiedAt] = React.useState<string | null>(null);
+  const [verificationExpiresAt, setVerificationExpiresAt] = React.useState<string | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = React.useState<number | null>(null);
 
-  const [dailySummaryEnabled, setDailySummaryEnabled] = useState(false);
-  const [dailySummaryTime, setDailySummaryTime] = useState(formatTimeInputValue(8, 0));
-  const [profileTier, setProfileTier] = useState('free');
+  const [dailySummaryEnabled, setDailySummaryEnabled] = React.useState(false);
+  const [dailySummaryTime, setDailySummaryTime] = React.useState(formatTimeInputValue(8, 0));
+  const [profileTier, setProfileTier] = React.useState('free');
 
-  const [isProfileLoading, setIsProfileLoading] = useState(true);
-  const [isSendingCode, setIsSendingCode] = useState(false);
-  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [isProfileLoading, setIsProfileLoading] = React.useState(true);
+  const [isSendingCode, setIsSendingCode] = React.useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = React.useState(false);
 
   // [Double Click Prevention] 중복 전송 방지를 위한 락(Lock)
-  const sendLock = useRef(false);
+  const sendLock = React.useRef(false);
 
   // --- Effects ---
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!user?.id) {
       if (user === null) setIsProfileLoading(false);
       return;
@@ -102,7 +102,7 @@ export default function NotificationsPage() {
     fetchProfile();
   }, [user?.id, user]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!verificationExpiresAt) {
       setRemainingSeconds(null);
       return;
