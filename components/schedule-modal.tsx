@@ -53,16 +53,11 @@ import {
 } from '@/lib/schedule-income-details';
 import { stripLegacyScheduleMemo } from '@/lib/schedule-memo-legacy';
 import { formatKoreanTime } from '@/lib/time-utils';
-import { getSupabaseClient } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Check, Copy, Loader2, Minus, Plus, Search, X } from 'lucide-react';
 import NaverMapSearchModal, { MapPlaceSelection } from '@/components/naver-map-search-modal';
 import { Z_INDEX } from '@/lib/z-index';
-
-const DEADLINE_MANAGEMENT_CTA_KEY = 'deadline-management-cta';
-const INCOME_DETAIL_MANAGEMENT_CTA_KEY = 'income-detail-management-cta';
-const STICKY_NAVIGATION_CTA_KEY = 'sticky-navigation-cta';
 
 const getTodayInKST = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
@@ -269,9 +264,6 @@ export default function ScheduleModal({
     useState<ScheduleTransactionItem['type']>('INCOME');
   const [showDeadlineManagement, setShowDeadlineManagement] = useState(false);
   const [newDeadlineLabel, setNewDeadlineLabel] = useState('');
-  const [showDeadlineManagementCta, setShowDeadlineManagementCta] = useState(false);
-  const [showIncomeDetailManagementCta, setShowIncomeDetailManagementCta] = useState(false);
-  const [showStickyNavigationCta, setShowStickyNavigationCta] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('basicInfo');
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
@@ -373,46 +365,6 @@ export default function ScheduleModal({
     };
   }, [isOpen]);
 
-  // Load CTA tutorial status
-  useEffect(() => {
-    if (!user?.id || !isOpen) return;
-
-    const fetchCtaStatus = async () => {
-      const supabase = getSupabaseClient();
-
-      // Check deadline management CTA
-      const { data: deadlineData } = await supabase
-        .from('tutorial_progress')
-        .select('completed_at')
-        .eq('user_id', user.id)
-        .eq('tutorial_key', DEADLINE_MANAGEMENT_CTA_KEY)
-        .maybeSingle();
-
-      setShowDeadlineManagementCta(!deadlineData?.completed_at);
-
-      // Check income detail management CTA
-      const { data: incomeData } = await supabase
-        .from('tutorial_progress')
-        .select('completed_at')
-        .eq('user_id', user.id)
-        .eq('tutorial_key', INCOME_DETAIL_MANAGEMENT_CTA_KEY)
-        .maybeSingle();
-
-      setShowIncomeDetailManagementCta(!incomeData?.completed_at);
-
-      // Check sticky navigation CTA
-      const { data: stickyData } = await supabase
-        .from('tutorial_progress')
-        .select('completed_at')
-        .eq('user_id', user.id)
-        .eq('tutorial_key', STICKY_NAVIGATION_CTA_KEY)
-        .maybeSingle();
-
-      setShowStickyNavigationCta(!stickyData?.completed_at);
-    };
-
-    fetchCtaStatus();
-  }, [user?.id, isOpen]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -699,25 +651,6 @@ export default function ScheduleModal({
     if (formData.platform) return;
     setFormData((prev) => ({ ...prev, platform: defaultPlatform }));
   }, [allPlatforms, schedule, formData.platform]);
-
-  const dismissStickyCta = async () => {
-    if (showStickyNavigationCta && user?.id) {
-      const supabase = getSupabaseClient();
-      try {
-        await supabase.from('tutorial_progress').upsert(
-          {
-            user_id: user.id,
-            tutorial_key: STICKY_NAVIGATION_CTA_KEY,
-            completed_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,tutorial_key' }
-        );
-      } catch {
-        // Ignore failures
-      }
-      setShowStickyNavigationCta(false);
-    }
-  };
 
   const handleSave = async (overrideFormData?: Partial<Schedule>) => {
     if (isSubmittingRef.current) return;
@@ -1511,7 +1444,6 @@ export default function ScheduleModal({
                       type="button"
                       onClick={() => {
                         scrollToSection(basicInfoRef);
-                        dismissStickyCta();
                       }}
                       className={`shrink-0 px-2.5 py-2 rounded-full text-[13px] font-semibold transition-all ${
                         activeTab === 'basicInfo'
@@ -1525,7 +1457,6 @@ export default function ScheduleModal({
                       type="button"
                       onClick={() => {
                         scrollToSection(progressInfoRef);
-                        dismissStickyCta();
                       }}
                       className={`shrink-0 px-2.5 py-2 rounded-full text-[13px] font-semibold transition-all ${
                         activeTab === 'progressInfo'
@@ -1539,7 +1470,6 @@ export default function ScheduleModal({
                       type="button"
                       onClick={() => {
                         scrollToSection(assetManagementRef);
-                        dismissStickyCta();
                       }}
                       className={`shrink-0 px-2.5 py-2 rounded-full text-[13px] font-semibold transition-all ${
                         activeTab === 'assetManagement'
@@ -1553,7 +1483,6 @@ export default function ScheduleModal({
                       type="button"
                       onClick={() => {
                         scrollToSection(memoRef);
-                        dismissStickyCta();
                       }}
                       className={`shrink-0 px-2.5 py-2 rounded-full text-[13px] font-semibold transition-all ${
                         activeTab === 'memo'
@@ -1565,33 +1494,6 @@ export default function ScheduleModal({
                     </button>
                   </div>
                 </div>
-                {showStickyNavigationCta && (
-                  <div className="absolute left-1/2 -translate-x-1/2 top-[40px] mt-3 z-50 pointer-events-none">
-                    <div className="relative w-[170px] rounded-2xl bg-white px-3.5 py-2.5 text-[12px] text-neutral-800 shadow-[0_10px_40px_rgba(255,87,34,0.25)]">
-                      <div
-                        className="absolute inset-0 rounded-2xl p-[2px] bg-gradient-to-r from-orange-400 via-red-500 to-orange-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
-                        style={{
-                          WebkitMask:
-                            'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                          WebkitMaskComposite: 'xor',
-                          maskComposite: 'exclude',
-                        }}
-                      ></div>
-                      <div className="relative z-10">
-                        <p className="font-bold text-[#FF5F00] leading-snug">
-                          스크롤 내릴 필요 없어요 ✋
-                        </p>
-                        <p className="text-neutral-600 mt-0.5 leading-snug">
-                          누르면 원하는 곳으로 바로 슝!
-                        </p>
-                      </div>
-                      <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[7px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[8px] border-b-red-500" />
-                      <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[5px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[7px] border-b-white" />
-                    </div>
-                    <span className="absolute top-[-12px] left-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-gradient-to-r from-orange-400 to-red-500 shadow-[0_0_0_2px_rgba(255,255,255,1)] animate-ping" />
-                    <span className="absolute top-[-12px] left-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-gradient-to-r from-orange-400 to-red-500 shadow-[0_0_0_2px_rgba(255,255,255,1)]" />
-                  </div>
-                )}
               </div>
             )}
             <div className="space-y-4 bg-[#F2F4F6] p-4">
@@ -1895,52 +1797,13 @@ export default function ScheduleModal({
                     <div className="relative">
                       <button
                         type="button"
-                        onClick={async () => {
-                          if (showDeadlineManagementCta && user?.id) {
-                            const supabase = getSupabaseClient();
-                            try {
-                              await supabase.from('tutorial_progress').upsert(
-                                {
-                                  user_id: user.id,
-                                  tutorial_key: DEADLINE_MANAGEMENT_CTA_KEY,
-                                  completed_at: new Date().toISOString(),
-                                },
-                                { onConflict: 'user_id,tutorial_key' }
-                              );
-                            } catch {
-                              // Ignore failures
-                            }
-                            setShowDeadlineManagementCta(false);
-                          }
+                        onClick={() => {
                           setShowDeadlineManagement(true);
                         }}
                         className={MANAGE_BUTTON_CLASS}
                       >
                         +<span>할 일 추가하기</span>
                       </button>
-                      {showDeadlineManagementCta && (
-                        <>
-                          <span className="pointer-events-none absolute -right-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 shadow-[0_0_0_2px_rgba(255,255,255,1)] animate-pulse" />
-                          <div className="pointer-events-none absolute bottom-full right-0 mb-3 w-[168px] rounded-2xl bg-white px-3.5 py-2.5 text-[12px] text-neutral-800 shadow-[0_10px_40px_rgba(99,102,241,0.25)] z-10">
-                            <div
-                              className="absolute inset-0 rounded-2xl p-[2px] bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
-                              style={{
-                                WebkitMask:
-                                  'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                                WebkitMaskComposite: 'xor',
-                                maskComposite: 'exclude',
-                              }}
-                            ></div>
-                            <div className="relative z-10">
-                              <p className="font-semibold text-neutral-900 leading-snug">
-                                📅 중요한 일정, 놓치지 않게!
-                              </p>
-                            </div>
-                            <span className="absolute bottom-0 right-4 translate-y-[7px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[8px] border-t-purple-500" />
-                            <span className="absolute bottom-0 right-[18px] translate-y-[5px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[7px] border-t-white" />
-                          </div>
-                        </>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -2438,52 +2301,13 @@ export default function ScheduleModal({
                   <div className="relative">
                     <button
                       type="button"
-                      onClick={async () => {
-                        if (showIncomeDetailManagementCta && user?.id) {
-                          const supabase = getSupabaseClient();
-                          try {
-                            await supabase.from('tutorial_progress').upsert(
-                              {
-                                user_id: user.id,
-                                tutorial_key: INCOME_DETAIL_MANAGEMENT_CTA_KEY,
-                                completed_at: new Date().toISOString(),
-                              },
-                              { onConflict: 'user_id,tutorial_key' }
-                            );
-                          } catch {
-                            // Ignore failures
-                          }
-                          setShowIncomeDetailManagementCta(false);
-                        }
+                      onClick={() => {
                         setShowIncomeDetailManagement(true);
                       }}
                       className={MANAGE_BUTTON_CLASS}
                     >
                       <span className="shrink-0">내역 직접 입력</span>
                     </button>
-                    {showIncomeDetailManagementCta && (
-                      <>
-                        <span className="pointer-events-none absolute -right-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 shadow-[0_0_0_2px_rgba(255,255,255,1)] animate-pulse" />
-                        <div className="pointer-events-none absolute bottom-full right-0 mb-3 w-[226px] rounded-2xl bg-white px-3.5 py-2.5 text-[12px] text-neutral-800 shadow-[0_10px_40px_rgba(99,102,241,0.25)] z-10">
-                          <div
-                            className="absolute inset-0 rounded-2xl p-[2px] bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 bg-[length:200%_100%] animate-[gradient-flow_3s_linear_infinite]"
-                            style={{
-                              WebkitMask:
-                                'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                              WebkitMaskComposite: 'xor',
-                              maskComposite: 'exclude',
-                            }}
-                          ></div>
-                          <div className="relative z-10">
-                            <p className="font-semibold text-neutral-900 leading-snug">
-                              🧩 상품권, 포인트... 내 방식대로 기록해요
-                            </p>
-                          </div>
-                          <span className="absolute bottom-0 right-4 translate-y-[7px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[8px] border-t-purple-500" />
-                          <span className="absolute bottom-0 right-[18px] translate-y-[5px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[7px] border-t-white" />
-                        </div>
-                      </>
-                    )}
                   </div>
                 </div>
                 <div className="rounded-[20px] bg-[#EFF5FF] px-4 py-4 space-y-1">
