@@ -9,6 +9,7 @@ import ScheduleItem from '@/components/schedule-item';
 import { parseDateString } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -139,6 +140,48 @@ type SortOption =
   | 'VISIT_LATE'
   | 'AMOUNT_HIGH'
   | 'AMOUNT_LOW';
+
+export function HomePageSkeleton() {
+  return (
+    <div className="flex-1 space-y-4 bg-neutral-50/50 px-5 pb-24 pt-3">
+      <div className="rounded-[24px] bg-white p-4 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <Skeleton className="h-6 w-32 rounded-full" />
+          <Skeleton className="h-7 w-20 rounded-full" />
+        </div>
+        <div className="mb-3 grid grid-cols-7 gap-2">
+          {Array.from({ length: 7 }).map((_, idx) => (
+            <Skeleton key={`weekday-${idx}`} className="h-4 w-full rounded-full" />
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-3">
+          {Array.from({ length: 28 }).map((_, idx) => (
+            <Skeleton key={`day-${idx}`} className="mx-auto h-8 w-8 rounded-full" />
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <Skeleton className="h-6 w-36 rounded-full" />
+          <Skeleton className="mt-2 h-4 w-32 rounded-full" />
+        </div>
+        <Skeleton className="h-12 rounded-[22px]" />
+        <Skeleton className="h-10 rounded-[22px]" />
+      </div>
+
+      <div className="space-y-3">
+        {Array.from({ length: 3 }).map((_, idx) => (
+          <div key={`card-${idx}`} className="rounded-3xl border border-neutral-100 bg-white p-4">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="mt-3 h-4 w-28" />
+            <Skeleton className="mt-4 h-10 w-full rounded-xl" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // --- 메인 페이지 ---
 export default function HomePage({
@@ -553,8 +596,16 @@ export default function HomePage({
   );
 
   const handleDateClick = (dateStr: string, hasSchedule: boolean) => {
+    const schedulesForDate = schedules.filter(
+      (schedule) =>
+        schedule.dead === dateStr ||
+        schedule.visit === dateStr ||
+        (schedule.additionalDeadlines || []).some((deadline) => deadline.date === dateStr)
+    );
+    const hasTodoForDate = schedulesForDate.some((schedule) => isTodoSchedule(schedule));
+    const nextFilter = hasSchedule && !hasTodoForDate ? 'DONE' : 'TODO';
     setSelectedDate(dateStr);
-    setViewFilter('TODO');
+    handleViewFilterChange(nextFilter);
     if (hasSchedule) {
       setCalendarCtaDate(null);
       setIsCalendarCtaOpen(false);
