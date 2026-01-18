@@ -42,19 +42,24 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: '/logo-white-2.png',
+        url: '/icon.png',
+        type: 'image/png',
+        sizes: '512x512',
         media: '(prefers-color-scheme: light)',
       },
       {
-        url: '/logo-white-2.png',
+        url: '/icon.png',
+        type: 'image/png',
+        sizes: '512x512',
         media: '(prefers-color-scheme: dark)',
       },
       {
-        url: '/logo-white-2.png',
-        type: 'image/svg+xml',
+        url: '/icon.png',
+        type: 'image/png',
+        sizes: '512x512',
       },
     ],
-    apple: '/logo-white-2.png',
+    apple: '/icon.png',
   },
 };
 

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import HomePage from '@/components/home-page';
+import HomePage, { HomePageSkeleton } from '@/components/home-page';
 import StatsPage from '@/components/stats-page';
 import ProfilePage from '@/components/profile-page';
 import PortfolioPage from '@/components/portfolio-page';
@@ -263,8 +263,12 @@ function PageContent() {
     return (
       <div className="min-h-screen bg-neutral-200 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mx-auto mb-2"></div>
-          <p className="text-gray-500 text-sm">로딩 중...</p>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm">
+            <img src="/icon.png" alt="ReviewFlow" className="h-9 w-9 object-contain" />
+          </div>
+          <div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full bg-white/70">
+            <div className="h-full w-1/2 animate-pulse rounded-full bg-orange-300" />
+          </div>
         </div>
       </div>
     );
@@ -275,6 +279,26 @@ function PageContent() {
   }
 
   if (isDataLoading) {
+    if (currentPage === 'home') {
+      return (
+        <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
+          <div className="w-full md:max-w-[800px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
+            <GlobalHeader
+              title="일정"
+              onNotifications={handleGoNotifications}
+              onProfile={handleGoProfile}
+            />
+            <HomePageSkeleton />
+            <NavigationBar
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              onAddClick={() => handleOpenScheduleModal()}
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-neutral-200 md:flex md:items-center md:justify-center md:p-4">
         <div className="w-full md:max-w-[800px] h-screen md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col items-center justify-center">
