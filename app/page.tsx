@@ -407,9 +407,7 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-neutral-200 flex items-center justify-center">
-          Loading...
-        </div>
+        <div className="min-h-screen bg-neutral-200" />
       }
     >
       <PageContent />
