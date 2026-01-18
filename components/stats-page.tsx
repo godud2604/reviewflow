@@ -73,6 +73,7 @@ export default function StatsPage({
   const historyDisabled = showIncomeModal || isScheduleModalOpen;
   const cardShadow = 'shadow-[0_14px_40px_rgba(18,34,64,0.08)]';
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
 
   const toNumber = (value: unknown) => {
@@ -351,6 +352,16 @@ export default function StatsPage({
     setShowIncomeTutorial(true);
   }, [hasAnyExtraIncome]);
 
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'auto' });
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  }, []);
+
   const monthlyGrowth: MonthlyGrowth[] = useMemo(() => {
     const monthMap = new Map<string, MonthlyGrowth>();
 
@@ -423,7 +434,10 @@ export default function StatsPage({
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y relative pt-4.5">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y relative pt-4.5"
+      >
         {/* [수정] 상단 월 선택 영역: 그라데이션 제거하여 버튼이 가려지는 문제 해결 */}
         <div className="mb-4 relative">
           <div

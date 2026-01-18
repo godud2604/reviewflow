@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import HomePage, { HomePageSkeleton } from '@/components/home-page';
 import StatsPage, { StatsPageSkeleton } from '@/components/stats-page';
@@ -48,6 +48,7 @@ function PageContent() {
   const isLandingPage = page === 'landing';
   const currentPage = page === 'home' || page === 'stats' || page === 'profile' ? page : 'home';
   const showPortfolio = view === 'portfolio';
+  const mainScrollRef = useRef<HTMLDivElement>(null);
 
   // Auth Hook
   const { user, loading: authLoading } = useAuth();
@@ -78,6 +79,12 @@ function PageContent() {
   const isLoggedIn = !!user && !isLandingPage;
   const { profile, refetch: refetchUserProfile } = useUserProfile({ enabled: isLoggedIn });
   const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
+
+  useEffect(() => {
+    if (currentPage !== 'stats') return;
+    if (!mainScrollRef.current) return;
+    mainScrollRef.current.scrollTo({ top: 0, behavior: 'auto' });
+  }, [currentPage]);
   const { isPro } = resolveTier({
     profileTier: profile?.tier ?? undefined,
     metadata,
@@ -388,7 +395,7 @@ function PageContent() {
     // 1. 최상단 컨테이너를 fixed로 고정하여 사파리 바운스(튕김)를 방지
     <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
       <div className="w-full md:max-w-[800px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
-        <main className="flex-1 overflow-y-auto outline-none">
+        <main ref={mainScrollRef} className="flex-1 overflow-y-auto outline-none">
           {showGlobalHeader && (
             <GlobalHeader
               title={currentPage === 'stats' ? '통계' : '일정'}
