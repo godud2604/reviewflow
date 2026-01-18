@@ -6,10 +6,12 @@ export default function NavigationBar({
   currentPage,
   onPageChange,
   onAddClick,
+  onHomeClick,
 }: {
   currentPage: 'home' | 'stats' | 'profile';
   onPageChange: (page: 'home' | 'stats') => void;
   onAddClick: () => void;
+  onHomeClick?: () => void;
 }) {
   const baseBtn =
     'flex flex-col items-center justify-center gap-1 rounded-2xl px-4 py-2 text-[13px] font-semibold text-neutral-400 transition';
@@ -19,7 +21,10 @@ export default function NavigationBar({
     <nav className="w-full px-4 pb-[calc(max(env(safe-area-inset-bottom),constant(safe-area-inset-bottom))+0.9rem)]">
       <div className="mx-auto flex max-w-[250px] items-center justify-between rounded-[28px] border border-neutral-200 bg-white/90 px-3 py-0.5 backdrop-blur">
         <button
-          onClick={() => onPageChange('home')}
+          onClick={() => {
+            onHomeClick?.();
+            onPageChange('home');
+          }}
           className={`${baseBtn} ${currentPage === 'home' ? activeClasses : ''}`}
           aria-label="일정 페이지로 이동"
         >

@@ -195,6 +195,7 @@ export default function HomePage({
   onCreateSchedule,
   focusDate,
   onFocusDateApplied,
+  resetSignal,
 }: {
   schedules: Schedule[];
   onScheduleClick: (id: number) => void;
@@ -206,6 +207,7 @@ export default function HomePage({
   onCreateSchedule?: (dateStr: string) => void;
   focusDate?: string | null;
   onFocusDateApplied?: () => void;
+  resetSignal?: number;
 }) {
   const posthog = usePostHog();
   const now = getNowInKST();
@@ -239,6 +241,9 @@ export default function HomePage({
   const [showFilterScrollHint, setShowFilterScrollHint] = useState(false);
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
+  const filterHeaderRef = useRef<HTMLDivElement | null>(null);
+  const scrollEffectRanRef = useRef(false);
+  const skipFilterScrollRef = useRef(false);
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const [calendarCtaDate, setCalendarCtaDate] = useState<string | null>(null);
   const [isCalendarCtaOpen, setIsCalendarCtaOpen] = useState(false);
@@ -289,6 +294,11 @@ export default function HomePage({
     schedule.status === '완료' &&
     !hasIncompleteAdditionalDeadlines(schedule) &&
     !isVisitUpcoming(schedule);
+
+  const hasTodoSchedules = useMemo(
+    () => schedules.some((schedule) => isTodoSchedule(schedule)),
+    [schedules]
+  );
 
   const isOverdueSchedule = (schedule: Schedule) => {
     if (schedule.dead && schedule.dead < today && schedule.status !== '완료') return true;
@@ -621,7 +631,7 @@ export default function HomePage({
     }
   };
 
-  const resetFilters = () => {
+  const resetFilters = useCallback(() => {
     setSelectedDate(null);
     setViewFilter('TODO');
     setSortOption('DEADLINE_SOON');
@@ -633,7 +643,13 @@ export default function HomePage({
     setSearchInput('');
     setCalendarCtaDate(null);
     setIsCalendarCtaOpen(false);
-  };
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    container.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   const handleCalendarDateAdd = (dateStr: string) => {
     onCreateSchedule?.(dateStr);
@@ -649,6 +665,21 @@ export default function HomePage({
   const applySearch = () => {
     setSearchQuery(searchInput.trim());
   };
+
+  const scrollToFilterHeader = useCallback(() => {
+    const target = filterHeaderRef.current;
+    const container = scrollContainerRef.current;
+    if (!target || !container) return;
+    const containerTop = container.getBoundingClientRect().top;
+    const targetTop = target.getBoundingClientRect().top;
+    const stickyHeight = filterStickyRef.current?.getBoundingClientRect().height ?? 0;
+    const offset =
+      targetTop -
+      containerTop +
+      container.scrollTop -
+      (isMobile ? stickyHeight + filterStickyTop + 8 : 8);
+    container.scrollTo({ top: offset, behavior: 'smooth' });
+  }, [filterStickyTop, isMobile]);
 
   const getStatusFilterLabel = () => {
     if (statusFilter === 'ALL') return '진행상태';
@@ -716,6 +747,40 @@ export default function HomePage({
     }
   };
 
+  useEffect(() => {
+    if (!resetSignal) return;
+    skipFilterScrollRef.current = true;
+    resetFilters();
+    scrollToTop();
+  }, [resetFilters, resetSignal, scrollToTop]);
+
+  useEffect(() => {
+    if (!hasSchedules) return;
+    if (!scrollEffectRanRef.current) {
+      scrollEffectRanRef.current = true;
+      if (hasTodoSchedules) {
+        scrollToFilterHeader();
+      }
+      return;
+    }
+    if (skipFilterScrollRef.current) {
+      skipFilterScrollRef.current = false;
+      return;
+    }
+    scrollToFilterHeader();
+  }, [
+    categoryFilter,
+    hasSchedules,
+    paybackFilter,
+    platformFilter,
+    scrollToFilterHeader,
+    searchQuery,
+    selectedDate,
+    sortOption,
+    statusFilter,
+    viewFilter,
+  ]);
+
   return (
     <div ref={contentScrollRef} className="flex-1 px-5 pb-24 space-y-3 pt-3 bg-neutral-50/50">
       {/* 3. 캘린더 */}
@@ -744,7 +809,7 @@ export default function HomePage({
       )}
 
       {/* 6. 검색 + 필터 컨트롤 */}
-      <div className="mt-6">
+      <div ref={filterHeaderRef} className="mt-6">
         {/* 헤더 섹션 */}
         <div className="flex items-start justify-between">
           <div className="mb-3">
@@ -775,9 +840,7 @@ export default function HomePage({
 
         <div
           ref={filterStickyRef}
-          className={`z-20 ${
-            isMobile ? (isFilterSticky ? 'fixed' : 'sticky -mx-[20px]') : ''
-          }`}
+          className={`z-20 ${isMobile ? (isFilterSticky ? 'fixed' : 'sticky -mx-[20px]') : ''}`}
           style={
             isMobile && isFilterSticky && filterStickyStyle
               ? {
@@ -1091,9 +1154,19 @@ export default function HomePage({
                 {showFilterScrollHint && (
                   <>
                     <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-white via-white/80 to-transparent" />
-                    <div className="pointer-events-none absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-neutral-200 bg-white/90 text-[10px] font-bold text-neutral-400">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const container = filterScrollRef.current;
+                        if (!container) return;
+                        const amount = Math.max(container.clientWidth * 0.6, 160);
+                        container.scrollBy({ left: amount, behavior: 'smooth' });
+                      }}
+                      className="absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-neutral-200 bg-white/90 text-[10px] font-bold text-neutral-500 shadow-sm"
+                      aria-label="필터 더보기"
+                    >
                       {'>'}
-                    </div>
+                    </button>
                   </>
                 )}
               </div>

@@ -125,6 +125,7 @@ function PageContent() {
   const initialDeadline = searchParams.get('date') ?? undefined;
   const isTodoModalOpen = searchParams.get('todo') === 'true';
   const [homeCalendarFocusDate, setHomeCalendarFocusDate] = useState<string | null>(null);
+  const [homeResetSignal, setHomeResetSignal] = useState(0);
   const mapSearchRequested = searchParams.get('mapSearch') === 'true';
   const mapSearchAutoSaveRequested = searchParams.get('mapSearchAutoSave') === 'true';
   const [statusChangeIntent, setStatusChangeIntent] = useState(false);
@@ -253,6 +254,10 @@ function PageContent() {
     router.push(`?page=${newPage}`);
   };
 
+  const handleHomeTabClick = () => {
+    setHomeResetSignal((prev) => prev + 1);
+  };
+
   const handleGoNotifications = () => {
     router.push('/notifications');
   };
@@ -322,6 +327,7 @@ function PageContent() {
             <NavigationBar
               currentPage={currentPage}
               onPageChange={handlePageChange}
+              onHomeClick={handleHomeTabClick}
               onAddClick={() => handleOpenScheduleModal()}
             />
           </div>
@@ -342,6 +348,7 @@ function PageContent() {
             <NavigationBar
               currentPage={currentPage}
               onPageChange={handlePageChange}
+              onHomeClick={handleHomeTabClick}
               onAddClick={() => handleOpenScheduleModal()}
             />
           </div>
@@ -357,6 +364,7 @@ function PageContent() {
             <NavigationBar
               currentPage={currentPage}
               onPageChange={handlePageChange}
+              onHomeClick={handleHomeTabClick}
               onAddClick={() => handleOpenScheduleModal()}
             />
           </div>
@@ -411,6 +419,7 @@ function PageContent() {
                   }
                   focusDate={homeCalendarFocusDate}
                   onFocusDateApplied={() => setHomeCalendarFocusDate(null)}
+                  resetSignal={homeResetSignal}
                 />
               )}
 
@@ -433,6 +442,7 @@ function PageContent() {
         <NavigationBar
           currentPage={currentPage}
           onPageChange={handlePageChange}
+          onHomeClick={handleHomeTabClick}
           onAddClick={() => handleOpenScheduleModal()}
         />
 
