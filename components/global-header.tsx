@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Bell, Rocket, Settings } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
@@ -15,6 +16,7 @@ type GlobalHeaderProps = {
 };
 
 export default function GlobalHeader({ title, onNotifications, onProfile }: GlobalHeaderProps) {
+  const router = useRouter();
   const [showKakaoCta, setShowKakaoCta] = useState(false);
   const [isNativeApp, setIsNativeApp] = useState<boolean | null>(null);
   const { user } = useAuth();
@@ -94,6 +96,14 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
               앱출시
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => router.push('/coupang-reward')}
+            className="items-center rounded-full border border-orange-200 bg-orange-50 px-3 py-2 text-[12px] font-semibold text-orange-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-100 md:flex"
+            aria-label="Pro 무료 혜택 받기"
+          >
+            Pro 무료 혜택 받기
+          </button>
           <div className="relative">
             <button
               type="button"

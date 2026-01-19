@@ -53,6 +53,7 @@ export interface UserProfile {
   tier: string;
   tierDurationMonths: number;
   tierExpiresAt: string | null;
+  coupangRewardLastDate: string | null;
 }
 
 interface UseUserProfileOptions {
@@ -186,6 +187,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
                 tier: newProfile.tier ?? 'free',
                 tierDurationMonths: newProfile.tier_duration_months ?? 0,
                 tierExpiresAt: newProfile.tier_expires_at ?? null,
+                coupangRewardLastDate: newProfile.coupang_reward_last_date ?? null,
               });
               hasFetchedRef.current = true;
             }
@@ -225,6 +227,7 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
             tier: data.tier ?? 'free',
             tierDurationMonths: data.tier_duration_months ?? 0,
             tierExpiresAt: data.tier_expires_at ?? null,
+            coupangRewardLastDate: data.coupang_reward_last_date ?? null,
           });
           hasFetchedRef.current = true;
         }
