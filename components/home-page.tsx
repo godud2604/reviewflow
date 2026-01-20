@@ -252,6 +252,34 @@ export default function HomePage({
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const filterStickyTop = isMobile ? FILTER_STICKY_TOP_MOBILE : FILTER_STICKY_TOP_DESKTOP;
+  const showScheduleCompleteToast = useCallback(() => {
+    toast({ title: '일정을 완료했어요.', duration: 1000 });
+  }, [toast]);
+  const showCompletedEditToast = useCallback(() => {
+    toast({
+      title: '완료 상태를 수정할 수 있어요.',
+      description: '진행 상태에서 필요한 단계로 변경해주세요',
+      duration: 1000,
+    });
+  }, [toast]);
+  const showAdditionalDeadlineToast = useCallback(
+    (wasCompleted: boolean) => {
+      toast({
+        title: wasCompleted ? '마감일 완료를 해제했어요.' : '마감일을 완료했어요.',
+        duration: 1000,
+      });
+    },
+    [toast]
+  );
+  const showPaybackToast = useCallback(
+    (wasConfirmed: boolean) => {
+      toast({
+        title: wasConfirmed ? '입금 완료를 취소했어요.' : '입금 완료 처리했어요.',
+        duration: 1000,
+      });
+    },
+    [toast]
+  );
 
   // Demo Data
   const demoSchedules = useMemo(
@@ -902,15 +930,15 @@ export default function HomePage({
                     type="text"
                     ref={searchInputRef}
                     value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      if ((event.nativeEvent as KeyboardEvent).isComposing) return;
-                      event.preventDefault();
-                      applySearch();
-                      event.currentTarget.blur();
-                    }
-                  }}
+                    onChange={(event) => setSearchInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        if ((event.nativeEvent as KeyboardEvent).isComposing) return;
+                        event.preventDefault();
+                        applySearch();
+                        event.currentTarget.blur();
+                      }
+                    }}
                     placeholder="제목, 연락처, 메모, 위치로 검색"
                     className="border-0 bg-transparent px-0 pt-1 text-[16px] font-medium text-neutral-700 shadow-none placeholder:text-neutral-400 focus-visible:ring-0 placeholder:text-[13px]"
                   />
@@ -1253,12 +1281,39 @@ export default function HomePage({
               key={schedule.id}
               schedule={schedule}
               onClick={() => onScheduleClick(schedule.id)}
-              onCompleteClick={onCompleteClick ? () => onCompleteClick(schedule.id) : undefined}
-              onCompletedClick={onCompletedClick ? () => onCompletedClick(schedule.id) : undefined}
-              onPaybackConfirm={onPaybackConfirm ? () => onPaybackConfirm(schedule.id) : undefined}
+              onCompleteClick={
+                onCompleteClick
+                  ? () => {
+                      onCompleteClick(schedule.id);
+                      showScheduleCompleteToast();
+                    }
+                  : undefined
+              }
+              onCompletedClick={
+                onCompletedClick
+                  ? () => {
+                      onCompletedClick(schedule.id);
+                      showCompletedEditToast();
+                    }
+                  : undefined
+              }
+              onPaybackConfirm={
+                onPaybackConfirm
+                  ? () => {
+                      onPaybackConfirm(schedule.id);
+                      showPaybackToast(Boolean(schedule.paybackConfirmed));
+                    }
+                  : undefined
+              }
               onAdditionalDeadlineToggle={
                 onAdditionalDeadlineToggle
-                  ? (deadlineId) => onAdditionalDeadlineToggle(schedule.id, deadlineId)
+                  ? (deadlineId) => {
+                      const deadline = schedule.additionalDeadlines?.find(
+                        (item) => item.id === deadlineId
+                      );
+                      onAdditionalDeadlineToggle(schedule.id, deadlineId);
+                      showAdditionalDeadlineToast(Boolean(deadline?.completed));
+                    }
                   : undefined
               }
               today={today}
