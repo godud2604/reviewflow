@@ -681,7 +681,7 @@ export default function HomePage({
 
   const resetFilters = useCallback(() => {
     setSelectedDate(null);
-    setShowAllOnSelectedDate(false);
+    setShowAllOnSelectedDate(true);
     setViewFilter('TODO');
     setSortOption('DEADLINE_SOON');
     setPlatformFilter('ALL');
