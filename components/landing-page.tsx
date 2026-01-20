@@ -19,6 +19,8 @@ export default function LandingPage() {
 
   const isProd = process.env.NODE_ENV === 'production';
   const IOS_APP_STORE_URL = 'https://apps.apple.com/kr/app/reviewflow/id6757174544';
+  const ANDROID_PLAY_STORE_URL =
+    'https://play.google.com/store/apps/details?id=com.reviewflow.reviewflow';
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -413,7 +415,7 @@ export default function LandingPage() {
             체험단 블로거를 위한 올인원 일정·정산 캘린더
           </p>
           <div
-            className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center animate-fade-in"
+            className="flex flex-col gap-3 md:gap-4 justify-center items-center animate-fade-in"
             style={{ animationDelay: '0.4s' }}
           >
             <button
@@ -437,14 +439,24 @@ export default function LandingPage() {
               </svg>
             </button>
             {isMobileDevice === false && (
-              <a
-                href={IOS_APP_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-white text-[#191F28] border border-neutral-300 px-5 md:px-8 py-2.5 md:py-4 rounded-full text-xs md:text-lg font-bold shadow-sm hover:bg-neutral-50 transition-all duration-300 flex items-center gap-2 cursor-pointer whitespace-nowrap"
-              >
-                iOS 다운로드
-              </a>
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center">
+                <a
+                  href={IOS_APP_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-white text-[#191F28] border border-neutral-300 px-5 md:px-8 py-2.5 md:py-4 rounded-full text-xs md:text-lg font-bold shadow-sm hover:bg-neutral-50 transition-all duration-300 flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                >
+                  iOS 다운로드
+                </a>
+                <a
+                  href={ANDROID_PLAY_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-white text-[#191F28] border border-neutral-300 px-5 md:px-8 py-2.5 md:py-4 rounded-full text-xs md:text-lg font-bold shadow-sm hover:bg-neutral-50 transition-all duration-300 flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                >
+                  Android 다운로드
+                </a>
+              </div>
             )}
           </div>
           <p
