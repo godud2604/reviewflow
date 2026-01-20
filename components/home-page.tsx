@@ -824,7 +824,14 @@ export default function HomePage({
     (checked: boolean) => {
       setShowAllOnSelectedDate(checked);
       if (checked) {
-        setSortOption(viewFilter === 'DONE' ? 'DEADLINE_LATE' : 'DEADLINE_SOON');
+        setViewFilter('TODO');
+        setPlatformFilter('ALL');
+        setPaybackFilter('ALL');
+        setStatusFilter('ALL');
+        setCategoryFilter('ALL');
+        setSearchQuery('');
+        setSearchInput('');
+        setSortOption('DEADLINE_SOON');
         return;
       }
       const schedulesForToday = schedules.filter(
@@ -897,7 +904,7 @@ export default function HomePage({
       />
 
       {/* 일정 추가 버튼 */}
-      {selectedDate && onCreateSchedule && (
+      {selectedDate && !showAllOnSelectedDate && onCreateSchedule && (
         <div className="mt-3 mb-1">
           <button
             type="button"
