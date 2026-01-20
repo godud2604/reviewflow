@@ -7,6 +7,7 @@ import ExtraIncomeModal from './extra-income-modal';
 import IncomeHistoryModal from './income-history-modal';
 import { Z_INDEX } from '@/lib/z-index';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import {
   buildIncomeDetailsFromLegacy,
   parseIncomeDetailsJson,
@@ -57,6 +58,7 @@ export default function StatsPage({
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showIncomeTutorial, setShowIncomeTutorial] = useState(false);
+  const [showCompletedOnly, setShowCompletedOnly] = useState(false);
   const [editingExtraIncome, setEditingExtraIncome] = useState<ExtraIncome | null>(null);
   const [historyView, setHistoryView] = useState<HistoryView>('all');
   const historyDisabled = showIncomeModal || isScheduleModalOpen;
@@ -180,9 +182,15 @@ export default function StatsPage({
     handleOpenIncomeModal(income);
   };
 
+  const visibleSchedules = useMemo(
+    () =>
+      showCompletedOnly ? schedules.filter((schedule) => schedule.status === '완료') : schedules,
+    [schedules, showCompletedOnly]
+  );
+
   const selectedMonthSchedules = useMemo(
-    () => schedules.filter((schedule) => isDateInSelectedMonth(getScheduleDate(schedule))),
-    [schedules, selectedMonthKey, selectedMonthDate]
+    () => visibleSchedules.filter((schedule) => isDateInSelectedMonth(getScheduleDate(schedule))),
+    [visibleSchedules, selectedMonthKey, selectedMonthDate]
   );
 
   const selectedMonthExtraIncomes = useMemo(
@@ -386,7 +394,7 @@ export default function StatsPage({
       return monthMap.get(key)!;
     };
 
-    schedules.forEach((s) => {
+    visibleSchedules.forEach((s) => {
       const date = parseDate(s.visit) || parseDate(s.dead);
       if (!date) return;
       const key = toMonthKey(date);
@@ -415,7 +423,7 @@ export default function StatsPage({
     return Array.from(monthMap.values()).sort(
       (a, b) => new Date(a.monthStart).getTime() - new Date(b.monthStart).getTime()
     );
-  }, [schedules, extraIncomes]);
+  }, [visibleSchedules, extraIncomes]);
 
   const monthOptions = useMemo(() => {
     // ... (Month Options 로직 동일) ...
@@ -442,31 +450,45 @@ export default function StatsPage({
       >
         {/* 상단 월 선택 영역 */}
         <div className="mb-4 relative">
-          <div
-            ref={monthScrollRef}
-            className="flex gap-2 overflow-x-auto pb-1 px-5 -mx-5 scrollbar-hide snap-x"
-          >
-            {monthOptions.map((option) => {
-              const isMonthLocked = !isPro && option.key !== currentMonthKey;
-              return (
-                <button
-                  key={option.key}
-                  onClick={() => {
-                    if (isMonthLocked) return;
-                    setSelectedMonthKey(option.key);
-                  }}
-                  disabled={isMonthLocked}
-                  className={`mt-1 flex-none snap-start rounded-full px-4 py-2 text-xs font-semibold transition whitespace-nowrap ${
-                    selectedMonthKey === option.key
-                      ? 'bg-[#0f172a] text-white shadow-md'
-                      : 'bg-white text-[#1f2937] border border-[#e5e7eb]'
-                  } ${isMonthLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-            <div className="w-2 flex-none" />
+          <div className="flex items-center gap-3">
+            <div
+              ref={monthScrollRef}
+              className="flex-1 flex gap-2 overflow-x-auto pb-1 px-5 -mx-5 scrollbar-hide snap-x mr-0"
+            >
+              {monthOptions.map((option) => {
+                const isMonthLocked = !isPro && option.key !== currentMonthKey;
+                return (
+                  <button
+                    key={option.key}
+                    onClick={() => {
+                      if (isMonthLocked) return;
+                      setSelectedMonthKey(option.key);
+                    }}
+                    disabled={isMonthLocked}
+                    className={`mt-1 flex-none snap-start rounded-full px-4 py-2 text-xs font-semibold transition whitespace-nowrap ${
+                      selectedMonthKey === option.key
+                        ? 'bg-[#0f172a] text-white shadow-md'
+                        : 'bg-white text-[#1f2937] border border-[#e5e7eb]'
+                    } ${isMonthLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+              <div className="w-2 flex-none" />
+            </div>
+            <label
+              htmlFor="completed-only"
+              className="flex items-center gap-2 text-[12px] font-semibold text-[#64748b] whitespace-nowrap"
+            >
+              완료만 보기
+              <Switch
+                id="completed-only"
+                checked={showCompletedOnly}
+                onCheckedChange={setShowCompletedOnly}
+                className="data-[state=checked]:bg-[#0f172a]"
+              />
+            </label>
           </div>
         </div>
 
@@ -487,11 +509,11 @@ export default function StatsPage({
 
           {/* Main Total Value (여백 및 폰트 축소) */}
           <div className="relative flex flex-col items-center justify-center text-center mt-1 mb-5">
-            <div className="text-[12px] font-bold text-white/90 uppercase tracking-wide mb-1 drop-shadow-sm">
+            <div className="text-[13px] font-bold text-white/90 uppercase tracking-wide mb-1 drop-shadow-sm">
               {displaySelectedMonthLabel} 총 경제적 가치
             </div>
             {/* 폰트 크기 40px -> 32px로 조정하여 부담 완화 */}
-            <div className="text-[32px] font-black leading-none text-white tracking-tight drop-shadow-md">
+            <div className="text-[30px] font-black leading-none text-white tracking-tight drop-shadow-md">
               ₩ {animatedEconValue.toLocaleString()}
             </div>
           </div>
@@ -501,10 +523,10 @@ export default function StatsPage({
             {/* 1. 방어한 생활비 */}
             <div className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02]">
               {/* 아이콘 배경 사이즈 10 -> 8로 축소 */}
-              <div className="mb-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
-                <Gift size={12} strokeWidth={2.5} />
+              <div className="mb-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
+                <Gift size={10} strokeWidth={1.5} />
               </div>
-              <div className="text-[12px] font-semibold text-white/80 leading-tight">
+              <div className="text-[11.5px] font-semibold text-white/80 leading-tight">
                 방어한 생활비
               </div>
               <div className="text-[15px] font-bold text-white mt-0.5 drop-shadow-sm">
@@ -514,10 +536,12 @@ export default function StatsPage({
 
             {/* 2. 현금수익 */}
             <div className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02]">
-              <div className="mb-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
-                <Wallet size={12} strokeWidth={2.5} />
+              <div className="mb-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
+                <Wallet size={10} strokeWidth={1.5} />
               </div>
-              <div className="text-[12px] font-semibold text-white/80 leading-tight">현금수익</div>
+              <div className="text-[11.5px] font-semibold text-white/80 leading-tight">
+                현금수익
+              </div>
               <div className="text-[15px] font-bold text-white mt-0.5 drop-shadow-sm">
                 {totalCashAndExtraIncome.toLocaleString()}
               </div>
@@ -525,10 +549,12 @@ export default function StatsPage({
 
             {/* 3. 지출비용 */}
             <div className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02]">
-              <div className="mb-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
-                <CreditCard size={12} strokeWidth={2.5} />
+              <div className="mb-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
+                <CreditCard size={10} strokeWidth={1.5} />
               </div>
-              <div className="text-[12px] font-semibold text-white/80 leading-tight">지출비용</div>
+              <div className="text-[11.5px] font-semibold text-white/80 leading-tight">
+                지출비용
+              </div>
               <div className="text-[15px] font-bold text-white mt-0.5 drop-shadow-sm">
                 {totalCost.toLocaleString()}
               </div>
