@@ -50,6 +50,16 @@ const getKstParts = (date: Date) => {
 
 const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
 
+const addDaysToExpiry = (expiresAt: string | null, days: number) => {
+  const now = new Date();
+  const current = expiresAt ? new Date(expiresAt) : null;
+  const base =
+    current && !Number.isNaN(current.getTime()) && current > now ? current : now;
+  const next = new Date(base);
+  next.setDate(next.getDate() + days);
+  return next.toISOString();
+};
+
 const formatKstExpiryLabel = (expiresAt: string) => {
   const expiresDate = new Date(expiresAt);
   if (Number.isNaN(expiresDate.getTime())) return null;
@@ -215,10 +225,15 @@ export default function CoupangRewardPage() {
     if (hasClickedToday || isSaving) return;
 
     setIsSaving(true);
+    const nextExpiryAt = addDaysToExpiry(tierExpiresAt, 1);
     const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('user_profiles')
-      .update({ coupang_reward_last_date: todayKst })
+      .update({
+        coupang_reward_last_date: todayKst,
+        tier_expires_at: nextExpiryAt,
+        tier: 'pro',
+      })
       .eq('id', user.id);
 
     if (error) {
@@ -234,6 +249,8 @@ export default function CoupangRewardPage() {
     }
 
     setLastRewardDate(todayKst);
+    setTierExpiresAt(nextExpiryAt);
+    setProfileTier('pro');
     localStorage.setItem('coupangRewardPending', todayKst);
     setIsSaving(false);
 
@@ -325,6 +342,30 @@ export default function CoupangRewardPage() {
               </p>
             )}
           </div>
+        </div>
+
+        <div className="rounded-[28px] border border-neutral-200 bg-white px-6 py-6 shadow-[0_20px_50px_rgba(15,23,42,0.06)]">
+          <div className="flex items-center gap-2 text-[15px] font-bold text-neutral-900">
+            <PartyPopper className="h-4 w-4 text-orange-500" />
+            Pro에서 제공되는 기능
+          </div>
+          <p className="mt-2 text-[12px] font-medium text-neutral-500">
+            Pro 혜택으로 일정 관리가 훨씬 편해져요.
+          </p>
+          <ul className="mt-4 space-y-3 text-[13px] font-semibold text-neutral-700">
+            <li className="flex items-start gap-2">
+              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-orange-400" />
+              매일 일정 요약 카카오 알림
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-orange-400" />
+              지난달 통계 상세 내역 제공
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-orange-400" />
+              엑셀 다운로드 기능
+            </li>
+          </ul>
         </div>
       </div>
 

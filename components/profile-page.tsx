@@ -420,8 +420,6 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
             >
               {tierLabel}
             </span>
-            <span>{tierDurationLabel}</span>
-            <span className="text-neutral-300">·</span>
             <span>{tierExpiryText}</span>
           </div>
         </section>

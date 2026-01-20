@@ -87,6 +87,8 @@ const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[]
 
 const FILTER_STICKY_TOP_DESKTOP = 159;
 const FILTER_STICKY_TOP_MOBILE = 64;
+const LAUNCH_GIFT_TUTORIAL_KEY = 'launch-gift-popup-2025-01';
+const LAUNCH_GIFT_CUTOFF = new Date('2025-01-20T00:00:00+09:00');
 
 const getScheduleRingColor = (status: string): string | undefined => CALENDAR_RING_COLORS[status];
 
@@ -251,7 +253,7 @@ export default function HomePage({
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const [calendarCtaDate, setCalendarCtaDate] = useState<string | null>(null);
   const [isCalendarCtaOpen, setIsCalendarCtaOpen] = useState(false);
-  const [showLaunchGiftPopup, setShowLaunchGiftPopup] = useState(true);
+  const [showLaunchGiftPopup, setShowLaunchGiftPopup] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -310,6 +312,64 @@ export default function HomePage({
     return (schedule.additionalDeadlines || []).some(
       (deadline) => deadline.date && !deadline.completed && deadline.date < today
     );
+  };
+
+  useEffect(() => {
+    if (!user?.id) {
+      setShowLaunchGiftPopup(false);
+      return;
+    }
+
+    const createdAt = user.created_at ? new Date(user.created_at) : null;
+    if (createdAt && createdAt >= LAUNCH_GIFT_CUTOFF) {
+      setShowLaunchGiftPopup(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchLaunchGiftStatus = async () => {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from('tutorial_progress')
+        .select('completed_at')
+        .eq('user_id', user.id)
+        .eq('tutorial_key', LAUNCH_GIFT_TUTORIAL_KEY)
+        .maybeSingle();
+
+      if (!isMounted) return;
+
+      if (error) {
+        setShowLaunchGiftPopup(true);
+        return;
+      }
+
+      setShowLaunchGiftPopup(!data?.completed_at);
+    };
+
+    fetchLaunchGiftStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.created_at, user?.id]);
+
+  const dismissLaunchGiftPopup = async () => {
+    setShowLaunchGiftPopup(false);
+    if (!user?.id) return;
+    const supabase = getSupabaseClient();
+    try {
+      await supabase.from('tutorial_progress').upsert(
+        {
+          user_id: user.id,
+          tutorial_key: LAUNCH_GIFT_TUTORIAL_KEY,
+          completed_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,tutorial_key' }
+      );
+    } catch {
+      // Ignore failures; popup can reappear if needed.
+    }
   };
 
   useEffect(() => {
@@ -1332,7 +1392,7 @@ export default function HomePage({
           <button
             type="button"
             aria-label="팝업 닫기"
-            onClick={() => setShowLaunchGiftPopup(false)}
+            onClick={dismissLaunchGiftPopup}
             className="absolute inset-0 bg-black/40"
           />
           <div className="absolute left-1/2 top-1/2 w-[92%] max-w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-orange-100 bg-white p-5 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
@@ -1342,7 +1402,7 @@ export default function HomePage({
               </div>
               <button
                 type="button"
-                onClick={() => setShowLaunchGiftPopup(false)}
+                onClick={dismissLaunchGiftPopup}
                 className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 hover:text-neutral-700"
                 aria-label="팝업 닫기"
               >
@@ -1357,7 +1417,7 @@ export default function HomePage({
             <button
               type="button"
               onClick={() => {
-                setShowLaunchGiftPopup(false);
+                dismissLaunchGiftPopup();
                 router.push('/coupang-reward');
               }}
               className="mt-5 w-full rounded-2xl bg-[#ff6a1f] py-3 text-[14px] font-bold text-white shadow-[0_18px_40px_rgba(255,106,31,0.35)] transition hover:bg-[#f25d12]"
@@ -1366,7 +1426,7 @@ export default function HomePage({
             </button>
             <button
               type="button"
-              onClick={() => setShowLaunchGiftPopup(false)}
+              onClick={dismissLaunchGiftPopup}
               className="mt-3 w-full rounded-2xl border border-neutral-200 py-2.5 text-[13px] font-semibold text-neutral-600 hover:bg-neutral-50"
             >
               나중에 볼게요
