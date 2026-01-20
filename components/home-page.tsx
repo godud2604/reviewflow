@@ -1369,7 +1369,7 @@ export default function HomePage({
                   : undefined
               }
               today={today}
-              selectedDate={selectedDate}
+              selectedDate={showAllOnSelectedDate ? null : selectedDate}
             />
           ))
         ) : shouldShowFilterTutorial ? (
