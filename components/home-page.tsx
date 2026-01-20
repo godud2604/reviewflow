@@ -10,6 +10,7 @@ import { parseDateString } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -221,6 +222,7 @@ export default function HomePage({
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [paybackFilter, setPaybackFilter] = useState<'ALL' | 'ONLY'>('ALL');
+  const [showAllOnSelectedDate, setShowAllOnSelectedDate] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -339,6 +341,7 @@ export default function HomePage({
   useEffect(() => {
     if (focusDate) {
       setSelectedDate(focusDate);
+      setShowAllOnSelectedDate(true);
       setViewFilter('TODO');
       setSortOption('VISIT_SOON');
       setCalendarCtaDate(null);
@@ -461,7 +464,8 @@ export default function HomePage({
   }, [schedules]);
 
   // --- Filtering Logic ---
-  const baseList = selectedDate
+  const isDateFiltered = Boolean(selectedDate && !showAllOnSelectedDate);
+  const baseList = isDateFiltered
     ? schedules.filter(
         (schedule) =>
           schedule.dead === selectedDate ||
@@ -558,7 +562,7 @@ export default function HomePage({
     if (sortOption === 'VISIT_SOON' || sortOption === 'VISIT_LATE') {
       const aVisit = getVisitKey(a);
       const bVisit = getVisitKey(b);
-      if (selectedDate) {
+      if (isDateFiltered) {
         const aSelectedVisit = a.visit === selectedDate;
         const bSelectedVisit = b.visit === selectedDate;
         if (aSelectedVisit !== bSelectedVisit) return aSelectedVisit ? -1 : 1;
@@ -582,12 +586,12 @@ export default function HomePage({
   const todoCount = baseList.filter((schedule) => isTodoSchedule(schedule)).length;
   const doneCount = baseList.filter((schedule) => isDoneSchedule(schedule)).length;
   const visitCount = filteredSchedules.filter((schedule) =>
-    selectedDate ? schedule.visit === selectedDate : schedule.visit
+    isDateFiltered ? schedule.visit === selectedDate : schedule.visit
   ).length;
 
   const deadlineCount = filteredSchedules.reduce((count, schedule) => {
     let c = 0;
-    if (selectedDate) {
+    if (isDateFiltered) {
       if (schedule.dead === selectedDate) c++;
       const additionalCount = (schedule.additionalDeadlines || []).filter(
         (deadline) => deadline.date === selectedDate
@@ -663,6 +667,7 @@ export default function HomePage({
     setSearchQuery('');
     setSearchInput('');
     setSelectedDate(dateStr);
+    setShowAllOnSelectedDate(false);
     handleViewFilterChange(nextFilter);
     setSortOption('VISIT_SOON');
     if (hasSchedule) {
@@ -676,6 +681,7 @@ export default function HomePage({
 
   const resetFilters = useCallback(() => {
     setSelectedDate(null);
+    setShowAllOnSelectedDate(false);
     setViewFilter('TODO');
     setSortOption('DEADLINE_SOON');
     setPlatformFilter('ALL');
@@ -709,6 +715,7 @@ export default function HomePage({
     const hasDoneForToday = schedulesForToday.some((schedule) => isDoneSchedule(schedule));
     const nextFilter = hasTodoForToday ? 'TODO' : hasDoneForToday ? 'DONE' : 'TODO';
     setSelectedDate(today);
+    setShowAllOnSelectedDate(false);
     handleViewFilterChange(nextFilter);
     setSortOption('VISIT_SOON');
     setCalendarCtaDate(null);
@@ -784,7 +791,7 @@ export default function HomePage({
   const getPageTitle = () => {
     const statusText = viewFilter === 'TODO' ? '할 일' : '완료';
 
-    if (selectedDate) {
+    if (isDateFiltered) {
       const [_, m, d] = selectedDate.split('-');
       return `${Number(m)}월 ${Number(d)}일 ${statusText}`;
     }
@@ -794,7 +801,7 @@ export default function HomePage({
 
   const handleViewFilterChange = (filter: ViewFilter) => {
     setViewFilter(filter);
-    if (selectedDate) {
+    if (isDateFiltered) {
       setSortOption('VISIT_SOON');
       return;
     }
@@ -807,10 +814,42 @@ export default function HomePage({
 
   const clearSelectedDate = useCallback(() => {
     setSelectedDate(null);
+    setShowAllOnSelectedDate(false);
     setCalendarCtaDate(null);
     setIsCalendarCtaOpen(false);
     setSortOption(viewFilter === 'DONE' ? 'DEADLINE_LATE' : 'DEADLINE_SOON');
   }, [viewFilter]);
+
+  const handleShowAllToggle = useCallback(
+    (checked: boolean) => {
+      setShowAllOnSelectedDate(checked);
+      if (checked) {
+        setSortOption(viewFilter === 'DONE' ? 'DEADLINE_LATE' : 'DEADLINE_SOON');
+        return;
+      }
+      const schedulesForToday = schedules.filter(
+        (schedule) =>
+          schedule.dead === today ||
+          schedule.visit === today ||
+          (schedule.additionalDeadlines || []).some((deadline) => deadline.date === today)
+      );
+      const hasTodoForToday = schedulesForToday.some((schedule) => isTodoSchedule(schedule));
+      const hasDoneForToday = schedulesForToday.some((schedule) => isDoneSchedule(schedule));
+      const nextFilter = hasTodoForToday ? 'TODO' : hasDoneForToday ? 'DONE' : 'TODO';
+      setSelectedDate(today);
+      setViewFilter(nextFilter);
+      setPlatformFilter('ALL');
+      setPaybackFilter('ALL');
+      setStatusFilter('ALL');
+      setCategoryFilter('ALL');
+      setSearchQuery('');
+      setSearchInput('');
+      setSortOption('VISIT_SOON');
+      setCalendarCtaDate(null);
+      setIsCalendarCtaOpen(false);
+    },
+    [schedules, today, viewFilter]
+  );
 
   useEffect(() => {
     if (!resetSignal) return;
@@ -886,21 +925,37 @@ export default function HomePage({
               방문 {visitCount}건 · 마감 {deadlineCount}건
             </p>
           </div>
-          {(isFilterActive || selectedDate) && (
-            <div className="flex items-center gap-2">
-              {!selectedDate && isFilterActive && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={resetFilters}
-                  className="h-8 rounded-full border border-orange-500 bg-orange-500 px-3 text-[12px] font-semibold text-white shadow-[0_8px_16px_rgba(255,106,31,0.25)] hover:bg-orange-600"
-                >
-                  ↺ 초기화
-                </Button>
-              )}
+          <div className="flex">
+            {isFilterActive && (
+              <div className="flex items-center gap-2">
+                {!selectedDate && isFilterActive && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetFilters}
+                    className="h-8 rounded-full bg-neutral-100 px-3 text-[12px] font-semibold text-neutral-600"
+                  >
+                    ↺ 초기화
+                  </Button>
+                )}
+              </div>
+            )}
+            <div className="flex items-center gap-2 rounded-full bg-neutral-100 px-3 h-8">
+              <label
+                htmlFor="show-all-todos-toggle"
+                className="text-[12px] font-semibold text-neutral-600"
+              >
+                전체 할일보기
+              </label>
+              <Switch
+                id="show-all-todos-toggle"
+                checked={showAllOnSelectedDate}
+                onCheckedChange={handleShowAllToggle}
+                className="data-[state=checked]:bg-neutral-900"
+              />
             </div>
-          )}
+          </div>
         </div>
 
         <div ref={filterStickySentinelRef} />
@@ -922,7 +977,7 @@ export default function HomePage({
         >
           <div className="bg-neutral-50/95 px-5 pt-2 backdrop-blur-md">
             {/* 검색창 */}
-            {!selectedDate && (
+            {!selectedDate || showAllOnSelectedDate ? (
               <div className="mb-1.5 rounded-[22px] border border-neutral-200 bg-white p-1">
                 <div className="h-8 flex items-center gap-2 rounded-[18px] bg-white px-3 py-1.5">
                   <span className="text-[14px] text-neutral-400">🔍</span>
@@ -963,7 +1018,7 @@ export default function HomePage({
                   </button>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* 필터 행 */}
             <div className="rounded-[22px] border border-neutral-200 bg-white px-3 py-1 shadow-[0_10px_26px_rgba(15,23,42,0.08)]">
@@ -983,7 +1038,7 @@ export default function HomePage({
                       }`}
                     >
                       <span>할 일</span>
-                      {selectedDate && (
+                      {isDateFiltered && (
                         <span
                           className={`text-[11px] ${viewFilter === 'TODO' ? 'text-orange-600' : 'text-neutral-400'}`}
                         >
@@ -1000,7 +1055,7 @@ export default function HomePage({
                       }`}
                     >
                       <span>완료</span>
-                      {selectedDate && (
+                      {isDateFiltered && (
                         <span
                           className={`text-[11px] ${viewFilter === 'DONE' ? 'text-green-600' : 'text-neutral-400'}`}
                         >
@@ -1011,7 +1066,7 @@ export default function HomePage({
                   </div>
 
                   {/* 나머지 필터들 */}
-                  {!selectedDate ? (
+                  {!selectedDate || showAllOnSelectedDate ? (
                     <>
                       <Select
                         value={sortOption}
@@ -1207,17 +1262,7 @@ export default function HomePage({
                         </SelectContent>
                       </Select>
                     </>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={resetFilters}
-                      className="h-7 rounded-full border border-orange-200 bg-orange-50 px-3 text-[12px] font-semibold text-orange-700 shadow-sm hover:border-orange-300 hover:bg-orange-100"
-                    >
-                      전체 할일보기
-                    </Button>
-                  )}
+                  ) : null}
                 </div>
                 {showFilterScrollHint && (
                   <>

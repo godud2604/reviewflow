@@ -200,9 +200,6 @@ function PageContent() {
       success = Boolean(createdSchedule);
     }
     if (success) {
-      if (!editingScheduleId && createdSchedule?.dead) {
-        setHomeCalendarFocusDate(createdSchedule.dead);
-      }
       handleCloseScheduleModal();
     }
     return success;
