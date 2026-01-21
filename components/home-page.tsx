@@ -1725,7 +1725,7 @@ function CalendarSection({
         })}
       </div>
       <div className="mt-4.5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
+        <div className="grid grid-cols-2 items-center gap-x-4 text-[11px] text-neutral-600">
           {CALENDAR_STATUS_LEGEND.map((item) => (
             <div key={item.status} className="flex items-center gap-1">
               <span
@@ -1738,7 +1738,7 @@ function CalendarSection({
         </div>
         <button
           onClick={goToToday}
-          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-100 px-4 text-[11.5px] font-semibold text-neutral-900 shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition hover:bg-neutral-200"
+          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-100 px-4 text-[11px] font-semibold text-neutral-900 shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition hover:bg-neutral-200"
         >
           <CalendarDays className="h-4 w-4" />
           오늘로 이동
