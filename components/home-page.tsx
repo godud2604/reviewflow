@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePostHog } from 'posthog-js/react';
-import { ArrowUp, X, Plus } from 'lucide-react';
+import { ArrowUp, X, Plus, CalendarDays } from 'lucide-react';
 
 import type { Schedule } from '@/types';
 import ScheduleItem from '@/components/schedule-item';
@@ -1597,12 +1597,6 @@ function CalendarSection({
             </svg>
           </button>
         </div>
-        <button
-          onClick={goToToday}
-          className="absolute right-[-6px] top-1/2 -translate-y-1/2 px-2 py-1.5 text-[12px] font-semibold text-neutral-900 rounded-lg hover:bg-neutral-200 transition-colors"
-        >
-          오늘로 이동
-        </button>
       </div>
 
       <div className="grid grid-cols-7 text-center text-[11px] text-neutral-400 mb-2.5 font-semibold">
@@ -1730,16 +1724,25 @@ function CalendarSection({
           );
         })}
       </div>
-      <div className="mt-4.5 flex flex-wrap items-center justify-end gap-3 text-[11px] text-neutral-600">
-        {CALENDAR_STATUS_LEGEND.map((item) => (
-          <div key={item.status} className="flex items-center gap-1">
-            <span
-              className="h-2.5 w-2.5 rounded-full border border-neutral-200"
-              style={{ backgroundColor: `${item.color}` }}
-            />
-            <span className="font-semibold text-neutral-700">{item.label}</span>
-          </div>
-        ))}
+      <div className="mt-4.5 flex flex-wrap items-center justify-between gap-3">
+        <div className="grid grid-cols-2 items-center gap-x-4 gap-y-1 text-[11px] text-neutral-500 leading-tight">
+          {CALENDAR_STATUS_LEGEND.map((item) => (
+            <div key={item.status} className="flex items-center gap-1">
+              <span
+                className="h-2.5 w-2.5 rounded-full border border-neutral-200"
+                style={{ backgroundColor: `${item.color}` }}
+              />
+              <span className="font-semibold">{item.label}</span>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={goToToday}
+          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-100 px-3 text-[11px] font-semibold text-neutral-900 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:bg-neutral-200"
+        >
+          <CalendarDays className="h-3.5 w-3.5" />
+          오늘로 이동
+        </button>
       </div>
     </div>
   );
