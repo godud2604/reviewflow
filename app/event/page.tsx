@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Check, Copy, Gift, Loader2, Share2 } from 'lucide-react';
+import { Check, ChevronDown, Copy, Gift, Loader2, Share2 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +26,13 @@ const isAfter = (left?: string | null, right?: Date) => {
   if (!left || !right) return false;
   const parsed = new Date(left);
   return !Number.isNaN(parsed.getTime()) && parsed.getTime() > right.getTime();
+};
+
+const formatExpiryLabel = (value?: string | null) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return `${parsed.getFullYear()}년 ${parsed.getMonth() + 1}월 ${parsed.getDate()}일`;
 };
 
 type MissionSubmission = {
@@ -52,6 +59,7 @@ export default function LaunchEventPage() {
   const [reviewNote, setReviewNote] = useState('');
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [reviewSubmissions, setReviewSubmissions] = useState<MissionSubmission[]>([]);
+  const [isProBenefitsOpen, setIsProBenefitsOpen] = useState(false);
 
   const kstToday = useMemo(() => formatKstDate(new Date()), []);
   const hasDailyClaimed = dailyClaimedAt === kstToday;
@@ -379,117 +387,159 @@ export default function LaunchEventPage() {
         )}
 
         {claimedAt && (
-          <section className="rounded-[28px] border border-neutral-200 bg-white p-6 shadow-sm transition">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold">미션 리스트</h2>
-                <p className="text-sm text-neutral-500">미션 완료 후 추가 혜택을 받아보세요.</p>
-              </div>
-            </div>
-
-            <div className="mt-6 space-y-4">
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">SNS 후기 남기기</p>
-                    <p className="text-xs text-neutral-500">
-                      블로그/스레드/SNS 후기 링크 공유 시 pro 1개월 지급 (무제한 참여 가능)
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="rounded-full bg-[#ff6a00] text-white hover:bg-[#f25f00]"
-                    onClick={() => setIsReviewDialogOpen(true)}
-                  >
-                    인증하기
-                  </Button>
-                </div>
-                {reviewSubmissions.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    {reviewSubmissions.map((submission) => (
-                      <div
-                        key={submission.id}
-                        className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs"
-                      >
-                        <span className="truncate text-neutral-600">{submission.link}</span>
-                        <span className="rounded-full bg-orange-50 px-2 py-1 text-[11px] font-semibold text-orange-600">
-                          {submission.status === 'approved'
-                            ? '승인 완료'
-                            : submission.status === 'rejected'
-                              ? '반려'
-                              : '검수 대기'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+          <>
+            <section className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-sm transition">
+              <button
+                type="button"
+                onClick={() => setIsProBenefitsOpen((prev) => !prev)}
+                className={cn(
+                  'flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition',
+                  isProBenefitsOpen ? 'border-b border-neutral-100' : ''
                 )}
+                aria-expanded={isProBenefitsOpen}
+              >
+                <div>
+                  <h2 className="text-base font-semibold">PRO 혜택</h2>
+                  <p className="text-xs text-neutral-500">프로 기능과 만료 정보를 확인하세요.</p>
+                </div>
+                <ChevronDown
+                  className={cn(
+                    'h-5 w-5 text-neutral-400 transition-transform',
+                    isProBenefitsOpen ? 'rotate-180' : 'rotate-0'
+                  )}
+                />
+              </button>
+
+              {isProBenefitsOpen && (
+                <div className="px-5 pb-5">
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+                    <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">
+                      PRO
+                    </span>
+                    <span>{`만료 ${formatExpiryLabel(tierExpiresAt) ?? '정보 없음'}`}</span>
+                  </div>
+
+                  <ul className="mt-3 space-y-1.5 text-xs text-neutral-600">
+                    <li>카카오 알림으로 일정과 요약을 받아볼 수 있어요.</li>
+                    <li>통계 페이지에서 전체 기간과 이전 달 수익 통계를 모두 확인할 수 있어요.</li>
+                    <li>활동 내역을 엑셀 파일로 다운로드할 수 있어요.</li>
+                  </ul>
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-[28px] border border-neutral-200 bg-white p-6 shadow-sm transition">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-base font-semibold">미션 리스트</h2>
+                  <p className="text-xs text-neutral-500">미션 완료 후 추가 혜택을 받아보세요.</p>
+                </div>
               </div>
 
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">친구 초대하기</p>
-                    <p className="text-xs text-neutral-500">
-                      친구도, 나도 pro 1개월. 친구가 가입 후 내 코드로 등록하면 지급돼요.
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="rounded-full bg-white text-neutral-700 shadow-sm hover:bg-neutral-100"
-                    onClick={referralCode ? handleCopyReferral : handleGenerateReferral}
-                  >
-                    {referralCode ? '코드 복사' : '초대하기'}
-                  </Button>
-                </div>
-                <div className="mt-3 flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs shadow-inner">
-                  <div className="flex items-center gap-2 text-neutral-600">
-                    <Share2 className="h-4 w-4 text-neutral-400" />
-                    <span>{referralCode ?? '초대하기 버튼을 눌러 코드 발급'}</span>
-                  </div>
-                  {referralCode && (
+              <div className="mt-6 space-y-4">
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">SNS 후기 남기기</p>
+                      <p className="text-xs text-neutral-500">
+                        블로그/스레드/SNS 후기 링크 공유 시 pro 1개월 지급 (무제한 참여 가능)
+                      </p>
+                    </div>
                     <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={handleCopyReferral}
-                      className="h-7 w-7"
+                      size="sm"
+                      className="rounded-full bg-[#ff6a00] text-white hover:bg-[#f25f00]"
+                      onClick={() => setIsReviewDialogOpen(true)}
                     >
-                      <Copy className="h-4 w-4" />
+                      인증하기
                     </Button>
+                  </div>
+                  {reviewSubmissions.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {reviewSubmissions.map((submission) => (
+                        <div
+                          key={submission.id}
+                          className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs"
+                        >
+                          <span className="truncate text-neutral-600">{submission.link}</span>
+                          <span className="rounded-full bg-orange-50 px-2 py-1 text-[11px] font-semibold text-orange-600">
+                            {submission.status === 'approved'
+                              ? '승인 완료'
+                              : submission.status === 'rejected'
+                                ? '반려'
+                                : '검수 대기'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-              </div>
 
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">매일 참여하기</p>
-                    <p className="text-xs text-neutral-500">
-                      하루에 한 번 클릭하면 pro 1일권 지급!
-                    </p>
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">친구 초대하기</p>
+                      <p className="text-xs text-neutral-500">
+                        친구도, 나도 pro 1개월. 친구가 가입 후 내 코드로 등록하면 지급돼요.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="rounded-full bg-white text-neutral-700 shadow-sm hover:bg-neutral-100"
+                      onClick={referralCode ? handleCopyReferral : handleGenerateReferral}
+                    >
+                      {referralCode ? '코드 복사' : '초대하기'}
+                    </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    variant={hasDailyClaimed ? 'outline' : 'default'}
-                    className={cn(
-                      'rounded-full',
-                      hasDailyClaimed
-                        ? 'border-neutral-200 text-neutral-500'
-                        : 'bg-[#ff6a00] text-white hover:bg-[#f25f00]'
+                  <div className="mt-3 flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs shadow-inner">
+                    <div className="flex items-center gap-2 text-neutral-600">
+                      <Share2 className="h-4 w-4 text-neutral-400" />
+                      <span>{referralCode ?? '초대하기 버튼을 눌러 코드 발급'}</span>
+                    </div>
+                    {referralCode && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={handleCopyReferral}
+                        className="h-7 w-7"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
                     )}
-                    onClick={handleDailyClaim}
-                    disabled={hasDailyClaimed}
-                  >
-                    {hasDailyClaimed ? '오늘 참여 완료' : '오늘 참여하기'}
-                  </Button>
+                  </div>
                 </div>
-                <p className="mt-3 text-xs text-neutral-500">
-                  {hasDailyClaimed
-                    ? '내일 다시 참여할 수 있어요.'
-                    : '참여 후 바로 기간이 늘어나요.'}
-                </p>
+
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">매일 참여하기</p>
+                      <p className="text-xs text-neutral-500">
+                        하루에 한 번 클릭하면 pro 1일권 지급!
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={hasDailyClaimed ? 'outline' : 'default'}
+                      className={cn(
+                        'rounded-full',
+                        hasDailyClaimed
+                          ? 'border-neutral-200 text-neutral-500'
+                          : 'bg-[#ff6a00] text-white hover:bg-[#f25f00]'
+                      )}
+                      onClick={handleDailyClaim}
+                      disabled={hasDailyClaimed}
+                    >
+                      {hasDailyClaimed ? '오늘 참여 완료' : '오늘 참여하기'}
+                    </Button>
+                  </div>
+                  <p className="mt-3 text-xs text-neutral-500">
+                    {hasDailyClaimed
+                      ? '내일 다시 참여할 수 있어요.'
+                      : '참여 후 바로 기간이 늘어나요.'}
+                  </p>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          </>
         )}
       </div>
 

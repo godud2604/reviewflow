@@ -478,8 +478,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
             ) : null}
             <p className="text-[13px] text-neutral-500">{emailLabel}</p>
           </div>
-          {/* iOS 심사 기간 동안 임시로 숨김 */}
-          {/* {isPro && (
+          {isPro && (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-neutral-500">
               <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">
                 PRO
@@ -488,7 +487,16 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
               <span className="text-neutral-300">·</span>
               <span>{tierExpiryLabel ? `만료 ${tierExpiryLabel}` : '만료 정보 없음'}</span>
             </div>
-          )} */}
+          )}
+        </section>
+
+        <section className="rounded-3xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
+          <p className="px-2 pb-2 text-[12px] font-semibold text-neutral-500">PRO 혜택</p>
+          <ul className="space-y-2 px-2 text-[13px] text-neutral-700">
+            <li>카카오 알림으로 일정과 요약을 받아볼 수 있어요.</li>
+            <li>통계 페이지에서 전체 기간과 이전 달 수익 통계를 모두 확인할 수 있어요.</li>
+            <li>활동 내역을 엑셀 파일로 다운로드할 수 있어요.</li>
+          </ul>
         </section>
 
         <section className="rounded-3xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
