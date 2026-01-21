@@ -15,6 +15,8 @@ const DEFAULT_CATEGORIES = [
   '반려동물',
   '생활/리빙',
   '주방/가전',
+  '데이트',
+  '웨딩',
 ] as const;
 
 export type CampaignEntry = {
