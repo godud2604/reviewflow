@@ -81,6 +81,7 @@ export default function StatsPage({
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
   const currentMonthKey = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
+  const allKey = 'all';
   const [selectedMonthKey, setSelectedMonthKey] = useState(currentMonthKey);
 
   const parseDate = (value?: string) => {
@@ -90,11 +91,13 @@ export default function StatsPage({
   };
 
   const getMonthStartDate = (monthKey: string) => {
+    if (monthKey === allKey) return null;
     const date = new Date(monthKey);
     return Number.isNaN(date.getTime()) ? null : date;
   };
 
   const selectedMonthDate = useMemo(() => getMonthStartDate(selectedMonthKey), [selectedMonthKey]);
+  const isAllSelected = selectedMonthKey === allKey;
   const isDateInSelectedMonth = (date: Date | null) => {
     if (!date || !selectedMonthDate) return false;
     return (
@@ -104,12 +107,14 @@ export default function StatsPage({
   };
 
   const formatFullMonthLabel = (key: string) => {
+    if (key === allKey) return '전체';
     const date = getMonthStartDate(key);
     if (!date) return key;
     return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
   };
 
   const formatMonthButtonLabel = (key: string) => {
+    if (key === allKey) return '전체';
     const date = getMonthStartDate(key);
     if (!date) return key;
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -125,6 +130,7 @@ export default function StatsPage({
   const selectedMonthLabel = formatFullMonthLabel(selectedMonthKey);
   const selectedMonthLabelShort = formatShortMonthLabel(selectedMonthKey);
   const displaySelectedMonthLabel = selectedMonthLabel || '선택한 달';
+  const displaySelectedRangeLabel = isAllSelected ? '여태까지' : displaySelectedMonthLabel;
 
   const getScheduleDate = (schedule: Schedule) =>
     parseDate(schedule.visit) || parseDate(schedule.dead);
@@ -191,13 +197,19 @@ export default function StatsPage({
   );
 
   const selectedMonthSchedules = useMemo(
-    () => visibleSchedules.filter((schedule) => isDateInSelectedMonth(getScheduleDate(schedule))),
-    [visibleSchedules, selectedMonthKey, selectedMonthDate]
+    () =>
+      isAllSelected
+        ? visibleSchedules
+        : visibleSchedules.filter((schedule) => isDateInSelectedMonth(getScheduleDate(schedule))),
+    [visibleSchedules, selectedMonthKey, selectedMonthDate, isAllSelected]
   );
 
   const selectedMonthExtraIncomes = useMemo(
-    () => extraIncomes.filter((income) => isDateInSelectedMonth(parseDate(income.date))),
-    [extraIncomes, selectedMonthKey, selectedMonthDate]
+    () =>
+      isAllSelected
+        ? extraIncomes
+        : extraIncomes.filter((income) => isDateInSelectedMonth(parseDate(income.date))),
+    [extraIncomes, selectedMonthKey, selectedMonthDate, isAllSelected]
   );
 
   const { detailIncomeTotal, detailCostTotal, incomeDetailBreakdown, costDetailBreakdown } =
@@ -441,8 +453,9 @@ export default function StatsPage({
       .filter((option): option is { key: string; date: Date; label: string } => option !== null)
       .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-    return options;
+    return [{ key: allKey, label: '전체' }, ...options];
   }, [monthlyGrowth, currentMonthKey]);
+
 
   return (
     <>
@@ -458,7 +471,8 @@ export default function StatsPage({
               className="flex-1 flex gap-2 overflow-x-auto pb-1 px-5 -mx-5 scrollbar-hide snap-x mr-0"
             >
               {monthOptions.map((option) => {
-                const isMonthLocked = !isPro && option.key !== currentMonthKey;
+                const isMonthLocked =
+                  !isPro && option.key !== currentMonthKey && option.key !== allKey;
                 return (
                   <button
                     key={option.key}
@@ -512,7 +526,7 @@ export default function StatsPage({
           {/* Main Total Value (여백 및 폰트 축소) */}
           <div className="relative flex flex-col items-center justify-center text-center mt-1 mb-5">
             <div className="text-[13px] font-bold text-white/90 uppercase tracking-wide mb-1 drop-shadow-sm">
-              {displaySelectedMonthLabel} 총 경제적 가치
+              {displaySelectedRangeLabel} 모은 총 경제적 가치
             </div>
             {/* 폰트 크기 40px -> 32px로 조정하여 부담 완화 */}
             <div className="text-[30px] font-black leading-none text-white tracking-tight drop-shadow-md">
@@ -567,7 +581,7 @@ export default function StatsPage({
         {/* 하단 리스트 영역 (기존 유지) */}
         <div className="flex items-center justify-between mb-3.5">
           <div className="ml-1.5 text-[16px] font-bold text-[#0f172a]">
-            {displaySelectedMonthLabel} 재무 상세
+            {isAllSelected ? '누적 재무 상세' : `${displaySelectedMonthLabel} 재무 상세`}
           </div>
           <button
             onClick={() => openHistoryModal('all')}
@@ -589,7 +603,7 @@ export default function StatsPage({
                     <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#fef4eb] text-[#f97316] text-[14px]">
                       ₩
                     </span>
-                    방어한 생활비
+                    {isAllSelected ? '누적 방어한 생활비' : '방어한 생활비'}
                   </div>
                   <div className="text-[18px] font-bold text-[#f97316] mt-1">
                     {totalBen.toLocaleString()} 원
@@ -638,7 +652,7 @@ export default function StatsPage({
                     <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#eef5ff] text-[#2563eb] text-[14px]">
                       💵
                     </span>
-                    수입
+                    {isAllSelected ? '누적 수입' : '수입'}
                   </div>
                   <div className="text-[18px] font-bold text-[#2563eb] mt-1">
                     {(totalInc + totalExtraIncome).toLocaleString()} 원
@@ -725,7 +739,7 @@ export default function StatsPage({
                     <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#fee2e2] text-[#ef4444] text-[14px]">
                       🪙
                     </span>
-                    지출
+                    {isAllSelected ? '누적 지출' : '지출'}
                   </div>
                   <div className="text-[18px] font-bold text-[#dc2626] mt-1">
                     {totalCost.toLocaleString()} 원
@@ -780,6 +794,7 @@ export default function StatsPage({
           selectedMonthKey={selectedMonthKey}
           selectedMonthLabel={selectedMonthLabelShort || displaySelectedMonthLabel}
           isPro={isPro}
+          isAllSelected={isAllSelected}
         />
       </div>
 
@@ -814,18 +829,21 @@ function TrendChart({
   selectedMonthKey,
   selectedMonthLabel,
   isPro,
+  isAllSelected,
 }: {
   currentMonthValue: number;
   monthlyGrowth: MonthlyGrowth[];
   selectedMonthKey: string;
   selectedMonthLabel: string;
   isPro: boolean;
+  isAllSelected: boolean;
 }) {
   // ... 기존 TrendChart 코드 전체 유지 ...
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const addSelectedIfMissing = (data: MonthlyGrowth[]) => {
     if (!selectedMonthKey) return data;
+    if (selectedMonthKey === 'all') return data;
     if (data.some((item) => item.monthStart === selectedMonthKey)) return data;
     return [
       ...data,
@@ -852,6 +870,9 @@ function TrendChart({
 
   const buildChartData = () => {
     if (isPro) {
+      return uniqueSortedData;
+    }
+    if (isAllSelected) {
       return uniqueSortedData;
     }
     const latest = uniqueSortedData.slice(-4);
