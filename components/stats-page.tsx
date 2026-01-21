@@ -13,7 +13,9 @@ import {
   parseIncomeDetailsJson,
   sumIncomeDetails,
 } from '@/lib/schedule-income-details';
-import { CreditCard, Gift, Plus, Wallet } from 'lucide-react';
+import { CreditCard, Gift, Info, Plus, Wallet } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 
 const incomeTutorialStorageKey = 'reviewflow-stats-income-tutorial-shown';
 
@@ -61,6 +63,7 @@ export default function StatsPage({
   const [showCompletedOnly, setShowCompletedOnly] = useState(false);
   const [editingExtraIncome, setEditingExtraIncome] = useState<ExtraIncome | null>(null);
   const [historyView, setHistoryView] = useState<HistoryView>('all');
+  const [isCompletedTooltipOpen, setIsCompletedTooltipOpen] = useState(false);
   const historyDisabled = showIncomeModal || isScheduleModalOpen;
   const cardShadow = 'shadow-[0_14px_40px_rgba(18,34,64,0.08)]';
 
@@ -155,6 +158,7 @@ export default function StatsPage({
 
   const { extraIncomes, createExtraIncome, updateExtraIncome, deleteExtraIncome } =
     useExtraIncomes();
+  const { toast } = useToast();
 
   const handleAddIncome = async (income: Omit<ExtraIncome, 'id'>) => {
     await createExtraIncome(income);
@@ -188,6 +192,17 @@ export default function StatsPage({
 
   const handleHistoryExtraIncomeClick = (income: ExtraIncome) => {
     handleOpenIncomeModal(income);
+  };
+
+  const handleCompletedOnlyToggle = (checked: boolean) => {
+    setShowCompletedOnly(checked);
+    if (checked) {
+      toast({
+        title: '완료된 내역만 통계에 반영돼요.',
+        description: '진행 중인 스케줄은 제외됩니다.',
+        duration: 1500,
+      });
+    }
   };
 
   const visibleSchedules = useMemo(
@@ -463,7 +478,6 @@ export default function StatsPage({
     return [{ key: allKey, label: '전체' }, ...options];
   }, [monthlyGrowth, currentMonthKey]);
 
-
   return (
     <>
       <div
@@ -500,18 +514,32 @@ export default function StatsPage({
               })}
               <div className="w-2 flex-none" />
             </div>
-            <label
-              htmlFor="completed-only"
-              className="flex items-center gap-2 text-[12px] font-semibold text-[#64748b] whitespace-nowrap"
-            >
-              완료만 보기
+            <div className="flex items-center gap-1 text-[11px] font-semibold text-[#64748b] whitespace-nowrap">
+              <Tooltip open={isCompletedTooltipOpen} onOpenChange={setIsCompletedTooltipOpen}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="완료만 보기 안내"
+                    onClick={() => setIsCompletedTooltipOpen((prev) => !prev)}
+                    className="flex h-4 w-4 items-center justify-center rounded-full text-[#64748b]"
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[220px] text-xs">
+                  진행 중인 스케줄을 제외하고 실제 완료된 내역의 통계만 확인합니다.
+                </TooltipContent>
+              </Tooltip>
+              <label htmlFor="completed-only" className="cursor-pointer mr-0.5">
+                완료만 보기
+              </label>
               <Switch
                 id="completed-only"
                 checked={showCompletedOnly}
-                onCheckedChange={setShowCompletedOnly}
+                onCheckedChange={handleCompletedOnlyToggle}
                 className="data-[state=checked]:bg-[#0f172a]"
               />
-            </label>
+            </div>
           </div>
         </div>
 
