@@ -1,0 +1,567 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Check, Copy, Gift, Loader2, PartyPopper, Share2 } from 'lucide-react';
+
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { getSupabaseClient } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+
+const EVENT_MISSION_TYPE = 'sns_review';
+const CLAIM_DAYS = 10;
+
+const formatKstDate = (date: Date) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date);
+
+const addDays = (date: Date, days: number) => new Date(date.getTime() + days * 86400000);
+
+const isAfter = (left?: string | null, right?: Date) => {
+  if (!left || !right) return false;
+  const parsed = new Date(left);
+  return !Number.isNaN(parsed.getTime()) && parsed.getTime() > right.getTime();
+};
+
+type MissionSubmission = {
+  id: number;
+  link: string | null;
+  status: string;
+  created_at: string;
+};
+
+export default function LaunchEventPage() {
+  const router = useRouter();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [claimedAt, setClaimedAt] = useState<string | null>(null);
+  const [tierExpiresAt, setTierExpiresAt] = useState<string | null>(null);
+  const [dailyClaimedAt, setDailyClaimedAt] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewLink, setReviewLink] = useState('');
+  const [reviewNote, setReviewNote] = useState('');
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [reviewSubmissions, setReviewSubmissions] = useState<MissionSubmission[]>([]);
+
+  const kstToday = useMemo(() => formatKstDate(new Date()), []);
+  const hasDailyClaimed = dailyClaimedAt === kstToday;
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      router.replace('/signin');
+      return;
+    }
+
+    if (!user) return;
+
+    let isMounted = true;
+    const fetchStatus = async () => {
+      setIsLoading(true);
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select(
+            'launch_event_claimed_at, tier_expires_at, launch_event_daily_claimed_at, launch_event_referral_code'
+          )
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+        if (!isMounted) return;
+        setClaimedAt(data?.launch_event_claimed_at ?? null);
+        setTierExpiresAt(data?.tier_expires_at ?? null);
+        setDailyClaimedAt(data?.launch_event_daily_claimed_at ?? null);
+        setReferralCode(data?.launch_event_referral_code ?? null);
+
+        const { data: submissions, error: submissionError } = await supabase
+          .from('launch_event_mission_submissions')
+          .select('id, link, status, created_at')
+          .eq('user_id', user.id)
+          .eq('mission_type', EVENT_MISSION_TYPE)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (submissionError) throw submissionError;
+        if (!isMounted) return;
+        setReviewSubmissions(submissions ?? []);
+      } catch (err) {
+        toast({
+          title: '이벤트 정보를 불러오지 못했어요',
+          description: err instanceof Error ? err.message : '잠시 후 다시 시도해 주세요.',
+          variant: 'destructive',
+        });
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    fetchStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authLoading, isAuthenticated, router, toast, user]);
+
+  const handleClaimReward = async () => {
+    if (!user || isClaiming) return;
+
+    setIsClaiming(true);
+    try {
+      const supabase = getSupabaseClient();
+      const now = new Date();
+      const base = isAfter(tierExpiresAt, now) ? new Date(tierExpiresAt as string) : now;
+      const nextExpiry = addDays(base, CLAIM_DAYS);
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          tier: 'pro',
+          tier_expires_at: nextExpiry.toISOString(),
+          launch_event_claimed_at: now.toISOString(),
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setClaimedAt(now.toISOString());
+      setTierExpiresAt(nextExpiry.toISOString());
+      setShowConfetti(true);
+      window.setTimeout(() => setShowConfetti(false), 1500);
+
+      toast({
+        title: '프로 10일권을 받았어요!',
+        description: '지금부터 프로 기능을 자유롭게 사용해 보세요.',
+      });
+    } catch (err) {
+      toast({
+        title: '10일권 지급에 실패했어요',
+        description: err instanceof Error ? err.message : '잠시 후 다시 시도해 주세요.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!user || isSubmittingReview) return;
+    const trimmed = reviewLink.trim();
+
+    if (!trimmed) {
+      toast({
+        title: '후기 링크를 입력해 주세요',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from('launch_event_mission_submissions')
+        .insert({
+          user_id: user.id,
+          mission_type: EVENT_MISSION_TYPE,
+          link: trimmed,
+          metadata: {
+            note: reviewNote.trim() || null,
+            source: 'launch_event',
+          },
+        })
+        .select('id, link, status, created_at')
+        .single();
+
+      if (error) throw error;
+
+      setReviewSubmissions((prev) => (data ? [data, ...prev].slice(0, 5) : prev));
+      setReviewLink('');
+      setReviewNote('');
+      setIsReviewDialogOpen(false);
+
+      try {
+        const authorMeta = user.user_metadata as { full_name?: string; name?: string } | null;
+        await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            feedbackType: 'SNS 후기 인증 요청',
+            content: `${trimmed}\n\n${reviewNote.trim()}`.trim(),
+            author: {
+              id: user.id,
+              email: user.email ?? null,
+              name: authorMeta?.full_name ?? authorMeta?.name ?? null,
+            },
+          }),
+          keepalive: true,
+        });
+      } catch (notifyError) {
+        console.error('Failed to notify mission submission:', notifyError);
+      }
+
+      toast({
+        title: '후기 인증이 접수되었어요',
+        description: '운영진 검수 후 1개월 지급이 진행됩니다.',
+      });
+    } catch (err) {
+      toast({
+        title: '후기 인증 제출에 실패했어요',
+        description: err instanceof Error ? err.message : '잠시 후 다시 시도해 주세요.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  const handleGenerateReferral = async () => {
+    if (!user) return;
+
+    const code = `RF-${user.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ launch_event_referral_code: code })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setReferralCode(code);
+      toast({
+        title: '초대 코드가 발급되었어요',
+        description: '코드를 친구에게 공유해 주세요.',
+      });
+    } catch (err) {
+      toast({
+        title: '초대 코드 발급에 실패했어요',
+        description: err instanceof Error ? err.message : '잠시 후 다시 시도해 주세요.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCopyReferral = async () => {
+    if (!referralCode) return;
+    try {
+      await navigator.clipboard.writeText(referralCode);
+      toast({
+        title: '초대 코드가 복사되었어요',
+      });
+    } catch (err) {
+      toast({
+        title: '복사에 실패했어요',
+        description: '다시 시도해 주세요.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDailyClaim = async () => {
+    if (!user || hasDailyClaimed) return;
+
+    try {
+      const supabase = getSupabaseClient();
+      const now = new Date();
+      const base = isAfter(tierExpiresAt, now) ? new Date(tierExpiresAt as string) : now;
+      const nextExpiry = addDays(base, 1);
+      const today = formatKstDate(now);
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          tier: 'pro',
+          tier_expires_at: nextExpiry.toISOString(),
+          launch_event_daily_claimed_at: today,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setTierExpiresAt(nextExpiry.toISOString());
+      setDailyClaimedAt(today);
+      toast({
+        title: '프로 1일권이 지급되었어요',
+        description: '내일 다시 참여할 수 있어요.',
+      });
+    } catch (err) {
+      toast({
+        title: '오늘의 참여 처리에 실패했어요',
+        description: err instanceof Error ? err.message : '잠시 후 다시 시도해 주세요.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F7F7F8] flex items-center justify-center">
+        <div className="flex items-center gap-2 text-sm text-neutral-600">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          이벤트를 준비 중이에요...
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F2F4F6] text-neutral-900">
+      <div className="max-w-3xl mx-auto px-5 py-10 space-y-10">
+        <div className="flex items-center justify-between">
+          <Link href="/?page=home" className="text-sm font-semibold text-neutral-500 hover:text-neutral-900">
+            ← 홈으로 돌아가기
+          </Link>
+          <span className="text-xs font-semibold uppercase tracking-[0.3em] text-orange-500">Launch Event</span>
+        </div>
+
+        <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#ff7a18] via-[#ff5b6b] to-[#ff3b9f] px-6 py-8 text-white shadow-2xl">
+          <div className="absolute right-6 top-6 rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold">앱 출시 기념</div>
+          <div className="space-y-4">
+            <p className="text-sm font-semibold text-white/80">모든 유저 대상 특별 혜택</p>
+            <h1 className="text-2xl md:text-3xl font-bold leading-snug">프로 10일권을 지금 바로 받아보세요</h1>
+            <p className="text-sm text-white/80">
+              일정 관리, 통계, 알림까지 프로 기능을 10일 동안 모두 체험할 수 있어요.
+            </p>
+          </div>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            {!claimedAt ? (
+              <Button
+                onClick={handleClaimReward}
+                disabled={isClaiming}
+                className="rounded-full bg-white px-5 text-sm font-semibold text-neutral-900 hover:bg-white/90"
+              >
+                {isClaiming ? '지급 중...' : '프로 10일권 받기'}
+              </Button>
+            ) : (
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">
+                <PartyPopper className="h-4 w-4" />
+                10일권 지급 완료!
+              </div>
+            )}
+            <div className="text-xs text-white/80">한 번만 받을 수 있어요</div>
+          </div>
+          {showConfetti && (
+            <div className="pointer-events-none absolute inset-0">
+              {Array.from({ length: 18 }).map((_, index) => (
+                <span
+                  key={`confetti-${index}`}
+                  className="absolute text-lg animate-[confetti-fall_1.5s_ease-out_forwards]"
+                  style={{
+                    left: `${(index % 6) * 15 + 10}%`,
+                    animationDelay: `${index * 0.03}s`,
+                  }}
+                >
+                  🎉
+                </span>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-[26px] border border-neutral-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50">
+              <Gift className="h-5 w-5 text-orange-500" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">혜택 안내</h2>
+              <p className="text-sm text-neutral-500">
+                이벤트 참여로 프로 기간을 늘리고 더 오래 사용해 보세요.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 text-sm text-neutral-600">
+            <div className="flex items-start gap-2">
+              <Check className="mt-0.5 h-4 w-4 text-emerald-500" />
+              프로 10일권 즉시 지급
+            </div>
+            <div className="flex items-start gap-2">
+              <Check className="mt-0.5 h-4 w-4 text-emerald-500" />
+              SNS 후기 인증 시 1개월 추가 (검수 후 지급)
+            </div>
+            <div className="flex items-start gap-2">
+              <Check className="mt-0.5 h-4 w-4 text-emerald-500" />
+              친구 초대 성공 시 친구+나 모두 1개월
+            </div>
+            <div className="flex items-start gap-2">
+              <Check className="mt-0.5 h-4 w-4 text-emerald-500" />
+              하루 1회 참여로 1일권 추가 지급
+            </div>
+          </div>
+        </section>
+
+        <section
+          className={cn(
+            'rounded-[26px] border border-neutral-200 bg-white p-6 shadow-sm transition',
+            !claimedAt && 'opacity-50'
+          )}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">미션 리스트</h2>
+              <p className="text-sm text-neutral-500">미션 완료 후 추가 혜택을 받아보세요.</p>
+            </div>
+            {!claimedAt && (
+              <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-500">
+                10일권 수령 후 활성화
+              </span>
+            )}
+          </div>
+
+          <div className="mt-6 space-y-4">
+            <div className="rounded-2xl border border-neutral-200 bg-neutral-50/40 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">SNS 후기 남기기</p>
+                  <p className="text-xs text-neutral-500">
+                    블로그/스레드/SNS 후기 링크 공유 시 1개월 지급 (무제한 참여 가능)
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => setIsReviewDialogOpen(true)}
+                  disabled={!claimedAt}
+                >
+                  인증하기
+                </Button>
+              </div>
+              {reviewSubmissions.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {reviewSubmissions.map((submission) => (
+                    <div
+                      key={submission.id}
+                      className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs"
+                    >
+                      <span className="truncate text-neutral-600">{submission.link}</span>
+                      <span className="rounded-full bg-orange-50 px-2 py-1 text-[11px] font-semibold text-orange-600">
+                        {submission.status === 'approved'
+                          ? '승인 완료'
+                          : submission.status === 'rejected'
+                            ? '반려'
+                            : '검수 대기'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-neutral-200 bg-neutral-50/40 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">친구 초대하기</p>
+                  <p className="text-xs text-neutral-500">
+                    친구도, 나도 1개월. 친구가 가입 후 내 코드로 등록하면 지급돼요.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="rounded-full"
+                  onClick={referralCode ? handleCopyReferral : handleGenerateReferral}
+                  disabled={!claimedAt}
+                >
+                  {referralCode ? '코드 복사' : '초대하기'}
+                </Button>
+              </div>
+              <div className="mt-3 flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs">
+                <div className="flex items-center gap-2 text-neutral-600">
+                  <Share2 className="h-4 w-4 text-neutral-400" />
+                  <span>{referralCode ?? '초대하기 버튼을 눌러 코드 발급'}</span>
+                </div>
+                {referralCode && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleCopyReferral}
+                    className="h-7 w-7"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-neutral-200 bg-neutral-50/40 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">매일 참여하기</p>
+                  <p className="text-xs text-neutral-500">하루에 한 번 클릭하면 프로 1일권 지급!</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant={hasDailyClaimed ? 'outline' : 'default'}
+                  className="rounded-full"
+                  onClick={handleDailyClaim}
+                  disabled={!claimedAt || hasDailyClaimed}
+                >
+                  {hasDailyClaimed ? '오늘 참여 완료' : '오늘 참여하기'}
+                </Button>
+              </div>
+              <p className="mt-3 text-xs text-neutral-500">
+                {hasDailyClaimed ? '내일 다시 참여할 수 있어요.' : '참여 후 바로 기간이 늘어나요.'}
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>SNS 후기 인증</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="후기 링크를 입력해 주세요"
+              value={reviewLink}
+              onChange={(event) => setReviewLink(event.target.value)}
+            />
+            <Textarea
+              placeholder="선택 사항: 어떤 플랫폼인지, 간단한 메모를 남겨주세요"
+              value={reviewNote}
+              onChange={(event) => setReviewNote(event.target.value)}
+              className="min-h-[100px]"
+            />
+            <Button
+              onClick={handleSubmitReview}
+              disabled={isSubmittingReview}
+              className="w-full"
+            >
+              {isSubmittingReview ? '제출 중...' : '인증 요청 보내기'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <style jsx global>{`
+        @keyframes confetti-fall {
+          0% {
+            opacity: 0;
+            transform: translateY(-10px) scale(0.8);
+          }
+          20% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(120px) scale(1.2);
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
