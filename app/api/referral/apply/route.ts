@@ -15,6 +15,18 @@ const parseDate = (value?: string | null) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+const formatKstYearMonth = (date: Date) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit' }).format(
+    date
+  );
+
+const isSameKstMonth = (value?: string | null, now?: Date) => {
+  if (!value || !now) return false;
+  const parsed = parseDate(value);
+  if (!parsed) return false;
+  return formatKstYearMonth(parsed) === formatKstYearMonth(now);
+};
+
 export async function POST(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -72,7 +84,7 @@ export async function POST(request: Request) {
 
     const { data: inviter, error: inviterError } = await admin
       .from('user_profiles')
-      .select('id, tier_expires_at')
+      .select('id, tier_expires_at, launch_event_referral_rewarded_at')
       .eq('launch_event_referral_code', code)
       .maybeSingle();
 
@@ -89,10 +101,9 @@ export async function POST(request: Request) {
     const now = new Date();
 
     const meBase = parseDate(me?.tier_expires_at) ?? now;
-    const inviterBase = parseDate(inviter?.tier_expires_at) ?? now;
-
     const meNextExpiry = addMonths(meBase > now ? meBase : now, 1);
-    const inviterNextExpiry = addMonths(inviterBase > now ? inviterBase : now, 1);
+
+    const canRewardInviter = !isSameKstMonth(inviter?.launch_event_referral_rewarded_at, now);
 
     const { error: updateMeError } = await admin
       .from('user_profiles')
@@ -106,20 +117,26 @@ export async function POST(request: Request) {
 
     if (updateMeError) throw updateMeError;
 
-    const { error: updateInviterError } = await admin
-      .from('user_profiles')
-      .update({
-        tier: 'pro',
-        tier_expires_at: inviterNextExpiry.toISOString(),
-      })
-      .eq('id', inviter.id);
+    if (canRewardInviter) {
+      const inviterBase = parseDate(inviter?.tier_expires_at) ?? now;
+      const inviterNextExpiry = addMonths(inviterBase > now ? inviterBase : now, 1);
+      const { error: updateInviterError } = await admin
+        .from('user_profiles')
+        .update({
+          tier: 'pro',
+          tier_expires_at: inviterNextExpiry.toISOString(),
+          launch_event_referral_rewarded_at: now.toISOString(),
+        })
+        .eq('id', inviter.id);
 
-    if (updateInviterError) throw updateInviterError;
+      if (updateInviterError) throw updateInviterError;
+    }
 
     return NextResponse.json({
       success: true,
       tier_expires_at: meNextExpiry.toISOString(),
       applied_at: now.toISOString(),
+      inviter_rewarded: canRewardInviter,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : '쿠폰 등록 중 오류가 발생했습니다.';

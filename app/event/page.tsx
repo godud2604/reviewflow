@@ -345,7 +345,9 @@ export default function LaunchEventPage() {
 
       toast({
         title: '쿠폰이 등록되었어요',
-        description: '친구와 나 모두 1개월이 바로 지급됐어요.',
+        description: data?.inviter_rewarded
+          ? '친구와 나 모두 1개월이 바로 지급됐어요.'
+          : '나는 1개월이 지급됐고, 추천인 보상은 이번 달 1회 제한이에요.',
       });
     } catch (err) {
       toast({
@@ -565,7 +567,7 @@ export default function LaunchEventPage() {
                     <div>
                       <p className="text-sm font-semibold">친구 초대하기</p>
                       <p className="text-xs text-neutral-500">
-                        친구도, 나도 pro 1개월. 친구가 가입 후 내 코드로 등록하면 지급돼요.
+                        친구는 가입 즉시 1개월, 추천인 보상은 매월 1회만 지급돼요.
                       </p>
                     </div>
                     <Button
@@ -597,7 +599,7 @@ export default function LaunchEventPage() {
                       <div>
                         <p className="text-sm font-semibold">쿠폰 등록하기</p>
                         <p className="text-[11px] text-neutral-500">
-                          친구의 쿠폰을 등록하면 즉시 1개월이 지급돼요.
+                          친구의 쿠폰을 등록하면 즉시 1개월이 지급돼요. 추천인 보상은 월 1회예요.
                         </p>
                       </div>
                       {appliedReferralCode && (
