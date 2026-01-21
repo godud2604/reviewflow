@@ -75,6 +75,13 @@ const CATEGORY_OPTIONS: Array<{
   { value: '주방/가전', label: '주방/가전', description: '주방용품, 가전디지털', icon: '🧺' },
   { value: '반려동물', label: '반려동물', description: '반려동물 용품/서비스', icon: '🐶' },
   { value: '여행/레저', label: '여행/레저', description: '여행, 숙박, 체험/레저', icon: '✈️' },
+  { value: '데이트', label: '데이트', description: '데이트 코스, 커플 체험', icon: '💑' },
+  {
+    value: '웨딩',
+    label: '웨딩',
+    description: '웨딩 스냅, 부케, 예복, 스튜디오',
+    icon: '💍',
+  },
   {
     value: '티켓/문화생활',
     label: '티켓/문화생활',
@@ -364,7 +371,6 @@ export default function ScheduleModal({
       window.removeEventListener('popstate', handlePopState);
     };
   }, [isOpen]);
-
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -2944,7 +2950,7 @@ export default function ScheduleModal({
                       key={option.value}
                       type="button"
                       onClick={() => handleToggleCategory(option.value)}
-                      className={`w-full flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
+                      className={`w-full flex items-start gap-3 rounded-2xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
                         isActive
                           ? 'bg-orange-50'
                           : 'border-neutral-200 bg-white hover:border-neutral-300'
@@ -2952,10 +2958,10 @@ export default function ScheduleModal({
                     >
                       <span className="text-sm">{option.icon}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[12px] font-bold text-neutral-900 truncate">
+                        <div className="text-[12px] font-bold text-neutral-900 whitespace-normal leading-snug">
                           {option.label}
                         </div>
-                        <div className="text-[11px] text-neutral-500 truncate">
+                        <div className="text-[11px] text-neutral-500 whitespace-normal leading-snug">
                           {option.description}
                         </div>
                       </div>
