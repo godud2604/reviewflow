@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Check, Copy, Gift, Loader2, PartyPopper, Share2 } from 'lucide-react';
+import { Check, Copy, Gift, Loader2, Share2 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -328,31 +328,28 @@ export default function LaunchEventPage() {
           >
             ← 홈으로 돌아가기
           </Link>
-          <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-orange-500 shadow-sm">
-            앱 출시 이벤트
-          </span>
         </div>
 
-        <section className="relative overflow-hidden rounded-[32px] border border-orange-100 bg-white px-6 py-7 shadow-[0_20px_50px_rgba(255,122,24,0.15)]">
-          <div className="pointer-events-none absolute -right-12 -top-20 h-48 w-48 rounded-full bg-orange-100/70 blur-2xl" />
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-orange-500">
-              <span className="rounded-full bg-orange-50 px-3 py-1">모든 유저 대상</span>
-              <span className="rounded-full bg-neutral-100 px-3 py-1 text-neutral-500">
-                10일권 1회 지급
-              </span>
+        {!claimedAt && (
+          <section className="relative overflow-hidden rounded-[32px] border border-orange-100 bg-white px-6 py-7 shadow-[0_20px_50px_rgba(255,122,24,0.15)]">
+            <div className="pointer-events-none absolute -right-12 -top-20 h-48 w-48 rounded-full bg-orange-100/70 blur-2xl" />
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2 text-xs font-semibold text-orange-500">
+                <span className="rounded-full bg-orange-50 px-3 py-1">모든 유저 대상</span>
+                <span className="rounded-full bg-neutral-100 px-3 py-1 text-neutral-500">
+                  10일권 1회 지급
+                </span>
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-2xl font-bold leading-snug md:text-3xl">
+                  프로 10일권을 지금 바로 받아보세요
+                </h1>
+                <p className="text-sm text-neutral-500">
+                  일정 관리, 통계, 알림까지 프로 기능을 10일 동안 모두 체험할 수 있어요.
+                </p>
+              </div>
             </div>
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold leading-snug md:text-3xl">
-                프로 10일권을 지금 바로 받아보세요
-              </h1>
-              <p className="text-sm text-neutral-500">
-                일정 관리, 통계, 알림까지 프로 기능을 10일 동안 모두 체험할 수 있어요.
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            {!claimedAt ? (
+            <div className="mt-6 flex flex-wrap items-center gap-3">
               <Button
                 onClick={handleClaimReward}
                 disabled={isClaiming}
@@ -360,183 +357,140 @@ export default function LaunchEventPage() {
               >
                 {isClaiming ? '지급 중...' : '프로 10일권 받기'}
               </Button>
-            ) : (
-              <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-600">
-                <PartyPopper className="h-4 w-4" />
-                10일권 지급 완료!
-              </div>
-            )}
-            <span className="text-xs text-neutral-400">한 번만 받을 수 있어요</span>
-          </div>
-          {showConfetti && (
-            <div className="pointer-events-none absolute inset-0">
-              {Array.from({ length: 18 }).map((_, index) => (
-                <span
-                  key={`confetti-${index}`}
-                  className="absolute text-lg animate-[confetti-fall_1.5s_ease-out_forwards]"
-                  style={{
-                    left: `${(index % 6) * 15 + 10}%`,
-                    animationDelay: `${index * 0.03}s`,
-                  }}
-                >
-                  🎉
-                </span>
-              ))}
+              <span className="text-xs text-neutral-400">한 번만 받을 수 있어요</span>
             </div>
-          )}
-        </section>
-
-        <section className="rounded-[28px] border border-neutral-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50">
-              <Gift className="h-5 w-5 text-orange-500" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold">혜택 안내</h2>
-              <p className="text-sm text-neutral-500">
-                이벤트 참여로 프로 기간을 늘리고 더 오래 사용해 보세요.
-              </p>
-            </div>
-          </div>
-          <div className="mt-5 grid gap-3 text-sm text-neutral-600">
-            <div className="flex items-start gap-2">
-              <Check className="mt-0.5 h-4 w-4 text-orange-500" />
-              프로 10일권 즉시 지급
-            </div>
-            <div className="flex items-start gap-2">
-              <Check className="mt-0.5 h-4 w-4 text-orange-500" />
-              SNS 후기 인증 시 1개월 추가 (검수 후 지급)
-            </div>
-            <div className="flex items-start gap-2">
-              <Check className="mt-0.5 h-4 w-4 text-orange-500" />
-              친구 초대 성공 시 친구+나 모두 1개월
-            </div>
-            <div className="flex items-start gap-2">
-              <Check className="mt-0.5 h-4 w-4 text-orange-500" />
-              하루 1회 참여로 1일권 추가 지급
-            </div>
-          </div>
-        </section>
-
-        <section
-          className={cn(
-            'rounded-[28px] border border-neutral-200 bg-white p-6 shadow-sm transition',
-            !claimedAt && 'pointer-events-none opacity-50'
-          )}
-        >
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold">미션 리스트</h2>
-              <p className="text-sm text-neutral-500">미션 완료 후 추가 혜택을 받아보세요.</p>
-            </div>
-            {!claimedAt && (
-              <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-500">
-                10일권 수령 후 활성화
-              </span>
-            )}
-          </div>
-
-          <div className="mt-6 space-y-4">
-            <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">SNS 후기 남기기</p>
-                  <p className="text-xs text-neutral-500">
-                    블로그/스레드/SNS 후기 링크 공유 시 1개월 지급 (무제한 참여 가능)
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  className="rounded-full bg-[#ff6a00] text-white hover:bg-[#f25f00]"
-                  onClick={() => setIsReviewDialogOpen(true)}
-                  disabled={!claimedAt}
-                >
-                  인증하기
-                </Button>
-              </div>
-              {reviewSubmissions.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  {reviewSubmissions.map((submission) => (
-                    <div
-                      key={submission.id}
-                      className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs"
-                    >
-                      <span className="truncate text-neutral-600">{submission.link}</span>
-                      <span className="rounded-full bg-orange-50 px-2 py-1 text-[11px] font-semibold text-orange-600">
-                        {submission.status === 'approved'
-                          ? '승인 완료'
-                          : submission.status === 'rejected'
-                            ? '반려'
-                            : '검수 대기'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">친구 초대하기</p>
-                  <p className="text-xs text-neutral-500">
-                    친구도, 나도 1개월. 친구가 가입 후 내 코드로 등록하면 지급돼요.
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  className="rounded-full bg-white text-neutral-700 shadow-sm hover:bg-neutral-100"
-                  onClick={referralCode ? handleCopyReferral : handleGenerateReferral}
-                  disabled={!claimedAt}
-                >
-                  {referralCode ? '코드 복사' : '초대하기'}
-                </Button>
-              </div>
-              <div className="mt-3 flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs shadow-inner">
-                <div className="flex items-center gap-2 text-neutral-600">
-                  <Share2 className="h-4 w-4 text-neutral-400" />
-                  <span>{referralCode ?? '초대하기 버튼을 눌러 코드 발급'}</span>
-                </div>
-                {referralCode && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={handleCopyReferral}
-                    className="h-7 w-7"
+            {showConfetti && (
+              <div className="pointer-events-none absolute inset-0">
+                {Array.from({ length: 18 }).map((_, index) => (
+                  <span
+                    key={`confetti-${index}`}
+                    className="absolute text-lg animate-[confetti-fall_1.5s_ease-out_forwards]"
+                    style={{
+                      left: `${(index % 6) * 15 + 10}%`,
+                      animationDelay: `${index * 0.03}s`,
+                    }}
                   >
-                    <Copy className="h-4 w-4" />
+                    🎉
+                  </span>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {claimedAt && (
+          <section className="rounded-[28px] border border-neutral-200 bg-white p-6 shadow-sm transition">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">미션 리스트</h2>
+                <p className="text-sm text-neutral-500">미션 완료 후 추가 혜택을 받아보세요.</p>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">SNS 후기 남기기</p>
+                    <p className="text-xs text-neutral-500">
+                      블로그/스레드/SNS 후기 링크 공유 시 pro 1개월 지급 (무제한 참여 가능)
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="rounded-full bg-[#ff6a00] text-white hover:bg-[#f25f00]"
+                    onClick={() => setIsReviewDialogOpen(true)}
+                  >
+                    인증하기
                   </Button>
+                </div>
+                {reviewSubmissions.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {reviewSubmissions.map((submission) => (
+                      <div
+                        key={submission.id}
+                        className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs"
+                      >
+                        <span className="truncate text-neutral-600">{submission.link}</span>
+                        <span className="rounded-full bg-orange-50 px-2 py-1 text-[11px] font-semibold text-orange-600">
+                          {submission.status === 'approved'
+                            ? '승인 완료'
+                            : submission.status === 'rejected'
+                              ? '반려'
+                              : '검수 대기'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
 
-            <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">매일 참여하기</p>
-                  <p className="text-xs text-neutral-500">하루에 한 번 클릭하면 프로 1일권 지급!</p>
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">친구 초대하기</p>
+                    <p className="text-xs text-neutral-500">
+                      친구도, 나도 pro 1개월. 친구가 가입 후 내 코드로 등록하면 지급돼요.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="rounded-full bg-white text-neutral-700 shadow-sm hover:bg-neutral-100"
+                    onClick={referralCode ? handleCopyReferral : handleGenerateReferral}
+                  >
+                    {referralCode ? '코드 복사' : '초대하기'}
+                  </Button>
                 </div>
-                <Button
-                  size="sm"
-                  variant={hasDailyClaimed ? 'outline' : 'default'}
-                  className={cn(
-                    'rounded-full',
-                    hasDailyClaimed
-                      ? 'border-neutral-200 text-neutral-500'
-                      : 'bg-[#ff6a00] text-white hover:bg-[#f25f00]'
+                <div className="mt-3 flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs shadow-inner">
+                  <div className="flex items-center gap-2 text-neutral-600">
+                    <Share2 className="h-4 w-4 text-neutral-400" />
+                    <span>{referralCode ?? '초대하기 버튼을 눌러 코드 발급'}</span>
+                  </div>
+                  {referralCode && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={handleCopyReferral}
+                      className="h-7 w-7"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
                   )}
-                  onClick={handleDailyClaim}
-                  disabled={!claimedAt || hasDailyClaimed}
-                >
-                  {hasDailyClaimed ? '오늘 참여 완료' : '오늘 참여하기'}
-                </Button>
+                </div>
               </div>
-              <p className="mt-3 text-xs text-neutral-500">
-                {hasDailyClaimed ? '내일 다시 참여할 수 있어요.' : '참여 후 바로 기간이 늘어나요.'}
-              </p>
+
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">매일 참여하기</p>
+                    <p className="text-xs text-neutral-500">
+                      하루에 한 번 클릭하면 pro 1일권 지급!
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={hasDailyClaimed ? 'outline' : 'default'}
+                    className={cn(
+                      'rounded-full',
+                      hasDailyClaimed
+                        ? 'border-neutral-200 text-neutral-500'
+                        : 'bg-[#ff6a00] text-white hover:bg-[#f25f00]'
+                    )}
+                    onClick={handleDailyClaim}
+                    disabled={hasDailyClaimed}
+                  >
+                    {hasDailyClaimed ? '오늘 참여 완료' : '오늘 참여하기'}
+                  </Button>
+                </div>
+                <p className="mt-3 text-xs text-neutral-500">
+                  {hasDailyClaimed
+                    ? '내일 다시 참여할 수 있어요.'
+                    : '참여 후 바로 기간이 늘어나요.'}
+                </p>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </div>
 
       <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
@@ -556,11 +510,7 @@ export default function LaunchEventPage() {
               onChange={(event) => setReviewNote(event.target.value)}
               className="min-h-[100px]"
             />
-            <Button
-              onClick={handleSubmitReview}
-              disabled={isSubmittingReview}
-              className="w-full"
-            >
+            <Button onClick={handleSubmitReview} disabled={isSubmittingReview} className="w-full">
               {isSubmittingReview ? '제출 중...' : '인증 요청 보내기'}
             </Button>
           </div>
