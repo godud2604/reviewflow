@@ -7,7 +7,6 @@ import { Gift } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { getSupabaseClient } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 export default function LaunchEventBanner() {
   const router = useRouter();
@@ -56,17 +55,12 @@ export default function LaunchEventBanner() {
     return null;
   }
 
-  if (isDismissed) {
+  if (isDismissed || isClaimed) {
     return null;
   }
 
   return (
-    <div
-      className={cn(
-        'mx-4 mt-4 rounded-2xl border border-orange-100 bg-gradient-to-r from-orange-50 via-white to-pink-50 px-4 py-3 shadow-sm',
-        isClaimed && 'opacity-80'
-      )}
-    >
+    <div className="mx-4 mt-4 rounded-2xl border border-orange-100 bg-gradient-to-r from-orange-50 via-white to-pink-50 px-4 py-3 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-orange-500 shadow">
