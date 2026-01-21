@@ -44,7 +44,7 @@ type MissionSubmission = {
 
 export default function LaunchEventPage() {
   const router = useRouter();
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { user, session, isAuthenticated, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +54,10 @@ export default function LaunchEventPage() {
   const [tierExpiresAt, setTierExpiresAt] = useState<string | null>(null);
   const [dailyClaimedAt, setDailyClaimedAt] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [appliedReferralCode, setAppliedReferralCode] = useState<string | null>(null);
+  const [appliedReferralAt, setAppliedReferralAt] = useState<string | null>(null);
+  const [referralApplyCode, setReferralApplyCode] = useState('');
+  const [isApplyingReferral, setIsApplyingReferral] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewLink, setReviewLink] = useState('');
   const [reviewNote, setReviewNote] = useState('');
@@ -81,7 +85,7 @@ export default function LaunchEventPage() {
         const { data, error } = await supabase
           .from('user_profiles')
           .select(
-            'launch_event_claimed_at, tier_expires_at, launch_event_daily_claimed_at, launch_event_referral_code'
+            'launch_event_claimed_at, tier_expires_at, launch_event_daily_claimed_at, launch_event_referral_code, launch_event_referral_applied_code, launch_event_referral_applied_at'
           )
           .eq('id', user.id)
           .single();
@@ -92,6 +96,8 @@ export default function LaunchEventPage() {
         setTierExpiresAt(data?.tier_expires_at ?? null);
         setDailyClaimedAt(data?.launch_event_daily_claimed_at ?? null);
         setReferralCode(data?.launch_event_referral_code ?? null);
+        setAppliedReferralCode(data?.launch_event_referral_applied_code ?? null);
+        setAppliedReferralAt(data?.launch_event_referral_applied_at ?? null);
 
         const { data: submissions, error: submissionError } = await supabase
           .from('launch_event_mission_submissions')
@@ -277,6 +283,81 @@ export default function LaunchEventPage() {
     }
   };
 
+  const handleApplyReferral = async () => {
+    if (!user || isApplyingReferral) return;
+    if (!session?.access_token) {
+      toast({
+        title: '로그인이 필요합니다',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (appliedReferralCode) {
+      toast({
+        title: '이미 쿠폰을 등록했어요',
+        description: '쿠폰은 한 번만 등록할 수 있어요.',
+      });
+      return;
+    }
+
+    const trimmed = referralApplyCode.trim().toUpperCase();
+    if (!trimmed) {
+      toast({
+        title: '쿠폰 코드를 입력해 주세요',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (referralCode && trimmed === referralCode) {
+      toast({
+        title: '내 쿠폰은 등록할 수 없어요',
+        description: '친구의 쿠폰 코드를 입력해 주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsApplyingReferral(true);
+    try {
+      const response = await fetch('/api/referral/apply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ code: trimmed }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || '쿠폰 등록에 실패했어요.');
+      }
+
+      setAppliedReferralCode(trimmed);
+      setAppliedReferralAt(data?.applied_at ?? null);
+      if (data?.tier_expires_at) {
+        setTierExpiresAt(data.tier_expires_at);
+      }
+      setReferralApplyCode('');
+
+      toast({
+        title: '쿠폰이 등록되었어요',
+        description: '친구와 나 모두 1개월이 바로 지급됐어요.',
+      });
+    } catch (err) {
+      toast({
+        title: '쿠폰 등록에 실패했어요',
+        description: err instanceof Error ? err.message : '잠시 후 다시 시도해 주세요.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsApplyingReferral(false);
+    }
+  };
+
   const handleDailyClaim = async () => {
     if (!user || hasDailyClaimed) return;
 
@@ -442,7 +523,8 @@ export default function LaunchEventPage() {
                     <div>
                       <p className="text-sm font-semibold">SNS 후기 남기기</p>
                       <p className="text-xs text-neutral-500">
-                        블로그/스레드/SNS 후기 링크 공유 시 pro 1개월 지급 (무제한 참여 가능)
+                        블로그/쓰레드/인스타 등 모든 SNS에 홍보 가능! 링크 공유 시 pro 1개월 지급
+                        (무제한 참여 가능)
                       </p>
                     </div>
                     <Button
@@ -466,10 +548,14 @@ export default function LaunchEventPage() {
                               ? '승인 완료'
                               : submission.status === 'rejected'
                                 ? '반려'
-                                : '검수 대기'}
+                                : '검수 대기 · 24시간 내 확인'}
                           </span>
                         </div>
                       ))}
+                      <p className="text-[11px] text-neutral-500">
+                        운영진이 링크 확인 후 상태가 자동으로 바뀝니다. 따로 status를 변경할 필요는
+                        없어요.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -504,6 +590,48 @@ export default function LaunchEventPage() {
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
+                    )}
+                  </div>
+                  <div className="mt-3 rounded-xl border border-dashed border-neutral-200 bg-white px-3 py-3 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold">쿠폰 등록하기</p>
+                        <p className="text-[11px] text-neutral-500">
+                          친구의 쿠폰을 등록하면 즉시 1개월이 지급돼요.
+                        </p>
+                      </div>
+                      {appliedReferralCode && (
+                        <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-600">
+                          등록 완료
+                        </span>
+                      )}
+                    </div>
+                    {tierExpiresAt && (
+                      <div className="mt-2 rounded-lg bg-neutral-50 px-2.5 py-2 text-[11px] text-neutral-500">
+                        현재 PRO 만료일: {formatExpiryLabel(tierExpiresAt)}
+                      </div>
+                    )}
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Input
+                        placeholder="RF-XXXXXXXX"
+                        value={appliedReferralCode ?? referralApplyCode}
+                        onChange={(event) => setReferralApplyCode(event.target.value)}
+                        disabled={Boolean(appliedReferralCode) || isApplyingReferral}
+                        className="h-9 flex-1 text-xs"
+                      />
+                      <Button
+                        size="sm"
+                        className="h-9 rounded-full bg-neutral-900 text-xs text-white hover:bg-neutral-800"
+                        onClick={handleApplyReferral}
+                        disabled={Boolean(appliedReferralCode) || isApplyingReferral}
+                      >
+                        {isApplyingReferral ? '등록 중...' : '쿠폰 등록'}
+                      </Button>
+                    </div>
+                    {appliedReferralCode && appliedReferralAt && (
+                      <p className="mt-2 text-[11px] text-neutral-500">
+                        {formatExpiryLabel(appliedReferralAt)}에 등록되었어요.
+                      </p>
                     )}
                   </div>
                 </div>
@@ -560,6 +688,9 @@ export default function LaunchEventPage() {
               onChange={(event) => setReviewNote(event.target.value)}
               className="min-h-[100px]"
             />
+            <p className="text-[11px] text-neutral-500">
+              검수는 운영진이 24시간 내로 확인하며 상태는 자동으로 업데이트됩니다.
+            </p>
             <Button onClick={handleSubmitReview} disabled={isSubmittingReview} className="w-full">
               {isSubmittingReview ? '제출 중...' : '인증 요청 보내기'}
             </Button>
