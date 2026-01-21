@@ -909,7 +909,7 @@ export default function HomePage({
           <button
             type="button"
             onClick={() => onCreateSchedule(selectedDate)}
-            className="group mx-auto flex w-full items-center justify-center gap-1.5 rounded-full border border-orange-200 bg-white px-3 py-2 text-[12px] font-semibold text-orange-600 shadow-sm transition-all hover:bg-orange-50/70 hover:border-orange-300 active:scale-[0.99]"
+            className="group mx-auto flex w-full items-center justify-center gap-1.5 rounded-full bg-white px-3 py-2 text-[12px] font-semibold text-orange-600 shadow-sm transition-all hover:bg-orange-50/70 hover:border-orange-300 active:scale-[0.99]"
           >
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-orange-100 text-orange-600">
               <Plus size={12} strokeWidth={3} />
@@ -948,7 +948,7 @@ export default function HomePage({
                 )}
               </div>
             )}
-            <div className="flex items-center gap-2 rounded-full bg-neutral-100 px-3 h-8">
+            <div className="flex items-center gap-2 rounded-full px-3 h-8">
               <label
                 htmlFor="show-all-todos-toggle"
                 className="text-[12px] font-semibold text-neutral-600"
@@ -985,7 +985,7 @@ export default function HomePage({
           <div className="bg-neutral-50/95 px-5 pt-2 backdrop-blur-md">
             {/* 검색창 */}
             {!selectedDate || showAllOnSelectedDate ? (
-              <div className="mb-1.5 rounded-[22px] border border-neutral-200 bg-white p-1">
+              <div className="mb-1.5 rounded-[22px] border border-neutral-100 bg-white p-1">
                 <div className="h-8 flex items-center gap-2 rounded-[18px] bg-white px-3 py-1.5">
                   <span className="text-[14px] text-neutral-400">🔍</span>
                   <Input
@@ -1028,7 +1028,7 @@ export default function HomePage({
             ) : null}
 
             {/* 필터 행 */}
-            <div className="rounded-[22px] border border-neutral-200 bg-white px-3 py-1 shadow-[0_10px_26px_rgba(15,23,42,0.08)]">
+            <div className="rounded-[22px] border border-neutral-100 bg-white px-3 py-1 shadow-[0_10px_26px_rgba(15,23,42,0.08)]">
               <div className="relative">
                 <div
                   ref={filterScrollRef}
@@ -1725,22 +1725,22 @@ function CalendarSection({
         })}
       </div>
       <div className="mt-4.5 flex flex-wrap items-center justify-between gap-3">
-        <div className="grid grid-cols-2 items-center gap-x-4 gap-y-1 text-[11px] text-neutral-500 leading-tight">
+        <div className="flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
           {CALENDAR_STATUS_LEGEND.map((item) => (
             <div key={item.status} className="flex items-center gap-1">
               <span
                 className="h-2.5 w-2.5 rounded-full border border-neutral-200"
                 style={{ backgroundColor: `${item.color}` }}
               />
-              <span className="font-semibold">{item.label}</span>
+              <span className="font-semibold text-neutral-700">{item.label}</span>
             </div>
           ))}
         </div>
         <button
           onClick={goToToday}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-100 px-3 text-[11px] font-semibold text-neutral-900 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:bg-neutral-200"
+          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-100 px-4 text-[11.5px] font-semibold text-neutral-900 shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition hover:bg-neutral-200"
         >
-          <CalendarDays className="h-3.5 w-3.5" />
+          <CalendarDays className="h-4 w-4" />
           오늘로 이동
         </button>
       </div>

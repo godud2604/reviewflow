@@ -13,7 +13,9 @@ import {
   parseIncomeDetailsJson,
   sumIncomeDetails,
 } from '@/lib/schedule-income-details';
-import { CreditCard, Gift, Plus, Wallet } from 'lucide-react';
+import { CreditCard, Gift, Info, Plus, Wallet } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 
 const incomeTutorialStorageKey = 'reviewflow-stats-income-tutorial-shown';
 
@@ -61,6 +63,7 @@ export default function StatsPage({
   const [showCompletedOnly, setShowCompletedOnly] = useState(false);
   const [editingExtraIncome, setEditingExtraIncome] = useState<ExtraIncome | null>(null);
   const [historyView, setHistoryView] = useState<HistoryView>('all');
+  const [isCompletedTooltipOpen, setIsCompletedTooltipOpen] = useState(false);
   const historyDisabled = showIncomeModal || isScheduleModalOpen;
   const cardShadow = 'shadow-[0_14px_40px_rgba(18,34,64,0.08)]';
 
@@ -81,6 +84,7 @@ export default function StatsPage({
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
   const currentMonthKey = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
+  const allKey = 'all';
   const [selectedMonthKey, setSelectedMonthKey] = useState(currentMonthKey);
 
   const parseDate = (value?: string) => {
@@ -90,11 +94,13 @@ export default function StatsPage({
   };
 
   const getMonthStartDate = (monthKey: string) => {
+    if (monthKey === allKey) return null;
     const date = new Date(monthKey);
     return Number.isNaN(date.getTime()) ? null : date;
   };
 
   const selectedMonthDate = useMemo(() => getMonthStartDate(selectedMonthKey), [selectedMonthKey]);
+  const isAllSelected = selectedMonthKey === allKey;
   const isDateInSelectedMonth = (date: Date | null) => {
     if (!date || !selectedMonthDate) return false;
     return (
@@ -104,12 +110,14 @@ export default function StatsPage({
   };
 
   const formatFullMonthLabel = (key: string) => {
+    if (key === allKey) return '전체';
     const date = getMonthStartDate(key);
     if (!date) return key;
     return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
   };
 
   const formatMonthButtonLabel = (key: string) => {
+    if (key === allKey) return '전체';
     const date = getMonthStartDate(key);
     if (!date) return key;
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -125,6 +133,7 @@ export default function StatsPage({
   const selectedMonthLabel = formatFullMonthLabel(selectedMonthKey);
   const selectedMonthLabelShort = formatShortMonthLabel(selectedMonthKey);
   const displaySelectedMonthLabel = selectedMonthLabel || '선택한 달';
+  const displaySelectedRangeLabel = isAllSelected ? '여태까지' : displaySelectedMonthLabel;
 
   const getScheduleDate = (schedule: Schedule) =>
     parseDate(schedule.visit) || parseDate(schedule.dead);
@@ -149,6 +158,7 @@ export default function StatsPage({
 
   const { extraIncomes, createExtraIncome, updateExtraIncome, deleteExtraIncome } =
     useExtraIncomes();
+  const { toast } = useToast();
 
   const handleAddIncome = async (income: Omit<ExtraIncome, 'id'>) => {
     await createExtraIncome(income);
@@ -184,6 +194,17 @@ export default function StatsPage({
     handleOpenIncomeModal(income);
   };
 
+  const handleCompletedOnlyToggle = (checked: boolean) => {
+    setShowCompletedOnly(checked);
+    if (checked) {
+      toast({
+        title: '완료된 내역만 통계에 반영돼요.',
+        description: '진행 중인 스케줄은 제외됩니다.',
+        duration: 1500,
+      });
+    }
+  };
+
   const visibleSchedules = useMemo(
     () =>
       showCompletedOnly ? schedules.filter((schedule) => schedule.status === '완료') : schedules,
@@ -191,13 +212,19 @@ export default function StatsPage({
   );
 
   const selectedMonthSchedules = useMemo(
-    () => visibleSchedules.filter((schedule) => isDateInSelectedMonth(getScheduleDate(schedule))),
-    [visibleSchedules, selectedMonthKey, selectedMonthDate]
+    () =>
+      isAllSelected
+        ? visibleSchedules
+        : visibleSchedules.filter((schedule) => isDateInSelectedMonth(getScheduleDate(schedule))),
+    [visibleSchedules, selectedMonthKey, selectedMonthDate, isAllSelected]
   );
 
   const selectedMonthExtraIncomes = useMemo(
-    () => extraIncomes.filter((income) => isDateInSelectedMonth(parseDate(income.date))),
-    [extraIncomes, selectedMonthKey, selectedMonthDate]
+    () =>
+      isAllSelected
+        ? extraIncomes
+        : extraIncomes.filter((income) => isDateInSelectedMonth(parseDate(income.date))),
+    [extraIncomes, selectedMonthKey, selectedMonthDate, isAllSelected]
   );
 
   const { detailIncomeTotal, detailCostTotal, incomeDetailBreakdown, costDetailBreakdown } =
@@ -289,15 +316,20 @@ export default function StatsPage({
   const animatedValueRef = useRef(0);
   const animationRef = useRef<number | null>(null);
   const lastAnimatedValueRef = useRef<number | null>(null);
+  const animationIdRef = useRef(0);
 
   // ... (애니메이션 Effect 등 기존 로직 동일) ...
   useEffect(() => {
     const target = econValue;
-    if (lastAnimatedValueRef.current === target) return;
+    if (lastAnimatedValueRef.current === target && animatedValueRef.current === target) {
+      return;
+    }
 
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
     }
+    animationIdRef.current += 1;
+    const animationId = animationIdRef.current;
 
     const start = animatedValueRef.current;
     if (target === start) {
@@ -309,6 +341,7 @@ export default function StatsPage({
     const startTime = performance.now();
 
     const step = (now: number) => {
+      if (animationIdRef.current !== animationId) return;
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
@@ -327,6 +360,7 @@ export default function StatsPage({
     animationRef.current = requestAnimationFrame(step);
 
     return () => {
+      animationIdRef.current += 1;
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, [econValue]);
@@ -441,7 +475,7 @@ export default function StatsPage({
       .filter((option): option is { key: string; date: Date; label: string } => option !== null)
       .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-    return options;
+    return [{ key: allKey, label: '전체' }, ...options];
   }, [monthlyGrowth, currentMonthKey]);
 
   return (
@@ -458,7 +492,8 @@ export default function StatsPage({
               className="flex-1 flex gap-2 overflow-x-auto pb-1 px-5 -mx-5 scrollbar-hide snap-x mr-0"
             >
               {monthOptions.map((option) => {
-                const isMonthLocked = !isPro && option.key !== currentMonthKey;
+                const isMonthLocked =
+                  !isPro && option.key !== currentMonthKey && option.key !== allKey;
                 return (
                   <button
                     key={option.key}
@@ -479,18 +514,32 @@ export default function StatsPage({
               })}
               <div className="w-2 flex-none" />
             </div>
-            <label
-              htmlFor="completed-only"
-              className="flex items-center gap-2 text-[12px] font-semibold text-[#64748b] whitespace-nowrap"
-            >
-              완료만 보기
+            <div className="flex items-center gap-1 text-[11px] font-semibold text-[#64748b] whitespace-nowrap">
+              <Tooltip open={isCompletedTooltipOpen} onOpenChange={setIsCompletedTooltipOpen}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="완료만 보기 안내"
+                    onClick={() => setIsCompletedTooltipOpen((prev) => !prev)}
+                    className="flex h-4 w-4 items-center justify-center rounded-full text-[#64748b]"
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[220px] text-xs">
+                  진행 중인 스케줄을 제외하고 실제 완료된 내역의 통계만 확인합니다.
+                </TooltipContent>
+              </Tooltip>
+              <label htmlFor="completed-only" className="cursor-pointer mr-0.5">
+                완료만 보기
+              </label>
               <Switch
                 id="completed-only"
                 checked={showCompletedOnly}
-                onCheckedChange={setShowCompletedOnly}
+                onCheckedChange={handleCompletedOnlyToggle}
                 className="data-[state=checked]:bg-[#0f172a]"
               />
-            </label>
+            </div>
           </div>
         </div>
 
@@ -512,7 +561,7 @@ export default function StatsPage({
           {/* Main Total Value (여백 및 폰트 축소) */}
           <div className="relative flex flex-col items-center justify-center text-center mt-1 mb-5">
             <div className="text-[13px] font-bold text-white/90 uppercase tracking-wide mb-1 drop-shadow-sm">
-              {displaySelectedMonthLabel} 총 경제적 가치
+              {displaySelectedRangeLabel} 모은 총 경제적 가치
             </div>
             {/* 폰트 크기 40px -> 32px로 조정하여 부담 완화 */}
             <div className="text-[30px] font-black leading-none text-white tracking-tight drop-shadow-md">
@@ -567,7 +616,7 @@ export default function StatsPage({
         {/* 하단 리스트 영역 (기존 유지) */}
         <div className="flex items-center justify-between mb-3.5">
           <div className="ml-1.5 text-[16px] font-bold text-[#0f172a]">
-            {displaySelectedMonthLabel} 재무 상세
+            {isAllSelected ? '누적 재무 상세' : `${displaySelectedMonthLabel} 재무 상세`}
           </div>
           <button
             onClick={() => openHistoryModal('all')}
@@ -589,7 +638,7 @@ export default function StatsPage({
                     <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#fef4eb] text-[#f97316] text-[14px]">
                       ₩
                     </span>
-                    방어한 생활비
+                    {isAllSelected ? '누적 방어한 생활비' : '방어한 생활비'}
                   </div>
                   <div className="text-[18px] font-bold text-[#f97316] mt-1">
                     {totalBen.toLocaleString()} 원
@@ -638,7 +687,7 @@ export default function StatsPage({
                     <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#eef5ff] text-[#2563eb] text-[14px]">
                       💵
                     </span>
-                    수입
+                    {isAllSelected ? '누적 수입' : '수입'}
                   </div>
                   <div className="text-[18px] font-bold text-[#2563eb] mt-1">
                     {(totalInc + totalExtraIncome).toLocaleString()} 원
@@ -725,7 +774,7 @@ export default function StatsPage({
                     <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#fee2e2] text-[#ef4444] text-[14px]">
                       🪙
                     </span>
-                    지출
+                    {isAllSelected ? '누적 지출' : '지출'}
                   </div>
                   <div className="text-[18px] font-bold text-[#dc2626] mt-1">
                     {totalCost.toLocaleString()} 원
@@ -780,6 +829,7 @@ export default function StatsPage({
           selectedMonthKey={selectedMonthKey}
           selectedMonthLabel={selectedMonthLabelShort || displaySelectedMonthLabel}
           isPro={isPro}
+          isAllSelected={isAllSelected}
         />
       </div>
 
@@ -814,18 +864,21 @@ function TrendChart({
   selectedMonthKey,
   selectedMonthLabel,
   isPro,
+  isAllSelected,
 }: {
   currentMonthValue: number;
   monthlyGrowth: MonthlyGrowth[];
   selectedMonthKey: string;
   selectedMonthLabel: string;
   isPro: boolean;
+  isAllSelected: boolean;
 }) {
   // ... 기존 TrendChart 코드 전체 유지 ...
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const addSelectedIfMissing = (data: MonthlyGrowth[]) => {
     if (!selectedMonthKey) return data;
+    if (selectedMonthKey === 'all') return data;
     if (data.some((item) => item.monthStart === selectedMonthKey)) return data;
     return [
       ...data,
@@ -852,6 +905,9 @@ function TrendChart({
 
   const buildChartData = () => {
     if (isPro) {
+      return uniqueSortedData;
+    }
+    if (isAllSelected) {
       return uniqueSortedData;
     }
     const latest = uniqueSortedData.slice(-4);
