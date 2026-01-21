@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Z_INDEX } from '@/lib/z-index';
 import { useAuth } from '@/hooks/use-auth';
-import { APP_LAUNCH_EVENT } from '@/lib/app-launch';
+import { APP_LAUNCH_EVENT, isInPwaDisplayMode, isNativeAppWebView } from '@/lib/app-launch';
 
 const IOS_APP_STORE_URL = 'https://apps.apple.com/kr/app/reviewflow/id6757174544';
 const ANDROID_PLAY_STORE_URL =
@@ -14,10 +14,17 @@ export default function AppDownloadBanner() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [isDismissed, setIsDismissed] = useState<boolean | null>(null);
   const [isManuallyOpen, setIsManuallyOpen] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState<boolean | null>(null);
+  const [isPwa, setIsPwa] = useState(false);
+  const [isNativeApp, setIsNativeApp] = useState(false);
 
   useEffect(() => {
     const storedValue = window.localStorage.getItem(BANNER_DISMISS_KEY);
     setIsDismissed(storedValue === 'true');
+    const userAgent = window.navigator.userAgent;
+    setIsMobileDevice(/iPhone|iPad|iPod|Android/i.test(userAgent));
+    setIsPwa(isInPwaDisplayMode());
+    setIsNativeApp(isNativeAppWebView());
   }, []);
 
   useEffect(() => {
@@ -39,6 +46,14 @@ export default function AppDownloadBanner() {
   };
 
   if (authLoading || !isAuthenticated) {
+    return null;
+  }
+
+  if (isMobileDevice === null) {
+    return null;
+  }
+
+  if (isNativeApp || (isMobileDevice && !isPwa)) {
     return null;
   }
 
