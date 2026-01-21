@@ -301,15 +301,20 @@ export default function StatsPage({
   const animatedValueRef = useRef(0);
   const animationRef = useRef<number | null>(null);
   const lastAnimatedValueRef = useRef<number | null>(null);
+  const animationIdRef = useRef(0);
 
   // ... (애니메이션 Effect 등 기존 로직 동일) ...
   useEffect(() => {
     const target = econValue;
-    if (lastAnimatedValueRef.current === target) return;
+    if (lastAnimatedValueRef.current === target && animatedValueRef.current === target) {
+      return;
+    }
 
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
     }
+    animationIdRef.current += 1;
+    const animationId = animationIdRef.current;
 
     const start = animatedValueRef.current;
     if (target === start) {
@@ -321,6 +326,7 @@ export default function StatsPage({
     const startTime = performance.now();
 
     const step = (now: number) => {
+      if (animationIdRef.current !== animationId) return;
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
@@ -339,6 +345,7 @@ export default function StatsPage({
     animationRef.current = requestAnimationFrame(step);
 
     return () => {
+      animationIdRef.current += 1;
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, [econValue]);
