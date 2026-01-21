@@ -1541,9 +1541,10 @@ export default function ScheduleModal({
               >
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[15px] font-bold text-neutral-500 mb-2.5">
-                      체험단 이름 (필수)
+                    <label className="block text-[15px] font-bold text-neutral-500 mb-0.5">
+                      제목 (필수)
                     </label>
+                    <p className="text-[12px] text-neutral-400 mb-2.5">업체명을 입력해주세요</p>
                     <div className="relative">
                       <input
                         type="text"
@@ -1555,14 +1556,14 @@ export default function ScheduleModal({
                           }
                         }}
                         className="w-full h-[40px] rounded-[18px] bg-[#F2F4F6] px-4 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none"
-                        placeholder="체험단 이름을 입력해주세요"
+                        placeholder="(예: [OO식당] 체험단 방문, XX샴푸 리뷰 등)"
                       />
                       {formData.title && (
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(formData.title || '');
                             toast({
-                              title: '체험단명이 복사되었습니다.',
+                              title: '제목이 복사되었습니다.',
                               duration: 1000,
                             });
                           }}
@@ -1572,7 +1573,7 @@ export default function ScheduleModal({
                         </button>
                       )}
                       {titleError && (
-                        <p className="mt-1 text-[12px] text-red-500">체험단명을 입력해주세요.</p>
+                        <p className="mt-1 text-[12px] text-red-500">제목을 입력해주세요.</p>
                       )}
                     </div>
                   </div>
@@ -1821,7 +1822,9 @@ export default function ScheduleModal({
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <p className="text-[16px] font-semibold text-neutral-900">체험 진행 정보</p>
+                    <p className="text-[16px] font-semibold text-neutral-900 mb-0.5">
+                      체험 진행 정보
+                    </p>
                   </div>
                   <p className="text-[12px] text-neutral-400">
                     리뷰 채널과 방문 정보를 손쉽게 입력해 보세요.
@@ -2299,10 +2302,10 @@ export default function ScheduleModal({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[16px] font-semibold text-neutral-900">자산 관리</p>
-                    <span className="text-[11px] text-neutral-400">
+                    <label className="text-[16px] font-semibold text-neutral-900">자산 관리</label>
+                    <p className="text-[11px] text-neutral-400">
                       제공(물품) + 현금 - 내가 쓴 돈 = 수익
-                    </span>
+                    </p>
                   </div>
                   <div className="relative">
                     <button
