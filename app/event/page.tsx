@@ -225,13 +225,14 @@ export default function LaunchEventPage() {
       setTimeout(() => setShowConfetti(false), 2500);
       toast({
         title: 'PRO 14일권을 받았어요! 🎉',
-        description: '지금부터 모든 기능을 사용할 수 있어요.',
+        duration: 1000,
       });
     } catch (err) {
       toast({
         title: '지급 실패',
         description: '잠시 후 다시 시도해 주세요.',
         variant: 'destructive',
+        duration: 1000,
       });
     } finally {
       setIsClaiming(false);
@@ -260,9 +261,14 @@ export default function LaunchEventPage() {
 
       setTierExpiresAt(nextExpiry.toISOString());
       setDailyClaimedAt(today);
-      toast({ title: '출석 완료! +1일 연장되었어요 📅' });
+      toast({ title: '출석 완료! +1일 연장되었어요 📅', duration: 1000 });
     } catch (err) {
-      toast({ title: '실패', description: '잠시 후 다시 시도해 주세요.', variant: 'destructive' });
+      toast({
+        title: '실패',
+        description: '잠시 후 다시 시도해 주세요.',
+        variant: 'destructive',
+        duration: 1000,
+      });
     }
   };
 
@@ -278,7 +284,7 @@ export default function LaunchEventPage() {
       if (error) throw error;
       setReferralCode(code);
     } catch (err) {
-      toast({ title: '오류 발생', variant: 'destructive' });
+      toast({ title: '오류 발생', variant: 'destructive', duration: 1000 });
     }
   };
 
@@ -294,7 +300,7 @@ export default function LaunchEventPage() {
 
     const code = referralApplyCode.trim().toUpperCase();
     if (!code) {
-      toast({ title: '코드를 입력해주세요', variant: 'destructive' });
+      toast({ title: '코드를 입력해주세요', variant: 'destructive', duration: 1000 });
       return;
     }
 
@@ -315,9 +321,14 @@ export default function LaunchEventPage() {
       if (data.applied_at) setAppliedReferralAt(data.applied_at);
       if (data.tier_expires_at) setTierExpiresAt(data.tier_expires_at);
       setReferralApplyCode('');
-      toast({ title: '쿠폰 등록 완료! +1개월 지급됨 🎁' });
+      toast({ title: '쿠폰 등록 완료! +1개월 지급됨 🎁', duration: 1000 });
     } catch (err: any) {
-      toast({ title: '등록 실패', description: err.message, variant: 'destructive' });
+      toast({
+        title: '등록 실패',
+        description: err.message,
+        variant: 'destructive',
+        duration: 1000,
+      });
     } finally {
       setIsApplyingReferral(false);
     }
@@ -326,7 +337,7 @@ export default function LaunchEventPage() {
   const handleSubmitReview = async () => {
     if (!user || isSubmittingReview) return;
     if (!reviewLink.trim()) {
-      toast({ title: '링크를 입력해주세요', variant: 'destructive' });
+      toast({ title: '링크를 입력해주세요', variant: 'destructive', duration: 1000 });
       return;
     }
 
@@ -349,9 +360,9 @@ export default function LaunchEventPage() {
       setIsReviewDialogOpen(false);
       setReviewLink('');
       setReviewNote('');
-      toast({ title: '인증 요청 완료', description: '검수 후 보상이 지급됩니다.' });
+      toast({ title: '인증 요청 완료', description: '검수 후 보상이 지급됩니다.', duration: 1000 });
     } catch (err) {
-      toast({ title: '제출 실패', variant: 'destructive' });
+      toast({ title: '제출 실패', variant: 'destructive', duration: 1000 });
     } finally {
       setIsSubmittingReview(false);
     }
