@@ -2205,11 +2205,11 @@ export default function ScheduleModal({
                         {customIncomeDetails.map((detail) => (
                           <div
                             key={detail.id}
-                            className="flex items-center justify-between rounded-[14px] bg-white/90 text-[13px] font-semibold text-neutral-600"
+                            className="flex items-center justify-between gap-2 rounded-[14px] bg-white/90 text-[13px] font-semibold text-neutral-600"
                           >
-                            <span className="flex items-center gap-2">
+                            <span className="flex min-w-0 items-center gap-2">
                               <span
-                                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                                   detail.type === 'EXPENSE'
                                     ? 'bg-[#fee2e2]/70 text-[#ef4444]'
                                     : 'bg-[#eef5ff] text-[#2563eb]'
@@ -2217,7 +2217,7 @@ export default function ScheduleModal({
                               >
                                 {detail.type === 'EXPENSE' ? '지출' : '수익'}
                               </span>
-                              <span>{detail.label}</span>
+                              <span className="min-w-0 truncate">{detail.label}</span>
                             </span>
                             <div className="flex items-center gap-1">
                               <input
@@ -2229,7 +2229,7 @@ export default function ScheduleModal({
                                     amount: parseNumber(e.target.value),
                                   })
                                 }
-                                className="h-[30px] w-[120px] rounded-full border border-neutral-200 bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
+                                className="h-[30px] w-[104px] rounded-full border border-neutral-200 bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
                               />
                               <button
                                 type="button"
