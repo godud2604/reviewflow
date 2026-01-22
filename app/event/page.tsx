@@ -403,9 +403,6 @@ export default function LaunchEventPage() {
             <h1 className="text-[16px] font-bold text-neutral-800">
               앱 출시 기념, <span className="text-orange-400">PRO 14일 연장</span> 혜택
             </h1>
-            <p className="text-[14px] text-neutral-500">
-              지금 시작하고 모든 프리미엄 기능을 경험해보세요.
-            </p>
           </header>
         ) : (
           <div className="rounded-[24px] bg-white p-5 shadow-sm border border-orange-100 relative overflow-hidden">
