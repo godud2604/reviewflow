@@ -2249,7 +2249,7 @@ export default function ScheduleModal({
                     </button>
                   </div>
                   {showIncomeDetailManagement && (
-                    <div className="mt-3 rounded-[24px] border border-neutral-200/80 bg-white/95 px-4 py-4 space-y-3 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+                    <div className="mt-3 rounded-[26px] border border-neutral-200/70 bg-white/95 px-4 py-4 space-y-3 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
                       <p className="text-[12px] text-neutral-400">
                         사용 방법: 수익/지출 선택 → 내역 이름 → 금액 입력
                       </p>
@@ -2260,7 +2260,7 @@ export default function ScheduleModal({
                             setNewIncomeDetailType(value as ScheduleTransactionItem['type'])
                           }
                         >
-                          <SelectTrigger className="h-11 rounded-2xl bg-[#F7F7F8] border border-transparent text-[14px] font-semibold text-neutral-700 focus-visible:border-orange-200">
+                          <SelectTrigger className="h-11 w-full min-w-0 rounded-2xl bg-white/80 border border-[#EDEDED] text-[14px] font-semibold text-neutral-700 shadow-[0_6px_16px_rgba(15,23,42,0.06)] focus-visible:border-orange-200">
                             <SelectValue placeholder="유형" />
                           </SelectTrigger>
                           <SelectContent>
@@ -2275,7 +2275,7 @@ export default function ScheduleModal({
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleAddIncomeDetailFromModal();
                           }}
-                          className="h-11 px-4 bg-[#F7F7F8] border border-transparent rounded-2xl text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/30 focus-visible:border-orange-200"
+                          className="h-11 w-full min-w-0 px-4 bg-white/80 border border-[#EDEDED] rounded-2xl text-[15px] shadow-[0_6px_16px_rgba(15,23,42,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/30 focus-visible:border-orange-200"
                           placeholder="내역 이름 (예: 주차비, 배송비)"
                         />
                         <input
@@ -2288,14 +2288,14 @@ export default function ScheduleModal({
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleAddIncomeDetailFromModal();
                           }}
-                          className="h-11 px-4 bg-[#F7F7F8] border border-transparent rounded-2xl text-[15px] text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/30 focus-visible:border-orange-200"
+                          className="h-11 w-full min-w-0 px-4 bg-white/80 border border-[#EDEDED] rounded-2xl text-[15px] text-right shadow-[0_6px_16px_rgba(15,23,42,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/30 focus-visible:border-orange-200"
                           placeholder="금액"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={handleAddIncomeDetailFromModal}
-                        className="w-full h-11 bg-[#FF7000] text-white rounded-2xl text-[14px] font-semibold hover:bg-[#FF5722]/90 transition-colors"
+                        className="group w-full h-11 rounded-2xl text-[14px] font-semibold text-white bg-gradient-to-r from-[#FF7A00] via-[#FF6A00] to-[#FF4D00] transition-all hover:brightness-105 active:scale-[0.99]"
                       >
                         추가
                       </button>
