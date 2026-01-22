@@ -88,10 +88,13 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
           <button
             type="button"
             onClick={() => router.push('/event')}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-[16px] shadow-sm transition hover:border-neutral-300"
+            className="group flex h-10 items-center gap-2 rounded-full border border-orange-200 bg-white px-3 text-[12px] font-semibold text-orange-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50"
             aria-label="미션 페이지로 이동"
           >
-            🎯
+            <span className="flex h-6 items-center justify-center rounded-full text-[16px] transition">
+              🎯
+            </span>
+            미션
           </button>
           {isNativeApp === false && (
             <button
