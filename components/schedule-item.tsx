@@ -152,6 +152,9 @@ export default function ScheduleItem({
     key: string;
     date: string;
     label: string;
+    dateText?: string;
+    labelText?: string;
+    strikeLabel?: boolean;
     className?: string;
     ddayLabel?: string;
   }> = [];
@@ -175,6 +178,9 @@ export default function ScheduleItem({
         key: 'dead',
         date: schedule.dead,
         label: deadLabel,
+        dateText: schedule.dead.slice(5),
+        labelText: '마감',
+        strikeLabel: isCompleted,
         className: `${deadDateClass}`.trim(),
         ddayLabel: getDdayLabel(schedule.dead, today),
       });
@@ -187,6 +193,9 @@ export default function ScheduleItem({
         key: 'dead',
         date: schedule.dead,
         label: deadLabel,
+        dateText: schedule.dead.slice(5),
+        labelText: '마감',
+        strikeLabel: isCompleted,
         className: `${deadDateClass}`.trim(),
         ddayLabel: getDdayLabel(schedule.dead, today),
       });
@@ -211,6 +220,9 @@ export default function ScheduleItem({
         key: `additional-${deadline.id}`,
         date: deadline.date,
         label: `${deadline.date.slice(5)} ${deadline.label}`,
+        dateText: deadline.date.slice(5),
+        labelText: deadline.label,
+        strikeLabel: deadline.completed === true,
         className: `${
           isListView ? 'text-rose-700' : isActiveDeadline ? 'font-bold text-rose-700' : ''
         }`.trim(),
@@ -347,7 +359,22 @@ export default function ScheduleItem({
                     {item.ddayLabel}
                   </span>
                 )}
-                <span className={item.className}>{item.label}</span>
+                {item.dateText && item.labelText ? (
+                  <span className={item.className}>
+                    <span className="mr-1">{item.dateText}</span>
+                    <span
+                      className={
+                        item.strikeLabel
+                          ? 'text-neutral-400 line-through decoration-1 decoration-neutral-400/80'
+                          : ''
+                      }
+                    >
+                      {item.labelText}
+                    </span>
+                  </span>
+                ) : (
+                  <span className={item.className}>{item.label}</span>
+                )}
               </span>
             ))
           ) : (
