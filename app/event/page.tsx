@@ -594,6 +594,7 @@ export default function LaunchEventPage() {
                       <br />
                       리뷰플로우 홍보 링크 공유하면{' '}
                       <span className="font-semibold text-orange-600">PRO 1개월</span> 선물해드려요.
+                      <br />
                       (무제한 참여 가능)
                     </p>
                   </div>
