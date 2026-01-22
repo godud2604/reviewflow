@@ -892,7 +892,18 @@ export default function ScheduleModal({
     if (!window.matchMedia('(max-width: 640px)').matches) return;
     requestAnimationFrame(() => {
       setTimeout(() => {
-        customIncomeListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const container = scrollContainerRef.current;
+        const target = customIncomeListRef.current;
+        if (!container || !target) {
+          customIncomeListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const extraOffset = 80;
+        const nextTop =
+          container.scrollTop + (targetRect.top - containerRect.top) - extraOffset;
+        container.scrollTo({ top: Math.max(0, nextTop), behavior: 'smooth' });
       }, 80);
     });
   };
