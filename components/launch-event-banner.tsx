@@ -14,6 +14,8 @@ export default function LaunchEventBanner() {
   const [isLoading, setIsLoading] = useState(true);
   const [isClaimed, setIsClaimed] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isCtaCompleted, setIsCtaCompleted] = useState(false);
+  const ctaKey = 'launch-event-banner-cta';
 
   useEffect(() => {
     if (authLoading) return;
@@ -27,18 +29,29 @@ export default function LaunchEventBanner() {
       setIsLoading(true);
       try {
         const supabase = getSupabaseClient();
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('launch_event_claimed_at')
-          .eq('id', user.id)
-          .single();
+        const [claimResult, ctaResult] = await Promise.all([
+          supabase
+            .from('user_profiles')
+            .select('launch_event_claimed_at')
+            .eq('id', user.id)
+            .single(),
+          supabase
+            .from('tutorial_progress')
+            .select('completed_at')
+            .eq('user_id', user.id)
+            .eq('tutorial_key', ctaKey)
+            .maybeSingle(),
+        ]);
 
-        if (error) throw error;
         if (!isMounted) return;
-        setIsClaimed(Boolean(data?.launch_event_claimed_at));
+        setIsClaimed(
+          claimResult.error ? false : Boolean(claimResult.data?.launch_event_claimed_at)
+        );
+        setIsCtaCompleted(ctaResult.error ? false : Boolean(ctaResult.data?.completed_at));
       } catch {
         if (!isMounted) return;
         setIsClaimed(false);
+        setIsCtaCompleted(false);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -55,16 +68,35 @@ export default function LaunchEventBanner() {
     return null;
   }
 
-  if (isDismissed || isClaimed) {
+  if (isDismissed || isClaimed || isCtaCompleted) {
     return null;
   }
+
+  const handleDismiss = async () => {
+    setIsDismissed(true);
+    if (!user) return;
+    try {
+      const supabase = getSupabaseClient();
+      await supabase.from('tutorial_progress').upsert(
+        {
+          user_id: user.id,
+          tutorial_key: ctaKey,
+          completed_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,tutorial_key' }
+      );
+      setIsCtaCompleted(true);
+    } catch {
+      // Ignore failures; CTA can show again if needed.
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <button
         type="button"
         aria-hidden="true"
-        onClick={() => setIsDismissed(true)}
+        onClick={handleDismiss}
         className="absolute inset-0 bg-black/40"
       />
       <div
@@ -75,7 +107,7 @@ export default function LaunchEventBanner() {
       >
         <button
           type="button"
-          onClick={() => setIsDismissed(true)}
+          onClick={handleDismiss}
           className="absolute right-4 top-4 text-neutral-400 transition hover:text-neutral-600"
           aria-label="팝업 닫기"
         >
@@ -99,7 +131,7 @@ export default function LaunchEventBanner() {
           </Button>
           <button
             type="button"
-            onClick={() => setIsDismissed(true)}
+            onClick={handleDismiss}
             className="mt-3 text-sm text-neutral-400 transition hover:text-neutral-600"
           >
             괜찮아요, 1개월만 쓸게요
