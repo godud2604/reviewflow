@@ -54,7 +54,7 @@ import { stripLegacyScheduleMemo } from '@/lib/schedule-memo-legacy';
 import { formatKoreanTime } from '@/lib/time-utils';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Check, Copy, Loader2, Minus, Plus, Search, X } from 'lucide-react';
+import { Check, Copy, Loader2, Search, Trash2, X } from 'lucide-react';
 import NaverMapSearchModal, { MapPlaceSelection } from '@/components/naver-map-search-modal';
 import { Z_INDEX } from '@/lib/z-index';
 
@@ -268,8 +268,11 @@ export default function ScheduleModal({
   const [newIncomeDetailLabel, setNewIncomeDetailLabel] = useState('');
   const [newIncomeDetailType, setNewIncomeDetailType] =
     useState<ScheduleTransactionItem['type']>('INCOME');
+  const [newIncomeDetailAmount, setNewIncomeDetailAmount] = useState('');
   const [showDeadlineManagement, setShowDeadlineManagement] = useState(false);
   const [newDeadlineLabel, setNewDeadlineLabel] = useState('');
+  const deadlineComposingRef = useRef(false);
+  const deadlineSubmitPendingRef = useRef(false);
   const [activeTab, setActiveTab] = useState<string>('basicInfo');
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
@@ -842,6 +845,12 @@ export default function ScheduleModal({
     return Number(value.replace(/,/g, ''));
   };
 
+  const formatAmountInput = (value: string) => {
+    const digits = value.replace(/[^\d]/g, '');
+    if (!digits) return '';
+    return Number(digits).toLocaleString();
+  };
+
   const formatPhoneInput = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 11);
     if (digits.length <= 3) return digits;
@@ -898,6 +907,7 @@ export default function ScheduleModal({
       });
       return;
     }
+    const amountValue = parseNumber(newIncomeDetailAmount);
     const duplicate = scheduleIncomeDetails.some(
       (detail) =>
         getIncomeDetailKey(detail.type, detail.label) ===
@@ -911,10 +921,15 @@ export default function ScheduleModal({
       });
       return;
     }
-    const newDetail = { ...createIncomeDetail(newIncomeDetailType, trimmedLabel), enabled: true };
+    const newDetail = {
+      ...createIncomeDetail(newIncomeDetailType, trimmedLabel),
+      amount: amountValue,
+      enabled: true,
+    };
     setScheduleIncomeDetails((prev) => [...prev, newDetail]);
     setNewIncomeDetailLabel('');
     setNewIncomeDetailType('INCOME');
+    setNewIncomeDetailAmount('');
     toast({
       title: '항목이 추가되었습니다.',
       duration: 1000,
@@ -969,7 +984,9 @@ export default function ScheduleModal({
   const handleRemoveDeadlineTemplate = (id: string) => {
     setFormData((prev) => ({
       ...prev,
-      additionalDeadlines: (prev.additionalDeadlines || []).filter((deadline) => deadline.id !== id),
+      additionalDeadlines: (prev.additionalDeadlines || []).filter(
+        (deadline) => deadline.id !== id
+      ),
     }));
     toast({
       title: '항목이 삭제되었습니다.',
@@ -1478,16 +1495,14 @@ export default function ScheduleModal({
                     )}
                   </div>
 
-                  <div className="mt-4 p-4 rounded-2xl bg-orange-50/30 border border-orange-100">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="">📋 </span>
-                      <span className="text-[13px] font-bold text-orange-700">세부 일정 관리</span>
-                    </div>
-                    {(formData.additionalDeadlines || []).length === 0 ? (
-                      <div className="text-[12px] text-neutral-400">
-                        추가된 일정이 없습니다.
+                  {(formData.additionalDeadlines || []).length > 0 && (
+                    <div className="mt-4 p-4 rounded-2xl bg-orange-50/30 border border-orange-100">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="">📋 </span>
+                        <span className="text-[13px] font-bold text-orange-700">
+                          세부 일정 관리
+                        </span>
                       </div>
-                    ) : (
                       <div className="space-y-3">
                         {(formData.additionalDeadlines || []).map((deadline) => {
                           const hasDeadline = Boolean(deadline?.date);
@@ -1496,9 +1511,7 @@ export default function ScheduleModal({
                             <div key={deadline.id}>
                               <label
                                 className={`block text-[14px] font-semibold mb-2 ${
-                                  isCompleted
-                                    ? 'text-neutral-400 line-through'
-                                    : 'text-neutral-700'
+                                  isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-700'
                                 }`}
                               >
                                 {deadline.label}
@@ -1523,16 +1536,19 @@ export default function ScheduleModal({
                                   <PopoverContent className="w-auto p-0" align="start">
                                     <Calendar
                                       mode="single"
-                                      selected={deadline?.date ? new Date(deadline.date) : undefined}
+                                      selected={
+                                        deadline?.date ? new Date(deadline.date) : undefined
+                                      }
                                       onSelect={(date) => {
                                         if (date) {
                                           setFormData((prev) => ({
                                             ...prev,
-                                            additionalDeadlines: (prev.additionalDeadlines || []).map(
-                                              (item) =>
-                                                item.id === deadline.id
-                                                  ? { ...item, date: format(date, 'yyyy-MM-dd') }
-                                                  : item
+                                            additionalDeadlines: (
+                                              prev.additionalDeadlines || []
+                                            ).map((item) =>
+                                              item.id === deadline.id
+                                                ? { ...item, date: format(date, 'yyyy-MM-dd') }
+                                                : item
                                             ),
                                           }));
                                           return;
@@ -1541,9 +1557,7 @@ export default function ScheduleModal({
                                           ...prev,
                                           additionalDeadlines: (prev.additionalDeadlines || []).map(
                                             (item) =>
-                                              item.id === deadline.id
-                                                ? { ...item, date: '' }
-                                                : item
+                                              item.id === deadline.id ? { ...item, date: '' } : item
                                           ),
                                         }));
                                       }}
@@ -1613,8 +1627,8 @@ export default function ScheduleModal({
                           );
                         })}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   <div className="flex justify-end">
                     <div className="relative">
@@ -2123,17 +2137,6 @@ export default function ScheduleModal({
                       제공(물품) + 현금 - 내가 쓴 돈 = 수익
                     </p>
                   </div>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowIncomeDetailManagement(true);
-                      }}
-                      className={MANAGE_BUTTON_CLASS}
-                    >
-                      <span className="shrink-0">내역 직접 입력</span>
-                    </button>
-                  </div>
                 </div>
                 <div className="rounded-[20px] bg-[#EFF5FF] px-4 py-4 space-y-1">
                   <label className="flex items-center justify-between text-[14px] font-semibold text-neutral-600">
@@ -2178,48 +2181,124 @@ export default function ScheduleModal({
                       className="mb-1 w-[120px] rounded-full border border-transparent bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
                     />
                   </label>
+                  {customIncomeDetails.length > 0 && (
+                    <div className="mt-2 mb-3 rounded-[16px] bg-white/80 px-3.5 py-2.5 border border-white/70 shadow-[0_6px_16px_rgba(15,23,42,0.05)]">
+                      <p className="text-[12px] font-semibold text-neutral-500 mb-2">
+                        추가 항목 {customIncomeDetails.length}개
+                      </p>
+                      <div className="space-y-2">
+                        {customIncomeDetails.map((detail) => (
+                          <div
+                            key={detail.id}
+                            className="flex items-center justify-between rounded-[14px] bg-white/90 text-[13px] font-semibold text-neutral-600"
+                          >
+                            <span className="flex items-center gap-2">
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                  detail.type === 'EXPENSE'
+                                    ? 'bg-[#fee2e2]/70 text-[#ef4444]'
+                                    : 'bg-[#eef5ff] text-[#2563eb]'
+                                }`}
+                              >
+                                {detail.type === 'EXPENSE' ? '지출' : '수익'}
+                              </span>
+                              <span>{detail.label}</span>
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={formatNumber(detail.amount || 0)}
+                                onChange={(e) =>
+                                  handleIncomeDetailChange(detail.id, {
+                                    amount: parseNumber(e.target.value),
+                                  })
+                                }
+                                className="h-[30px] w-[120px] rounded-full border border-neutral-200 bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveScheduleIncomeDetail(detail.id)}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                aria-label="내역 삭제"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-2.5 text-[12px] text-neutral-500">
+                        입력한 내역은 통계에서 가계부처럼 한눈에 관리할 수 있어요.
+                      </p>
+                    </div>
+                  )}
                   <p className="text-[13px] font-bold text-neutral-600 tracking-tight text-right">
                     총 {formatNumber(totalAssetGain)}원 경제적 가치
                   </p>
-                </div>
-                <div className="rounded-[18px] border border-neutral-200/80 bg-white px-4 py-3">
-                  <p className="text-[12px] font-semibold text-neutral-500 mb-2">
-                    추가 항목 {customIncomeDetails.length}개
-                  </p>
-                  {customIncomeDetails.length === 0 ? (
-                    <div className="text-[12px] text-neutral-400">추가 항목이 없습니다.</div>
-                  ) : (
-                    <div className="space-y-1">
-                      {customIncomeDetails.map((detail) => (
-                        <label
-                          key={detail.id}
-                          className="flex items-center justify-between text-[14px] font-semibold text-neutral-600"
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowIncomeDetailManagement((prev) => !prev)}
+                      className={MANAGE_BUTTON_CLASS}
+                    >
+                      +
+                      <span>
+                        {showIncomeDetailManagement ? '내역 입력 닫기' : '내역 직접 입력하기'}
+                      </span>
+                    </button>
+                  </div>
+                  {showIncomeDetailManagement && (
+                    <div className="mt-3 rounded-[24px] border border-neutral-200/80 bg-white/95 px-4 py-4 space-y-3 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+                      <p className="text-[12px] text-neutral-400">
+                        사용 방법: 수익/지출 선택 → 내역 이름 → 금액 입력
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-[120px_minmax(0,1fr)_120px]">
+                        <Select
+                          value={newIncomeDetailType}
+                          onValueChange={(value) =>
+                            setNewIncomeDetailType(value as ScheduleTransactionItem['type'])
+                          }
                         >
-                          <span className="flex items-center gap-2">
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                detail.type === 'EXPENSE'
-                                  ? 'bg-[#fee2e2]/70 text-[#ef4444]'
-                                  : 'bg-[#eef5ff] text-[#2563eb]'
-                              }`}
-                            >
-                              {detail.type === 'EXPENSE' ? '지출' : '수익'}
-                            </span>
-                            <span>{detail.label}</span>
-                          </span>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={formatNumber(detail.amount || 0)}
-                            onChange={(e) =>
-                              handleIncomeDetailChange(detail.id, {
-                                amount: parseNumber(e.target.value),
-                              })
-                            }
-                            className="mb-1 w-[120px] rounded-full border border-neutral-200 bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
-                          />
-                        </label>
-                      ))}
+                          <SelectTrigger className="h-11 rounded-2xl bg-[#F7F7F8] border border-transparent text-[14px] font-semibold text-neutral-700 focus-visible:border-orange-200">
+                            <SelectValue placeholder="유형" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="INCOME">수익</SelectItem>
+                            <SelectItem value="EXPENSE">지출</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <input
+                          type="text"
+                          value={newIncomeDetailLabel}
+                          onChange={(e) => setNewIncomeDetailLabel(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAddIncomeDetailFromModal();
+                          }}
+                          className="h-11 px-4 bg-[#F7F7F8] border border-transparent rounded-2xl text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/30 focus-visible:border-orange-200"
+                          placeholder="내역 이름 (예: 주차비, 배송비)"
+                        />
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={newIncomeDetailAmount}
+                          onChange={(e) =>
+                            setNewIncomeDetailAmount(formatAmountInput(e.target.value))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAddIncomeDetailFromModal();
+                          }}
+                          className="h-11 px-4 bg-[#F7F7F8] border border-transparent rounded-2xl text-[15px] text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/30 focus-visible:border-orange-200"
+                          placeholder="금액"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddIncomeDetailFromModal}
+                        className="w-full h-11 bg-[#FF7000] text-white rounded-2xl text-[14px] font-semibold hover:bg-[#FF5722]/90 transition-colors"
+                      >
+                        추가
+                      </button>
                     </div>
                   )}
                 </div>
@@ -2428,122 +2507,6 @@ export default function ScheduleModal({
           </div>
         </div>
       </div>
-
-      {showIncomeDetailManagement && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setShowIncomeDetailManagement(false)}
-            style={{ zIndex: Z_INDEX.managementBackdrop }}
-          />
-          <div
-            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
-            style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
-          >
-            <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
-              <span className="font-bold text-[16px]">내역 직접 추가</span>
-              <button
-                onClick={() => setShowIncomeDetailManagement(false)}
-                className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
-                aria-label="닫기"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-              <div>
-                <label className="block text-[15px] font-bold text-neutral-500">새 내역 추가</label>
-                <p className="text-[13px] text-neutral-500 mb-4">
-                  상품권, 배송비... 내 방식대로 자유롭게 적어요
-                </p>
-                <div className="flex items-center gap-2 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setNewIncomeDetailType('INCOME')}
-                    className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-semibold transition-all ${
-                      newIncomeDetailType === 'INCOME'
-                        ? 'bg-[#eef5ff] text-[#2563eb] shadow-sm scale-105'
-                        : 'border border-neutral-200 text-neutral-500 hover:border-blue-200 hover:bg-blue-50/30'
-                    }`}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    수익
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNewIncomeDetailType('EXPENSE')}
-                    className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-semibold transition-all ${
-                      newIncomeDetailType === 'EXPENSE'
-                        ? 'bg-[#fee2e2]/70 text-[#ef4444] shadow-sm scale-105'
-                        : 'border border-neutral-200 text-neutral-500 hover:border-red-200 hover:bg-red-50/30'
-                    }`}
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                    지출
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newIncomeDetailLabel}
-                    onChange={(e) => setNewIncomeDetailLabel(e.target.value)}
-                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/40"
-                    placeholder={'예: 상품권 수익, 주차비 (자유롭게 입력)'}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddIncomeDetailFromModal}
-                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-[#FF5722]/90 transition-colors"
-                  >
-                    추가
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[15px] font-bold text-neutral-500 mb-2">
-                  등록된 내역
-                </label>
-                {customIncomeDetails.length === 0 ? (
-                  <div className="text-[15px] text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
-                    등록된 내역 없습니다
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {customIncomeDetails.map((detail) => (
-                      <div
-                        key={detail.id}
-                        className="flex flex-wrap items-center gap-2 px-4 py-3 bg-neutral-50 rounded-xl"
-                      >
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                            detail.type === 'EXPENSE'
-                              ? 'bg-[#fee2e2]/70 text-[#ef4444]'
-                              : 'bg-[#eef5ff] text-[#2563eb]'
-                          }`}
-                        >
-                          {detail.type === 'EXPENSE' ? '지출' : '수익'}
-                        </span>
-                        <span className="flex-1 min-w-[140px] text-[14px] font-semibold text-neutral-700">
-                          {detail.label}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveScheduleIncomeDetail(detail.id)}
-                          className="text-red-600 hover:text-red-700 font-semibold text-[14px] cursor-pointer"
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
 
       {showPlatformManagement && (
         <>
@@ -3062,6 +3025,26 @@ export default function ScheduleModal({
                     type="text"
                     value={newDeadlineLabel}
                     onChange={(e) => setNewDeadlineLabel(e.target.value)}
+                    onCompositionStart={() => {
+                      deadlineComposingRef.current = true;
+                    }}
+                    onCompositionEnd={() => {
+                      deadlineComposingRef.current = false;
+                      if (deadlineSubmitPendingRef.current) {
+                        deadlineSubmitPendingRef.current = false;
+                        handleAddDeadlineTemplate();
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (deadlineComposingRef.current || e.nativeEvent.isComposing) {
+                          deadlineSubmitPendingRef.current = true;
+                          return;
+                        }
+                        handleAddDeadlineTemplate();
+                      }
+                    }}
                     className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
                     placeholder="예: 초안 제출일, 수정본 제출일, 제품 구매"
                   />

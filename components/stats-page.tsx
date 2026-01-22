@@ -724,6 +724,41 @@ export default function StatsPage({
                     );
                   })}
                 </div>
+                {incomeDetailEntries.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-[13px] font-bold text-[#0f172a]">수익 내역</div>
+                      <div className="text-xs text-[#6b7685]">
+                        {detailIncomeTotal
+                          ? `총 ${detailIncomeTotal.toLocaleString()}원`
+                          : '없음'}
+                      </div>
+                    </div>
+                    <div className="mt-3 space-y-3">
+                      {incomeDetailEntries.map(([label, amount]) => {
+                        const percentage = detailIncomeTotal
+                          ? Math.round((amount / detailIncomeTotal) * 100)
+                          : 0;
+                        return (
+                          <div key={label} className="flex items-center gap-3">
+                            <div className="w-26 text-[12px] font-semibold text-[#4b5563] truncate">
+                              {label}
+                            </div>
+                            <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full"
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                            <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                              {amount.toLocaleString()}원
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 {/* 부수입 리스트 */}
                 {selectedMonthExtraIncomes.length > 0 && (
                   <div>
@@ -809,6 +844,39 @@ export default function StatsPage({
                   );
                 })}
               </div>
+              {costDetailEntries.length > 0 && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[13px] font-bold text-[#0f172a]">지출 내역</div>
+                    <div className="text-xs text-[#6b7685]">
+                      {detailCostTotal ? `총 ${detailCostTotal.toLocaleString()}원` : '없음'}
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    {costDetailEntries.map(([label, amount]) => {
+                      const percentage = detailCostTotal
+                        ? Math.round((amount / detailCostTotal) * 100)
+                        : 0;
+                      return (
+                        <div key={label} className="flex items-center gap-3">
+                          <div className="w-26 text-[12px] font-semibold text-[#4b5563] truncate">
+                            {label}
+                          </div>
+                          <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-[#fca5a5] to-[#ef4444] rounded-full transition-all duration-500"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                          <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                            {amount.toLocaleString()}원
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </section>
           </div>
         ) : (
