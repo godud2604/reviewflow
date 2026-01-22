@@ -78,6 +78,7 @@ type MissionSubmission = {
   link: string | null;
   status: string;
   created_at: string;
+  rejection_reason?: string | null;
 };
 
 // --- Components ---
@@ -171,7 +172,7 @@ export default function LaunchEventPage() {
         // Fetch Review Submissions
         const { data: submissions } = await supabase
           .from('launch_event_mission_submissions')
-          .select('id, link, status, created_at')
+          .select('id, link, status, created_at, rejection_reason')
           .eq('user_id', user.id)
           .eq('mission_type', EVENT_MISSION_TYPE)
           .order('created_at', { ascending: false })
@@ -550,22 +551,29 @@ export default function LaunchEventPage() {
                         <span className="max-w-[180px] truncate text-[11px] text-neutral-600">
                           {sub.link}
                         </span>
-                        <span
-                          className={cn(
-                            'text-[10px] font-bold px-2 py-0.5 rounded-full',
-                            sub.status === 'approved'
-                              ? 'bg-green-100 text-green-700'
-                              : sub.status === 'rejected'
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-neutral-200 text-neutral-600'
+                        <div className="flex flex-col items-end gap-1">
+                          <span
+                            className={cn(
+                              'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                              sub.status === 'approved'
+                                ? 'bg-green-100 text-green-700'
+                                : sub.status === 'rejected'
+                                  ? 'bg-red-100 text-red-700'
+                                  : 'bg-neutral-200 text-neutral-600'
+                            )}
+                          >
+                            {sub.status === 'pending'
+                              ? '검수 중'
+                              : sub.status === 'approved'
+                                ? '지급 완료'
+                                : '반려됨'}
+                          </span>
+                          {sub.status === 'rejected' && sub.rejection_reason && (
+                            <span className="text-[10px] text-red-500">
+                              {sub.rejection_reason}
+                            </span>
                           )}
-                        >
-                          {sub.status === 'pending'
-                            ? '검수 중'
-                            : sub.status === 'approved'
-                              ? '지급 완료'
-                              : '반려됨'}
-                        </span>
+                        </div>
                       </div>
                     ))}
                   </div>
