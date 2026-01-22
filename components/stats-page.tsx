@@ -227,6 +227,17 @@ export default function StatsPage({
     [extraIncomes, selectedMonthKey, selectedMonthDate, isAllSelected]
   );
 
+  const groupedExtraIncomes = useMemo(() => {
+    const map = new Map<string, number>();
+    selectedMonthExtraIncomes.forEach((income) => {
+      const key = income.title.trim() || '기타';
+      map.set(key, (map.get(key) || 0) + toNumber(income.amount));
+    });
+    return Array.from(map.entries())
+      .map(([title, amount]) => ({ title, amount }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [selectedMonthExtraIncomes]);
+
   const { detailIncomeTotal, detailCostTotal, incomeDetailBreakdown, costDetailBreakdown } =
     useMemo(() => {
       const summary = {
@@ -760,7 +771,7 @@ export default function StatsPage({
                   </div>
                 )}
                 {/* 부수입 리스트 */}
-                {selectedMonthExtraIncomes.length > 0 && (
+                {groupedExtraIncomes.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between">
                       <div className="text-[13px] font-bold text-[#0f172a]">부수입</div>
@@ -769,31 +780,27 @@ export default function StatsPage({
                       </div>
                     </div>
                     <div className="mt-3 space-y-3">
-                      {selectedMonthExtraIncomes
-                        .slice()
-                        .sort((a, b) => b.amount - a.amount)
-                        .map((income) => {
-                          // ... 부수입 렌더링 유지 ...
-                          const percentage = totalExtraIncome
-                            ? Math.round((income.amount / totalExtraIncome) * 100)
-                            : 0;
-                          return (
-                            <div key={income.id} className="flex items-center gap-3">
-                              <div className="w-26 text-[12px] font-semibold text-[#4b5563] truncate">
-                                {income.title}
-                              </div>
-                              <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
-                                <div
-                                  className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
-                              <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
-                                {income.amount.toLocaleString()}원
-                              </div>
+                      {groupedExtraIncomes.map((income) => {
+                        const percentage = totalExtraIncome
+                          ? Math.round((income.amount / totalExtraIncome) * 100)
+                          : 0;
+                        return (
+                          <div key={income.title} className="flex items-center gap-3">
+                            <div className="w-26 text-[12px] font-semibold text-[#4b5563] truncate">
+                              {income.title}
                             </div>
-                          );
-                        })}
+                            <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full"
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                            <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                              {income.amount.toLocaleString()}원
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
