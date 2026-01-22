@@ -14,7 +14,7 @@ export default function PricingPage() {
           href="/event"
           className="inline-flex items-center text-sm font-semibold text-[#FF5722] hover:text-[#E64A19]"
         >
-          ← 이벤트로 돌아가기
+          ← 이전으로
         </Link>
 
         <div className="text-center space-y-4 mb-12">

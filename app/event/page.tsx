@@ -399,27 +399,9 @@ export default function LaunchEventPage() {
         ) : (
           <div className="rounded-[24px] bg-white p-5 shadow-sm border border-orange-100 relative overflow-hidden">
             <div className="relative z-10">
-              <div className="mb-2 flex items-center gap-2 text-orange-600">
-                <Check className="h-4 w-4" />
-                <span className="text-[11px] font-bold uppercase tracking-[0.12em]">
-                  membership active
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <h2 className="text-[16px] font-bold text-neutral-900">PRO 이용 중</h2>
-
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="text-[12px] rounded-full border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-                >
-                  <Link href="/pricing">PRO 혜택 보러가기</Link>
-                </Button>
-              </div>
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-2 flex items-center gap-3">
                 <div className="flex-1 rounded-xl px-4 py-3 border border-orange-100">
-                  <p className="text-[11px] text-orange-500">현재 만료 예정일</p>
+                  <p className="text-[12px] text-orange-500">PRO 만료 예정일</p>
                   <p className="text-[14px] font-semibold tabular-nums text-neutral-900">
                     {formatExpiryLabel(tierExpiresAt)}
                   </p>
@@ -427,6 +409,14 @@ export default function LaunchEventPage() {
               </div>
             </div>
             <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-orange-200/50 blur-2xl" />
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="mt-3 text-[10px] rounded-full  hover:bg-orange-50 hover:text-orange-700"
+            >
+              <Link href="/pricing">PRO 혜택 보러가기</Link>
+            </Button>
           </div>
         )}
 
