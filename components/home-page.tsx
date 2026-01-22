@@ -935,7 +935,7 @@ export default function HomePage({
           <div className="flex">
             {isFilterActive && (
               <div className="flex items-center gap-2">
-                {!selectedDate && isFilterActive && (
+                {!isDateFiltered && isFilterActive && (
                   <Button
                     type="button"
                     variant="ghost"
@@ -984,7 +984,7 @@ export default function HomePage({
         >
           <div className="bg-neutral-50/95 px-5 pt-2 backdrop-blur-md">
             {/* 검색창 */}
-            {!selectedDate || showAllOnSelectedDate ? (
+            {!isDateFiltered ? (
               <div className="mb-1.5 rounded-[22px] border border-neutral-100 bg-white p-1">
                 <div className="h-8 flex items-center gap-2 rounded-[18px] bg-white px-3 py-1.5">
                   <span className="text-[14px] text-neutral-400">🔍</span>
@@ -1028,7 +1028,13 @@ export default function HomePage({
             ) : null}
 
             {/* 필터 행 */}
-            <div className="rounded-[22px] border border-neutral-100 bg-white px-3 py-1 shadow-[0_10px_26px_rgba(15,23,42,0.08)]">
+            <div
+              className={
+                isDateFiltered
+                  ? 'py-1'
+                  : 'rounded-[22px] border border-neutral-100 bg-white px-3 py-1 shadow-[0_10px_26px_rgba(15,23,42,0.08)]'
+              }
+            >
               <div className="relative">
                 <div
                   ref={filterScrollRef}
@@ -1073,7 +1079,7 @@ export default function HomePage({
                   </div>
 
                   {/* 나머지 필터들 */}
-                  {!selectedDate || showAllOnSelectedDate ? (
+                  {!isDateFiltered ? (
                     <>
                       <Select
                         value={sortOption}
@@ -1271,7 +1277,7 @@ export default function HomePage({
                     </>
                   ) : null}
                 </div>
-                {showFilterScrollHint && (
+                {!isDateFiltered && showFilterScrollHint && (
                   <>
                     <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-white via-white/80 to-transparent" />
                     <button

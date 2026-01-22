@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Gift } from 'lucide-react';
+import { Gift, X } from 'lucide-react';
 
 import { useAuth } from '@/hooks/use-auth';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -60,34 +60,49 @@ export default function LaunchEventBanner() {
   }
 
   return (
-    <div className="mx-4 mt-4 rounded-2xl border border-orange-100 bg-gradient-to-r from-orange-50 via-white to-pink-50 px-4 py-3 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-orange-500 shadow">
-            <Gift className="h-4 w-4" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-neutral-900">앱 출시 기념 프로 10일권</p>
-            <p className="text-xs text-neutral-500">
-              {isClaimed ? '이미 수령했어요. 미션으로 추가 혜택을 받으세요!' : '지금 이벤트 페이지에서 바로 받아보세요.'}
-            </p>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <button
+        type="button"
+        aria-hidden="true"
+        onClick={() => setIsDismissed(true)}
+        className="absolute inset-0 bg-black/40"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="launch-event-title"
+        className="relative w-full max-w-sm rounded-3xl bg-white px-6 py-7 text-center shadow-2xl"
+      >
+        <button
+          type="button"
+          onClick={() => setIsDismissed(true)}
+          className="absolute right-4 top-4 text-neutral-400 transition hover:text-neutral-600"
+          aria-label="팝업 닫기"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-rose-50 via-white to-orange-50 text-rose-500 shadow-sm">
+          <Gift className="h-9 w-9" />
         </div>
-        <div className="flex items-center gap-2">
+        <h2 id="launch-event-title" className="text-lg font-semibold text-neutral-900">
+          앱 출시 기념 선물이 도착했어요!
+        </h2>
+        <p className="mt-2 text-sm text-neutral-500">
+          기본 1개월 무료 기간에 14일을 더 추가해 드릴게요.
+        </p>
+        <div className="mt-5 flex flex-col gap-2">
           <Button
-            size="sm"
-            className="rounded-full"
+            className="h-11 rounded-full bg-rose-500 text-white hover:bg-rose-600"
             onClick={() => router.push('/event')}
           >
-            {isClaimed ? '미션 보러가기' : '10일권 받으러가기'}
+            PRO 14일권 연장받기
           </Button>
           <button
             type="button"
             onClick={() => setIsDismissed(true)}
-            className="text-xs text-neutral-400 hover:text-neutral-600"
-            aria-label="이벤트 배너 닫기"
+            className="mt-3 text-sm text-neutral-400 transition hover:text-neutral-600"
           >
-            닫기
+            괜찮아요, 1개월만 쓸게요
           </button>
         </div>
       </div>
