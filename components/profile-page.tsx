@@ -344,6 +344,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
 
   const handleGotoNotifications = () => router.push('/notifications');
   const handleGotoMonthlyReport = () => router.push('/monthlyReport');
+  const handleGotoPricing = () => router.push('/pricing');
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -478,19 +479,15 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
             ) : null}
             <p className="text-[13px] text-neutral-500">{emailLabel}</p>
           </div>
-          {/* iOS 심사 기간 동안 임시로 숨김 */}
-          {/* {isPro && (
+          {isPro && (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-neutral-500">
               <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">
                 PRO
               </span>
-              <span>{`${displayTierDuration}개월`}</span>
-              <span className="text-neutral-300">·</span>
               <span>{tierExpiryLabel ? `만료 ${tierExpiryLabel}` : '만료 정보 없음'}</span>
             </div>
-          )} */}
+          )}
         </section>
-
         <section className="rounded-3xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
           <p className="px-2 pb-2 text-[12px] font-semibold text-neutral-500">고급 기능</p>
           {proFeatures.map((feature, idx) => {

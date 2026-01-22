@@ -11,6 +11,7 @@ import ScheduleModal from '@/components/schedule-modal';
 import TodoModal from '@/components/todo-modal';
 import LandingPage from '@/components/landing-page';
 import GlobalHeader from '@/components/global-header';
+import LaunchEventBanner from '@/components/launch-event-banner';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useSchedules } from '@/hooks/use-schedules';
@@ -400,6 +401,7 @@ function PageContent() {
               onProfile={handleGoProfile}
             />
           )}
+          {!showPortfolio && <LaunchEventBanner />}
           {showPortfolio ? (
             <PortfolioPage
               schedules={schedules}

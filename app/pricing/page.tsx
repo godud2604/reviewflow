@@ -11,10 +11,10 @@ export default function PricingPage() {
     <div className="min-h-screen bg-[#F2F4F6] text-[#0F172A]">
       <div className="max-w-6xl mx-auto px-6 py-16 space-y-10">
         <Link
-          href="/"
+          href="/event"
           className="inline-flex items-center text-sm font-semibold text-[#FF5722] hover:text-[#E64A19]"
         >
-          ← 홈으로 돌아가기
+          ← 이전으로
         </Link>
 
         <div className="text-center space-y-4 mb-12">
@@ -40,19 +40,27 @@ export default function PricingPage() {
               <div className="space-y-3 py-6 border-t border-b border-gray-200">
                 <div className="flex items-start gap-3">
                   <span className="text-[#FF5722] mt-1">✓</span>
-                  <span className="text-[#374151]">기본 일정 관리</span>
+                  <span className="text-[#374151]">체험단 일정 등록</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="text-[#FF5722] mt-1">✓</span>
-                  <span className="text-[#374151]">캘린더 확인</span>
+                  <span className="text-[#374151]">캘린더 뷰 모드</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="text-[#FF5722] mt-1">✓</span>
-                  <span className="text-[#374151]">이번달 수익/비용 통계</span>
+                  <span className="text-[#374151]">일정 리스트 (할 일/완료)</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="text-[#FF5722] mt-1">✓</span>
-                  <span className="text-[#374151]">방문 일정 브리핑</span>
+                  <span className="text-[#374151]">일정 리스트 검색 및 필터</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-[#FF5722] mt-1">✓</span>
+                  <span className="text-[#374151]">이번 달 및 예정 수익/비용 통계</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-[#FF5722] mt-1">✓</span>
+                  <span className="text-[#374151]">월별 성장 추이 내역 확인</span>
                 </div>
               </div>
             </div>
@@ -75,24 +83,35 @@ export default function PricingPage() {
               <div className="space-y-3 py-6 border-t border-b border-white/20">
                 <div className="flex items-start gap-3">
                   <span className="mt-1">✓</span>
-                  <span>무제한 일정 관리</span>
+                  <span>체험단 일정 관리</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="mt-1">✓</span>
-                  <span>고급 통계 및 차트</span>
+                  <span>캘린더 뷰 모드</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="mt-1">✓</span>
-                  <span>일일 요약 알림 (알림톡/SMS)</span>
+                  <span>일정 리스트 (할 일/완료)</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="mt-1">✓</span>
-                  <span>매월 수익/비용 통계</span>
+                  <span>일정 리스트 검색 및 필터</span>
                 </div>
-
                 <div className="flex items-start gap-3">
                   <span className="mt-1">✓</span>
-                  <span>활동 내역 엑셀 내보내기</span>
+                  <span>과거 포함 전체 수익/비용 통계</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="mt-1">✓</span>
+                  <span>월별 성장 추이 내역 확인</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="mt-1">✓</span>
+                  <span>카카오 알림톡으료 요약 제공 (방문, 마감, 마감 초과)</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="mt-1">✓</span>
+                  <span>활동 내역 엑셀 다운로드</span>
                 </div>
               </div>
             </div>
@@ -100,7 +119,7 @@ export default function PricingPage() {
         </div>
 
         {/* FAQ Section */}
-        <div className="bg-white shadow-lg rounded-3xl p-8 md:p-10 max-w-4xl mx-auto mt-16">
+        {/* <div className="bg-white shadow-lg rounded-3xl p-8 md:p-10 max-w-4xl mx-auto mt-16">
           <h2 className="text-2xl font-bold mb-8 text-center">자주 묻는 질문</h2>
           <div className="space-y-6">
             <div className="space-y-2">
@@ -122,7 +141,7 @@ export default function PricingPage() {
               </p>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Footer Links */}
         <div className="text-center space-x-6 text-sm text-[#6B7280] pt-8">

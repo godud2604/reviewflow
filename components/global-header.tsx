@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Bell, Rocket, Settings } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
@@ -15,6 +16,7 @@ type GlobalHeaderProps = {
 };
 
 export default function GlobalHeader({ title, onNotifications, onProfile }: GlobalHeaderProps) {
+  const router = useRouter();
   const [showKakaoCta, setShowKakaoCta] = useState(false);
   const [isNativeApp, setIsNativeApp] = useState<boolean | null>(null);
   const { user } = useAuth();
@@ -83,6 +85,17 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
           <h1 className="text-[20px] font-semibold text-neutral-900">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => router.push('/event')}
+            className="group flex h-10 items-center gap-2 rounded-full border border-orange-200 bg-white px-3 text-[12px] font-semibold text-orange-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50"
+            aria-label="미션 페이지로 이동"
+          >
+            <span className="flex h-6 items-center justify-center rounded-full text-[16px] transition">
+              🎯
+            </span>
+            미션
+          </button>
           {isNativeApp === false && (
             <button
               type="button"
