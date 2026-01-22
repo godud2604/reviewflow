@@ -68,14 +68,22 @@ export async function POST(request: Request) {
 
     const { data: me, error: meError } = await admin
       .from('user_profiles')
-      .select('id, tier_expires_at, launch_event_referral_code, launch_event_referral_applied_code')
+      .select(
+        'id, tier_expires_at, launch_event_referral_code, launch_event_referral_applied_code, launch_event_referral_applied_at'
+      )
       .eq('id', userId)
       .single();
 
     if (meError) throw meError;
 
-    if (me?.launch_event_referral_applied_code) {
-      return NextResponse.json({ error: '이미 쿠폰을 등록했어요.' }, { status: 409 });
+    const now = new Date();
+
+    if (isSameKstMonth(me?.launch_event_referral_applied_at, now)) {
+      return NextResponse.json({ error: '이번 달에는 이미 쿠폰을 등록했어요.' }, { status: 409 });
+    }
+
+    if (me?.launch_event_referral_applied_code && me.launch_event_referral_applied_code === code) {
+      return NextResponse.json({ error: '지난번 등록한 코드와 동일해요.' }, { status: 409 });
     }
 
     if (me?.launch_event_referral_code && me.launch_event_referral_code === code) {
@@ -98,12 +106,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '내 쿠폰은 등록할 수 없어요.' }, { status: 400 });
     }
 
-    const now = new Date();
+    const { data: redemption, error: redemptionError } = await admin
+      .from('launch_event_referral_redemptions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('code', code)
+      .maybeSingle();
+
+    if (redemptionError) throw redemptionError;
+
+    if (redemption?.id) {
+      return NextResponse.json({ error: '이미 등록했던 코드예요.' }, { status: 409 });
+    }
+
+    const { error: insertRedemptionError } = await admin
+      .from('launch_event_referral_redemptions')
+      .insert({ user_id: userId, code, redeemed_at: now.toISOString() });
+
+    if (insertRedemptionError) {
+      if (insertRedemptionError.code === '23505') {
+        return NextResponse.json({ error: '이미 등록했던 코드예요.' }, { status: 409 });
+      }
+      throw insertRedemptionError;
+    }
 
     const meBase = parseDate(me?.tier_expires_at) ?? now;
     const meNextExpiry = addMonths(meBase > now ? meBase : now, 1);
 
-    const canRewardInviter = !isSameKstMonth(inviter?.launch_event_referral_rewarded_at, now);
+    const canRewardInviter = true;
 
     const { error: updateMeError } = await admin
       .from('user_profiles')
@@ -115,22 +145,27 @@ export async function POST(request: Request) {
       })
       .eq('id', userId);
 
-    if (updateMeError) throw updateMeError;
-
-    if (canRewardInviter) {
-      const inviterBase = parseDate(inviter?.tier_expires_at) ?? now;
-      const inviterNextExpiry = addMonths(inviterBase > now ? inviterBase : now, 1);
-      const { error: updateInviterError } = await admin
-        .from('user_profiles')
-        .update({
-          tier: 'pro',
-          tier_expires_at: inviterNextExpiry.toISOString(),
-          launch_event_referral_rewarded_at: now.toISOString(),
-        })
-        .eq('id', inviter.id);
-
-      if (updateInviterError) throw updateInviterError;
+    if (updateMeError) {
+      await admin
+        .from('launch_event_referral_redemptions')
+        .delete()
+        .eq('user_id', userId)
+        .eq('code', code);
+      throw updateMeError;
     }
+
+    const inviterBase = parseDate(inviter?.tier_expires_at) ?? now;
+    const inviterNextExpiry = addMonths(inviterBase > now ? inviterBase : now, 1);
+    const { error: updateInviterError } = await admin
+      .from('user_profiles')
+      .update({
+        tier: 'pro',
+        tier_expires_at: inviterNextExpiry.toISOString(),
+        launch_event_referral_rewarded_at: now.toISOString(),
+      })
+      .eq('id', inviter.id);
+
+    if (updateInviterError) throw updateInviterError;
 
     return NextResponse.json({
       success: true,

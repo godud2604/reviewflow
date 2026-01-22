@@ -33,12 +33,37 @@ const CLAIM_DAYS = 14;
 const formatKstDate = (date: Date) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date);
 
+const formatKstYearMonth = (date: Date) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit' }).format(
+    date
+  );
+
 const addDays = (date: Date, days: number) => new Date(date.getTime() + days * 86400000);
+
+const parseDate = (value?: string | null) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 const isAfter = (left?: string | null, right?: Date) => {
   if (!left || !right) return false;
   const parsed = new Date(left);
   return !Number.isNaN(parsed.getTime()) && parsed.getTime() > right.getTime();
+};
+
+const isSameKstMonth = (value?: string | null, now?: Date) => {
+  if (!value || !now) return false;
+  const parsed = parseDate(value);
+  if (!parsed) return false;
+  return formatKstYearMonth(parsed) === formatKstYearMonth(now);
+};
+
+const formatYmdLabel = (value?: string | null) => {
+  if (!value) return '';
+  const [year, month, day] = value.split('-');
+  if (!year || !month || !day) return '';
+  return `${year}년 ${Number(month)}월 ${Number(day)}일`;
 };
 
 const formatExpiryLabel = (value?: string | null) => {
@@ -75,6 +100,7 @@ export default function LaunchEventPage() {
   // Referral State
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [appliedReferralCode, setAppliedReferralCode] = useState<string | null>(null);
+  const [appliedReferralAt, setAppliedReferralAt] = useState<string | null>(null);
   const [referralApplyCode, setReferralApplyCode] = useState('');
   const [isApplyingReferral, setIsApplyingReferral] = useState(false);
   const [referralTab, setReferralTab] = useState<'invite' | 'register'>('invite'); // Tab State
@@ -86,8 +112,29 @@ export default function LaunchEventPage() {
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [reviewSubmissions, setReviewSubmissions] = useState<MissionSubmission[]>([]);
 
-  const kstToday = useMemo(() => formatKstDate(new Date()), []);
+  const now = useMemo(() => new Date(), []);
+  const kstToday = useMemo(() => formatKstDate(now), [now]);
   const hasDailyClaimed = dailyClaimedAt === kstToday;
+  const isReferralLocked = useMemo(() => isSameKstMonth(appliedReferralAt, now), [appliedReferralAt, now]);
+  const nextReferralEligibleDate = useMemo(() => {
+    if (!appliedReferralAt) return null;
+    const applied = parseDate(appliedReferralAt);
+    if (!applied) return null;
+    const kstYearMonth = formatKstYearMonth(applied);
+    const [yearValue, monthValue] = kstYearMonth.split('-');
+    const year = Number(yearValue);
+    const month = Number(monthValue);
+    if (!year || !month) return null;
+    const nextYear = month === 12 ? year + 1 : year;
+    const nextMonth = month === 12 ? 1 : month + 1;
+    return `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+  }, [appliedReferralAt]);
+  const referralDaysUntilNext = useMemo(() => {
+    if (!isReferralLocked || !nextReferralEligibleDate) return null;
+    const diff =
+      (new Date(nextReferralEligibleDate).getTime() - new Date(kstToday).getTime()) / 86400000;
+    return Math.max(0, Math.ceil(diff));
+  }, [isReferralLocked, nextReferralEligibleDate, kstToday]);
 
   // --- Effects ---
   useEffect(() => {
@@ -106,7 +153,7 @@ export default function LaunchEventPage() {
         const { data, error } = await supabase
           .from('user_profiles')
           .select(
-            'launch_event_claimed_at, tier_expires_at, launch_event_daily_claimed_at, launch_event_referral_code, launch_event_referral_applied_code'
+            'launch_event_claimed_at, tier_expires_at, launch_event_daily_claimed_at, launch_event_referral_code, launch_event_referral_applied_code, launch_event_referral_applied_at'
           )
           .eq('id', user.id)
           .single();
@@ -119,6 +166,7 @@ export default function LaunchEventPage() {
         setDailyClaimedAt(data?.launch_event_daily_claimed_at ?? null);
         setReferralCode(data?.launch_event_referral_code ?? null);
         setAppliedReferralCode(data?.launch_event_referral_applied_code ?? null);
+        setAppliedReferralAt(data?.launch_event_referral_applied_at ?? null);
 
         // Fetch Review Submissions
         const { data: submissions } = await supabase
@@ -236,7 +284,7 @@ export default function LaunchEventPage() {
 
   const handleApplyReferral = async () => {
     if (!user || isApplyingReferral) return;
-    if (appliedReferralCode) return;
+    if (isReferralLocked) return;
 
     const code = referralApplyCode.trim().toUpperCase();
     if (!code) {
@@ -258,6 +306,7 @@ export default function LaunchEventPage() {
       if (!res.ok) throw new Error(data.error);
 
       setAppliedReferralCode(code);
+      if (data.applied_at) setAppliedReferralAt(data.applied_at);
       if (data.tier_expires_at) setTierExpiresAt(data.tier_expires_at);
       setReferralApplyCode('');
       toast({ title: '쿠폰 등록 완료! +1개월 지급됨 🎁' });
@@ -316,14 +365,14 @@ export default function LaunchEventPage() {
         {/* Navigation */}
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/?page=home')}
             type="button"
             className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-sm transition hover:border-neutral-300 hover:text-neutral-900"
             aria-label="뒤로가기"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h2 className="text-[18px] font-semibold text-neutral-900">프로모션</h2>
+          <h2 className="text-[18px] font-semibold text-neutral-900">이전으로</h2>
         </div>
 
         {/* --- Main Content --- */}
@@ -335,7 +384,7 @@ export default function LaunchEventPage() {
               launch event
             </p>
             <h1 className="text-[16px] font-bold text-neutral-800">
-              앱 출시 기념, <span className="text-orange-400">PRO 14일 무료</span> 혜택
+              앱 출시 기념, <span className="text-orange-400">PRO 14일 연장</span> 혜택
             </h1>
             <p className="text-[14px] text-neutral-500">
               지금 시작하고 모든 프리미엄 기능을 경험해보세요.
@@ -350,7 +399,18 @@ export default function LaunchEventPage() {
                   membership active
                 </span>
               </div>
-              <h2 className="text-[18px] font-bold text-neutral-900">PRO 이용 중</h2>
+              <div className="flex justify-between">
+                <h2 className="text-[18px] font-bold text-neutral-900">PRO 이용 중</h2>
+
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+                >
+                  <Link href="/pricing">PRO 혜택 보러가기</Link>
+                </Button>
+              </div>
               <div className="mt-4 flex items-center gap-3">
                 <div className="flex-1 rounded-xl px-4 py-3 border border-orange-100">
                   <p className="text-[11px] text-orange-500">현재 만료 예정일</p>
@@ -359,9 +419,6 @@ export default function LaunchEventPage() {
                   </p>
                 </div>
               </div>
-              <p className="mt-3 text-[12px] text-neutral-500">
-                아래 미션을 완료하면 만료일이 자동으로 늘어나요.
-              </p>
             </div>
             <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-orange-200/50 blur-2xl" />
           </div>
@@ -412,7 +469,7 @@ export default function LaunchEventPage() {
         {/* 3. Mission List (Only after claim) */}
         {claimedAt && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between px-1">
+            <div className="mt-4 flex items-center justify-between px-1">
               <h3 className="text-[16px] font-bold text-neutral-900">미션 리스트</h3>
             </div>
 
@@ -444,7 +501,7 @@ export default function LaunchEventPage() {
                       : 'bg-orange-500 text-white hover:bg-orange-600 shadow-none'
                   )}
                 >
-                  {hasDailyClaimed ? '완료됨' : '출석하기'}
+                  {hasDailyClaimed ? '내일 또 봬요!' : '출석하기'}
                 </Button>
               </div>
             </div>
@@ -458,7 +515,7 @@ export default function LaunchEventPage() {
                   </div>
                   <div className="space-y-1 w-full">
                     <div className="flex justify-between">
-                      <h4 className="font-bold text-neutral-900">리뷰플로우 SNS 후기 남기기</h4>
+                      <h4 className="font-bold text-neutral-900">SNS에 리뷰플로우 후기 남기기</h4>
                       <span className="text-[12px] text-neutral-500">무제한 참여 가능</span>
                     </div>
                     <p className="text-[12px] leading-relaxed text-neutral-500">
@@ -587,16 +644,26 @@ export default function LaunchEventPage() {
                       <p className="mt-1 text-[12px] text-neutral-500">
                         친구의 코드를 입력하면 즉시{' '}
                         <span className="text-orange-600 font-semibold">PRO 1개월</span>이 지급돼요.
+                        <span className="block">쿠폰 등록은 월 1회만 가능해요.</span>
                       </p>
                     </div>
 
-                    {appliedReferralCode ? (
+                    {isReferralLocked ? (
                       <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 text-center">
                         <div className="mb-1 flex justify-center text-emerald-600">
                           <Check className="h-5 w-5" />
                         </div>
-                        <p className="text-sm font-bold text-emerald-800">등록 완료!</p>
-                        <p className="text-xs text-emerald-600 mt-1">이미 혜택을 받으셨어요.</p>
+                        <p className="text-sm font-bold text-emerald-800">이번 달 등록 완료!</p>
+                        <p className="text-xs text-emerald-600 mt-1">
+                          {nextReferralEligibleDate
+                            ? `${formatYmdLabel(nextReferralEligibleDate)}부터 다시 등록할 수 있어요.`
+                            : '다음 달에 다시 등록할 수 있어요.'}
+                        </p>
+                        {typeof referralDaysUntilNext === 'number' && (
+                          <p className="text-[11px] text-emerald-500 mt-1">
+                            약 {referralDaysUntilNext}일 뒤에 재등록 가능
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div className="flex gap-2">
@@ -636,16 +703,16 @@ export default function LaunchEventPage() {
                 placeholder="https://..."
                 value={reviewLink}
                 onChange={(e) => setReviewLink(e.target.value)}
-                className="bg-neutral-50"
+                className="bg-neutral-50 mt-1"
               />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold text-neutral-600">추가 메모 (선택)</label>
               <Textarea
-                placeholder="어떤 SNS인지 간단히 적어주세요."
+                placeholder="추가 메모 (선택 사항)"
                 value={reviewNote}
                 onChange={(e) => setReviewNote(e.target.value)}
-                className="min-h-[80px] bg-neutral-50 resize-none"
+                className="min-h-[80px] bg-neutral-50 resize-none mt-1"
               />
             </div>
             <div className="pt-2">
