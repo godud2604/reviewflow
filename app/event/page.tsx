@@ -485,12 +485,12 @@ export default function LaunchEventPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full ${hasDailyClaimed ? 'bg-neutral-100 text-neutral-400' : 'bg-orange-100 text-orange-600'}`}
+                    className={`flex h-6 w-6 items-center justify-center rounded-full ${hasDailyClaimed ? 'bg-neutral-100 text-neutral-400' : 'bg-orange-100 text-orange-600'}`}
                   >
-                    <CalendarCheck className="h-5 w-5" />
+                    <CalendarCheck className="h-4 w-4" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-neutral-900">매일 출석체크</h4>
+                    <h4 className="text-[14px] font-bold text-neutral-900">매일 출석체크</h4>
                     <p className="text-[12px] text-neutral-500">
                       버튼 누르고{' '}
                       <span className="text-orange-600 font-semibold">+ PRO 1일 즉시 연장</span>
@@ -517,12 +517,14 @@ export default function LaunchEventPage() {
             <div className="rounded-[24px] bg-white p-5 shadow-sm border border-neutral-200">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex gap-3 w-full">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600">
-                    <Megaphone className="h-5 w-5" />
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600">
+                    <Megaphone className="h-4 w-4" />
                   </div>
                   <div className="space-y-1 w-full">
                     <div className="flex justify-between">
-                      <h4 className="font-bold text-neutral-900">SNS에 리뷰플로우 후기 남기기</h4>
+                      <h4 className="text-[14px] font-bold text-neutral-900">
+                        SNS에 리뷰플로우 후기 남기기
+                      </h4>
                       <span className="text-[12px] text-neutral-500">무제한 참여 가능</span>
                     </div>
                     <p className="text-[12px] leading-relaxed text-neutral-500">
@@ -618,7 +620,9 @@ export default function LaunchEventPage() {
                 {referralTab === 'invite' ? (
                   <div className="space-y-4 animate-in fade-in slide-in-from-bottom-1 duration-300">
                     <div>
-                      <h4 className="font-bold text-neutral-900">친구 초대하고 같이 받기</h4>
+                      <h4 className="text-[14px] font-bold text-neutral-900">
+                        친구 초대하고 같이 받기
+                      </h4>
                       <p className="mt-1 text-[12px] text-neutral-500">
                         친구와 나 모두에게{' '}
                         <span className="text-orange-600 font-semibold">PRO 1개월</span>을 드려요.
@@ -651,7 +655,7 @@ export default function LaunchEventPage() {
                 ) : (
                   <div className="space-y-4 animate-in fade-in slide-in-from-bottom-1 duration-300">
                     <div>
-                      <h4 className="font-bold text-neutral-900">초대 코드 등록하기</h4>
+                      <h4 className="text-[14px] font-bold text-neutral-900">초대 코드 등록하기</h4>
                       <p className="mt-1 text-[12px] text-neutral-500">
                         친구의 코드를 입력하면 즉시{' '}
                         <span className="text-orange-600 font-semibold">PRO 1개월</span>이 지급돼요.
@@ -705,7 +709,7 @@ export default function LaunchEventPage() {
       <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
         <DialogContent className="sm:max-w-[420px] rounded-2xl p-6">
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-xl">후기 링크 제출</DialogTitle>
+            <DialogTitle className="text-base">후기 링크 제출</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">

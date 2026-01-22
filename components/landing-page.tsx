@@ -215,12 +215,10 @@ export default function LandingPage() {
       {isWaitlistModalOpen && (
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center px-5"
-          onClick={handleCloseWaitlistModal}
           style={{ zIndex: Z_INDEX.heroOverlay }}
         >
           <div
             className="w-90 max-w-sm bg-white rounded-2xl p-5 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
               <div>

@@ -93,12 +93,7 @@ export default function LaunchEventBanner() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <button
-        type="button"
-        aria-hidden="true"
-        onClick={handleDismiss}
-        className="absolute inset-0 bg-black/40"
-      />
+      <div aria-hidden="true" className="absolute inset-0 bg-black/40" />
       <div
         role="dialog"
         aria-modal="true"
