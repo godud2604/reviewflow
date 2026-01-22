@@ -34,9 +34,11 @@ const formatKstDate = (date: Date) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date);
 
 const formatKstYearMonth = (date: Date) =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit' }).format(
-    date
-  );
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+  }).format(date);
 
 const addDays = (date: Date, days: number) => new Date(date.getTime() + days * 86400000);
 
@@ -116,7 +118,10 @@ export default function LaunchEventPage() {
   const now = useMemo(() => new Date(), []);
   const kstToday = useMemo(() => formatKstDate(now), [now]);
   const hasDailyClaimed = dailyClaimedAt === kstToday;
-  const isReferralLocked = useMemo(() => isSameKstMonth(appliedReferralAt, now), [appliedReferralAt, now]);
+  const isReferralLocked = useMemo(
+    () => isSameKstMonth(appliedReferralAt, now),
+    [appliedReferralAt, now]
+  );
   const nextReferralEligibleDate = useMemo(() => {
     if (!appliedReferralAt) return null;
     const applied = parseDate(appliedReferralAt);
@@ -401,13 +406,13 @@ export default function LaunchEventPage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <h2 className="text-[18px] font-bold text-neutral-900">PRO 이용 중</h2>
+                <h2 className="text-[16px] font-bold text-neutral-900">PRO 이용 중</h2>
 
                 <Button
                   asChild
                   variant="outline"
                   size="sm"
-                  className="rounded-full border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+                  className="text-[12px] rounded-full border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
                 >
                   <Link href="/pricing">PRO 혜택 보러가기</Link>
                 </Button>
@@ -415,7 +420,7 @@ export default function LaunchEventPage() {
               <div className="mt-4 flex items-center gap-3">
                 <div className="flex-1 rounded-xl px-4 py-3 border border-orange-100">
                   <p className="text-[11px] text-orange-500">현재 만료 예정일</p>
-                  <p className="text-[18px] font-semibold tabular-nums text-neutral-900">
+                  <p className="text-[14px] font-semibold tabular-nums text-neutral-900">
                     {formatExpiryLabel(tierExpiresAt)}
                   </p>
                 </div>
@@ -569,9 +574,7 @@ export default function LaunchEventPage() {
                                 : '반려됨'}
                           </span>
                           {sub.status === 'rejected' && sub.rejection_reason && (
-                            <span className="text-[10px] text-red-500">
-                              {sub.rejection_reason}
-                            </span>
+                            <span className="text-[10px] text-red-500">{sub.rejection_reason}</span>
                           )}
                         </div>
                       </div>
@@ -618,7 +621,6 @@ export default function LaunchEventPage() {
                       <p className="mt-1 text-[12px] text-neutral-500">
                         친구와 나 모두에게{' '}
                         <span className="text-orange-600 font-semibold">PRO 1개월</span>을 드려요.
-                        (월 1회 제한)
                       </p>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl bg-neutral-50 p-1 pl-4 border border-neutral-200">
