@@ -12,7 +12,7 @@ export default function PricingPage() {
       <div className="max-w-6xl mx-auto px-6 py-16 space-y-10">
         <Link
           href="/event"
-          className="inline-flex items-center text-sm font-semibold text-[#FF5722] hover:text-[#E64A19]"
+          className="inline-flex items-center text-[18px] font-semibold text-[#FF5722] hover:text-[#E64A19]"
         >
           ← 이전으로
         </Link>
@@ -68,9 +68,6 @@ export default function PricingPage() {
 
           {/* Pro Plan */}
           <div className="bg-gradient-to-br from-[#FF5722] to-[#FF7043] shadow-xl rounded-3xl p-8 text-white relative overflow-hidden">
-            <div className="absolute top-4 right-4 bg-white text-[#FF5722] text-xs font-bold px-3 py-1 rounded-full">
-              추천
-            </div>
             <div className="space-y-6">
               <div>
                 <h2 className="text-2xl font-bold mb-2">프로</h2>
