@@ -155,12 +155,12 @@ export default function LaunchEventPage() {
       window.setTimeout(() => setShowConfetti(false), 1500);
 
       toast({
-        title: '프로 10일권을 받았어요!',
+        title: 'PRO 14일권을 받았어요!',
         description: '지금부터 프로 기능을 자유롭게 사용해 보세요.',
       });
     } catch (err) {
       toast({
-        title: '10일권 지급에 실패했어요',
+        title: '14일권 지급에 실패했어요',
         description: err instanceof Error ? err.message : '잠시 후 다시 시도해 주세요.',
         variant: 'destructive',
       });
@@ -428,15 +428,15 @@ export default function LaunchEventPage() {
               <div className="flex items-center gap-2 text-xs font-semibold text-orange-500">
                 <span className="rounded-full bg-orange-50 px-3 py-1">모든 유저 대상</span>
                 <span className="rounded-full bg-neutral-100 px-3 py-1 text-neutral-500">
-                  10일권 1회 지급
+                  14일권 1회 지급
                 </span>
               </div>
               <div className="space-y-2">
                 <h1 className="text-2xl font-bold leading-snug md:text-3xl">
-                  프로 10일권을 지금 바로 받아보세요
+                  프로 14일권을 지금 바로 받아보세요
                 </h1>
                 <p className="text-sm text-neutral-500">
-                  일정 관리, 통계, 알림까지 프로 기능을 10일 동안 모두 체험할 수 있어요.
+                  일정 관리, 통계, 알림까지 프로 기능을 14일 동안 모두 체험할 수 있어요.
                 </p>
               </div>
             </div>
@@ -446,7 +446,7 @@ export default function LaunchEventPage() {
                 disabled={isClaiming}
                 className="h-11 rounded-full bg-[#ff6a00] px-6 text-sm font-semibold text-white hover:bg-[#f25f00]"
               >
-                {isClaiming ? '지급 중...' : '프로 10일권 받기'}
+                {isClaiming ? '지급 중...' : '프로 14일권 받기'}
               </Button>
               <span className="text-xs text-neutral-400">한 번만 받을 수 있어요</span>
             </div>
