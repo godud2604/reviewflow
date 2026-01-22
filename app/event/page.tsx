@@ -304,79 +304,79 @@ export default function LaunchEventPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50">
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50/50">
         <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-neutral-900 font-sans">
-      <div className="mx-auto flex max-w-[480px] flex-col px-5 py-6 pb-20">
+    <div className="min-h-screen bg-neutral-50/50 text-neutral-900 font-sans tracking-tight px-2">
+      <div className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-8 pb-20">
         {/* Navigation */}
-        <nav className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="rounded-full p-2 hover:bg-neutral-100 transition"
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-sm transition hover:border-neutral-300 hover:text-neutral-900"
+            aria-label="뒤로가기"
           >
-            <ArrowLeft className="h-6 w-6 text-neutral-800" />
+            <ArrowLeft className="h-5 w-5" />
           </button>
-          <div className="text-sm font-medium text-neutral-500">프로모션</div>
-          <div className="w-10" /> {/* Spacer */}
-        </nav>
+          <h2 className="text-[18px] font-semibold text-neutral-900">프로모션</h2>
+        </div>
 
         {/* --- Main Content --- */}
 
         {/* 1. Header & Status (Always visible after claim) */}
         {!claimedAt ? (
-          <header className="mb-8 mt-2 space-y-3">
-            <span className="inline-block rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-600">
-              New Launch Event
-            </span>
-            <h1 className="text-2xl font-bold leading-tight text-neutral-900">
-              앱 출시 기념,
-              <br />
-              <span className="text-orange-600">PRO 14일 무료</span> 혜택
+          <header className="space-y-1">
+            <p className="text-[11px] uppercase tracking-[0.1em] text-orange-400 font-bold">
+              launch event
+            </p>
+            <h1 className="text-[16px] font-bold text-neutral-800">
+              앱 출시 기념, <span className="text-orange-400">PRO 14일 무료</span> 혜택
             </h1>
-            <p className="text-neutral-500 text-sm">
+            <p className="text-[14px] text-neutral-500">
               지금 시작하고 모든 프리미엄 기능을 경험해보세요.
             </p>
           </header>
         ) : (
-          <div className="mb-6 rounded-[24px] bg-neutral-900 p-6 text-white shadow-lg relative overflow-hidden">
+          <div className="rounded-[24px] bg-white p-5 shadow-sm border border-orange-100 relative overflow-hidden">
             <div className="relative z-10">
-              <div className="mb-1 flex items-center gap-2 text-orange-400">
+              <div className="mb-2 flex items-center gap-2 text-orange-600">
                 <Check className="h-4 w-4" />
-                <span className="text-xs font-bold uppercase tracking-wider">My Membership</span>
+                <span className="text-[11px] font-bold uppercase tracking-[0.12em]">
+                  membership active
+                </span>
               </div>
-              <h2 className="text-2xl font-bold">PRO 이용 중</h2>
+              <h2 className="text-[18px] font-bold text-neutral-900">PRO 이용 중</h2>
               <div className="mt-4 flex items-center gap-3">
-                <div className="flex-1 rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm">
-                  <p className="text-[11px] text-neutral-300">현재 만료 예정일</p>
-                  <p className="text-lg font-semibold tabular-nums">
+                <div className="flex-1 rounded-xl px-4 py-3 border border-orange-100">
+                  <p className="text-[11px] text-orange-500">현재 만료 예정일</p>
+                  <p className="text-[18px] font-semibold tabular-nums text-neutral-900">
                     {formatExpiryLabel(tierExpiresAt)}
                   </p>
                 </div>
               </div>
-              <p className="mt-4 text-[11px] text-neutral-400">
-                👇 아래 미션을 완료하면 만료일이 자동으로 늘어나요!
+              <p className="mt-3 text-[12px] text-neutral-500">
+                아래 미션을 완료하면 만료일이 자동으로 늘어나요.
               </p>
             </div>
-            {/* Decor */}
-            <div className="absolute -right-4 -top-4 h-32 w-32 rounded-full bg-orange-500/20 blur-2xl" />
+            <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-orange-200/50 blur-2xl" />
           </div>
         )}
 
         {/* 2. Initial Claim Card */}
         {!claimedAt && (
-          <section className="relative overflow-hidden rounded-[24px] bg-white p-6 shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-neutral-100">
+          <section className="relative overflow-hidden rounded-[24px] bg-white p-5 shadow-sm border border-neutral-200">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
                 <Gift className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-neutral-900">14일권 받기</h3>
-                <p className="text-sm text-neutral-500">누구나 1회 즉시 지급</p>
+                <h3 className="text-[16px] font-bold text-neutral-900">14일권 받기</h3>
+                <p className="text-[14px] text-neutral-500">누구나 1회 즉시 지급</p>
               </div>
             </div>
 
@@ -384,7 +384,7 @@ export default function LaunchEventPage() {
               <Button
                 onClick={handleClaimReward}
                 disabled={isClaiming}
-                className="w-full h-12 rounded-xl bg-[#ff6a00] text-base font-bold text-white shadow-orange-200 shadow-lg hover:bg-[#e65f00]"
+                className="w-full h-12 rounded-xl bg-orange-500 text-base font-bold text-white hover:bg-orange-600 shadow-none"
               >
                 {isClaiming ? '지급 중...' : '지금 혜택 받기'}
               </Button>
@@ -413,12 +413,11 @@ export default function LaunchEventPage() {
         {claimedAt && (
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-lg font-bold text-neutral-900">미션 리스트</h3>
-              <span className="text-xs text-neutral-500">무제한 참여 가능</span>
+              <h3 className="text-[16px] font-bold text-neutral-900">미션 리스트</h3>
             </div>
 
             {/* Mission 1: Daily Check-in (Top Priority) */}
-            <div className="group relative overflow-hidden rounded-[20px] bg-white p-5 shadow-sm border border-neutral-200 transition-all hover:border-orange-200">
+            <div className="group relative overflow-hidden rounded-[24px] bg-white p-5 shadow-sm border border-neutral-200 transition-all hover:border-orange-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div
@@ -428,7 +427,7 @@ export default function LaunchEventPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-neutral-900">매일 출석체크</h4>
-                    <p className="text-xs text-neutral-500">
+                    <p className="text-[12px] text-neutral-500">
                       버튼 누르고{' '}
                       <span className="text-orange-600 font-semibold">+ PRO 1일 즉시 연장</span>
                     </p>
@@ -442,7 +441,7 @@ export default function LaunchEventPage() {
                     'h-9 rounded-full px-4 text-xs font-semibold transition-all',
                     hasDailyClaimed
                       ? 'bg-neutral-100 text-neutral-400 hover:bg-neutral-100 border border-neutral-200'
-                      : 'bg-[#ff6a00] text-white hover:bg-[#e65f00] shadow-md shadow-orange-100'
+                      : 'bg-orange-500 text-white hover:bg-orange-600 shadow-none'
                   )}
                 >
                   {hasDailyClaimed ? '완료됨' : '출석하기'}
@@ -451,21 +450,22 @@ export default function LaunchEventPage() {
             </div>
 
             {/* Mission 2: SNS Review */}
-            <div className="rounded-[20px] bg-white p-5 shadow-sm border border-neutral-200">
+            <div className="rounded-[24px] bg-white p-5 shadow-sm border border-neutral-200">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                <div className="flex gap-3 w-full">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600">
                     <Megaphone className="h-5 w-5" />
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="font-bold text-neutral-900">SNS 후기 남기기</h4>
-                    <p className="text-xs leading-relaxed text-neutral-500">
+                  <div className="space-y-1 w-full">
+                    <div className="flex justify-between">
+                      <h4 className="font-bold text-neutral-900">리뷰플로우 SNS 후기 남기기</h4>
+                      <span className="text-[12px] text-neutral-500">무제한 참여 가능</span>
+                    </div>
+                    <p className="text-[12px] leading-relaxed text-neutral-500">
                       앱 리뷰, 쓰레드, 블로그, 인스타 어디든 OK.
                       <br />
-                      링크 공유하면 <span className="font-semibold text-blue-600">
-                        PRO 1개월
-                      </span>{' '}
-                      선물해드려요.
+                      리뷰플로우 홍보 링크 공유하면{' '}
+                      <span className="font-semibold text-orange-600">PRO 1개월</span> 선물해드려요.
                     </p>
                   </div>
                 </div>
@@ -473,7 +473,7 @@ export default function LaunchEventPage() {
               <div className="mt-4">
                 <Button
                   variant="outline"
-                  className="w-full rounded-xl border-blue-100 bg-blue-50/50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 h-10 text-xs font-semibold"
+                  className="w-full rounded-xl border-orange-100 bg-orange-50/60 text-orange-600 hover:bg-orange-100 hover:text-orange-700 h-10 text-xs font-semibold"
                   onClick={() => setIsReviewDialogOpen(true)}
                 >
                   후기 링크 제출하고 받기
@@ -517,7 +517,7 @@ export default function LaunchEventPage() {
             </div>
 
             {/* Mission 3: Referral System (Tabbed) */}
-            <div className="rounded-[20px] bg-white shadow-sm border border-neutral-200 overflow-hidden">
+            <div className="rounded-[24px] bg-white shadow-sm border border-neutral-200 overflow-hidden">
               {/* Custom Tabs */}
               <div className="flex border-b border-neutral-100">
                 <button
@@ -550,9 +550,9 @@ export default function LaunchEventPage() {
                   <div className="space-y-4 animate-in fade-in slide-in-from-bottom-1 duration-300">
                     <div>
                       <h4 className="font-bold text-neutral-900">친구 초대하고 같이 받기</h4>
-                      <p className="mt-1 text-xs text-neutral-500">
+                      <p className="mt-1 text-[12px] text-neutral-500">
                         친구와 나 모두에게{' '}
-                        <span className="text-purple-600 font-semibold">PRO 1개월</span>을 드려요.
+                        <span className="text-orange-600 font-semibold">PRO 1개월</span>을 드려요.
                         (월 1회 제한)
                       </p>
                     </div>
@@ -573,7 +573,7 @@ export default function LaunchEventPage() {
                         <Button
                           size="sm"
                           onClick={handleGenerateReferral}
-                          className="h-9 rounded-lg bg-neutral-900 text-xs"
+                          className="h-9 rounded-lg bg-neutral-900 text-xs text-white hover:bg-black"
                         >
                           발급받기
                         </Button>
@@ -584,9 +584,9 @@ export default function LaunchEventPage() {
                   <div className="space-y-4 animate-in fade-in slide-in-from-bottom-1 duration-300">
                     <div>
                       <h4 className="font-bold text-neutral-900">초대 코드 등록하기</h4>
-                      <p className="mt-1 text-xs text-neutral-500">
+                      <p className="mt-1 text-[12px] text-neutral-500">
                         친구의 코드를 입력하면 즉시{' '}
-                        <span className="text-purple-600 font-semibold">PRO 1개월</span>이 지급돼요.
+                        <span className="text-orange-600 font-semibold">PRO 1개월</span>이 지급돼요.
                       </p>
                     </div>
 
@@ -652,7 +652,7 @@ export default function LaunchEventPage() {
               <Button
                 onClick={handleSubmitReview}
                 disabled={isSubmittingReview}
-                className="w-full h-11 bg-[#ff6a00] hover:bg-[#e65f00] text-white font-bold rounded-xl"
+                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
               >
                 {isSubmittingReview ? '제출 중...' : '인증하고 1개월 받기'}
               </Button>
