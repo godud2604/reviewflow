@@ -13,11 +13,84 @@ import {
   parseIncomeDetailsJson,
   sumIncomeDetails,
 } from '@/lib/schedule-income-details';
-import { CreditCard, Gift, Info, Plus, Wallet } from 'lucide-react';
+import { CreditCard, Gift, Info, Plus, Wallet, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 
 const incomeTutorialStorageKey = 'reviewflow-stats-income-tutorial-shown';
+
+// --- [신규 컴포넌트] 스크롤 가능한 리스트 래퍼 (더보기 버튼 포함) ---
+function ScrollableList({
+  children,
+  maxHeight = 'max-h-[320px]',
+  className = '',
+}: {
+  children: React.ReactNode;
+  maxHeight?: string;
+  className?: string;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showIndicator, setShowIndicator] = useState(false);
+
+  // 컨텐츠 길이에 따라 스크롤 필요 여부 체크
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (scrollRef.current) {
+        const { scrollHeight, clientHeight } = scrollRef.current;
+        // 내용이 박스보다 길면 인디케이터 표시
+        setShowIndicator(scrollHeight > clientHeight);
+      }
+    };
+
+    // 데이터 로딩 시차 등을 고려해 약간의 지연 후 체크하거나 리사이즈 옵저버 사용 권장되지만,
+    // 여기서는 children 변경 시 체크하도록 설정
+    const timer = setTimeout(checkOverflow, 100);
+    return () => clearTimeout(timer);
+  }, [children]);
+
+  // 스크롤 이벤트 핸들러
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      // 바닥에 거의 도달했는지 확인 (여유값 20px)
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 20;
+      setShowIndicator(!isAtBottom);
+    }
+  };
+
+  return (
+    <div className="relative group">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className={`${maxHeight} overflow-y-auto pr-2 pb-8 ${className} scrollbar-hide`}
+      >
+        {children}
+      </div>
+
+      {/* 하단 화이트 그라데이션 (스크롤 더 있을 때만 표시) */}
+      <div
+        className={`absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none rounded-b-[26px] transition-opacity duration-300 ${
+          showIndicator ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+
+      {/* 스크롤 더보기 버튼 (스크롤 더 있을 때만 표시) */}
+      <div
+        className={`absolute bottom-4 left-1/2 -translate-x-1/2 transition-all duration-300 z-10 ${
+          showIndicator
+            ? 'opacity-100 translate-y-0'
+            : 'opacity-0 translate-y-2 pointer-events-none'
+        }`}
+      >
+        <div className="flex items-center gap-1.5 bg-white border border-[#f1f5f9] shadow-[0_4px_12px_rgba(0,0,0,0.06)] rounded-full px-3.5 py-1.5 animate-pulse">
+          <ChevronDown className="w-3.5 h-3.5 text-[#f97316]" strokeWidth={2.5} />
+          <span className="text-[11px] font-bold text-[#f97316]">스크롤하여 더보기</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type StatsPageProps = {
   schedules: Schedule[];
@@ -26,7 +99,6 @@ type StatsPageProps = {
   isPro: boolean;
 };
 
-// ... (Skeleton Component는 동일하므로 생략하거나 기존 유지) ...
 export function StatsPageSkeleton() {
   return (
     <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y relative pt-4.5">
@@ -45,7 +117,6 @@ export function StatsPageSkeleton() {
           <Skeleton className="h-20 rounded-2xl" />
         </div>
       </div>
-      {/* ... 나머지 스켈레톤 유지 ... */}
     </div>
   );
 }
@@ -56,7 +127,6 @@ export default function StatsPage({
   isScheduleModalOpen,
   isPro,
 }: StatsPageProps) {
-  // ... (기존 State 및 Hooks 로직 동일하게 유지) ...
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showIncomeTutorial, setShowIncomeTutorial] = useState(false);
@@ -311,15 +381,8 @@ export default function StatsPage({
     0
   );
 
-  // [수정] 경제적 가치 계산식
-  // scheduleValue: 스케줄 상의 순수 가치 (베네핏 + 페이 - 지출)
   const scheduleValue = totalBen + totalInc - totalCost;
-
-  // totalCashAndExtraIncome: 현금수익 (스케줄 페이 + 부수익)
   const totalCashAndExtraIncome = totalInc + totalExtraIncome;
-
-  // econValue: 화면 상단에 표시될 '총 경제적 가치'
-  // (방어한 생활비 + 현금수익 + 부수익) - 지출비용
   const econValue = totalBen + totalCashAndExtraIncome - totalCost;
 
   const hasIncomeData = totalBen > 0 || totalInc > 0 || totalCost > 0 || totalExtraIncome > 0;
@@ -329,47 +392,38 @@ export default function StatsPage({
   const lastAnimatedValueRef = useRef<number | null>(null);
   const animationIdRef = useRef(0);
 
-  // ... (애니메이션 Effect 등 기존 로직 동일) ...
   useEffect(() => {
     const target = econValue;
     if (lastAnimatedValueRef.current === target && animatedValueRef.current === target) {
       return;
     }
-
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
     }
     animationIdRef.current += 1;
     const animationId = animationIdRef.current;
-
     const start = animatedValueRef.current;
     if (target === start) {
       lastAnimatedValueRef.current = target;
       return;
     }
-
     const duration = 900;
     const startTime = performance.now();
-
     const step = (now: number) => {
       if (animationIdRef.current !== animationId) return;
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
       const nextValue = Math.round(start + (target - start) * eased);
-
       animatedValueRef.current = nextValue;
       setAnimatedEconValue(nextValue);
-
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(step);
       } else {
         lastAnimatedValueRef.current = target;
       }
     };
-
     animationRef.current = requestAnimationFrame(step);
-
     return () => {
       animationIdRef.current += 1;
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
@@ -393,7 +447,6 @@ export default function StatsPage({
   const incomeDetailEntries = getDetailEntries(incomeDetailBreakdown);
   const costDetailEntries = getDetailEntries(costDetailBreakdown);
 
-  // ... (Tutorial Effect 및 Scroll Effect 유지) ...
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const seen = window.localStorage.getItem(incomeTutorialStorageKey);
@@ -418,15 +471,12 @@ export default function StatsPage({
   }, []);
 
   const monthlyGrowth: MonthlyGrowth[] = useMemo(() => {
-    // ... (Monthly Growth 로직 동일) ...
     const monthMap = new Map<string, MonthlyGrowth>();
-
     const toMonthKey = (date: Date) => {
       const year = date.getFullYear();
       const month = (date.getMonth() + 1).toString().padStart(2, '0');
       return `${year}-${month}-01`;
     };
-
     const ensureEntry = (key: string) => {
       if (!monthMap.has(key)) {
         monthMap.set(key, {
@@ -440,7 +490,6 @@ export default function StatsPage({
       }
       return monthMap.get(key)!;
     };
-
     visibleSchedules.forEach((s) => {
       const date = parseDate(s.visit) || parseDate(s.dead);
       if (!date) return;
@@ -450,7 +499,6 @@ export default function StatsPage({
       entry.incomeTotal += toNumber(s.income);
       entry.costTotal += toNumber(s.cost);
     });
-
     extraIncomes.forEach((income) => {
       const date = parseDate(income.date);
       if (!date) return;
@@ -458,7 +506,6 @@ export default function StatsPage({
       const entry = ensureEntry(key);
       entry.extraIncomeTotal += toNumber(income.amount);
     });
-
     monthMap.forEach((entry) => {
       entry.econValue =
         (entry.benefitTotal || 0) +
@@ -466,14 +513,12 @@ export default function StatsPage({
         (entry.extraIncomeTotal || 0) -
         (entry.costTotal || 0);
     });
-
     return Array.from(monthMap.values()).sort(
       (a, b) => new Date(a.monthStart).getTime() - new Date(b.monthStart).getTime()
     );
   }, [visibleSchedules, extraIncomes]);
 
   const monthOptions = useMemo(() => {
-    // ... (Month Options 로직 동일) ...
     const keys = Array.from(
       new Set([...monthlyGrowth.map((entry) => entry.monthStart), currentMonthKey])
     );
@@ -554,13 +599,11 @@ export default function StatsPage({
           </div>
         </div>
 
-        {/* Hero Card: Slim Version */}
+        {/* Hero Card */}
         <div className="relative overflow-hidden rounded-[26px] p-5 mt-1 mb-4 bg-gradient-to-br from-orange-300 via-orange-500 to-red-400 shadow-[0_10px_30px_-10px_rgba(255,87,34,0.4)] ring-1 ring-white/20">
-          {/* 배경 패턴 */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.25),transparent_40%),linear-gradient(135deg,rgba(255,255,255,0.1),transparent_50%)] mix-blend-overlay" />
           <div className="absolute inset-0 backdrop-blur-[1px]" />
 
-          {/* 우측 상단 버튼 (사이즈 축소) */}
           <button
             onClick={() => handleOpenIncomeModal()}
             className="absolute top-4 right-4 z-10 flex items-center justify-center w-7 h-7 rounded-full bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/30 active:scale-95 transition-all text-white shadow-sm"
@@ -569,22 +612,17 @@ export default function StatsPage({
             <Plus size={16} strokeWidth={2.5} />
           </button>
 
-          {/* Main Total Value (여백 및 폰트 축소) */}
           <div className="relative flex flex-col items-center justify-center text-center mt-1 mb-5">
             <div className="text-[13px] font-bold text-white/90 uppercase tracking-wide mb-1 drop-shadow-sm">
               {displaySelectedRangeLabel} 모은 총 경제적 가치
             </div>
-            {/* 폰트 크기 40px -> 32px로 조정하여 부담 완화 */}
             <div className="text-[30px] font-black leading-none text-white tracking-tight drop-shadow-md">
               ₩ {animatedEconValue.toLocaleString()}
             </div>
           </div>
 
-          {/* 3-Column Grid: 컴팩트 스타일 */}
           <div className="relative grid grid-cols-3 gap-2">
-            {/* 1. 방어한 생활비 */}
             <div className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02]">
-              {/* 아이콘 배경 사이즈 10 -> 8로 축소 */}
               <div className="mb-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
                 <Gift size={10} strokeWidth={1.5} />
               </div>
@@ -596,7 +634,6 @@ export default function StatsPage({
               </div>
             </div>
 
-            {/* 2. 현금수익 */}
             <div className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02]">
               <div className="mb-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
                 <Wallet size={10} strokeWidth={1.5} />
@@ -609,7 +646,6 @@ export default function StatsPage({
               </div>
             </div>
 
-            {/* 3. 지출비용 */}
             <div className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02]">
               <div className="mb-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
                 <CreditCard size={10} strokeWidth={1.5} />
@@ -624,7 +660,6 @@ export default function StatsPage({
           </div>
         </div>
 
-        {/* 하단 리스트 영역 (기존 유지) */}
         <div className="flex items-center justify-between mb-3.5">
           <div className="ml-1.5 text-[16px] font-bold text-[#0f172a]">
             {isAllSelected ? '누적 재무 상세' : `${displaySelectedMonthLabel} 재무 상세`}
@@ -638,10 +673,9 @@ export default function StatsPage({
           </button>
         </div>
 
-        {/* ... (이하 Chart 및 Detail Cards 코드는 기존과 동일하므로 생략 없이 사용 가능) ... */}
         {hasIncomeData ? (
           <div className="space-y-4 mb-3.5">
-            {/* Benefit Card */}
+            {/* 1. Benefit Card */}
             <section className={`bg-white rounded-[26px] p-6 shadow-sm ${cardShadow}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -665,8 +699,9 @@ export default function StatsPage({
               <p className="text-xs text-[#6b7280] mt-1">
                 체험단에서 받은 제품/서비스 값 항목만 뽑아 보여줘요.
               </p>
+
+              {/* 스크롤 가능한 리스트 적용 */}
               <div className="mt-4 space-y-3">
-                {/* ... 그래프 로직 유지 ... */}
                 {benefitEntries.map(([category, amount]) => {
                   const percentage = totalBen ? Math.round((amount / totalBen) * 100) : 0;
                   return (
@@ -689,9 +724,8 @@ export default function StatsPage({
               </div>
             </section>
 
-            {/* Income Card */}
-            <section className={`bg-white rounded-[26px] p-6 shadow-sm ${cardShadow}`}>
-              {/* ... (수입 카드 내용 유지) ... */}
+            {/* 2. Income Card */}
+            <section className={`bg-white rounded-[26px] px-6 pt-6 pb-2 shadow-sm ${cardShadow}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
@@ -711,105 +745,106 @@ export default function StatsPage({
                   전체 내역 보기
                 </button>
               </div>
-              <div className="mt-4 space-y-4">
-                {/* ... 수입 그래프 로직 유지 ... */}
-                <div className="mt-3 space-y-3">
-                  {incomeEntries.map(([category, amount]) => {
-                    const percentage = totalInc ? Math.round((amount / totalInc) * 100) : 0;
-                    return (
-                      <div key={category} className="flex items-center gap-3">
-                        {/* ... */}
-                        <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
-                          {category}
-                        </div>
-                        <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                        <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
-                          {amount.toLocaleString()}원
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {incomeDetailEntries.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <div className="text-[13px] font-bold text-[#0f172a]">수익 내역</div>
-                      <div className="text-xs text-[#6b7685]">
-                        {detailIncomeTotal
-                          ? `총 ${detailIncomeTotal.toLocaleString()}원`
-                          : '없음'}
-                      </div>
-                    </div>
-                    <div className="mt-3 space-y-3">
-                      {incomeDetailEntries.map(([label, amount]) => {
-                        const percentage = detailIncomeTotal
-                          ? Math.round((amount / detailIncomeTotal) * 100)
-                          : 0;
-                        return (
-                          <div key={label} className="flex items-center gap-3">
-                            <div className="w-26 text-[12px] font-semibold text-[#4b5563] truncate">
-                              {label}
-                            </div>
-                            <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full"
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                            <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
-                              {amount.toLocaleString()}원
-                            </div>
+
+              {/* 스크롤 가능한 리스트 적용 */}
+              <div className="mt-4">
+                <ScrollableList maxHeight="max-h-[320px]" className="space-y-4">
+                  <div className="mt-3 space-y-3">
+                    {incomeEntries.map(([category, amount]) => {
+                      const percentage = totalInc ? Math.round((amount / totalInc) * 100) : 0;
+                      return (
+                        <div key={category} className="flex items-center gap-3">
+                          <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
+                            {category}
                           </div>
-                        );
-                      })}
-                    </div>
+                          <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full transition-all duration-500"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                          <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                            {amount.toLocaleString()}원
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
-                {/* 부수입 리스트 */}
-                {groupedExtraIncomes.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <div className="text-[13px] font-bold text-[#0f172a]">부수입</div>
-                      <div className="text-xs text-[#6b7685]">
-                        {totalExtraIncome ? `총 ${totalExtraIncome.toLocaleString()}원` : '없음'}
+                  {incomeDetailEntries.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-[13px] font-bold text-[#0f172a]">수익 내역</div>
+                        <div className="text-xs text-[#6b7685]">
+                          {detailIncomeTotal
+                            ? `총 ${detailIncomeTotal.toLocaleString()}원`
+                            : '없음'}
+                        </div>
+                      </div>
+                      <div className="mt-3 space-y-3">
+                        {incomeDetailEntries.map(([label, amount]) => {
+                          const percentage = detailIncomeTotal
+                            ? Math.round((amount / detailIncomeTotal) * 100)
+                            : 0;
+                          return (
+                            <div key={label} className="flex items-center gap-3">
+                              <div className="w-26 text-[12px] font-semibold text-[#4b5563] truncate">
+                                {label}
+                              </div>
+                              <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                              <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                                {amount.toLocaleString()}원
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                    <div className="mt-3 space-y-3">
-                      {groupedExtraIncomes.map((income) => {
-                        const percentage = totalExtraIncome
-                          ? Math.round((income.amount / totalExtraIncome) * 100)
-                          : 0;
-                        return (
-                          <div key={income.title} className="flex items-center gap-3">
-                            <div className="w-26 text-[12px] font-semibold text-[#4b5563] truncate">
-                              {income.title}
+                  )}
+                  {/* 부수입 리스트 */}
+                  {groupedExtraIncomes.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-[13px] font-bold text-[#0f172a]">부수입</div>
+                        <div className="text-xs text-[#6b7685]">
+                          {totalExtraIncome ? `총 ${totalExtraIncome.toLocaleString()}원` : '없음'}
+                        </div>
+                      </div>
+                      <div className="mt-3 space-y-3">
+                        {groupedExtraIncomes.map((income) => {
+                          const percentage = totalExtraIncome
+                            ? Math.round((income.amount / totalExtraIncome) * 100)
+                            : 0;
+                          return (
+                            <div key={income.title} className="flex items-center gap-3">
+                              <div className="w-26 text-[12px] font-semibold text-[#4b5563] truncate">
+                                {income.title}
+                              </div>
+                              <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                              <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                                {income.amount.toLocaleString()}원
+                              </div>
                             </div>
-                            <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-[#60a5fa] to-[#2563eb] rounded-full"
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                            <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
-                              {income.amount.toLocaleString()}원
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </ScrollableList>
               </div>
             </section>
 
-            {/* Cost Card */}
-            <section className={`bg-white rounded-[26px] p-6 shadow-sm ${cardShadow}`}>
-              {/* ... (지출 카드 내용 유지) ... */}
+            {/* 3. Cost Card */}
+            <section className={`bg-white rounded-[26px] px-6 pt-6 pb-2 shadow-sm ${cardShadow}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
@@ -829,45 +864,17 @@ export default function StatsPage({
                   전체 내역 보기
                 </button>
               </div>
-              <div className="mt-4 space-y-3">
-                {costEntries.map(([category, amount]) => {
-                  // ... 지출 그래프 로직 유지 ...
-                  const percentage = totalCost ? Math.round((amount / totalCost) * 100) : 0;
-                  return (
-                    <div key={category} className="flex items-center gap-3">
-                      <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
-                        {category}
-                      </div>
-                      <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-[#fca5a5] to-[#ef4444] rounded-full transition-all duration-500"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                      <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
-                        {amount.toLocaleString()}원
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {costDetailEntries.length > 0 && (
-                <div className="mt-4">
-                  <div className="flex items-center justify-between">
-                    <div className="text-[13px] font-bold text-[#0f172a]">지출 내역</div>
-                    <div className="text-xs text-[#6b7685]">
-                      {detailCostTotal ? `총 ${detailCostTotal.toLocaleString()}원` : '없음'}
-                    </div>
-                  </div>
-                  <div className="mt-3 space-y-3">
-                    {costDetailEntries.map(([label, amount]) => {
-                      const percentage = detailCostTotal
-                        ? Math.round((amount / detailCostTotal) * 100)
-                        : 0;
+
+              {/* 스크롤 가능한 리스트 적용 */}
+              <div className="mt-4">
+                <ScrollableList maxHeight="max-h-[320px]" className="space-y-4">
+                  <div className="space-y-3">
+                    {costEntries.map(([category, amount]) => {
+                      const percentage = totalCost ? Math.round((amount / totalCost) * 100) : 0;
                       return (
-                        <div key={label} className="flex items-center gap-3">
-                          <div className="w-26 text-[12px] font-semibold text-[#4b5563] truncate">
-                            {label}
+                        <div key={category} className="flex items-center gap-3">
+                          <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
+                            {category}
                           </div>
                           <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
                             <div
@@ -882,8 +889,41 @@ export default function StatsPage({
                       );
                     })}
                   </div>
-                </div>
-              )}
+                  {costDetailEntries.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-[13px] font-bold text-[#0f172a]">지출 내역</div>
+                        <div className="text-xs text-[#6b7685]">
+                          {detailCostTotal ? `총 ${detailCostTotal.toLocaleString()}원` : '없음'}
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        {costDetailEntries.map(([label, amount]) => {
+                          const percentage = detailCostTotal
+                            ? Math.round((amount / detailCostTotal) * 100)
+                            : 0;
+                          return (
+                            <div key={label} className="flex items-center gap-3">
+                              <div className="w-26 text-[12px] font-semibold text-[#4b5563] truncate">
+                                {label}
+                              </div>
+                              <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-[#fca5a5] to-[#ef4444] rounded-full transition-all duration-500"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                              <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                                {amount.toLocaleString()}원
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </ScrollableList>
+              </div>
             </section>
           </div>
         ) : (
@@ -932,7 +972,6 @@ export default function StatsPage({
   );
 }
 
-// ... (TrendChart Component는 변경 없음, 기존 코드 사용) ...
 function TrendChart({
   currentMonthValue,
   monthlyGrowth,
@@ -948,7 +987,6 @@ function TrendChart({
   isPro: boolean;
   isAllSelected: boolean;
 }) {
-  // ... 기존 TrendChart 코드 전체 유지 ...
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const addSelectedIfMissing = (data: MonthlyGrowth[]) => {
