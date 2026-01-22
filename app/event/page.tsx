@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Check, ChevronDown, Copy, Gift, Loader2, Share2 } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Copy, Gift, Loader2, Share2 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -156,7 +156,7 @@ export default function LaunchEventPage() {
 
       toast({
         title: 'PRO 14일권을 받았어요!',
-        description: '지금부터 프로 기능을 자유롭게 사용해 보세요.',
+        description: '지금부터 PRO 기능을 자유롭게 사용해 보세요.',
       });
     } catch (err) {
       toast({
@@ -384,7 +384,7 @@ export default function LaunchEventPage() {
       setTierExpiresAt(nextExpiry.toISOString());
       setDailyClaimedAt(today);
       toast({
-        title: '프로 1일권이 지급되었어요',
+        title: 'PRO 1일권이 지급되었어요',
         description: '내일 다시 참여할 수 있어요.',
       });
     } catch (err) {
@@ -398,55 +398,88 @@ export default function LaunchEventPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-[#F7F7F8] flex items-center justify-center">
-        <div className="flex items-center gap-2 text-sm text-neutral-600">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          이벤트를 준비 중이에요...
+      <div className="min-h-screen bg-neutral-50/50 text-neutral-900 font-sans tracking-tight px-2">
+        <div className="mx-auto flex max-w-xl items-center justify-center px-4 py-12">
+          <div className="flex items-center gap-2 text-sm text-neutral-600">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            이벤트를 준비 중이에요...
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen bg-[#F7F7F8] text-neutral-900">
-      <div className="pointer-events-none absolute -top-40 right-[-80px] h-[320px] w-[320px] rounded-full bg-orange-200/40 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 left-[-120px] h-[320px] w-[320px] rounded-full bg-orange-100/60 blur-3xl" />
-      <div className="relative mx-auto flex max-w-3xl flex-col gap-8 px-5 py-10">
-        <div className="flex items-center justify-between">
-          <Link
-            href="/?page=home"
-            className="text-sm font-semibold text-neutral-500 transition hover:text-neutral-900"
+    <div className="min-h-screen bg-neutral-50/50 text-neutral-900 font-sans tracking-tight px-2">
+      <div className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-8">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.push('/?page=home')}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-sm transition hover:border-neutral-300 hover:text-neutral-900"
+              aria-label="뒤로가기"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="space-y-0.5">
+              <h2 className="text-[16px] font-semibold text-neutral-900">이전으로</h2>
+            </div>
+          </div>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="rounded-full border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
           >
-            ← 홈으로 돌아가기
-          </Link>
+            <Link href="/pricing">PRO 혜택 보러가기</Link>
+          </Button>
         </div>
 
+        {!claimedAt ? (
+          <header className="space-y-2 mt-4">
+            <h1 className="text-[18px] font-semibold text-neutral-800">
+              앱 출시 기념으로,
+              <br />
+              PRO 14일 연장권을 드려요
+            </h1>
+          </header>
+        ) : (
+          <header className="space-y-2 mt-4">
+            <h1 className="text-[18px] font-semibold text-neutral-800">
+              미션 완료 후,
+              <br />
+              PRO 추가 혜택을 받아가세요!
+            </h1>
+          </header>
+        )}
+
         {!claimedAt && (
-          <section className="relative overflow-hidden rounded-[32px] border border-orange-100 bg-white px-6 py-7 shadow-[0_20px_50px_rgba(255,122,24,0.15)]">
-            <div className="pointer-events-none absolute -right-12 -top-20 h-48 w-48 rounded-full bg-orange-100/70 blur-2xl" />
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2 text-xs font-semibold text-orange-500">
-                <span className="rounded-full bg-orange-50 px-3 py-1">모든 유저 대상</span>
-                <span className="rounded-full bg-neutral-100 px-3 py-1 text-neutral-500">
-                  14일권 1회 지급
-                </span>
+          <section className="relative overflow-hidden rounded-[24px] border border-neutral-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                  <Gift className="h-4 w-4" />
+                </div>
+                <h3 className="text-[16px] font-bold text-neutral-800">PRO 14일 연장권</h3>
               </div>
-              <div className="space-y-2">
-                <h1 className="text-2xl font-bold leading-snug md:text-3xl">
-                  프로 14일권을 지금 바로 받아보세요
-                </h1>
-                <p className="text-sm text-neutral-500">
-                  일정 관리, 통계, 알림까지 프로 기능을 14일 동안 모두 체험할 수 있어요.
-                </p>
+              <span className="rounded-full bg-orange-50 px-2 py-1 text-[11px] font-semibold text-orange-600">
+                1회 지급
+              </span>
+            </div>
+            <div className="mt-3 space-y-2">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
+                <span className="rounded-full bg-neutral-100 px-2 py-1">모든 유저 대상</span>
+                <span className="rounded-full bg-neutral-100 px-2 py-1">중복 지급 불가</span>
               </div>
             </div>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
+            <div className="mt-5 flex flex-wrap items-center gap-3">
               <Button
                 onClick={handleClaimReward}
                 disabled={isClaiming}
-                className="h-11 rounded-full bg-[#ff6a00] px-6 text-sm font-semibold text-white hover:bg-[#f25f00]"
+                className="h-11 rounded-xl bg-neutral-900 px-6 text-sm font-semibold text-white hover:bg-black"
               >
-                {isClaiming ? '지급 중...' : '프로 14일권 받기'}
+                {isClaiming ? '지급 중...' : 'PRO 14일권 받기'}
               </Button>
               <span className="text-xs text-neutral-400">한 번만 받을 수 있어요</span>
             </div>
@@ -471,51 +504,16 @@ export default function LaunchEventPage() {
 
         {claimedAt && (
           <>
-            <section className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-sm transition">
-              <button
-                type="button"
-                onClick={() => setIsProBenefitsOpen((prev) => !prev)}
-                className={cn(
-                  'flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition',
-                  isProBenefitsOpen ? 'border-b border-neutral-100' : ''
-                )}
-                aria-expanded={isProBenefitsOpen}
-              >
-                <div>
-                  <h2 className="text-base font-semibold">PRO 혜택</h2>
-                  <p className="text-xs text-neutral-500">프로 기능과 만료 정보를 확인하세요.</p>
-                </div>
-                <ChevronDown
-                  className={cn(
-                    'h-5 w-5 text-neutral-400 transition-transform',
-                    isProBenefitsOpen ? 'rotate-180' : 'rotate-0'
-                  )}
-                />
-              </button>
-
-              {isProBenefitsOpen && (
-                <div className="px-5 pb-5">
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
-                    <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">
-                      PRO
-                    </span>
-                    <span>{`만료 ${formatExpiryLabel(tierExpiresAt) ?? '정보 없음'}`}</span>
-                  </div>
-
-                  <ul className="mt-3 space-y-1.5 text-xs text-neutral-600">
-                    <li>카카오 알림으로 일정과 요약을 받아볼 수 있어요.</li>
-                    <li>통계 페이지에서 전체 기간과 이전 달 수익 통계를 모두 확인할 수 있어요.</li>
-                    <li>활동 내역을 엑셀 파일로 다운로드할 수 있어요.</li>
-                  </ul>
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-[28px] border border-neutral-200 bg-white p-6 shadow-sm transition">
+            <section className="rounded-[24px] border border-neutral-200 bg-white p-5 shadow-sm transition">
               <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-base font-semibold">미션 리스트</h2>
-                  <p className="text-xs text-neutral-500">미션 완료 후 추가 혜택을 받아보세요.</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-600">
+                    <Gift className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-[16px] font-semibold">미션 리스트</h2>
+                    <p className="text-xs text-neutral-500">미션 완료 후 추가 혜택을 받아보세요.</p>
+                  </div>
                 </div>
               </div>
 

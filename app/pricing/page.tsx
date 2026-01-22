@@ -11,10 +11,10 @@ export default function PricingPage() {
     <div className="min-h-screen bg-[#F2F4F6] text-[#0F172A]">
       <div className="max-w-6xl mx-auto px-6 py-16 space-y-10">
         <Link
-          href="/"
+          href="/event"
           className="inline-flex items-center text-sm font-semibold text-[#FF5722] hover:text-[#E64A19]"
         >
-          ← 홈으로 돌아가기
+          ← 이벤트로 돌아가기
         </Link>
 
         <div className="text-center space-y-4 mb-12">
