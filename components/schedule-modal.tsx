@@ -295,6 +295,7 @@ export default function ScheduleModal({
   const basicInfoRef = useRef<HTMLDivElement | null>(null);
   const progressInfoRef = useRef<HTMLDivElement | null>(null);
   const assetManagementRef = useRef<HTMLDivElement | null>(null);
+  const customIncomeListRef = useRef<HTMLDivElement | null>(null);
   const memoRef = useRef<HTMLDivElement | null>(null);
   const showMapSearchModalRef = useRef(showMapSearchModal);
 
@@ -886,6 +887,16 @@ export default function ScheduleModal({
     );
   };
 
+  const scrollToCustomIncomeList = () => {
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(max-width: 640px)').matches) return;
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        customIncomeListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
+    });
+  };
+
   const handleAddIncomeDetailFromModal = () => {
     const trimmedLabel = newIncomeDetailLabel.trim();
     if (!trimmedLabel) {
@@ -934,6 +945,7 @@ export default function ScheduleModal({
       title: '항목이 추가되었습니다.',
       duration: 1000,
     });
+    scrollToCustomIncomeList();
   };
 
   const handleRemoveScheduleIncomeDetail = (id: string) => {
@@ -2182,7 +2194,10 @@ export default function ScheduleModal({
                     />
                   </label>
                   {customIncomeDetails.length > 0 && (
-                    <div className="mt-2 mb-3 rounded-[16px] bg-white/80 px-3.5 py-2.5 border border-white/70 shadow-[0_6px_16px_rgba(15,23,42,0.05)]">
+                    <div
+                      ref={customIncomeListRef}
+                      className="mt-2 mb-3 scroll-mt-4 rounded-[16px] bg-white/80 px-3.5 py-2.5 border border-white/70 shadow-[0_6px_16px_rgba(15,23,42,0.05)]"
+                    >
                       <p className="text-[12px] font-semibold text-neutral-500 mb-2">
                         추가 항목 {customIncomeDetails.length}개
                       </p>
