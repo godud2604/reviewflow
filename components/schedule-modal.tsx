@@ -7,7 +7,6 @@ import type {
   ScheduleChannel,
   ScheduleTransactionItem,
   TransactionType,
-  DeadlineTemplate,
   AdditionalDeadline,
 } from '@/types';
 import { Calendar } from '@/components/ui/calendar';
@@ -279,15 +278,11 @@ export default function ScheduleModal({
     platforms: userPlatforms,
     categories: userCategories,
     scheduleChannels: userChannels,
-    incomeDetails: userIncomeDetails,
-    deadlineTemplates: userDeadlineTemplates,
     addPlatform,
     removePlatform,
     addScheduleChannel,
     removeScheduleChannel,
     updateCategories,
-    updateIncomeDetails,
-    updateDeadlineTemplates,
     loading: profileLoading,
   } = useUserProfile();
   const isSubmittingRef = useRef(false);
@@ -470,30 +465,6 @@ export default function ScheduleModal({
     if (a.length !== b.length) return false;
     return a.every((item, idx) => item === b[idx]);
   };
-
-  const incomeDetailTemplates = React.useMemo((): ScheduleTransactionItem[] => {
-    return (userIncomeDetails || [])
-      .map(
-        (detail): ScheduleTransactionItem => ({
-          ...detail,
-          label: detail.label?.trim() || '',
-          type: (detail.type === 'EXPENSE' ? 'EXPENSE' : 'INCOME') as TransactionType,
-          enabled: typeof detail.enabled === 'boolean' ? detail.enabled : true,
-        })
-      )
-      .filter(
-        (detail) =>
-          detail.label &&
-          !(
-            (detail.type === 'INCOME' && detail.label === DEFAULT_INCOME_LABEL) ||
-            (detail.type === 'EXPENSE' && detail.label === DEFAULT_COST_LABEL)
-          )
-      );
-  }, [userIncomeDetails]);
-
-  const enabledIncomeDetailTemplates = incomeDetailTemplates.filter(
-    (detail) => detail.enabled !== false
-  );
 
   const getIncomeDetailKey = (type: ScheduleTransactionItem['type'], label: string) =>
     `${type}:${label.trim()}`;
@@ -927,7 +898,7 @@ export default function ScheduleModal({
       });
       return;
     }
-    const duplicate = incomeDetailTemplates.some(
+    const duplicate = scheduleIncomeDetails.some(
       (detail) =>
         getIncomeDetailKey(detail.type, detail.label) ===
         getIncomeDetailKey(newIncomeDetailType, trimmedLabel)
@@ -940,76 +911,22 @@ export default function ScheduleModal({
       });
       return;
     }
-    const nextTemplates = [
-      ...incomeDetailTemplates,
-      { ...createIncomeDetail(newIncomeDetailType, trimmedLabel), enabled: true },
-    ];
-    updateIncomeDetails(nextTemplates).then((success) => {
-      if (!success) return;
-      setNewIncomeDetailLabel('');
-      setNewIncomeDetailType('INCOME');
-      toast({
-        title: '항목이 추가되었습니다.',
-        duration: 1000,
-      });
+    const newDetail = { ...createIncomeDetail(newIncomeDetailType, trimmedLabel), enabled: true };
+    setScheduleIncomeDetails((prev) => [...prev, newDetail]);
+    setNewIncomeDetailLabel('');
+    setNewIncomeDetailType('INCOME');
+    toast({
+      title: '항목이 추가되었습니다.',
+      duration: 1000,
     });
   };
 
-  const handleToggleIncomeDetailTemplate = (id: string, enabled: boolean) => {
-    const nextTemplates = incomeDetailTemplates.map((detail) =>
-      detail.id === id ? { ...detail, enabled } : detail
-    );
-    updateIncomeDetails(nextTemplates);
+  const handleRemoveScheduleIncomeDetail = (id: string) => {
+    setScheduleIncomeDetails((prev) => prev.filter((detail) => detail.id !== id));
   };
 
-  const handleUpdateIncomeDetailTemplateType = (
-    id: string,
-    type: ScheduleTransactionItem['type']
-  ) => {
-    const current = incomeDetailTemplates.find((detail) => detail.id === id);
-    if (!current) return;
-    const duplicate = incomeDetailTemplates.some(
-      (detail) =>
-        detail.id !== id &&
-        getIncomeDetailKey(detail.type, detail.label) === getIncomeDetailKey(type, current.label)
-    );
-    if (duplicate) {
-      toast({
-        title: '이미 등록된 항목입니다.',
-        variant: 'destructive',
-        duration: 1000,
-      });
-      return;
-    }
-    const nextTemplates = incomeDetailTemplates.map((detail) =>
-      detail.id === id ? { ...detail, type } : detail
-    );
-    updateIncomeDetails(nextTemplates).then((success) => {
-      if (!success) return;
-      toast({
-        title: type === 'EXPENSE' ? '지출로 변경되었습니다.' : '수익으로 변경되었습니다.',
-        duration: 1000,
-      });
-    });
-  };
-
-  const handleRemoveIncomeDetailTemplate = (id: string) => {
-    const target = incomeDetailTemplates.find((detail) => detail.id === id);
-    const nextTemplates = incomeDetailTemplates.filter((detail) => detail.id !== id);
-    updateIncomeDetails(nextTemplates).then((success) => {
-      if (!success || !target) return;
-      toast({
-        title: '항목이 삭제되었습니다.',
-        duration: 1000,
-      });
-    });
-  };
-
-  // Deadline Template Handlers
-  const deadlineTemplates = React.useMemo(
-    () => userDeadlineTemplates || [],
-    [userDeadlineTemplates]
-  );
+  const createAdditionalDeadlineId = () =>
+    `deadline-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
   const handleAddDeadlineTemplate = () => {
     const trimmedLabel = newDeadlineLabel.trim();
@@ -1021,7 +938,9 @@ export default function ScheduleModal({
       });
       return;
     }
-    const duplicate = deadlineTemplates.some((template) => template.label === trimmedLabel);
+    const duplicate = (formData.additionalDeadlines || []).some(
+      (deadline) => deadline.label === trimmedLabel
+    );
     if (duplicate) {
       toast({
         title: '이미 등록된 항목입니다.',
@@ -1030,52 +949,31 @@ export default function ScheduleModal({
       });
       return;
     }
-    const nextTemplates = [
-      ...deadlineTemplates,
-      { id: `deadline-${Date.now()}`, label: trimmedLabel, enabled: true },
-    ];
-    updateDeadlineTemplates(nextTemplates).then((success) => {
-      if (!success) return;
-      setNewDeadlineLabel('');
-      toast({
-        title: '항목이 추가되었습니다.',
-        duration: 1000,
-      });
+    const nextDeadline: AdditionalDeadline = {
+      id: createAdditionalDeadlineId(),
+      label: trimmedLabel,
+      date: '',
+      completed: false,
+    };
+    setFormData((prev) => ({
+      ...prev,
+      additionalDeadlines: [...(prev.additionalDeadlines || []), nextDeadline],
+    }));
+    setNewDeadlineLabel('');
+    toast({
+      title: '항목이 추가되었습니다.',
+      duration: 1000,
     });
-  };
-
-  const handleToggleDeadlineTemplate = (id: string, enabled: boolean) => {
-    const nextTemplates = deadlineTemplates.map((template) =>
-      template.id === id ? { ...template, enabled } : template
-    );
-    updateDeadlineTemplates(nextTemplates);
   };
 
   const handleRemoveDeadlineTemplate = (id: string) => {
-    const nextTemplates = deadlineTemplates.filter((template) => template.id !== id);
-    updateDeadlineTemplates(nextTemplates).then((success) => {
-      if (!success) return;
-      toast({
-        title: '항목이 삭제되었습니다.',
-        duration: 1000,
-      });
-    });
-  };
-
-  const handleTemplateAmountChange = (template: ScheduleTransactionItem, value: string) => {
-    const amount = parseNumber(value);
-    setScheduleIncomeDetails((prev) => {
-      const index = prev.findIndex(
-        (detail) =>
-          getIncomeDetailKey(detail.type, detail.label) ===
-          getIncomeDetailKey(template.type, template.label)
-      );
-      if (index === -1) {
-        return [...prev, { ...createIncomeDetail(template.type, template.label), amount }];
-      }
-      const next = [...prev];
-      next[index] = { ...next[index], amount };
-      return next;
+    setFormData((prev) => ({
+      ...prev,
+      additionalDeadlines: (prev.additionalDeadlines || []).filter((deadline) => deadline.id !== id),
+    }));
+    toast({
+      title: '항목이 삭제되었습니다.',
+      duration: 1000,
     });
   };
 
@@ -1291,54 +1189,16 @@ export default function ScheduleModal({
   const hasLocation = Boolean(formData.region || formData.regionDetail);
   const defaultIncomeDetail = scheduleIncomeDetails.find(isDefaultIncomeDetail);
   const defaultCostDetail = scheduleIncomeDetails.find(isDefaultCostDetail);
-  const allTemplateKeys = React.useMemo(
-    () =>
-      new Set(incomeDetailTemplates.map((detail) => getIncomeDetailKey(detail.type, detail.label))),
-    [incomeDetailTemplates]
-  );
-  const activeTemplateKeys = React.useMemo(
-    () =>
-      new Set(
-        enabledIncomeDetailTemplates.map((detail) => getIncomeDetailKey(detail.type, detail.label))
-      ),
-    [enabledIncomeDetailTemplates]
-  );
-  const orphanScheduleDetails = React.useMemo(
+  const customIncomeDetails = React.useMemo(
     () =>
       scheduleIncomeDetails.filter(
-        (detail) =>
-          !isDefaultIncomeDetail(detail) &&
-          !isDefaultCostDetail(detail) &&
-          !allTemplateKeys.has(getIncomeDetailKey(detail.type, detail.label))
+        (detail) => !isDefaultIncomeDetail(detail) && !isDefaultCostDetail(detail)
       ),
-    [scheduleIncomeDetails, allTemplateKeys]
+    [scheduleIncomeDetails]
   );
-  const orphanDetailKeys = React.useMemo(
-    () =>
-      new Set(orphanScheduleDetails.map((detail) => getIncomeDetailKey(detail.type, detail.label))),
-    [orphanScheduleDetails]
-  );
-  const enabledExtraDetails = React.useMemo(() => {
-    const merged = new Map<string, ScheduleTransactionItem>();
-    enabledIncomeDetailTemplates.forEach((detail) => {
-      merged.set(getIncomeDetailKey(detail.type, detail.label), detail);
-    });
-    orphanScheduleDetails.forEach((detail) => {
-      const key = getIncomeDetailKey(detail.type, detail.label);
-      if (!merged.has(key)) merged.set(key, detail);
-    });
-    return Array.from(merged.values());
-  }, [enabledIncomeDetailTemplates, orphanScheduleDetails]);
   const activeScheduleDetails = React.useMemo(
-    (): ScheduleTransactionItem[] =>
-      scheduleIncomeDetails.filter(
-        (detail) =>
-          isDefaultIncomeDetail(detail) ||
-          isDefaultCostDetail(detail) ||
-          activeTemplateKeys.has(getIncomeDetailKey(detail.type, detail.label)) ||
-          orphanDetailKeys.has(getIncomeDetailKey(detail.type, detail.label))
-      ),
-    [scheduleIncomeDetails, activeTemplateKeys, orphanDetailKeys]
+    (): ScheduleTransactionItem[] => scheduleIncomeDetails,
+    [scheduleIncomeDetails]
   );
   const { incomeTotal, costTotal } = React.useMemo(
     () => sumIncomeDetails(activeScheduleDetails),
@@ -1618,187 +1478,143 @@ export default function ScheduleModal({
                     )}
                   </div>
 
-                  {deadlineTemplates.filter((template) => template.enabled !== false).length >
-                    0 && (
-                    <div className="mt-4 p-4 rounded-2xl bg-orange-50/30 border border-orange-100">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="">📋 </span>
-                        <span className="text-[13px] font-bold text-orange-700">
-                          세부 일정 관리
-                        </span>
+                  <div className="mt-4 p-4 rounded-2xl bg-orange-50/30 border border-orange-100">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="">📋 </span>
+                      <span className="text-[13px] font-bold text-orange-700">세부 일정 관리</span>
+                    </div>
+                    {(formData.additionalDeadlines || []).length === 0 ? (
+                      <div className="text-[12px] text-neutral-400">
+                        추가된 일정이 없습니다.
                       </div>
-                      {profileLoading ? (
-                        <div className="space-y-3">
-                          {[1, 2, 3].map((i) => (
-                            <div key={i} className="space-y-2">
-                              <div className="h-5 w-20 bg-neutral-200 rounded animate-pulse" />
+                    ) : (
+                      <div className="space-y-3">
+                        {(formData.additionalDeadlines || []).map((deadline) => {
+                          const hasDeadline = Boolean(deadline?.date);
+                          const isCompleted = deadline?.completed === true;
+                          return (
+                            <div key={deadline.id}>
+                              <label
+                                className={`block text-[14px] font-semibold mb-2 ${
+                                  isCompleted
+                                    ? 'text-neutral-400 line-through'
+                                    : 'text-neutral-700'
+                                }`}
+                              >
+                                {deadline.label}
+                              </label>
                               <div className="flex items-center gap-2">
-                                <div className="flex-1 h-[40px] bg-neutral-200 rounded-[18px] animate-pulse" />
-                                <div className="w-20 h-[40px] bg-neutral-200 rounded-[18px] animate-pulse" />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {deadlineTemplates
-                            .filter((template) => template.enabled !== false)
-                            .map((template) => {
-                              const deadline = (formData.additionalDeadlines || []).find(
-                                (d) => d.label === template.label
-                              );
-                              const hasDeadline = Boolean(deadline?.date);
-                              const isCompleted = deadline?.completed === true;
-                              return (
-                                <div key={template.id}>
-                                  <label
-                                    className={`block text-[14px] font-semibold mb-2 ${
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <button
+                                      className={`flex-1 h-[40px] rounded-[18px] px-4 text-[15px] text-left cursor-pointer focus-visible:outline-none transition-colors ${
+                                        isCompleted
+                                          ? 'bg-neutral-100 text-neutral-400'
+                                          : 'bg-white text-neutral-900 border border-neutral-200'
+                                      }`}
+                                    >
+                                      {deadline?.date
+                                        ? format(new Date(deadline.date), 'PPP', {
+                                            locale: ko,
+                                          })
+                                        : '날짜 선택'}
+                                    </button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={deadline?.date ? new Date(deadline.date) : undefined}
+                                      onSelect={(date) => {
+                                        if (date) {
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            additionalDeadlines: (prev.additionalDeadlines || []).map(
+                                              (item) =>
+                                                item.id === deadline.id
+                                                  ? { ...item, date: format(date, 'yyyy-MM-dd') }
+                                                  : item
+                                            ),
+                                          }));
+                                          return;
+                                        }
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          additionalDeadlines: (prev.additionalDeadlines || []).map(
+                                            (item) =>
+                                              item.id === deadline.id
+                                                ? { ...item, date: '' }
+                                                : item
+                                          ),
+                                        }));
+                                      }}
+                                      locale={ko}
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                                {hasDeadline && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        additionalDeadlines: (prev.additionalDeadlines || []).map(
+                                          (item) =>
+                                            item.id === deadline.id
+                                              ? { ...item, completed: !item.completed }
+                                              : item
+                                        ),
+                                      }));
+                                    }}
+                                    className={`flex items-center gap-1.5 px-3 h-[40px] rounded-[18px] transition-all active:scale-95 font-semibold text-[13px] ${
                                       isCompleted
-                                        ? 'text-neutral-400 line-through'
-                                        : 'text-neutral-700'
+                                        ? 'bg-orange-400 text-white shadow-sm'
+                                        : 'bg-white text-neutral-600 border border-neutral-200 hover:border-orange-300'
                                     }`}
                                   >
-                                    {template.label}
-                                  </label>
-                                  <div className="flex items-center gap-2">
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <button
-                                          className={`flex-1 h-[40px] rounded-[18px] px-4 text-[15px] text-left cursor-pointer focus-visible:outline-none transition-colors ${
-                                            isCompleted
-                                              ? 'bg-neutral-100 text-neutral-400'
-                                              : 'bg-white text-neutral-900 border border-neutral-200'
-                                          }`}
-                                        >
-                                          {deadline?.date
-                                            ? format(new Date(deadline.date), 'PPP', {
-                                                locale: ko,
-                                              })
-                                            : '날짜 선택'}
-                                        </button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                          mode="single"
-                                          selected={
-                                            deadline?.date ? new Date(deadline.date) : undefined
-                                          }
-                                          onSelect={(date) => {
-                                            const newDeadlines = formData.additionalDeadlines || [];
-                                            if (date) {
-                                              const existing = newDeadlines.findIndex(
-                                                (d) => d.label === template.label
-                                              );
-                                              if (existing >= 0) {
-                                                newDeadlines[existing] = {
-                                                  ...newDeadlines[existing],
-                                                  date: format(date, 'yyyy-MM-dd'),
-                                                };
-                                              } else {
-                                                newDeadlines.push({
-                                                  id: `${template.id}-${Date.now()}`,
-                                                  label: template.label,
-                                                  date: format(date, 'yyyy-MM-dd'),
-                                                  completed: false,
-                                                });
-                                              }
-                                            } else {
-                                              const filtered = newDeadlines.filter(
-                                                (d) => d.label !== template.label
-                                              );
-                                              setFormData({
-                                                ...formData,
-                                                additionalDeadlines: filtered,
-                                              });
-                                              return;
-                                            }
-                                            setFormData({
-                                              ...formData,
-                                              additionalDeadlines: [...newDeadlines],
-                                            });
-                                          }}
-                                          locale={ko}
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="16"
+                                      height="16"
+                                      viewBox="0 0 20 20"
+                                      fill="none"
+                                      className="inline-block"
+                                    >
+                                      <circle
+                                        cx="10"
+                                        cy="10"
+                                        r="8"
+                                        stroke={isCompleted ? 'white' : '#d1d5db'}
+                                        strokeWidth="2"
+                                        fill={isCompleted ? 'white' : 'transparent'}
+                                      />
+                                      {isCompleted && (
+                                        <path
+                                          d="M6 10.5l2.5 2.5 5-5"
+                                          stroke="#f97316"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
                                         />
-                                      </PopoverContent>
-                                    </Popover>
-                                    {hasDeadline && (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            const newDeadlines = (
-                                              formData.additionalDeadlines || []
-                                            ).map((d) => {
-                                              if (d.label === template.label) {
-                                                return { ...d, completed: !d.completed };
-                                              }
-                                              return d;
-                                            });
-                                            setFormData({
-                                              ...formData,
-                                              additionalDeadlines: newDeadlines,
-                                            });
-                                          }}
-                                          className={`flex items-center gap-1.5 px-3 h-[40px] rounded-[18px] transition-all active:scale-95 font-semibold text-[13px] ${
-                                            isCompleted
-                                              ? 'bg-orange-400 text-white shadow-sm'
-                                              : 'bg-white text-neutral-600 border border-neutral-200 hover:border-orange-300'
-                                          }`}
-                                        >
-                                          <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="16"
-                                            height="16"
-                                            viewBox="0 0 20 20"
-                                            fill="none"
-                                            className="inline-block"
-                                          >
-                                            <circle
-                                              cx="10"
-                                              cy="10"
-                                              r="8"
-                                              stroke={isCompleted ? 'white' : '#d1d5db'}
-                                              strokeWidth="2"
-                                              fill={isCompleted ? 'white' : 'transparent'}
-                                            />
-                                            {isCompleted && (
-                                              <path
-                                                d="M6 10.5l2.5 2.5 5-5"
-                                                stroke="#f97316"
-                                                strokeWidth="2"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                              />
-                                            )}
-                                          </svg>
-                                          <span>{isCompleted ? '완료' : '완료'}</span>
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            const filtered = (
-                                              formData.additionalDeadlines || []
-                                            ).filter((d) => d.label !== template.label);
-                                            setFormData({
-                                              ...formData,
-                                              additionalDeadlines: filtered,
-                                            });
-                                          }}
-                                          className="flex items-center gap-1 px-2.5 h-[40px] rounded-[18px] bg-white text-neutral-500 border border-neutral-200 hover:border-red-300 hover:text-red-600 transition-all active:scale-95 font-semibold text-[13px]"
-                                          title="날짜 초기화"
-                                        >
-                                          <X className="w-4 h-4" />
-                                        </button>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                                      )}
+                                    </svg>
+                                    <span>{isCompleted ? '완료' : '완료'}</span>
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveDeadlineTemplate(deadline.id)}
+                                  className="flex items-center gap-1 px-2.5 h-[40px] rounded-[18px] bg-white text-neutral-500 border border-neutral-200 hover:border-red-300 hover:text-red-600 transition-all active:scale-95 font-semibold text-[13px]"
+                                  title="일정 삭제"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="flex justify-end">
                     <div className="relative">
@@ -2362,65 +2178,51 @@ export default function ScheduleModal({
                       className="mb-1 w-[120px] rounded-full border border-transparent bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
                     />
                   </label>
-                  {!incomeDetailTemplates.length && (
-                    <p className="text-[13px] font-bold text-neutral-600 tracking-tight text-right">
-                      총 {formatNumber(totalAssetGain)}원 경제적 가치
-                    </p>
-                  )}
-                </div>
-                {incomeDetailTemplates.length > 0 && (
-                  <div className="rounded-[18px] border border-neutral-200/80 bg-white px-4 py-3">
-                    <p className="text-[12px] font-semibold text-neutral-500 mb-2">
-                      추가 항목 {enabledExtraDetails.length}개
-                    </p>
-                    {enabledExtraDetails.length === 0 ? (
-                      <div className="text-[12px] text-neutral-400">
-                        체크된 추가 항목이 없습니다.
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {enabledExtraDetails.map((detail) => {
-                          const matchedDetail = scheduleIncomeDetails.find(
-                            (item) =>
-                              getIncomeDetailKey(item.type, item.label) ===
-                              getIncomeDetailKey(detail.type, detail.label)
-                          );
-                          return (
-                            <label
-                              key={detail.id}
-                              className="flex items-center justify-between text-[14px] font-semibold text-neutral-600"
-                            >
-                              <span className="flex items-center gap-2">
-                                <span
-                                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                    detail.type === 'EXPENSE'
-                                      ? 'bg-[#fee2e2]/70 text-[#ef4444]'
-                                      : 'bg-[#eef5ff] text-[#2563eb]'
-                                  }`}
-                                >
-                                  {detail.type === 'EXPENSE' ? '지출' : '수익'}
-                                </span>
-                                <span>{detail.label}</span>
-                              </span>
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                value={formatNumber(matchedDetail?.amount || 0)}
-                                onChange={(e) => handleTemplateAmountChange(detail, e.target.value)}
-                                className="mb-1 w-[120px] rounded-full border border-neutral-200 bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
-                              />
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {incomeDetailTemplates.length > 0 && (
                   <p className="text-[13px] font-bold text-neutral-600 tracking-tight text-right">
                     총 {formatNumber(totalAssetGain)}원 경제적 가치
                   </p>
-                )}
+                </div>
+                <div className="rounded-[18px] border border-neutral-200/80 bg-white px-4 py-3">
+                  <p className="text-[12px] font-semibold text-neutral-500 mb-2">
+                    추가 항목 {customIncomeDetails.length}개
+                  </p>
+                  {customIncomeDetails.length === 0 ? (
+                    <div className="text-[12px] text-neutral-400">추가 항목이 없습니다.</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {customIncomeDetails.map((detail) => (
+                        <label
+                          key={detail.id}
+                          className="flex items-center justify-between text-[14px] font-semibold text-neutral-600"
+                        >
+                          <span className="flex items-center gap-2">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                detail.type === 'EXPENSE'
+                                  ? 'bg-[#fee2e2]/70 text-[#ef4444]'
+                                  : 'bg-[#eef5ff] text-[#2563eb]'
+                              }`}
+                            >
+                              {detail.type === 'EXPENSE' ? '지출' : '수익'}
+                            </span>
+                            <span>{detail.label}</span>
+                          </span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={formatNumber(detail.amount || 0)}
+                            onChange={(e) =>
+                              handleIncomeDetailChange(detail.id, {
+                                amount: parseNumber(e.target.value),
+                              })
+                            }
+                            className="mb-1 w-[120px] rounded-full border border-neutral-200 bg-white/80 px-3 py-[2px] text-right text-[12px] font-semibold text-neutral-900 focus-visible:border-orange-300 focus-visible:outline-none"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-2 pt-3 border-t border-neutral-200/80">
                   <label className="flex items-start gap-3">
                     <Checkbox
@@ -2703,24 +2505,17 @@ export default function ScheduleModal({
                 <label className="block text-[15px] font-bold text-neutral-500 mb-2">
                   등록된 내역
                 </label>
-                {incomeDetailTemplates.length === 0 ? (
+                {customIncomeDetails.length === 0 ? (
                   <div className="text-[15px] text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
                     등록된 내역 없습니다
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {incomeDetailTemplates.map((detail) => (
+                    {customIncomeDetails.map((detail) => (
                       <div
                         key={detail.id}
                         className="flex flex-wrap items-center gap-2 px-4 py-3 bg-neutral-50 rounded-xl"
                       >
-                        <Checkbox
-                          checked={detail.enabled !== false}
-                          onCheckedChange={(checked) =>
-                            handleToggleIncomeDetailTemplate(detail.id, Boolean(checked))
-                          }
-                          className="mt-[2px]"
-                        />
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                             detail.type === 'EXPENSE'
@@ -2735,7 +2530,7 @@ export default function ScheduleModal({
                         </span>
                         <button
                           type="button"
-                          onClick={() => handleRemoveIncomeDetailTemplate(detail.id)}
+                          onClick={() => handleRemoveScheduleIncomeDetail(detail.id)}
                           className="text-red-600 hover:text-red-700 font-semibold text-[14px] cursor-pointer"
                         >
                           삭제
@@ -3284,30 +3079,23 @@ export default function ScheduleModal({
                 <label className="block text-[15px] font-bold text-neutral-500 mb-2">
                   등록된 일정
                 </label>
-                {deadlineTemplates.length === 0 ? (
+                {(formData.additionalDeadlines || []).length === 0 ? (
                   <div className="text-[15px] text-center text-neutral-400 py-10 bg-neutral-50 rounded-xl">
                     등록된 일정이 없습니다
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {deadlineTemplates.map((template) => (
+                    {(formData.additionalDeadlines || []).map((deadline) => (
                       <div
-                        key={template.id}
+                        key={deadline.id}
                         className="flex items-center gap-3 px-4 py-3 bg-neutral-50 rounded-xl"
                       >
-                        <Checkbox
-                          checked={template.enabled !== false}
-                          onCheckedChange={(checked) =>
-                            handleToggleDeadlineTemplate(template.id, Boolean(checked))
-                          }
-                          className="mt-[2px]"
-                        />
                         <span className="flex-1 text-[14px] font-semibold text-neutral-700">
-                          {template.label}
+                          {deadline.label}
                         </span>
                         <button
                           type="button"
-                          onClick={() => handleRemoveDeadlineTemplate(template.id)}
+                          onClick={() => handleRemoveDeadlineTemplate(deadline.id)}
                           className="text-red-600 hover:text-red-700 font-semibold text-[14px] cursor-pointer"
                         >
                           삭제
