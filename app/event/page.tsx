@@ -688,7 +688,7 @@ export default function LaunchEventPage() {
                           placeholder="RF-XXXXXXXX"
                           value={referralApplyCode}
                           onChange={(e) => setReferralApplyCode(e.target.value)}
-                          className="h-11 text-sm bg-neutral-50"
+                          className="h-11 text-sm bg-neutral-50 text-[16px]"
                         />
                         <Button
                           onClick={handleApplyReferral}
