@@ -1724,7 +1724,7 @@ function CalendarSection({
           );
         })}
       </div>
-      <div className="mt-4.5 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-6.5 flex flex-wrap items-center justify-between gap-3">
         <div className="grid grid-cols-2 items-center gap-x-4 text-[11px] text-neutral-600">
           {CALENDAR_STATUS_LEGEND.map((item) => (
             <div key={item.status} className="flex items-center gap-1">
