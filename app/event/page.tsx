@@ -10,7 +10,6 @@ import {
   ChevronRight,
   Copy,
   Gift,
-  Loader2,
   Megaphone,
   Share2,
   Ticket,
@@ -23,6 +22,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
@@ -84,6 +84,78 @@ type MissionSubmission = {
 };
 
 // --- Components ---
+function LaunchEventSkeleton() {
+  return (
+    <div className="min-h-screen bg-neutral-50/50 text-neutral-900 font-sans tracking-tight px-2">
+      <div className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-8 pb-20">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <Skeleton className="h-5 w-20 rounded-full" />
+        </div>
+
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-24 rounded-full" />
+          <Skeleton className="h-5 w-64 rounded-full" />
+        </div>
+
+        <div className="rounded-[24px] bg-white p-5 shadow-sm border border-neutral-200">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-12 w-12 rounded-2xl" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-32 rounded-full" />
+              <Skeleton className="h-3 w-24 rounded-full" />
+            </div>
+          </div>
+          <Skeleton className="mt-6 h-12 w-full rounded-xl" />
+        </div>
+
+        <div className="space-y-4">
+          <Skeleton className="h-5 w-24 rounded-full" />
+
+          <div className="rounded-[24px] bg-white p-5 shadow-sm border border-neutral-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-6 w-6 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-28 rounded-full" />
+                  <Skeleton className="h-3 w-40 rounded-full" />
+                </div>
+              </div>
+              <Skeleton className="h-9 w-20 rounded-full" />
+            </div>
+          </div>
+
+          <div className="rounded-[24px] bg-white p-5 shadow-sm border border-neutral-200 space-y-3">
+            <div className="flex items-start gap-3">
+              <Skeleton className="h-6 w-6 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-52 rounded-full" />
+                <Skeleton className="h-3 w-full rounded-full" />
+                <Skeleton className="h-3 w-40 rounded-full" />
+              </div>
+            </div>
+            <Skeleton className="h-10 w-full rounded-xl" />
+          </div>
+
+          <div className="rounded-[24px] bg-white shadow-sm border border-neutral-200 overflow-hidden">
+            <div className="flex border-b border-neutral-100">
+              <Skeleton className="h-12 w-1/2 rounded-none" />
+              <Skeleton className="h-12 w-1/2 rounded-none" />
+            </div>
+            <div className="p-5 space-y-4">
+              <Skeleton className="h-4 w-40 rounded-full" />
+              <Skeleton className="h-3 w-60 rounded-full" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-11 flex-1 rounded-xl" />
+                <Skeleton className="h-11 w-20 rounded-xl" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function LaunchEventPage() {
   const router = useRouter();
@@ -369,11 +441,7 @@ export default function LaunchEventPage() {
   };
 
   if (authLoading || isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50/50">
-        <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
-      </div>
-    );
+    return <LaunchEventSkeleton />;
   }
 
   return (
