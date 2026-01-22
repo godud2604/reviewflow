@@ -521,17 +521,15 @@ export default function LaunchEventPage() {
                     <Megaphone className="h-4 w-4" />
                   </div>
                   <div className="space-y-1 w-full">
-                    <div className="flex justify-between">
-                      <h4 className="text-[14px] font-bold text-neutral-900">
-                        SNS에 리뷰플로우 후기 남기기
-                      </h4>
-                      <span className="text-[12px] text-neutral-500">무제한 참여 가능</span>
-                    </div>
+                    <h4 className="text-[14px] font-bold text-neutral-900">
+                      SNS에 리뷰플로우 후기 남기기
+                    </h4>
                     <p className="text-[12px] leading-relaxed text-neutral-500">
                       앱 리뷰, 쓰레드, 블로그, 인스타 어디든 OK.
                       <br />
                       리뷰플로우 홍보 링크 공유하면{' '}
                       <span className="font-semibold text-orange-600">PRO 1개월</span> 선물해드려요.
+                      (무제한 참여 가능)
                     </p>
                   </div>
                 </div>
@@ -550,37 +548,44 @@ export default function LaunchEventPage() {
               {reviewSubmissions.length > 0 && (
                 <div className="mt-4 border-t border-neutral-100 pt-3">
                   <p className="mb-2 text-[10px] font-medium text-neutral-400">최근 제출 내역</p>
-                  <div className="space-y-2">
+                  <div className="">
                     {reviewSubmissions.map((sub) => (
-                      <div
-                        key={sub.id}
-                        className="flex items-center justify-between rounded-lg bg-neutral-50 px-3 py-2"
-                      >
-                        <span className="max-w-[180px] truncate text-[11px] text-neutral-600">
-                          {sub.link}
-                        </span>
-                        <div className="flex flex-col items-end gap-1">
-                          <span
-                            className={cn(
-                              'text-[10px] font-bold px-2 py-0.5 rounded-full',
-                              sub.status === 'approved'
-                                ? 'bg-green-100 text-green-700'
-                                : sub.status === 'rejected'
-                                  ? 'bg-red-100 text-red-700'
-                                  : 'bg-neutral-200 text-neutral-600'
-                            )}
-                          >
-                            {sub.status === 'pending'
-                              ? '검수 중'
-                              : sub.status === 'approved'
-                                ? '지급 완료'
-                                : '반려됨'}
+                      <>
+                        <div
+                          key={sub.id}
+                          className="mt-3 flex items-center justify-between rounded-lg bg-neutral-50 px-3 py-2"
+                        >
+                          <span className="max-w-[200px] truncate text-[11px] text-neutral-600">
+                            {sub.link}
                           </span>
-                          {sub.status === 'rejected' && sub.rejection_reason && (
-                            <span className="text-[10px] text-red-500">{sub.rejection_reason}</span>
-                          )}
+                          <div className="flex flex-col items-end gap-1">
+                            <span
+                              className={cn(
+                                'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                                sub.status === 'approved'
+                                  ? 'bg-green-100 text-green-700'
+                                  : sub.status === 'rejected'
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-neutral-200 text-neutral-600'
+                              )}
+                            >
+                              {sub.status === 'pending'
+                                ? '검수 중'
+                                : sub.status === 'approved'
+                                  ? '지급 완료'
+                                  : '반려됨'}
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                        {sub.status === 'pending' && (
+                          <span className="text-[10px] text-neutral-500">
+                            조금만 기다려주세요. 운영진이 24시간 안에 꼼꼼히 확인해드릴게요.
+                          </span>
+                        )}
+                        {sub.status === 'rejected' && sub.rejection_reason && (
+                          <span className="text-[10px] text-red-500">{sub.rejection_reason}</span>
+                        )}
+                      </>
                     ))}
                   </div>
                 </div>
