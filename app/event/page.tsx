@@ -569,7 +569,7 @@ export default function LaunchEventPage() {
                   className={cn(
                     'h-9 rounded-full px-4 text-xs font-semibold transition-all',
                     hasDailyClaimed
-                      ? 'bg-neutral-100 text-neutral-400 hover:bg-neutral-100 border border-neutral-200'
+                      ? 'bg-neutral-100 text-neutral-900 hover:bg-neutral-100 border border-neutral-200'
                       : 'bg-orange-500 text-white hover:bg-orange-600 shadow-none'
                   )}
                 >
