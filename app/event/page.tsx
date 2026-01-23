@@ -81,6 +81,9 @@ type MissionSubmission = {
   status: string;
   created_at: string;
   rejection_reason?: string | null;
+  metadata?: {
+    note?: string | null;
+  };
 };
 
 // --- Components ---
@@ -408,8 +411,12 @@ export default function LaunchEventPage() {
 
   const handleSubmitReview = async () => {
     if (!user || isSubmittingReview) return;
-    if (!reviewLink.trim()) {
-      toast({ title: '링크를 입력해주세요', variant: 'destructive', duration: 1000 });
+    if (!reviewLink.trim() && !reviewNote.trim()) {
+      toast({
+        title: '링크 또는 닉네임/아이디를 입력해주세요',
+        variant: 'destructive',
+        duration: 1000,
+      });
       return;
     }
 
@@ -616,11 +623,8 @@ export default function LaunchEventPage() {
                   <p className="mb-2 text-[10px] font-medium text-neutral-400">최근 제출 내역</p>
                   <div className="">
                     {reviewSubmissions.map((sub) => (
-                      <>
-                        <div
-                          key={sub.id}
-                          className="mt-3 flex items-center justify-between rounded-lg bg-neutral-50 px-3 py-2"
-                        >
+                      <div key={sub.id}>
+                        <div className="mt-3 flex items-center justify-between rounded-lg bg-neutral-50 px-3 py-2">
                           <span className="max-w-[200px] truncate text-[11px] text-neutral-600">
                             {sub.link}
                           </span>
@@ -644,14 +648,22 @@ export default function LaunchEventPage() {
                           </div>
                         </div>
                         {sub.status === 'pending' && (
-                          <span className="text-[10px] text-neutral-500">
-                            조금만 기다려주세요. 운영진이 24시간 안에 꼼꼼히 확인해드릴게요.
-                          </span>
+                          <div className="mt-1">
+                            <span className="text-[10px] text-neutral-500 block">
+                              조금만 기다려주세요. 운영진이 24시간 안에 꼼꼼히 확인해드릴게요.
+                            </span>
+                            {sub.metadata?.note && (
+                              <span className="text-[10px] text-neutral-700 block mt-0.5">
+                                <span className="font-semibold">추가 메모:</span>{' '}
+                                {sub.metadata.note}
+                              </span>
+                            )}
+                          </div>
                         )}
                         {sub.status === 'rejected' && sub.rejection_reason && (
                           <span className="text-[10px] text-red-500">{sub.rejection_reason}</span>
                         )}
-                      </>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -781,9 +793,9 @@ export default function LaunchEventPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-neutral-600">게시물 링크</label>
+              <label className="text-xs font-semibold text-neutral-600">게시물 링크 (선택)</label>
               <Input
-                placeholder="https://..."
+                placeholder="https://... (블로그, SNS 등은 링크, 앱스토어/플레이스토어는 미입력 가능)"
                 value={reviewLink}
                 onChange={(e) => setReviewLink(e.target.value)}
                 className="bg-neutral-50 mt-1"
@@ -791,8 +803,11 @@ export default function LaunchEventPage() {
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold text-neutral-600">추가 메모 (선택)</label>
+              <span className="block text-[11px] font-normal text-orange-600 mt-0.5">
+                앱스토어/플레이스토어 리뷰의 경우, 본인 닉네임 또는 아이디를 꼭 입력해 주세요.
+              </span>
               <Textarea
-                placeholder="추가 메모 (선택 사항)"
+                placeholder="앱스토어/플레이스토어 리뷰는 닉네임 또는 아이디를 입력해 주세요. (예: 리뷰 작성자명 등)"
                 value={reviewNote}
                 onChange={(e) => setReviewNote(e.target.value)}
                 className="min-h-[80px] bg-neutral-50 resize-none mt-1"
