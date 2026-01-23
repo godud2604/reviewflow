@@ -97,6 +97,13 @@ function normalizeChannelInputs(
   return unique;
 }
 
-export function stringifyChannels(channels: ScheduleChannel[]): string {
-  return sanitizeChannels(channels, { allowEmpty: true }).join(', ');
+export function stringifyChannels(
+  channels: ScheduleChannel[],
+  options: SanitizeChannelOptions = {}
+): string {
+  const { allowEmpty = true, allowed } = options;
+  if (allowed) {
+    return sanitizeChannels(channels, { ...options, allowEmpty }).join(', ');
+  }
+  return normalizeChannelInputs(channels).join(', ');
 }
