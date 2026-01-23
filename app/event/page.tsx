@@ -698,6 +698,10 @@ export default function LaunchEventPage() {
                         친구와 나 모두에게{' '}
                         <span className="text-orange-600 font-semibold">PRO 1개월</span>을 드려요.
                       </p>
+                      <div className="mt-2 rounded-lg bg-orange-50 border border-orange-100 px-3 py-2 text-[12px] text-orange-700 font-semibold">
+                        ※ 본 이벤트는 <span className="font-bold">2026년 1월 30일</span>까지
+                        진행됩니다.
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl bg-neutral-50 p-1 pl-4 border border-neutral-200">
                       <div className="flex-1 truncate text-sm font-medium text-neutral-700">
@@ -730,7 +734,10 @@ export default function LaunchEventPage() {
                       <p className="mt-1 text-[12px] text-neutral-500">
                         친구의 코드를 입력하면 즉시{' '}
                         <span className="text-orange-600 font-semibold">PRO 1개월</span>이 지급돼요.
-                        <span className="block">쿠폰 등록은 월 1회만 가능해요.</span>
+                        <div className="mt-2 rounded-lg bg-orange-50 border border-orange-100 px-3 py-2 text-[12px] text-orange-700 font-semibold">
+                          ※ 본 이벤트는 <span className="font-bold">2026년 1월 30일</span>까지
+                          진행됩니다.
+                        </div>
                       </p>
                     </div>
 
@@ -739,17 +746,7 @@ export default function LaunchEventPage() {
                         <div className="mb-1 flex justify-center text-emerald-600">
                           <Check className="h-5 w-5" />
                         </div>
-                        <p className="text-sm font-bold text-emerald-800">이번 달 등록 완료!</p>
-                        <p className="text-xs text-emerald-600 mt-1">
-                          {nextReferralEligibleDate
-                            ? `${formatYmdLabel(nextReferralEligibleDate)}부터 다시 등록할 수 있어요.`
-                            : '다음 달에 다시 등록할 수 있어요.'}
-                        </p>
-                        {typeof referralDaysUntilNext === 'number' && (
-                          <p className="text-[11px] text-emerald-500 mt-1">
-                            약 {referralDaysUntilNext}일 뒤에 재등록 가능
-                          </p>
-                        )}
+                        <p className="text-sm font-bold text-emerald-800">등록 완료!</p>
                       </div>
                     ) : (
                       <div className="flex gap-2">
