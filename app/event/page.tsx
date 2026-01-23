@@ -711,8 +711,8 @@ export default function LaunchEventPage() {
                         <span className="text-orange-600 font-semibold">PRO 1개월</span>을 드려요.
                       </p>
                       <div className="mt-2 rounded-lg bg-orange-50 border border-orange-100 px-3 py-2 text-[12px] text-orange-700 font-semibold">
-                        ※ 본 이벤트는 <span className="font-bold">2026년 1월 30일</span>까지
-                        진행됩니다.
+                        ※ 친구 초대, 쿠폰 등록 이벤트는{' '}
+                        <span className="font-bold">2026년 1월 30일</span>까지 진행됩니다.
                       </div>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl bg-neutral-50 p-1 pl-4 border border-neutral-200">
@@ -747,8 +747,8 @@ export default function LaunchEventPage() {
                         친구의 코드를 입력하면 즉시{' '}
                         <span className="text-orange-600 font-semibold">PRO 1개월</span>이 지급돼요.
                         <div className="mt-2 rounded-lg bg-orange-50 border border-orange-100 px-3 py-2 text-[12px] text-orange-700 font-semibold">
-                          ※ 본 이벤트는 <span className="font-bold">2026년 1월 30일</span>까지
-                          진행됩니다.
+                          ※ 친구 초대, 쿠폰 등록 이벤트는{' '}
+                          <span className="font-bold">2026년 1월 30일</span>까지 진행됩니다.
                         </div>
                       </p>
                     </div>
