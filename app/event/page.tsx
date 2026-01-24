@@ -7,11 +7,9 @@ import {
   ArrowLeft,
   CalendarCheck,
   Check,
-  ChevronRight,
   Copy,
   Gift,
   Megaphone,
-  Share2,
   Ticket,
   Users,
 } from 'lucide-react';
@@ -496,7 +494,7 @@ export default function LaunchEventPage() {
               asChild
               variant="outline"
               size="sm"
-              className="mt-3 text-[10px] rounded-full  hover:bg-orange-50 hover:text-orange-700"
+              className="mt-3 text-[12px] rounded-full  hover:bg-orange-50 hover:text-orange-700"
             >
               <Link href="/pricing">PRO 혜택 보러가기</Link>
             </Button>
@@ -607,6 +605,58 @@ export default function LaunchEventPage() {
                   </div>
                 </div>
               </div>
+
+              {/* 앱 링크 버튼 추가 */}
+              <div className="mt-3 flex gap-2">
+                {/* iOS: universal link + fallback */}
+                <Button
+                  variant="ghost"
+                  className="flex-1 w-full rounded-xl border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50 h-10 text-xs font-semibold"
+                  onClick={() => {
+                    const userAgent =
+                      typeof window !== 'undefined' ? window.navigator.userAgent : '';
+                    const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+                    if (isIOS) {
+                      // 1. 딥링크 시도
+                      window.location.href = 'reviewflow://event';
+                      // 2. 1초 후 앱스토어로 이동 (앱 미설치 시)
+                      setTimeout(() => {
+                        window.location.href =
+                          'https://apps.apple.com/kr/app/reviewflow/id6757174544';
+                      }, 1000);
+                    } else {
+                      window.open(
+                        'https://apps.apple.com/kr/app/reviewflow/id6757174544',
+                        '_blank'
+                      );
+                    }
+                  }}
+                >
+                  iOS 앱 바로가기
+                </Button>
+                {/* Android: intent link + fallback */}
+                <Button
+                  variant="ghost"
+                  className="flex-1 w-full rounded-xl border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50 h-10 text-xs font-semibold"
+                  onClick={() => {
+                    const userAgent =
+                      typeof window !== 'undefined' ? window.navigator.userAgent : '';
+                    const isAndroid = /Android/i.test(userAgent);
+                    if (isAndroid) {
+                      // 1. intent 딥링크 시도
+                      window.location.href =
+                        'intent://event#Intent;scheme=reviewflow;package=com.reviewflow.reviewflow;S.browser_fallback_url=https://play.google.com/store/apps/details?id=com.reviewflow.reviewflow;end';
+                    } else {
+                      window.open(
+                        'https://play.google.com/store/apps/details?id=com.reviewflow.reviewflow',
+                        '_blank'
+                      );
+                    }
+                  }}
+                >
+                  Android 앱 바로가기
+                </Button>
+              </div>
               <div className="mt-4">
                 <Button
                   variant="outline"
@@ -650,7 +700,7 @@ export default function LaunchEventPage() {
                         {sub.status === 'pending' && (
                           <div className="mt-1">
                             <span className="text-[10px] text-neutral-500 block">
-                              조금만 기다려주세요. 운영진이 24시간 안에 꼼꼼히 확인해드릴게요.
+                              조금만 기다려주세요. 운영진이 24시간 안에 확인해드릴게요 !
                             </span>
                             {sub.metadata?.note && (
                               <span className="text-[10px] text-neutral-700 block mt-0.5">

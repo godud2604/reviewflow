@@ -10,6 +10,7 @@ type UserProfileSummary = {
   daily_summary_hour: number | null;
   daily_summary_minute: number | null;
   daily_summary_last_sent_at: string | null;
+  tier: string | null;
 };
 
 type ScheduleSummary = {
@@ -51,9 +52,10 @@ export async function POST(request: NextRequest) {
     const { data: profiles, error: profileError } = await adminClient
       .from('user_profiles')
       .select(
-        'id, phone_number, phone_verified_at, daily_summary_enabled, daily_summary_hour, daily_summary_minute, daily_summary_last_sent_at'
+        'id, phone_number, phone_verified_at, daily_summary_enabled, daily_summary_hour, daily_summary_minute, daily_summary_last_sent_at, tier'
       )
       .eq('daily_summary_enabled', true)
+      .neq('tier', 'free')
       .not('phone_number', 'is', null)
       .not('phone_verified_at', 'is', null);
 
@@ -67,6 +69,8 @@ export async function POST(request: NextRequest) {
     const currentMinute = now.getMinutes();
 
     const eligibleProfiles = (profiles ?? []).filter((profile: UserProfileSummary) => {
+      const tier = (profile.tier ?? 'free').toLowerCase();
+      if (tier === 'free') return false;
       const hour = profile.daily_summary_hour ?? 8;
       const minute = profile.daily_summary_minute ?? 0;
       const alreadySent = isSameKstDay(profile.daily_summary_last_sent_at, today);

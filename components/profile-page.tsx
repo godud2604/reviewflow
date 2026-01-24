@@ -424,6 +424,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
       toast({
         title: 'PRO 전용 기능입니다.',
         variant: 'destructive',
+        duration: 1000,
       });
       return;
     }
@@ -461,7 +462,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
 
   return (
     <div className="min-h-screen bg-[#F7F7F8] pb-24 font-sans tracking-tight">
-      <div className="mx-auto max-w-[520px] space-y-6 px-5 pt-6">
+      <div className="mx-auto max-w-[520px] space-y-4 px-5 pt-6">
         <div className="flex items-center gap-3" onClick={() => router.push('/?page=home')}>
           <button
             type="button"
@@ -488,8 +489,50 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
             </div>
           )}
         </section>
+        <section
+          className={`rounded-3xl border px-5 py-4 shadow-sm ${
+            isPro ? 'border-neutral-200 bg-white' : 'border-orange-200 bg-orange-50/70'
+          }`}
+        >
+          <p
+            className={`text-[13px] font-semibold ${
+              isPro ? 'text-neutral-800' : 'text-orange-700'
+            }`}
+          >
+            {isPro ? 'PRO를 더 연장할까요?' : 'PRO 혜택을 사용해 보세요'}
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => router.push(isPro ? '/event' : '/event')}
+              className={`w-full rounded-2xl px-4 py-2.5 text-[13px] font-semibold transition ${
+                isPro
+                  ? 'bg-neutral-900 text-white hover:bg-neutral-800'
+                  : 'bg-orange-500 text-white hover:bg-orange-600'
+              }`}
+            >
+              {isPro ? 'PRO 1일 추가하러가기' : 'PRO 혜택 받으러가기'}
+            </button>
+          </div>
+        </section>
+
+        <button
+          type="button"
+          onClick={() => setIsFeedbackModalOpen(true)}
+          className="flex w-full items-center justify-between rounded-3xl border border-neutral-200 bg-white px-6 py-4 shadow-sm text-left text-sm font-semibold text-neutral-900 transition hover:border-neutral-300 hover:bg-neutral-50"
+        >
+          <span className="flex items-center gap-3">
+            <span className="flex flex-col gap-1">
+              <span className="text-[14px] font-semibold text-neutral-900">피드백 · 문의하기</span>
+              <span className="text-[12px] font-medium text-neutral-500">
+                궁금한 점이나 불편한 점을 알려주시면 빠르게 개선할게요
+              </span>
+            </span>
+          </span>
+          <span className="text-[18px] text-neutral-300">›</span>
+        </button>
         <section className="rounded-3xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
-          <p className="px-2 pb-2 text-[12px] font-semibold text-neutral-500">고급 기능</p>
+          <p className="px-2 pb-2 text-[12px] font-semibold text-neutral-500">PRO 기능</p>
           {proFeatures.map((feature, idx) => {
             const isFeatureLocked = feature.isPro && !isPro;
             return (
@@ -515,22 +558,6 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
             );
           })}
         </section>
-
-        <button
-          type="button"
-          onClick={() => setIsFeedbackModalOpen(true)}
-          className="flex w-full items-center justify-between rounded-3xl border border-neutral-200 bg-white px-6 py-4 shadow-sm text-left text-sm font-semibold text-neutral-900 transition hover:border-neutral-300 hover:bg-neutral-50"
-        >
-          <span className="flex items-center gap-3">
-            <span className="flex flex-col gap-1">
-              <span className="text-[14px] font-semibold text-neutral-900">피드백 · 문의하기</span>
-              <span className="text-[12px] font-medium text-neutral-500">
-                궁금한 점이나 불편한 점을 알려주시면 빠르게 개선할게요
-              </span>
-            </span>
-          </span>
-          <span className="text-[18px] text-neutral-300">›</span>
-        </button>
 
         {/* {isPro && tierDurationMonths !== COUPON_TIER_DURATION_MONTHS && (
           <section className="rounded-3xl border border-amber-100 bg-white px-5 py-4 shadow-sm">

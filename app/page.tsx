@@ -7,6 +7,7 @@ import StatsPage, { StatsPageSkeleton } from '@/components/stats-page';
 import ProfilePage, { ProfilePageSkeleton } from '@/components/profile-page';
 import PortfolioPage from '@/components/portfolio-page';
 import NavigationBar from '@/components/navigation-bar';
+import MissionCtaBanner from '@/components/mission-cta-banner';
 import ScheduleModal from '@/components/schedule-modal';
 import TodoModal from '@/components/todo-modal';
 import LandingPage from '@/components/landing-page';
@@ -393,7 +394,7 @@ function PageContent() {
     // 1. 최상단 컨테이너를 fixed로 고정하여 사파리 바운스(튕김)를 방지
     <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
       <div className="w-full md:max-w-[800px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
-        <main ref={mainScrollRef} className="flex-1 overflow-y-auto outline-none">
+        <main className="flex-1 flex flex-col overflow-y-auto">
           {showGlobalHeader && (
             <GlobalHeader
               title={currentPage === 'stats' ? '통계' : '일정'}
@@ -401,6 +402,8 @@ function PageContent() {
               onProfile={handleGoProfile}
             />
           )}
+          {/* 미션 CTA 띠배너: header 바로 아래에만 노출 */}
+          {currentPage === 'home' && <MissionCtaBanner />}
           {!showPortfolio && <LaunchEventBanner />}
           {showPortfolio ? (
             <PortfolioPage
@@ -445,6 +448,7 @@ function PageContent() {
           )}
         </main>
 
+        {/* 하단 고정 미션 CTA 배너 (PRO 연장) */}
         <NavigationBar
           currentPage={currentPage}
           onPageChange={handlePageChange}
@@ -486,11 +490,7 @@ function PageContent() {
 
 export default function Page() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-neutral-200" />
-      }
-    >
+    <Suspense fallback={<div className="min-h-screen bg-neutral-200" />}>
       <PageContent />
     </Suspense>
   );

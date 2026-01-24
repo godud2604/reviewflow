@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Schedule, ExtraIncome, MonthlyGrowth, HistoryView } from '@/types';
 import { useExtraIncomes } from '@/hooks/use-extra-incomes';
 import ExtraIncomeModal from './extra-income-modal';
@@ -8,6 +9,15 @@ import IncomeHistoryModal from './income-history-modal';
 import { Z_INDEX } from '@/lib/z-index';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import {
   buildIncomeDetailsFromLegacy,
   parseIncomeDetailsJson,
@@ -134,8 +144,10 @@ export default function StatsPage({
   const [editingExtraIncome, setEditingExtraIncome] = useState<ExtraIncome | null>(null);
   const [historyView, setHistoryView] = useState<HistoryView>('all');
   const [isCompletedTooltipOpen, setIsCompletedTooltipOpen] = useState(false);
+  const [showProGateModal, setShowProGateModal] = useState(false);
   const historyDisabled = showIncomeModal || isScheduleModalOpen;
   const cardShadow = 'shadow-[0_14px_40px_rgba(18,34,64,0.08)]';
+  const router = useRouter();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
@@ -154,6 +166,10 @@ export default function StatsPage({
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
   const currentMonthKey = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
+  const previousMonthDate = new Date(currentYear, currentMonth - 1, 1);
+  const previousMonthKey = `${previousMonthDate.getFullYear()}-${(previousMonthDate.getMonth() + 1)
+    .toString()
+    .padStart(2, '0')}-01`;
   const allKey = 'all';
   const [selectedMonthKey, setSelectedMonthKey] = useState(currentMonthKey);
 
@@ -254,6 +270,10 @@ export default function StatsPage({
 
   const handleDeleteEditingIncome = (id: number) => {
     return deleteExtraIncome(id);
+  };
+
+  const openProGateModal = () => {
+    setShowProGateModal(true);
   };
 
   const handleHistoryScheduleClick = (schedule: Schedule) => {
@@ -548,23 +568,37 @@ export default function StatsPage({
               className="flex-1 flex gap-2 overflow-x-auto pb-1 px-5 -mx-5 scrollbar-hide snap-x mr-0"
             >
               {monthOptions.map((option) => {
-                const isMonthLocked =
-                  !isPro && option.key !== currentMonthKey && option.key !== allKey;
+                const isProOnlyOption =
+                  option.key === allKey ||
+                  (option.key !== currentMonthKey && option.key !== previousMonthKey);
+                const isMonthLocked = !isPro && isProOnlyOption;
+                const proBadgeClass =
+                  selectedMonthKey === option.key
+                    ? 'bg-white/20 text-white'
+                    : 'bg-[#fff4d7] text-[#b45309]';
                 return (
                   <button
                     key={option.key}
                     onClick={() => {
-                      if (isMonthLocked) return;
+                      if (isMonthLocked) {
+                        openProGateModal();
+                        return;
+                      }
                       setSelectedMonthKey(option.key);
                     }}
-                    disabled={isMonthLocked}
-                    className={`mt-1 flex-none snap-start rounded-full px-4 py-2 text-xs font-semibold transition whitespace-nowrap ${
+                    aria-disabled={isMonthLocked}
+                    className={`mt-1 flex-none snap-start rounded-full px-4 py-2 text-xs font-semibold transition whitespace-nowrap flex items-center gap-2 ${
                       selectedMonthKey === option.key
                         ? 'bg-[#0f172a] text-white shadow-md'
                         : 'bg-white text-[#1f2937] border border-[#e5e7eb]'
-                    } ${isMonthLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    } ${isMonthLocked ? 'opacity-50 cursor-pointer' : ''}`}
                   >
-                    {option.label}
+                    <span>{option.label}</span>
+                    {isProOnlyOption && (
+                      <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${proBadgeClass}`}>
+                        PRO
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -968,6 +1002,37 @@ export default function StatsPage({
         onExtraIncomeItemClick={handleHistoryExtraIncomeClick}
         isDisabled={historyDisabled}
       />
+
+      <Dialog open={showProGateModal} onOpenChange={setShowProGateModal}>
+        <DialogContent className="max-w-[360px] rounded-[24px] p-6">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-[16px] font-bold text-[#0f172a]">
+              PRO 기능이에요
+            </DialogTitle>
+            <DialogDescription className="text-[12.5px] text-[#6b7280] leading-relaxed">
+              전체 기간과 이전 달 통계는 PRO에서 제공돼요.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-col sm:justify-start sm:items-stretch">
+            <Button
+              className="h-11 w-full rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600"
+              onClick={() => {
+                setShowProGateModal(false);
+                router.push('/event');
+              }}
+            >
+              PRO 혜택 받으러가기
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 w-full rounded-xl text-sm font-semibold"
+              onClick={() => setShowProGateModal(false)}
+            >
+              닫기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

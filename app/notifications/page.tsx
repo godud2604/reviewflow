@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 
 import { getSupabaseClient } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { resolveTier } from '@/lib/tier';
 
 // --- Helper Functions ---
 const cleanPhoneNumber = (phone?: string) => phone?.replace(/[^0-9]/g, '') || '';
@@ -34,6 +35,7 @@ export default function NotificationsPage() {
 
   // --- State ---
   const [savedPhoneNumber, setSavedPhoneNumber] = useState<string | null>(null);
+  const [profileTier, setProfileTier] = useState<string | null>(null);
 
   const [phoneInput, setPhoneInput] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
@@ -67,7 +69,7 @@ export default function NotificationsPage() {
       const { data, error } = await supabase
         .from('user_profiles')
         .select(
-          'phone_number, phone_verified_at, daily_summary_enabled, daily_summary_hour, daily_summary_minute'
+          'phone_number, phone_verified_at, daily_summary_enabled, daily_summary_hour, daily_summary_minute, tier'
         )
         .eq('id', user.id)
         .single();
@@ -81,6 +83,7 @@ export default function NotificationsPage() {
       const dbPhone = data?.phone_number ? formatPhoneInput(data.phone_number) : '';
       setSavedPhoneNumber(dbPhone);
       setPhoneVerifiedAt(data?.phone_verified_at ?? null);
+      setProfileTier(data?.tier ?? null);
 
       setPhoneInput(dbPhone);
 
@@ -318,6 +321,12 @@ export default function NotificationsPage() {
   const isVerificationExpired = remainingSeconds === 0;
   const isVerificationSent = Boolean(verificationExpiresAt);
   const isViewMode = !!savedPhoneNumber && !isEditingPhone;
+  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const { isPro } = resolveTier({
+    profileTier: profileTier ?? undefined,
+    metadata,
+  });
+  const isProLocked = !isPro;
 
   // ------------------------------------------------------------------
   // ✅ [Loading UI] 데이터 로딩 중 보여줄 스켈레톤 화면
@@ -371,16 +380,38 @@ export default function NotificationsPage() {
         </div>
 
         <header className="space-y-1">
-          <p className="text-[11px] uppercase tracking-[0.1em] text-orange-400 font-bold">
-            morning brief
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-[11px] uppercase tracking-[0.1em] text-orange-400 font-bold">
+              morning brief
+            </p>
+            <span className="rounded-full bg-orange-100 text-orange-600 px-2 py-0.5 text-[10px] font-bold">
+              PRO
+            </span>
+          </div>
           <h1 className="text-[14px] font-bold text-neutral-800">
             방문, 마감 일정 또는 마감 초과가 있는 날<br />
-            아침에 <span className="text-orange-400">카카오 알림톡</span>으로 요약해드려요.
+            아침에 <span className="text-orange-400">카카오 알림톡</span>
+            으로 요약해드려요.
           </h1>
         </header>
 
         <div className="flex flex-col gap-4">
+          {isProLocked && (
+            <section className="rounded-[20px] border border-orange-200 bg-orange-50/70 px-4 py-3">
+              <p className="text-[13px] font-semibold text-orange-700">
+                현재 등급에서는 카카오 알림톡을 사용할 수 없어요.
+              </p>
+              <p className="text-[12px] text-orange-600 mt-1">
+                PRO로 업그레이드하면 알림톡 요약을 받을 수 있어요.
+              </p>
+              <Button
+                onClick={() => router.push('/event')}
+                className="mt-3 h-9 rounded-full bg-orange-500 px-4 text-xs font-semibold text-white hover:bg-orange-600"
+              >
+                PRO 혜택 받으러 가기
+              </Button>
+            </section>
+          )}
           {/* 1. 휴대폰 인증/관리 카드 */}
           <section
             className={cn(
@@ -541,10 +572,12 @@ export default function NotificationsPage() {
             <section
               className={cn(
                 'slide-in rounded-[24px] border border-orange-100 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] space-y-6 transition-opacity duration-300',
-                isEditingPhone ? 'opacity-60 pointer-events-none grayscale-[0.5]' : 'opacity-100'
+                isEditingPhone || isProLocked
+                  ? 'opacity-60 pointer-events-none grayscale-[0.5]'
+                  : 'opacity-100'
               )}
             >
-              {isEditingPhone && (
+              {(isEditingPhone || isProLocked) && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[24px] bg-white/10 backdrop-blur-[1px]"></div>
               )}
 
@@ -564,6 +597,7 @@ export default function NotificationsPage() {
                   checked={dailySummaryEnabled}
                   onCheckedChange={handleToggleDailySummary}
                   className="data-[state=checked]:bg-orange-500"
+                  disabled={isProLocked}
                 />
               </div>
 
@@ -583,6 +617,7 @@ export default function NotificationsPage() {
                       key={timeValue}
                       type="button"
                       onClick={() => handleDailySummaryTimeChange(timeValue)}
+                      disabled={isProLocked}
                       className={cn(
                         'rounded-full px-3 py-1.5 text-[14px] font-medium transition-all border',
                         dailySummaryTime === timeValue

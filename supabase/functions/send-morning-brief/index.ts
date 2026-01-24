@@ -43,9 +43,10 @@ serve(async (req) => {
     // 3. 알림 대상 유저 조회
     const { data: users, error: userError } = await supabaseAdmin
       .from('user_profiles')
-      .select('id, phone_number, daily_summary_hour, daily_summary_minute')
+      .select('id, phone_number, daily_summary_hour, daily_summary_minute, tier')
       .eq('daily_summary_enabled', true)
       .not('phone_number', 'is', null)
+      .neq('tier', 'free')
       .eq('daily_summary_hour', currentHour)
       .eq('daily_summary_minute', targetMinute);
 
@@ -62,6 +63,10 @@ serve(async (req) => {
     // 4. [변경됨] 병렬 처리 (Promise.all) - 100명 동시 발송
     const sendPromises = users.map(async (user) => {
       try {
+        const tier = String(user.tier ?? 'free').toLowerCase();
+        if (tier === 'free') {
+          return null;
+        }
         // (1) DB 조회 - 모든 스케줄 가져오기 (완료 여부 무관)
         const { data: allSchedules, error: schedError } = await supabaseAdmin
           .from('schedules')

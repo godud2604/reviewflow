@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Bell, Rocket, Settings } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
-import { isNativeAppWebView, openAppLaunchModal } from '@/lib/app-launch';
+import { isNativeAppWebView } from '@/lib/app-launch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 const KAKAO_TUTORIAL_KEY = 'kakao-alimtalk-notifications-cta';
 
@@ -19,6 +21,7 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
   const router = useRouter();
   const [showKakaoCta, setShowKakaoCta] = useState(false);
   const [isNativeApp, setIsNativeApp] = useState<boolean | null>(null);
+  const [showAppModal, setShowAppModal] = useState(false);
   const { user } = useAuth();
   const userId = user?.id;
 
@@ -97,15 +100,77 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
             미션
           </button>
           {isNativeApp === false && (
-            <button
-              type="button"
-              onClick={openAppLaunchModal}
-              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#ff7a18] via-[#ff5b6b] to-[#ff3b9f] px-4 py-2 text-[12px] font-semibold text-white shadow-[0_10px_24px_rgba(255,90,90,0.35)] transition hover:brightness-105"
-              aria-label="앱 출시 안내 열기"
-            >
-              <Rocket className="h-4 w-4" />
-              앱출시
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowAppModal(true)}
+                className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#ff7a18] via-[#ff5b6b] to-[#ff3b9f] px-4 py-2 text-[12px] font-semibold text-white shadow-[0_10px_24px_rgba(255,90,90,0.35)] transition hover:brightness-105"
+                aria-label="앱 출시 안내 열기"
+              >
+                <Rocket className="h-4 w-4" />
+                앱출시
+              </button>
+              <Dialog open={showAppModal} onOpenChange={setShowAppModal}>
+                <DialogContent className="rounded-2xl p-6 max-w-xs w-full">
+                  <DialogHeader>
+                    <DialogTitle className="text-base flex items-center gap-2">
+                      <Rocket className="h-5 w-5 text-orange-500" />
+                      리뷰플로우 앱 출시!
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="mt-3 text-sm text-neutral-800 text-center">
+                    iOS, Android 앱이 정식 출시되었습니다.
+                    <br />
+                    지금 바로 다운로드해보세요!
+                  </div>
+                  <div className="mt-5 flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1 text-xs"
+                      onClick={() => {
+                        const userAgent =
+                          typeof window !== 'undefined' ? window.navigator.userAgent : '';
+                        const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+                        if (isIOS) {
+                          window.location.href = 'reviewflow://event';
+                          setTimeout(() => {
+                            window.location.href =
+                              'https://apps.apple.com/kr/app/reviewflow/id6757174544';
+                          }, 1000);
+                        } else {
+                          window.open(
+                            'https://apps.apple.com/kr/app/reviewflow/id6757174544',
+                            '_blank'
+                          );
+                        }
+                      }}
+                    >
+                      iOS 앱 이동
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 text-xs"
+                      onClick={() => {
+                        const userAgent =
+                          typeof window !== 'undefined' ? window.navigator.userAgent : '';
+                        const isAndroid = /Android/i.test(userAgent);
+                        if (isAndroid) {
+                          window.location.href =
+                            'intent://event#Intent;scheme=reviewflow;package=com.reviewflow.reviewflow;S.browser_fallback_url=https://play.google.com/store/apps/details?id=com.reviewflow.reviewflow;end';
+                        } else {
+                          window.open(
+                            'https://play.google.com/store/apps/details?id=com.reviewflow.reviewflow',
+                            '_blank'
+                          );
+                        }
+                      }}
+                    >
+                      Android 앱 이동
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
           <div className="relative">
             <button
