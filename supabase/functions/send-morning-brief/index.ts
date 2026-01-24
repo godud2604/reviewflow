@@ -72,42 +72,49 @@ serve(async (req) => {
 
         const schedules = allSchedules || [];
 
+        const parseAdditionalDeadlines = (value: any) => {
+          if (!value) return [];
+          try {
+            const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+            return Array.isArray(parsed) ? parsed : [];
+          } catch (e) {
+            console.error('Failed to parse additional_deadlines', e);
+            return [];
+          }
+        };
+
         // 오늘 마감인 마감일 개수 카운트 (스케줄 개수가 아닌 마감일 개수)
         let dCount = 0;
+        // 마감 초과 일정 카운트 (메인 + 추가 마감일, 미완료만)
+        let oCount = 0;
+
         schedules.forEach((schedule) => {
           // 메인 마감일이 오늘이고 미완료인 경우만 카운트
           if (schedule.deadline === todayStr && schedule.status !== '완료') {
             dCount++;
           }
 
-          // 추가 마감일 중 오늘이고 개별 completed가 false인 것만 카운트
-          if (schedule.additional_deadlines) {
-            try {
-              // DB에서 JSON 문자열로 저장되어 있으므로 파싱 필요
-              const deadlines =
-                typeof schedule.additional_deadlines === 'string'
-                  ? JSON.parse(schedule.additional_deadlines)
-                  : schedule.additional_deadlines;
+          // 메인 마감일이 오늘 이전이고 미완료인 경우만 카운트
+          if (schedule.deadline && schedule.deadline < todayStr && schedule.status !== '완료') {
+            oCount++;
+          }
 
-              if (Array.isArray(deadlines)) {
-                const todayDeadlines = deadlines.filter(
-                  (d: any) => d.date === todayStr && !d.completed
-                );
-                dCount += todayDeadlines.length;
-              }
-            } catch (e) {
-              console.error('Failed to parse additional_deadlines', e);
-            }
+          const deadlines = parseAdditionalDeadlines(schedule.additional_deadlines);
+          if (deadlines.length) {
+            const todayDeadlines = deadlines.filter(
+              (d: any) => d.date === todayStr && !d.completed
+            );
+            dCount += todayDeadlines.length;
+
+            const overdueDeadlines = deadlines.filter(
+              (d: any) => d.date && d.date < todayStr && !d.completed
+            );
+            oCount += overdueDeadlines.length;
           }
         });
 
         // 오늘 방문 일정 카운트 (완료 여부 무관)
         const vCount = schedules.filter((s) => s.visit_date === todayStr).length;
-
-        // 마감 초과 일정 카운트 (메인 마감일만 체크, 미완료만)
-        const oCount = schedules.filter(
-          (s) => s.deadline && s.deadline < todayStr && s.status !== '완료'
-        ).length;
 
         // 일정이 없으면 null 리턴 (나중에 필터링)
         if (dCount === 0 && vCount === 0 && oCount === 0) {

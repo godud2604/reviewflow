@@ -15,6 +15,7 @@ type UserProfileSummary = {
 type ScheduleSummary = {
   user_id: string;
   deadline: string | null;
+  additional_deadlines?: unknown;
   visit_date: string | null;
   status: string | null;
 };
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     const userIds = eligibleProfiles.map((profile) => profile.id);
     const { data: schedules, error: scheduleError } = await adminClient
       .from('schedules')
-      .select('user_id, deadline, visit_date, status')
+      .select('user_id, deadline, additional_deadlines, visit_date, status')
       .in('user_id', userIds)
       .neq('status', '완료');
 
@@ -104,11 +105,38 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const deadlineToday = userSchedules.filter((s) => s.deadline === today).length;
+      const parseAdditionalDeadlines = (value: unknown) => {
+        if (!value) return [];
+        try {
+          const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          console.error('additional_deadlines parse error', error);
+          return [];
+        }
+      };
+
+      const deadlineToday =
+        userSchedules.filter((s) => s.deadline === today).length +
+        userSchedules.reduce((count, s) => {
+          const deadlines = parseAdditionalDeadlines(s.additional_deadlines);
+          const todayDeadlines = deadlines.filter(
+            (d: any) => d.date === today && !d.completed
+          );
+          return count + todayDeadlines.length;
+        }, 0);
+
       const visitToday = userSchedules.filter((s) => s.visit_date === today).length;
-      const overdueCount = userSchedules.filter(
-        (s) => s.deadline && s.deadline < today
-      ).length;
+
+      const overdueCount =
+        userSchedules.filter((s) => s.deadline && s.deadline < today).length +
+        userSchedules.reduce((count, s) => {
+          const deadlines = parseAdditionalDeadlines(s.additional_deadlines);
+          const overdueDeadlines = deadlines.filter(
+            (d: any) => d.date && d.date < today && !d.completed
+          );
+          return count + overdueDeadlines.length;
+        }, 0);
 
       await sendDailySummaryAlimtalk({
         phone,
