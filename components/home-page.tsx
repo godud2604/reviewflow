@@ -259,8 +259,7 @@ export default function HomePage({
   }, [toast]);
   const showCompletedEditToast = useCallback(() => {
     toast({
-      title: '완료 상태를 수정할 수 있어요.',
-      description: '진행 상태에서 필요한 단계로 변경해주세요',
+      title: '진행 상태를 변경 해주세요',
       duration: 1000,
     });
   }, [toast]);

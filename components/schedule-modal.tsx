@@ -1306,14 +1306,18 @@ export default function ScheduleModal({
   const statusFields = (
     <div className="space-y-6">
       <div>
-        <label className="block text-[15px] font-bold text-neutral-500 mb-2">진행 상태</label>
+        <label
+          className={`block text-[15px] font-bold ${showCompletionOnboarding && schedule ? 'text-orange-500' : 'text-neutral-500'} mb-2`}
+        >
+          진행 상태
+        </label>
         <Select
           value={formData.status}
           onValueChange={(value) => handleStatusChange(value as Schedule['status'])}
         >
           <SelectTrigger
             size="default"
-            className="w-full bg-[#F7F7F8] border-none rounded-xl text-[16px]"
+            className={`w-full ${showCompletionOnboarding && schedule ? 'bg-orange-100 border-orange-100' : 'bg-[#F7F7F8] border-none'} rounded-xl text-[16px]}`}
           >
             <SelectValue placeholder="선택하세요" />
           </SelectTrigger>
@@ -1325,6 +1329,9 @@ export default function ScheduleModal({
             ))}
           </SelectContent>
         </Select>
+        {showCompletionOnboarding && schedule && (
+          <p className="text-[13px] text-orange-700 mt-2">진행 상태를 변경 후 저장해주세요.</p>
+        )}
       </div>
     </div>
   );
@@ -1438,29 +1445,6 @@ export default function ScheduleModal({
                   <span className="text-[14px] font-bold text-red-700">
                     마감 기한 초과된 체험단입니다
                   </span>
-                </div>
-              )}
-              {showCompletionOnboarding && schedule && (
-                <div className="rounded-2xl border border-orange-200 bg-orange-50/70 px-4 py-3 text-orange-900 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-[14px] font-bold">
-                        완료 상태를 변경하려면 진행 상태를 조정해주세요
-                      </p>
-                      <p className="text-[12px] text-orange-700">
-                        진행 상태에서 필요한 단계로 바꾼 뒤 저장하면 반영됩니다.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => scrollToSection(statusSectionRef)}
-                      className="rounded-full border border-orange-200 bg-white px-3 py-1 text-[12px] font-semibold text-orange-700 hover:border-orange-300"
-                    >
-                      진행 상태로 이동
-                    </button>
-                  </div>
                 </div>
               )}
 
