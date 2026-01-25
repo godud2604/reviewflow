@@ -150,6 +150,16 @@ export default function StatsPage({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
 
+  // --- [Scroll Targets Refs] ---
+  const benefitRef = useRef<HTMLElement>(null);
+  const incomeRef = useRef<HTMLElement>(null);
+  const costRef = useRef<HTMLElement>(null);
+
+  // --- [Scroll Helper] ---
+  const scrollToSection = (ref: React.RefObject<HTMLElement>) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const toNumber = (value: unknown) => {
     const num = Number(value);
     return Number.isFinite(num) ? num : 0;
@@ -664,7 +674,11 @@ export default function StatsPage({
           </div>
 
           <div className="relative grid grid-cols-3 gap-2">
-            <div className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02]">
+            {/* 1. 방어한 생활비 뱃지 (Clickable) */}
+            <div
+              onClick={() => scrollToSection(benefitRef)}
+              className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02] cursor-pointer"
+            >
               <div className="mb-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
                 <Gift size={10} strokeWidth={1.5} />
               </div>
@@ -676,7 +690,11 @@ export default function StatsPage({
               </div>
             </div>
 
-            <div className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02]">
+            {/* 2. 현금수익 뱃지 (Clickable) */}
+            <div
+              onClick={() => scrollToSection(incomeRef)}
+              className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02] cursor-pointer"
+            >
               <div className="mb-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
                 <Wallet size={10} strokeWidth={1.5} />
               </div>
@@ -688,7 +706,11 @@ export default function StatsPage({
               </div>
             </div>
 
-            <div className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02]">
+            {/* 3. 지출비용 뱃지 (Clickable) */}
+            <div
+              onClick={() => scrollToSection(costRef)}
+              className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02] cursor-pointer"
+            >
               <div className="mb-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
                 <CreditCard size={10} strokeWidth={1.5} />
               </div>
@@ -717,8 +739,11 @@ export default function StatsPage({
 
         {hasIncomeData ? (
           <div className="space-y-4 mb-3.5">
-            {/* 1. Benefit Card */}
-            <section className={`bg-white rounded-[26px] p-6 shadow-sm ${cardShadow}`}>
+            {/* 1. Benefit Card (Target) */}
+            <section
+              ref={benefitRef}
+              className={`bg-white rounded-[26px] p-6 shadow-sm ${cardShadow} scroll-mt-20`}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
@@ -775,8 +800,11 @@ export default function StatsPage({
               )}
             </section>
 
-            {/* 2. Income Card (Minimal Applied) */}
-            <section className={`bg-white rounded-[26px] px-6 pt-6 shadow-sm ${cardShadow}`}>
+            {/* 2. Income Card (Target) */}
+            <section
+              ref={incomeRef}
+              className={`bg-white rounded-[26px] px-6 pt-6 shadow-sm ${cardShadow} scroll-mt-20`}
+            >
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
                   <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
@@ -899,8 +927,11 @@ export default function StatsPage({
               )}
             </section>
 
-            {/* 3. Cost Card (Minimal Applied) */}
-            <section className={`bg-white rounded-[26px] px-6 pt-6 shadow-sm ${cardShadow}`}>
+            {/* 3. Cost Card (Target) */}
+            <section
+              ref={costRef}
+              className={`bg-white rounded-[26px] px-6 pt-6 shadow-sm ${cardShadow} scroll-mt-20`}
+            >
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
                   <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
