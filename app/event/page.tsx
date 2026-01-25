@@ -432,6 +432,21 @@ export default function LaunchEventPage() {
         .select()
         .single();
 
+      // Google Spaces Webhook 호출
+      try {
+        await fetch('/api/reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reviewLink: reviewLink.trim(),
+            reviewNote: reviewNote.trim(),
+            user: { id: user.id, email: user.email },
+          }),
+        });
+      } catch (e) {
+        // 무시 (실패해도 메인 플로우 영향 X)
+      }
+
       if (error) throw error;
       setReviewSubmissions((prev) => [data, ...prev]);
       setIsReviewDialogOpen(false);
