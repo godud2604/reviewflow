@@ -1418,7 +1418,9 @@ export default function HomePage({
                 setIsCalendarCtaOpen(false);
               }}
             >
-              등록하기
+              {calendarCtaDate
+                ? `${formatKoreanMonthDay(calendarCtaDate)} 일정 등록하기`
+                : '등록하기'}
             </Button>
           </DrawerFooter>
         </DrawerContent>
