@@ -278,6 +278,18 @@ export default function ScheduleModal({
   const deadlineSubmitPendingRef = useRef(false);
   const [activeTab, setActiveTab] = useState<string>('basicInfo');
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // 메모장 자동 높이 조절을 위한 ref와 함수
+  const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResizeTextarea = useCallback(() => {
+    const textarea = memoTextareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto'; // 높이를 초기화해서 줄어들 때도 반응하게 함
+      textarea.style.height = `${textarea.scrollHeight}px`; // 스크롤 높이만큼 설정
+    }
+  }, []);
+
   const { toast } = useToast();
   const { user } = useAuth();
   const {
@@ -331,6 +343,11 @@ export default function ScheduleModal({
       isMountedRef.current = false;
     };
   }, []);
+
+  // 메모 내용이나 모달 상태가 변할 때 높이 자동 조절 실행
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [formData.memo, isOpen, autoResizeTextarea]);
 
   useEffect(() => {
     showMapSearchModalRef.current = showMapSearchModal;
@@ -2432,11 +2449,14 @@ export default function ScheduleModal({
                 <p className="text-[16px] font-semibold text-neutral-900">메모장</p>
                 <div className="relative">
                   <textarea
-                    rows={4}
+                    ref={memoTextareaRef}
                     value={formData.memo || ''}
-                    onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, memo: e.target.value });
+                      autoResizeTextarea();
+                    }}
                     placeholder="가이드라인 복사 붙여넣기..."
-                    className="w-full rounded-[12px] bg-[#F9FAFB] pl-4 pr-10 py-4 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3182F6]/40 transition-colors"
+                    className="w-full rounded-[12px] bg-[#F9FAFB] pl-4 pr-10 py-4 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3182F6]/40 transition-colors resize-none overflow-hidden min-h-[120px]"
                   />
                   {formData.memo && (
                     <button
@@ -2566,6 +2586,7 @@ export default function ScheduleModal({
         </div>
       </div>
 
+      {/* 모달들 (Platform, Channel, Confirm 등)은 동일하게 유지 */}
       {showPlatformManagement && (
         <>
           <div
@@ -2577,6 +2598,7 @@ export default function ScheduleModal({
             className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
             style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
           >
+            {/* 플랫폼 관리 내용... (생략 없이 원본 유지) */}
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-[16px]">플랫폼 관리</span>
               <button
@@ -2749,6 +2771,7 @@ export default function ScheduleModal({
             className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
             style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
           >
+            {/* 카테고리 관리 내용 */}
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-base">카테고리 관리</span>
               <button
@@ -2803,6 +2826,7 @@ export default function ScheduleModal({
         </>
       )}
 
+      {/* Alert Dialogs */}
       <AlertDialog
         open={platformToDelete !== null}
         onOpenChange={(open) => {
