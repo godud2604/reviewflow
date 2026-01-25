@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+// 마감일(필수) 영역에 스크롤하기 위한 ref
+const deadlineSectionRef = React.createRef<HTMLDivElement>();
 import type {
   Schedule,
   GuideFile,
@@ -670,6 +672,10 @@ export default function ScheduleModal({
         variant: 'destructive',
         duration: 1000,
       });
+      // 마감일이 비어있으면 해당 위치로 스크롤
+      if (missingDeadline && deadlineSectionRef.current) {
+        deadlineSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
@@ -1463,7 +1469,7 @@ export default function ScheduleModal({
                 className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-5"
               >
                 <div className="space-y-4">
-                  <div>
+                  <div ref={deadlineSectionRef}>
                     <label className="block text-[15px] font-bold text-neutral-500 mb-0.5">
                       제목 (필수)
                     </label>
