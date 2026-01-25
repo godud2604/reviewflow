@@ -1846,6 +1846,38 @@ export default function ScheduleModal({
                         />
                       </button>
                     </div>
+                    {/* 사장님(광고주) 전화번호: 비방문형일 때 Progress Info 섹션 토글 아래에 표시 */}
+                    {!visitMode && (
+                      <div className="mt-4">
+                        <p className="text-[15px] font-semibold text-neutral-500 mb-2">
+                          사장님(광고주) 전화번호
+                        </p>
+                        <div className="relative">
+                          <input
+                            type="tel"
+                            value={formData.ownerPhone || ''}
+                            onChange={(e) => handleOwnerPhoneChange(e.target.value)}
+                            placeholder="예: 010-9876-5432"
+                            className="w-full rounded-[18px] bg-[#F7F7F8] px-4 py-2 text-[15px] text-neutral-900 focus-visible:outline-none"
+                          />
+                          {formData.ownerPhone && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(formData.ownerPhone || '');
+                                toast({
+                                  title: '사장님 전화번호가 복사되었습니다.',
+                                  duration: 1000,
+                                });
+                              }}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                            >
+                              <Copy className="w-4 h-4 cursor-pointer" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {visitMode && (
                       <div className="space-y-3">
                         <div className="space-y-3">
@@ -2424,37 +2456,7 @@ export default function ScheduleModal({
                 </div>
               </section>
 
-              {!visitMode && (
-                <section className="rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-3">
-                  <p className="text-[16px] font-semibold text-neutral-900">
-                    사장님(광고주) 전화번호
-                  </p>
-                  <div className="relative">
-                    <input
-                      type="tel"
-                      value={formData.ownerPhone || ''}
-                      onChange={(e) => handleOwnerPhoneChange(e.target.value)}
-                      placeholder="예: 010-9876-5432"
-                      className="w-full rounded-[16px] border border-neutral-200 bg-[#F7F7F8] px-4 py-2 text-[15px] text-neutral-900 focus-visible:border-[#FF5722] focus-visible:outline-none"
-                    />
-                    {formData.ownerPhone && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(formData.ownerPhone || '');
-                          toast({
-                            title: '사장님 전화번호가 복사되었습니다.',
-                            duration: 1000,
-                          });
-                        }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
-                      >
-                        <Copy className="w-4 h-4 cursor-pointer" />
-                      </button>
-                    )}
-                  </div>
-                </section>
-              )}
+              {!visitMode && <></>}
             </div>
             {formData.guideFiles && formData.guideFiles.length > 0 && (
               <div ref={guideFilesSectionRef} className="scroll-mt-[70px] mt-6 space-y-3">
