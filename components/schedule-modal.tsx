@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+// 마감일(필수) 영역에 스크롤하기 위한 ref
+const deadlineSectionRef = React.createRef<HTMLDivElement>();
 import type {
   Schedule,
   GuideFile,
   ScheduleChannel,
   ScheduleTransactionItem,
-  TransactionType,
   AdditionalDeadline,
 } from '@/types';
 import { Calendar } from '@/components/ui/calendar';
@@ -54,7 +55,7 @@ import { stripLegacyScheduleMemo } from '@/lib/schedule-memo-legacy';
 import { formatKoreanTime } from '@/lib/time-utils';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Check, Copy, Loader2, Search, Trash2, X } from 'lucide-react';
+import { Check, Copy, Loader2, Search, Trash2, X, ArrowUp, ArrowDown } from 'lucide-react';
 import NaverMapSearchModal, { MapPlaceSelection } from '@/components/naver-map-search-modal';
 import { Z_INDEX } from '@/lib/z-index';
 
@@ -225,6 +226,8 @@ export default function ScheduleModal({
 }) {
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData());
 
+  const [purchaseLink, setPurchaseLink] = useState<string>('');
+
   const [viewportStyle, setViewportStyle] = useState<{ height: string; top: string }>({
     height: '100%',
     top: '0px',
@@ -275,6 +278,18 @@ export default function ScheduleModal({
   const deadlineSubmitPendingRef = useRef(false);
   const [activeTab, setActiveTab] = useState<string>('basicInfo');
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // 메모장 자동 높이 조절을 위한 ref와 함수
+  const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResizeTextarea = useCallback(() => {
+    const textarea = memoTextareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto'; // 높이를 초기화해서 줄어들 때도 반응하게 함
+      textarea.style.height = `${textarea.scrollHeight}px`; // 스크롤 높이만큼 설정
+    }
+  }, []);
+
   const { toast } = useToast();
   const { user } = useAuth();
   const {
@@ -299,7 +314,18 @@ export default function ScheduleModal({
   const memoRef = useRef<HTMLDivElement | null>(null);
   const showMapSearchModalRef = useRef(showMapSearchModal);
 
-  // Keep the modal history entry so the mobile back button triggers the close confirmation dialog.
+  // 스크롤 상/하단 이동 함수 (always visible)
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToBottom = () => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -328,6 +354,10 @@ export default function ScheduleModal({
       isMountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [formData.memo, isOpen, autoResizeTextarea]);
 
   useEffect(() => {
     showMapSearchModalRef.current = showMapSearchModal;
@@ -522,19 +552,13 @@ export default function ScheduleModal({
         paybackExpected: schedule.paybackExpected ?? false,
         paybackConfirmed: schedule.paybackExpected ? !!schedule.paybackConfirmed : false,
       });
-      if (schedule.status === '재확인' && schedule.reconfirmReason) {
-        const reason = schedule.reconfirmReason;
-        if (
-          ['입금 확인 필요', '리워드 미지급', '가이드 내용 불분명', '플랫폼 답변 대기중'].includes(
-            reason
-          )
-        ) {
-          setReconfirmReason(reason);
-        } else {
-          setReconfirmReason('기타');
-          setCustomReconfirmReason(reason);
-        }
+      // 기존 schedule에 purchaseLink가 있으면 상태에 반영
+      if (schedule?.purchaseLink) {
+        setPurchaseLink(schedule.purchaseLink);
+      } else {
+        setPurchaseLink('');
       }
+
       setVisitMode(hasVisitData(schedule));
       setLocationDetailEnabled(Boolean(schedule.regionDetail));
     } else {
@@ -648,6 +672,10 @@ export default function ScheduleModal({
         variant: 'destructive',
         duration: 1000,
       });
+      // 마감일이 비어있으면 해당 위치로 스크롤
+      if (missingDeadline && deadlineSectionRef.current) {
+        deadlineSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
@@ -657,6 +685,8 @@ export default function ScheduleModal({
     try {
       const updatedFormData: Partial<Schedule> = { ...mergedFormData };
       updatedFormData.title = trimmedTitle;
+      // purchaseLink를 저장 데이터에 포함
+      updatedFormData.purchaseLink = purchaseLink;
       const hasInvalidDetails = activeScheduleDetails.some(
         (detail) => detail.enabled !== false && detail.amount > 0 && !detail.label.trim()
       );
@@ -901,8 +931,7 @@ export default function ScheduleModal({
         const containerRect = container.getBoundingClientRect();
         const targetRect = target.getBoundingClientRect();
         const extraOffset = 80;
-        const nextTop =
-          container.scrollTop + (targetRect.top - containerRect.top) - extraOffset;
+        const nextTop = container.scrollTop + (targetRect.top - containerRect.top) - extraOffset;
         container.scrollTo({ top: Math.max(0, nextTop), behavior: 'smooth' });
       }, 80);
     });
@@ -1277,14 +1306,18 @@ export default function ScheduleModal({
   const statusFields = (
     <div className="space-y-6">
       <div>
-        <label className="block text-[15px] font-bold text-neutral-500 mb-2">진행 상태</label>
+        <label
+          className={`block text-[15px] font-bold ${showCompletionOnboarding && schedule ? 'text-orange-500' : 'text-neutral-500'} mb-2`}
+        >
+          진행 상태
+        </label>
         <Select
           value={formData.status}
           onValueChange={(value) => handleStatusChange(value as Schedule['status'])}
         >
           <SelectTrigger
             size="default"
-            className="w-full bg-[#F7F7F8] border-none rounded-xl text-[16px]"
+            className={`w-full ${showCompletionOnboarding && schedule ? 'bg-orange-100 border-orange-100' : 'bg-[#F7F7F8] border-none'} rounded-xl text-[16px]}`}
           >
             <SelectValue placeholder="선택하세요" />
           </SelectTrigger>
@@ -1296,6 +1329,9 @@ export default function ScheduleModal({
             ))}
           </SelectContent>
         </Select>
+        {showCompletionOnboarding && schedule && (
+          <p className="text-[13px] text-orange-700 mt-2">진행 상태를 변경 후 저장해주세요.</p>
+        )}
       </div>
     </div>
   );
@@ -1411,36 +1447,13 @@ export default function ScheduleModal({
                   </span>
                 </div>
               )}
-              {showCompletionOnboarding && schedule && (
-                <div className="rounded-2xl border border-orange-200 bg-orange-50/70 px-4 py-3 text-orange-900 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-[14px] font-bold">
-                        완료 상태를 변경하려면 진행 상태를 조정해주세요
-                      </p>
-                      <p className="text-[12px] text-orange-700">
-                        진행 상태에서 필요한 단계로 바꾼 뒤 저장하면 반영됩니다.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => scrollToSection(statusSectionRef)}
-                      className="rounded-full border border-orange-200 bg-white px-3 py-1 text-[12px] font-semibold text-orange-700 hover:border-orange-300"
-                    >
-                      진행 상태로 이동
-                    </button>
-                  </div>
-                </div>
-              )}
 
               <section
                 ref={basicInfoRef}
                 className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-5"
               >
                 <div className="space-y-4">
-                  <div>
+                  <div ref={deadlineSectionRef}>
                     <label className="block text-[15px] font-bold text-neutral-500 mb-0.5">
                       제목 (필수)
                     </label>
@@ -1475,6 +1488,38 @@ export default function ScheduleModal({
                       {titleError && (
                         <p className="mt-1 text-[12px] text-red-500">제목을 입력해주세요.</p>
                       )}
+                    </div>
+                  </div>
+
+                  {/* 당첨가이드 링크 입력 필드 */}
+                  <div>
+                    <label className="block text-[15px] font-bold text-neutral-500 mb-0.5">
+                      가이드라인 링크
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={purchaseLink}
+                        onChange={(e) => setPurchaseLink(e.target.value)}
+                        className="w-full h-[40px] rounded-[18px] bg-[#F2F4F6] px-4 pr-12 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none"
+                        placeholder="https://..."
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (purchaseLink) {
+                            navigator.clipboard.writeText(purchaseLink);
+                            toast({
+                              title: '링크가 복사되었습니다.',
+                              duration: 1000,
+                            });
+                          }
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                        title="복사"
+                      >
+                        <Copy className="w-4 h-4 cursor-pointer" />
+                      </button>
                     </div>
                   </div>
 
@@ -1816,6 +1861,37 @@ export default function ScheduleModal({
                         />
                       </button>
                     </div>
+                    {!visitMode && (
+                      <div className="mt-4">
+                        <p className="text-[15px] font-semibold text-neutral-500 mb-2">
+                          사장님(광고주) 전화번호
+                        </p>
+                        <div className="relative">
+                          <input
+                            type="tel"
+                            value={formData.ownerPhone || ''}
+                            onChange={(e) => handleOwnerPhoneChange(e.target.value)}
+                            placeholder="예: 010-9876-5432"
+                            className="w-full rounded-[18px] bg-[#F7F7F8] px-4 py-2 text-[15px] text-neutral-900 focus-visible:outline-none"
+                          />
+                          {formData.ownerPhone && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(formData.ownerPhone || '');
+                                toast({
+                                  title: '사장님 전화번호가 복사되었습니다.',
+                                  duration: 1000,
+                                });
+                              }}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                            >
+                              <Copy className="w-4 h-4 cursor-pointer" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {visitMode && (
                       <div className="space-y-3">
                         <div className="space-y-3">
@@ -2370,11 +2446,14 @@ export default function ScheduleModal({
                 <p className="text-[16px] font-semibold text-neutral-900">메모장</p>
                 <div className="relative">
                   <textarea
-                    rows={4}
+                    ref={memoTextareaRef}
                     value={formData.memo || ''}
-                    onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, memo: e.target.value });
+                      autoResizeTextarea();
+                    }}
                     placeholder="가이드라인 복사 붙여넣기..."
-                    className="w-full rounded-[12px] bg-[#F9FAFB] pl-4 pr-10 py-4 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3182F6]/40 transition-colors"
+                    className="w-full rounded-[12px] bg-[#F9FAFB] pl-4 pr-10 py-4 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3182F6]/40 transition-colors resize-none overflow-hidden min-h-[120px]"
                   />
                   {formData.memo && (
                     <button
@@ -2394,37 +2473,7 @@ export default function ScheduleModal({
                 </div>
               </section>
 
-              {!visitMode && (
-                <section className="rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-3">
-                  <p className="text-[16px] font-semibold text-neutral-900">
-                    사장님(광고주) 전화번호
-                  </p>
-                  <div className="relative">
-                    <input
-                      type="tel"
-                      value={formData.ownerPhone || ''}
-                      onChange={(e) => handleOwnerPhoneChange(e.target.value)}
-                      placeholder="예: 010-9876-5432"
-                      className="w-full rounded-[16px] border border-neutral-200 bg-[#F7F7F8] px-4 py-2 text-[15px] text-neutral-900 focus-visible:border-[#FF5722] focus-visible:outline-none"
-                    />
-                    {formData.ownerPhone && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(formData.ownerPhone || '');
-                          toast({
-                            title: '사장님 전화번호가 복사되었습니다.',
-                            duration: 1000,
-                          });
-                        }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
-                      >
-                        <Copy className="w-4 h-4 cursor-pointer" />
-                      </button>
-                    )}
-                  </div>
-                </section>
-              )}
+              {!visitMode && <></>}
             </div>
             {formData.guideFiles && formData.guideFiles.length > 0 && (
               <div ref={guideFilesSectionRef} className="scroll-mt-[70px] mt-6 space-y-3">
@@ -2531,10 +2580,30 @@ export default function ScheduleModal({
               </button>
             )}
           </div>
+
+          {/* 항상 표시되는 플로팅 버튼 - schedule(체험단 수정)일 때만 표시 */}
+          {schedule && (
+            <div className="absolute bottom-[90px] right-5 z-50 flex flex-col gap-2 pointer-events-none">
+              <button
+                onClick={scrollToTop}
+                className="pointer-events-auto rounded-full bg-white/90 p-2.5 shadow-lg border border-neutral-100 transition-all hover:bg-white active:scale-95"
+              >
+                <ArrowUp className="w-5 h-5 text-neutral-600" />
+              </button>
+              <button
+                onClick={scrollToBottom}
+                className="pointer-events-auto rounded-full bg-white/90 p-2.5 shadow-lg border border-neutral-100 transition-all hover:bg-white active:scale-95"
+              >
+                <ArrowDown className="w-5 h-5 text-neutral-600" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* 나머지 모달들 (Platform, Channel, Confirm 등) 코드 생략 없이 유지 */}
       {showPlatformManagement && (
+        /* ... 플랫폼 관리 모달 코드 ... */
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
@@ -2621,6 +2690,7 @@ export default function ScheduleModal({
       )}
 
       {showChannelManagement && (
+        /* ... 채널 관리 모달 코드 ... */
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
@@ -2707,6 +2777,7 @@ export default function ScheduleModal({
       )}
 
       {showCategoryManagement && (
+        /* ... 카테고리 관리 모달 코드 ... */
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
@@ -2771,6 +2842,7 @@ export default function ScheduleModal({
         </>
       )}
 
+      {/* Alert Dialogs (삭제, 중복, 확인 등) */}
       <AlertDialog
         open={platformToDelete !== null}
         onOpenChange={(open) => {
@@ -3017,6 +3089,7 @@ export default function ScheduleModal({
       />
 
       {showDeadlineManagement && (
+        /* ... 할일 관리 모달 코드 ... */
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"

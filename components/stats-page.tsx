@@ -52,8 +52,6 @@ function ScrollableList({
       }
     };
 
-    // 데이터 로딩 시차 등을 고려해 약간의 지연 후 체크하거나 리사이즈 옵저버 사용 권장되지만,
-    // 여기서는 children 변경 시 체크하도록 설정
     const timer = setTimeout(checkOverflow, 100);
     return () => clearTimeout(timer);
   }, [children]);
@@ -151,6 +149,16 @@ export default function StatsPage({
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
+
+  // --- [Scroll Targets Refs] ---
+  const benefitRef = useRef<HTMLElement>(null);
+  const incomeRef = useRef<HTMLElement>(null);
+  const costRef = useRef<HTMLElement>(null);
+
+  // --- [Scroll Helper] ---
+  const scrollToSection = (ref: React.RefObject<HTMLElement>) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const toNumber = (value: unknown) => {
     const num = Number(value);
@@ -406,6 +414,8 @@ export default function StatsPage({
   const econValue = totalBen + totalCashAndExtraIncome - totalCost;
 
   const hasIncomeData = totalBen > 0 || totalInc > 0 || totalCost > 0 || totalExtraIncome > 0;
+
+  // --- 토스 스타일 빠른 애니메이션 적용 ---
   const [animatedEconValue, setAnimatedEconValue] = useState(0);
   const animatedValueRef = useRef(0);
   const animationRef = useRef<number | null>(null);
@@ -427,20 +437,27 @@ export default function StatsPage({
       lastAnimatedValueRef.current = target;
       return;
     }
-    const duration = 900;
+
+    // 500ms, Quartic Ease 적용
+    const duration = 500;
     const startTime = performance.now();
+
     const step = (now: number) => {
       if (animationIdRef.current !== animationId) return;
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
+
+      const eased = 1 - Math.pow(1 - progress, 4);
+
       const nextValue = Math.round(start + (target - start) * eased);
       animatedValueRef.current = nextValue;
       setAnimatedEconValue(nextValue);
+
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(step);
       } else {
         lastAnimatedValueRef.current = target;
+        setAnimatedEconValue(target);
       }
     };
     animationRef.current = requestAnimationFrame(step);
@@ -449,6 +466,7 @@ export default function StatsPage({
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, [econValue]);
+  // ------------------------------------
 
   const hasAnyExtraIncome = extraIncomes.length > 0;
   const getCategoryEntries = (categoryMap: Record<Schedule['category'], number>) =>
@@ -656,7 +674,11 @@ export default function StatsPage({
           </div>
 
           <div className="relative grid grid-cols-3 gap-2">
-            <div className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02]">
+            {/* 1. 방어한 생활비 뱃지 (Clickable) */}
+            <div
+              onClick={() => scrollToSection(benefitRef)}
+              className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02] cursor-pointer"
+            >
               <div className="mb-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
                 <Gift size={10} strokeWidth={1.5} />
               </div>
@@ -668,7 +690,11 @@ export default function StatsPage({
               </div>
             </div>
 
-            <div className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02]">
+            {/* 2. 현금수익 뱃지 (Clickable) */}
+            <div
+              onClick={() => scrollToSection(incomeRef)}
+              className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02] cursor-pointer"
+            >
               <div className="mb-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
                 <Wallet size={10} strokeWidth={1.5} />
               </div>
@@ -680,7 +706,11 @@ export default function StatsPage({
               </div>
             </div>
 
-            <div className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02]">
+            {/* 3. 지출비용 뱃지 (Clickable) */}
+            <div
+              onClick={() => scrollToSection(costRef)}
+              className="flex flex-col items-center justify-center rounded-[18px] bg-white/10 backdrop-blur-lg shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_-2px_rgba(0,0,0,0.05)] p-2.5 text-center min-h-[85px] border border-white/20 transition-transform hover:scale-[1.02] cursor-pointer"
+            >
               <div className="mb-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md">
                 <CreditCard size={10} strokeWidth={1.5} />
               </div>
@@ -709,8 +739,11 @@ export default function StatsPage({
 
         {hasIncomeData ? (
           <div className="space-y-4 mb-3.5">
-            {/* 1. Benefit Card */}
-            <section className={`bg-white rounded-[26px] p-6 shadow-sm ${cardShadow}`}>
+            {/* 1. Benefit Card (Target) */}
+            <section
+              ref={benefitRef}
+              className={`bg-white rounded-[26px] p-6 shadow-sm ${cardShadow} scroll-mt-20`}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
@@ -723,44 +756,56 @@ export default function StatsPage({
                     {totalBen.toLocaleString()} 원
                   </div>
                 </div>
-                <button
-                  onClick={() => openHistoryModal('benefit')}
-                  className="text-[12px] font-semibold text-[#6b7685] hover:text-[#111827] transition-colors"
-                >
-                  전체 내역 보기
-                </button>
+                {totalBen > 0 && (
+                  <button
+                    onClick={() => openHistoryModal('benefit')}
+                    className="text-[12px] font-semibold text-[#6b7685] hover:text-[#111827] transition-colors"
+                  >
+                    전체 내역 보기
+                  </button>
+                )}
               </div>
-              <p className="text-xs text-[#6b7280] mt-1">
-                체험단에서 받은 제품/서비스 값 항목만 뽑아 보여줘요.
-              </p>
 
-              {/* 스크롤 가능한 리스트 적용 */}
-              <div className="mt-4 space-y-3">
-                {benefitEntries.map(([category, amount]) => {
-                  const percentage = totalBen ? Math.round((amount / totalBen) * 100) : 0;
-                  return (
-                    <div key={category} className="flex items-center gap-3">
-                      <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
-                        {category}
-                      </div>
-                      <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-[#ff9431] to-[#ff6b2c] rounded-full transition-all duration-500"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                      <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
-                        {amount.toLocaleString()}원
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              {totalBen > 0 ? (
+                <>
+                  <p className="text-xs text-[#6b7280] mt-1">
+                    체험단에서 받은 제품/서비스 값 항목만 뽑아 보여줘요.
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    {benefitEntries.map(([category, amount]) => {
+                      const percentage = totalBen ? Math.round((amount / totalBen) * 100) : 0;
+                      return (
+                        <div key={category} className="flex items-center gap-3">
+                          <div className="w-26 text-[12px] font-semibold text-[#4b5563]">
+                            {category}
+                          </div>
+                          <div className="flex-1 bg-[#eef2f7] rounded-full h-2 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-[#ff9431] to-[#ff6b2c] rounded-full transition-all duration-500"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                          <div className="w-18 text-right text-xs text-[#9ca3af] font-semibold">
+                            {amount.toLocaleString()}원
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="mt-2 text-[13px] text-gray-400 font-medium">
+                  내역이 아직 없어요.
+                </div>
+              )}
             </section>
 
-            {/* 2. Income Card */}
-            <section className={`bg-white rounded-[26px] px-6 pt-6 pb-2 shadow-sm ${cardShadow}`}>
-              <div className="flex items-start justify-between gap-3">
+            {/* 2. Income Card (Target) */}
+            <section
+              ref={incomeRef}
+              className={`bg-white rounded-[26px] px-6 pt-6 shadow-sm ${cardShadow} scroll-mt-20`}
+            >
+              <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
                   <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
                     <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#eef5ff] text-[#2563eb] text-[14px]">
@@ -772,16 +817,18 @@ export default function StatsPage({
                     {(totalInc + totalExtraIncome).toLocaleString()} 원
                   </div>
                 </div>
-                <button
-                  onClick={() => openHistoryModal('income')}
-                  className="text-[12px] font-semibold text-[#6b7685] hover:text-[#111827] transition-colors"
-                >
-                  전체 내역 보기
-                </button>
+                {totalInc + totalExtraIncome > 0 && (
+                  <button
+                    onClick={() => openHistoryModal('income')}
+                    className="text-[12px] font-semibold text-[#6b7685] hover:text-[#111827] transition-colors"
+                  >
+                    전체 내역 보기
+                  </button>
+                )}
               </div>
 
-              {/* 스크롤 가능한 리스트 적용 */}
-              <div className="mt-4">
+              {/* 데이터가 없으면 리스트 영역 숨김 (Minimal) */}
+              {totalInc + totalExtraIncome > 0 ? (
                 <ScrollableList maxHeight="max-h-[320px]" className="space-y-4">
                   <div className="mt-3 space-y-3">
                     {incomeEntries.map(([category, amount]) => {
@@ -839,7 +886,6 @@ export default function StatsPage({
                       </div>
                     </div>
                   )}
-                  {/* 부수입 리스트 */}
                   {groupedExtraIncomes.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between">
@@ -874,12 +920,19 @@ export default function StatsPage({
                     </div>
                   )}
                 </ScrollableList>
-              </div>
+              ) : (
+                <div className="mt-2 text-[13px] text-gray-400 font-medium">
+                  내역이 아직 없어요.
+                </div>
+              )}
             </section>
 
-            {/* 3. Cost Card */}
-            <section className={`bg-white rounded-[26px] px-6 pt-6 pb-2 shadow-sm ${cardShadow}`}>
-              <div className="flex items-start justify-between gap-3">
+            {/* 3. Cost Card (Target) */}
+            <section
+              ref={costRef}
+              className={`bg-white rounded-[26px] px-6 pt-6 shadow-sm ${cardShadow} scroll-mt-20`}
+            >
+              <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
                   <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
                     <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#fee2e2] text-[#ef4444] text-[14px]">
@@ -891,16 +944,18 @@ export default function StatsPage({
                     {totalCost.toLocaleString()} 원
                   </div>
                 </div>
-                <button
-                  onClick={() => openHistoryModal('cost')}
-                  className="text-[12px] font-semibold text-[#6b7685] hover:text-[#111827] transition-colors"
-                >
-                  전체 내역 보기
-                </button>
+                {totalCost > 0 && (
+                  <button
+                    onClick={() => openHistoryModal('cost')}
+                    className="text-[12px] font-semibold text-[#6b7685] hover:text-[#111827] transition-colors"
+                  >
+                    전체 내역 보기
+                  </button>
+                )}
               </div>
 
-              {/* 스크롤 가능한 리스트 적용 */}
-              <div className="mt-4">
+              {/* 데이터가 없으면 리스트 영역 숨김 (Minimal) */}
+              {totalCost > 0 ? (
                 <ScrollableList maxHeight="max-h-[320px]" className="space-y-4">
                   <div className="space-y-3">
                     {costEntries.map(([category, amount]) => {
@@ -957,7 +1012,11 @@ export default function StatsPage({
                     </div>
                   )}
                 </ScrollableList>
-              </div>
+              ) : (
+                <div className="mt-2 text-[13px] text-gray-400 font-medium">
+                  내역이 아직 없어요.
+                </div>
+              )}
             </section>
           </div>
         ) : (
