@@ -6,7 +6,6 @@ import type {
   GuideFile,
   ScheduleChannel,
   ScheduleTransactionItem,
-  TransactionType,
   AdditionalDeadline,
 } from '@/types';
 import { Calendar } from '@/components/ui/calendar';
@@ -54,7 +53,7 @@ import { stripLegacyScheduleMemo } from '@/lib/schedule-memo-legacy';
 import { formatKoreanTime } from '@/lib/time-utils';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Check, Copy, Loader2, Search, Trash2, X } from 'lucide-react';
+import { Check, Copy, Loader2, Search, Trash2, X, ArrowUp, ArrowDown } from 'lucide-react';
 import NaverMapSearchModal, { MapPlaceSelection } from '@/components/naver-map-search-modal';
 import { Z_INDEX } from '@/lib/z-index';
 
@@ -225,7 +224,6 @@ export default function ScheduleModal({
 }) {
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData());
 
-  // 구매/당첨가이드 링크 상태 추가
   const [purchaseLink, setPurchaseLink] = useState<string>('');
 
   const [viewportStyle, setViewportStyle] = useState<{ height: string; top: string }>({
@@ -314,7 +312,18 @@ export default function ScheduleModal({
   const memoRef = useRef<HTMLDivElement | null>(null);
   const showMapSearchModalRef = useRef(showMapSearchModal);
 
-  // Keep the modal history entry so the mobile back button triggers the close confirmation dialog.
+  // 스크롤 상/하단 이동 함수 (always visible)
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToBottom = () => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -344,7 +353,6 @@ export default function ScheduleModal({
     };
   }, []);
 
-  // 메모 내용이나 모달 상태가 변할 때 높이 자동 조절 실행
   useEffect(() => {
     autoResizeTextarea();
   }, [formData.memo, isOpen, autoResizeTextarea]);
@@ -1863,7 +1871,6 @@ export default function ScheduleModal({
                         />
                       </button>
                     </div>
-                    {/* 사장님(광고주) 전화번호: 비방문형일 때 Progress Info 섹션 토글 아래에 표시 */}
                     {!visitMode && (
                       <div className="mt-4">
                         <p className="text-[15px] font-semibold text-neutral-500 mb-2">
@@ -2583,11 +2590,30 @@ export default function ScheduleModal({
               </button>
             )}
           </div>
+
+          {/* 항상 표시되는 플로팅 버튼 - schedule(체험단 수정)일 때만 표시 */}
+          {schedule && (
+            <div className="absolute bottom-[90px] right-5 z-50 flex flex-col gap-2 pointer-events-none">
+              <button
+                onClick={scrollToTop}
+                className="pointer-events-auto rounded-full bg-white/90 p-2.5 shadow-lg border border-neutral-100 transition-all hover:bg-white active:scale-95"
+              >
+                <ArrowUp className="w-5 h-5 text-neutral-600" />
+              </button>
+              <button
+                onClick={scrollToBottom}
+                className="pointer-events-auto rounded-full bg-white/90 p-2.5 shadow-lg border border-neutral-100 transition-all hover:bg-white active:scale-95"
+              >
+                <ArrowDown className="w-5 h-5 text-neutral-600" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* 모달들 (Platform, Channel, Confirm 등)은 동일하게 유지 */}
+      {/* 나머지 모달들 (Platform, Channel, Confirm 등) 코드 생략 없이 유지 */}
       {showPlatformManagement && (
+        /* ... 플랫폼 관리 모달 코드 ... */
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
@@ -2598,7 +2624,6 @@ export default function ScheduleModal({
             className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
             style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
           >
-            {/* 플랫폼 관리 내용... (생략 없이 원본 유지) */}
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-[16px]">플랫폼 관리</span>
               <button
@@ -2675,6 +2700,7 @@ export default function ScheduleModal({
       )}
 
       {showChannelManagement && (
+        /* ... 채널 관리 모달 코드 ... */
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
@@ -2761,6 +2787,7 @@ export default function ScheduleModal({
       )}
 
       {showCategoryManagement && (
+        /* ... 카테고리 관리 모달 코드 ... */
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
@@ -2771,7 +2798,6 @@ export default function ScheduleModal({
             className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full h-[70%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
             style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
           >
-            {/* 카테고리 관리 내용 */}
             <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
               <span className="font-bold text-base">카테고리 관리</span>
               <button
@@ -2826,7 +2852,7 @@ export default function ScheduleModal({
         </>
       )}
 
-      {/* Alert Dialogs */}
+      {/* Alert Dialogs (삭제, 중복, 확인 등) */}
       <AlertDialog
         open={platformToDelete !== null}
         onOpenChange={(open) => {
@@ -3073,6 +3099,7 @@ export default function ScheduleModal({
       />
 
       {showDeadlineManagement && (
+        /* ... 할일 관리 모달 코드 ... */
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
