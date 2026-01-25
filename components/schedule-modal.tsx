@@ -225,6 +225,9 @@ export default function ScheduleModal({
 }) {
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData());
 
+  // 구매/당첨가이드 링크 상태 추가
+  const [purchaseLink, setPurchaseLink] = useState<string>('');
+
   const [viewportStyle, setViewportStyle] = useState<{ height: string; top: string }>({
     height: '100%',
     top: '0px',
@@ -522,19 +525,13 @@ export default function ScheduleModal({
         paybackExpected: schedule.paybackExpected ?? false,
         paybackConfirmed: schedule.paybackExpected ? !!schedule.paybackConfirmed : false,
       });
-      if (schedule.status === '재확인' && schedule.reconfirmReason) {
-        const reason = schedule.reconfirmReason;
-        if (
-          ['입금 확인 필요', '리워드 미지급', '가이드 내용 불분명', '플랫폼 답변 대기중'].includes(
-            reason
-          )
-        ) {
-          setReconfirmReason(reason);
-        } else {
-          setReconfirmReason('기타');
-          setCustomReconfirmReason(reason);
-        }
+      // 기존 schedule에 purchaseLink가 있으면 상태에 반영
+      if (schedule?.purchaseLink) {
+        setPurchaseLink(schedule.purchaseLink);
+      } else {
+        setPurchaseLink('');
       }
+
       setVisitMode(hasVisitData(schedule));
       setLocationDetailEnabled(Boolean(schedule.regionDetail));
     } else {
@@ -657,6 +654,8 @@ export default function ScheduleModal({
     try {
       const updatedFormData: Partial<Schedule> = { ...mergedFormData };
       updatedFormData.title = trimmedTitle;
+      // purchaseLink를 저장 데이터에 포함
+      updatedFormData.purchaseLink = purchaseLink;
       const hasInvalidDetails = activeScheduleDetails.some(
         (detail) => detail.enabled !== false && detail.amount > 0 && !detail.label.trim()
       );
@@ -901,8 +900,7 @@ export default function ScheduleModal({
         const containerRect = container.getBoundingClientRect();
         const targetRect = target.getBoundingClientRect();
         const extraOffset = 80;
-        const nextTop =
-          container.scrollTop + (targetRect.top - containerRect.top) - extraOffset;
+        const nextTop = container.scrollTop + (targetRect.top - containerRect.top) - extraOffset;
         container.scrollTo({ top: Math.max(0, nextTop), behavior: 'smooth' });
       }, 80);
     });
@@ -1475,6 +1473,38 @@ export default function ScheduleModal({
                       {titleError && (
                         <p className="mt-1 text-[12px] text-red-500">제목을 입력해주세요.</p>
                       )}
+                    </div>
+                  </div>
+
+                  {/* 당첨가이드 링크 입력 필드 */}
+                  <div>
+                    <label className="block text-[15px] font-bold text-neutral-500 mb-0.5">
+                      가이드라인 링크
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={purchaseLink}
+                        onChange={(e) => setPurchaseLink(e.target.value)}
+                        className="w-full h-[40px] rounded-[18px] bg-[#F2F4F6] px-4 pr-12 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none"
+                        placeholder="https://..."
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (purchaseLink) {
+                            navigator.clipboard.writeText(purchaseLink);
+                            toast({
+                              title: '링크가 복사되었습니다.',
+                              duration: 1000,
+                            });
+                          }
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                        title="복사"
+                      >
+                        <Copy className="w-4 h-4 cursor-pointer" />
+                      </button>
                     </div>
                   </div>
 
