@@ -2550,7 +2550,7 @@ export default function ScheduleModal({
                         </label>
                       </div>
                       <div className="rounded-[18px] border border-neutral-200 bg-white px-4 py-3 mt-4">
-                        <div className="flex items-center justify-between gap-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                           <div className="min-w-0">
                             <p className="text-[13px] font-semibold text-neutral-900">
                               입금 확인 (정산 완료)
@@ -2559,7 +2559,7 @@ export default function ScheduleModal({
                               입금이 완료되면 달력의 💸 표시가 사라져요.
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-end gap-2 sm:justify-start">
                             <span
                               className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
                                 formData.paybackConfirmed
@@ -2570,6 +2570,7 @@ export default function ScheduleModal({
                               {formData.paybackConfirmed ? '완료' : '미완료'}
                             </span>
                             <Switch
+                              className="shrink-0"
                               checked={formData.paybackConfirmed || false}
                               onCheckedChange={(checked) =>
                                 handlePaybackConfirmedChange(Boolean(checked))
