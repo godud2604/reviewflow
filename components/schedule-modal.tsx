@@ -2546,7 +2546,7 @@ export default function ScheduleModal({
                               }
                             }}
                           />
-                          <span>내가 쓴 지출금액과 같아요</span>
+                          <span>내가 쓴 돈의 금액과 같아요</span>
                         </label>
                       </div>
                       <div className="rounded-[18px] border border-neutral-200 bg-white px-4 py-3 mt-4">

@@ -666,7 +666,13 @@ export default function HomePage({
     const hasTodoForDate = schedulesForDate.some((schedule) => isTodoSchedule(schedule));
     const hasDoneForDate = schedulesForDate.some((schedule) => isDoneSchedule(schedule));
     const hasPaybackForDate = schedulesForDate.some((schedule) => isPaybackSchedule(schedule));
-    const nextFilter = hasPaybackForDate ? 'PAYBACK' : hasTodoForDate ? 'TODO' : hasDoneForDate ? 'DONE' : 'TODO';
+    const nextFilter = hasTodoForDate
+      ? 'TODO'
+      : hasPaybackForDate
+        ? 'PAYBACK'
+        : hasDoneForDate
+          ? 'DONE'
+          : 'TODO';
     setPlatformFilter('ALL');
     setStatusFilter('ALL');
     setCategoryFilter('ALL');
@@ -722,7 +728,13 @@ export default function HomePage({
     const hasTodoForToday = schedulesForToday.some((schedule) => isTodoSchedule(schedule));
     const hasDoneForToday = schedulesForToday.some((schedule) => isDoneSchedule(schedule));
     const hasPaybackForToday = schedulesForToday.some((schedule) => isPaybackSchedule(schedule));
-    const nextFilter = hasPaybackForToday ? 'PAYBACK' : hasTodoForToday ? 'TODO' : hasDoneForToday ? 'DONE' : 'TODO';
+    const nextFilter = hasTodoForToday
+      ? 'TODO'
+      : hasPaybackForToday
+        ? 'PAYBACK'
+        : hasDoneForToday
+          ? 'DONE'
+          : 'TODO';
     setSelectedDate(today);
     setShowAllOnSelectedDate(false);
     handleViewFilterChange(nextFilter);
@@ -849,7 +861,13 @@ export default function HomePage({
       const hasTodoForToday = schedulesForToday.some((schedule) => isTodoSchedule(schedule));
       const hasDoneForToday = schedulesForToday.some((schedule) => isDoneSchedule(schedule));
       const hasPaybackForToday = schedulesForToday.some((schedule) => isPaybackSchedule(schedule));
-      const nextFilter = hasPaybackForToday ? 'PAYBACK' : hasTodoForToday ? 'TODO' : hasDoneForToday ? 'DONE' : 'TODO';
+      const nextFilter = hasTodoForToday
+        ? 'TODO'
+        : hasPaybackForToday
+          ? 'PAYBACK'
+          : hasDoneForToday
+            ? 'DONE'
+            : 'TODO';
       setSelectedDate(today);
       setViewFilter(nextFilter);
       setPlatformFilter('ALL');
