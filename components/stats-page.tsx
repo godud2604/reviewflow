@@ -174,10 +174,6 @@ export default function StatsPage({
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
   const currentMonthKey = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
-  const previousMonthDate = new Date(currentYear, currentMonth - 1, 1);
-  const previousMonthKey = `${previousMonthDate.getFullYear()}-${(previousMonthDate.getMonth() + 1)
-    .toString()
-    .padStart(2, '0')}-01`;
   const allKey = 'all';
   const [selectedMonthKey, setSelectedMonthKey] = useState(currentMonthKey);
 
@@ -586,9 +582,7 @@ export default function StatsPage({
               className="flex-1 flex gap-2 overflow-x-auto pb-1 px-5 -mx-5 scrollbar-hide snap-x mr-0"
             >
               {monthOptions.map((option) => {
-                const isProOnlyOption =
-                  option.key === allKey ||
-                  (option.key !== currentMonthKey && option.key !== previousMonthKey);
+                const isProOnlyOption = option.key === allKey || option.key < currentMonthKey;
                 const isMonthLocked = !isPro && isProOnlyOption;
                 const proBadgeClass =
                   selectedMonthKey === option.key
