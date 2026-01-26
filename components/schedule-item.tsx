@@ -111,8 +111,7 @@ export default function ScheduleItem({
   const hasPaybackExpected = Boolean(schedule.paybackExpected);
   const isVisitActive = Boolean(schedule.visit && schedule.visit === activeDate);
   const isDeadActive = Boolean(schedule.dead && schedule.dead === activeDate);
-  const paybackDate =
-    hasPaybackExpected ? schedule.paybackExpectedDate || schedule.dead || '' : '';
+  const paybackDate = hasPaybackExpected ? schedule.paybackExpectedDate || schedule.dead || '' : '';
   const isPaybackActive = Boolean(paybackDate && paybackDate === activeDate);
   const visitDateClass = isListView
     ? 'text-sky-700'
@@ -152,9 +151,6 @@ export default function ScheduleItem({
   const channelList = schedule.channel?.filter(Boolean) ?? [];
   const channelLabel = channelList.join(', ');
   const hasChannelLabel = channelLabel.length > 0;
-  const hasAdditionalDeadlines = Boolean(
-    schedule.additionalDeadlines && schedule.additionalDeadlines.length > 0
-  );
 
   const dateItems: Array<{
     key: string;
@@ -286,7 +282,11 @@ export default function ScheduleItem({
       }`}
       onClick={onClick}
     >
-      <div className="mr-3 flex flex-col items-center gap-2 min-w-[60px]">
+      {/* [수정됨] 왼쪽 뱃지 영역
+        - max-w-[74px] 추가: 너비 제한
+        - shrink-0 추가: 찌그러짐 방지
+      */}
+      <div className="mr-3 flex flex-col items-center gap-2 min-w-[60px] max-w-[74px] shrink-0">
         <button
           type="button"
           onClick={(e) => {
@@ -336,6 +336,7 @@ export default function ScheduleItem({
                 }`}
               >
                 <span className="flex justify-center items-center gap-1 px-2 text-[9px] font-bold">
+                  {/* 부모 너비 제한에 따라 truncate 작동 */}
                   <span className="translate-y-[-0.5px] truncate">{deadline.label}</span>
                 </span>
               </button>
@@ -351,13 +352,14 @@ export default function ScheduleItem({
                 onPaybackConfirm?.();
               }
             }}
-            className={`px-2 py-1 rounded-full text-[9px] font-bold border transition-all active:scale-95 w-full text-center ${
+            className={`px-2 py-1 rounded-full text-[9px] font-bold border transition-all active:scale-95 w-full text-center overflow-hidden ${
               isPaid
                 ? 'bg-orange-600/70 text-white border-orange-600 shadow-sm'
                 : 'bg-white text-gray-400 border-gray-200 hover:text-orange-400 hover:border-orange-200'
             }`}
           >
-            {isPaid ? '입금완료' : '입금완료'}
+            {/* 텍스트가 길어질 경우를 대비해 truncate 적용 */}
+            <span className="block truncate">{isPaid ? '입금완료' : '입금완료'}</span>
           </button>
         )}
       </div>
