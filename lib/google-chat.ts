@@ -2,6 +2,7 @@
 
 const WEBHOOK_URL = process.env.GOOGLE_CHAT_WEBHOOK_URL;
 const FEEDBACK_WEBHOOK_URL = process.env.GOOGLE_CHAT_FEEDBACK_WEBHOOK_URL;
+const SIGNUP_WEBHOOK_URL = process.env.GOOGLE_CHAT_SIGNUP_WEBHOOK_URL;
 const DEDUPE_WINDOW_MS = 300_000; // 5분
 const sentAlerts = new Map<string, number>();
 
@@ -154,6 +155,50 @@ export async function sendFeedbackToGoogleChat(payload: FeedbackMessageInput) {
     }
   } catch (err) {
     console.error('Failed to send Google Chat feedback:', err);
+    throw err;
+  }
+}
+
+type SignupStatsMessageInput = {
+  totalUsers: number;
+  todaySignups: number;
+};
+
+function buildSignupStatsPayload({ totalUsers, todaySignups }: SignupStatsMessageInput) {
+  const timeString = formatKST(new Date());
+  const numberFormatter = new Intl.NumberFormat('ko-KR');
+
+  const textMessage =
+    `🎉 *회원가입*\n\n` +
+    `🙌 새로운 분이 ReviewFlow에 합류했어요 !.\n\n` +
+    `👥 *총 회원 수:* ${numberFormatter.format(totalUsers)}명\n` +
+    `🆕 *오늘 가입한 수:* ${numberFormatter.format(todaySignups)}명\n` +
+    `⏰ *시간:* ${timeString}`;
+
+  return { text: textMessage };
+}
+
+export async function sendSignupStatsToGoogleChat(payload: SignupStatsMessageInput) {
+  const webhookUrl = SIGNUP_WEBHOOK_URL || WEBHOOK_URL;
+  if (!webhookUrl) {
+    console.warn('Google Chat signup webhook URL missing.');
+    return;
+  }
+
+  try {
+    const body = buildSignupStatsPayload(payload);
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Google Chat Signup API Error (${res.status}): ${errorText}`);
+    }
+  } catch (err) {
+    console.error('Failed to send Google Chat signup stats:', err);
     throw err;
   }
 }

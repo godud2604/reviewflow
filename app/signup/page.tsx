@@ -103,6 +103,13 @@ export default function SignUpPage() {
       }
 
       setSuccess(true);
+
+      // Fire-and-forget: signup notification (server-side counts + Google Chat webhook)
+      void fetch('/api/hooks/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: data?.user?.id, provider: 'email' }),
+      }).catch(() => {});
     } catch (err) {
       setError('회원가입 중 오류가 발생했습니다.');
     } finally {
