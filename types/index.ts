@@ -76,6 +76,8 @@ export interface Schedule {
     otherText?: string;
   };
   paybackExpected?: boolean;
+  paybackExpectedDate?: string;
+  paybackExpectedAmount?: number;
   paybackConfirmed?: boolean;
 }
 

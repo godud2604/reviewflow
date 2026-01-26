@@ -108,8 +108,12 @@ export default function ScheduleItem({
   const deadLabel = schedule.dead ? `${schedule.dead.slice(5)} 마감` : '마감 미정';
   const activeDate = selectedDate ?? today;
   const isListView = !selectedDate;
+  const hasPaybackExpected = Boolean(schedule.paybackExpected);
   const isVisitActive = Boolean(schedule.visit && schedule.visit === activeDate);
   const isDeadActive = Boolean(schedule.dead && schedule.dead === activeDate);
+  const paybackDate =
+    hasPaybackExpected ? schedule.paybackExpectedDate || schedule.dead || '' : '';
+  const isPaybackActive = Boolean(paybackDate && paybackDate === activeDate);
   const visitDateClass = isListView
     ? 'text-sky-700'
     : isVisitActive
@@ -119,6 +123,11 @@ export default function ScheduleItem({
     ? 'text-rose-700'
     : isDeadActive
       ? 'font-bold text-rose-700'
+      : '';
+  const paybackDateClass = isListView
+    ? 'text-orange-600'
+    : isPaybackActive
+      ? 'font-bold text-orange-600'
       : '';
 
   const total = schedule.benefit + schedule.income - schedule.cost;
@@ -138,7 +147,6 @@ export default function ScheduleItem({
   const canComplete = !!onCompleteClick;
 
   const platformLabel = schedule.platform ? getPlatformDisplayName(schedule.platform) : '';
-  const hasPaybackExpected = Boolean(schedule.paybackExpected);
   const isPaid = Boolean(schedule.paybackConfirmed);
   const canConfirmPayback = hasPaybackExpected && !!onPaybackConfirm;
   const channelList = schedule.channel?.filter(Boolean) ?? [];
@@ -228,6 +236,23 @@ export default function ScheduleItem({
         }`.trim(),
         ddayLabel: getDdayLabel(deadline.date, today),
       });
+    });
+  }
+
+  if (hasPaybackExpected && paybackDate) {
+    const paybackAmount =
+      schedule.paybackExpectedAmount && schedule.paybackExpectedAmount > 0
+        ? ` (${schedule.paybackExpectedAmount.toLocaleString()})`
+        : '';
+    dateItems.push({
+      key: 'payback',
+      date: paybackDate,
+      label: `${paybackDate.slice(5)} 입금예정${paybackAmount}`,
+      dateText: paybackDate.slice(5),
+      labelText: `입금예정${paybackAmount}`,
+      strikeLabel: isPaid,
+      className: `${paybackDateClass}`.trim(),
+      ddayLabel: getDdayLabel(paybackDate, today),
     });
   }
 

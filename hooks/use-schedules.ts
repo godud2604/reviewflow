@@ -8,6 +8,8 @@ import type { Schedule, AdditionalDeadline } from '@/types';
 import type { DbSchedule } from '@/types/database';
 import { parseStoredChannels, stringifyChannels } from '@/lib/schedule-channels';
 
+const LEGACY_PAYBACK_DEADLINE_ID = '__payback_expected_date__';
+
 interface UseSchedulesOptions {
   enabled?: boolean;
 }
@@ -30,6 +32,7 @@ const toNumber = (value: unknown) => {
 // DB -> Frontend 매핑
 function mapDbToSchedule(db: DbSchedule): Schedule {
   let additionalDeadlines: AdditionalDeadline[] = [];
+  let legacyPaybackDate = '';
   if (db.additional_deadlines) {
     try {
       const parsed =
@@ -42,6 +45,12 @@ function mapDbToSchedule(db: DbSchedule): Schedule {
     } catch (e) {
       console.error('Failed to parse additional_deadlines:', e);
     }
+  }
+
+  if (additionalDeadlines.length > 0) {
+    const legacy = additionalDeadlines.find((d) => d?.id === LEGACY_PAYBACK_DEADLINE_ID);
+    legacyPaybackDate = legacy?.date || '';
+    additionalDeadlines = additionalDeadlines.filter((d) => d?.id !== LEGACY_PAYBACK_DEADLINE_ID);
   }
 
   return {
@@ -70,6 +79,9 @@ function mapDbToSchedule(db: DbSchedule): Schedule {
     reconfirmReason: db.reconfirm_reason || undefined,
     visitReviewChecklist: db.visit_review_checklist || undefined,
     paybackExpected: db.payback_expected,
+    paybackExpectedDate:
+      db.payback_expected_date || legacyPaybackDate || (db.payback_expected ? db.deadline || '' : ''),
+    paybackExpectedAmount: db.payback_expected_amount ?? 0,
     paybackConfirmed: db.payback_confirmed,
     phone: db.phone || '',
     ownerPhone: db.owner_phone || '',
@@ -106,6 +118,14 @@ function mapScheduleToDb(schedule: Omit<Schedule, 'id'>, userId: string) {
     reconfirm_reason: schedule.reconfirmReason || null,
     visit_review_checklist: schedule.visitReviewChecklist || null,
     payback_expected: schedule.paybackExpected || false,
+    payback_expected_date:
+      schedule.paybackExpected && schedule.paybackExpectedDate
+        ? schedule.paybackExpectedDate
+        : null,
+    payback_expected_amount:
+      schedule.paybackExpected && schedule.paybackExpectedAmount && schedule.paybackExpectedAmount > 0
+        ? schedule.paybackExpectedAmount
+        : null,
     payback_confirmed: schedule.paybackConfirmed || false,
     phone: schedule.phone || null,
     owner_phone: schedule.ownerPhone || null,
@@ -146,6 +166,15 @@ function mapScheduleUpdatesToDb(updates: Partial<Schedule>) {
   if (updates.visitReviewChecklist !== undefined)
     dbUpdates.visit_review_checklist = updates.visitReviewChecklist;
   if (updates.paybackExpected !== undefined) dbUpdates.payback_expected = updates.paybackExpected;
+  if (updates.paybackExpectedDate !== undefined) {
+    dbUpdates.payback_expected_date = updates.paybackExpectedDate || null;
+  }
+  if (updates.paybackExpectedAmount !== undefined) {
+    dbUpdates.payback_expected_amount =
+      updates.paybackExpectedAmount && updates.paybackExpectedAmount > 0
+        ? updates.paybackExpectedAmount
+        : null;
+  }
   if (updates.paybackConfirmed !== undefined)
     dbUpdates.payback_confirmed = updates.paybackConfirmed;
   if (updates.phone !== undefined) dbUpdates.phone = updates.phone;

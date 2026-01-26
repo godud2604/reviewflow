@@ -37,6 +37,8 @@ export interface DbSchedule {
     googleReview: boolean;
   } | null;
   payback_expected: boolean;
+  payback_expected_date: string | null;
+  payback_expected_amount: number | null;
   payback_confirmed: boolean;
   created_at: string;
   updated_at: string;

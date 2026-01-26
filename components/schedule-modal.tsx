@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -188,6 +189,8 @@ const createEmptyFormData = (): Partial<Schedule> => ({
   reconfirmReason: '',
   visitReviewChecklist: { ...DEFAULT_VISIT_REVIEW_CHECKLIST },
   paybackExpected: false,
+  paybackExpectedDate: '',
+  paybackExpectedAmount: 0,
   paybackConfirmed: false,
   region: '',
   regionDetail: '',
@@ -272,6 +275,7 @@ export default function ScheduleModal({
   const [newIncomeDetailType, setNewIncomeDetailType] =
     useState<ScheduleTransactionItem['type']>('INCOME');
   const [newIncomeDetailAmount, setNewIncomeDetailAmount] = useState('');
+  const [paybackAmountSameAsCost, setPaybackAmountSameAsCost] = useState(false);
   const [showDeadlineManagement, setShowDeadlineManagement] = useState(false);
   const [newDeadlineLabel, setNewDeadlineLabel] = useState('');
   const deadlineComposingRef = useRef(false);
@@ -550,8 +554,13 @@ export default function ScheduleModal({
             ? { ...DEFAULT_VISIT_REVIEW_CHECKLIST, ...schedule.visitReviewChecklist }
             : schedule.visitReviewChecklist,
         paybackExpected: schedule.paybackExpected ?? false,
+        paybackExpectedDate: schedule.paybackExpected
+          ? schedule.paybackExpectedDate || schedule.dead || ''
+          : '',
+        paybackExpectedAmount: schedule.paybackExpected ? schedule.paybackExpectedAmount || 0 : 0,
         paybackConfirmed: schedule.paybackExpected ? !!schedule.paybackConfirmed : false,
       });
+      setPaybackAmountSameAsCost(false);
       // 기존 schedule에 purchaseLink가 있으면 상태에 반영
       if (schedule?.purchaseLink) {
         setPurchaseLink(schedule.purchaseLink);
@@ -567,6 +576,7 @@ export default function ScheduleModal({
         emptyForm.dead = initialDeadline;
       }
       setFormData(emptyForm);
+      setPaybackAmountSameAsCost(false);
       setReconfirmReason('');
       setCustomReconfirmReason('');
       setPendingFiles([]);
@@ -576,6 +586,13 @@ export default function ScheduleModal({
       setScheduleIncomeDetails(ensureDefaultIncomeDetails([]));
     }
   }, [schedule, isOpen, hasVisitData, initialDeadline]);
+
+  useEffect(() => {
+    if (!formData.paybackExpected) return;
+    if (!paybackAmountSameAsCost) return;
+    const costAmount = scheduleIncomeDetails.find(isDefaultCostDetail)?.amount || 0;
+    setFormData((prev) => ({ ...prev, paybackExpectedAmount: costAmount }));
+  }, [formData.paybackExpected, paybackAmountSameAsCost, scheduleIncomeDetails]);
 
   useEffect(() => {
     let isActive = true;
@@ -726,6 +743,18 @@ export default function ScheduleModal({
         updatedFormData.reconfirmReason = reason;
       } else {
         updatedFormData.reconfirmReason = '';
+      }
+
+      if (updatedFormData.paybackExpected) {
+        updatedFormData.paybackExpectedDate =
+          updatedFormData.paybackExpectedDate || updatedFormData.dead || '';
+        if (!updatedFormData.paybackExpectedAmount || updatedFormData.paybackExpectedAmount < 0) {
+          updatedFormData.paybackExpectedAmount = 0;
+        }
+      } else {
+        updatedFormData.paybackExpectedDate = '';
+        updatedFormData.paybackExpectedAmount = 0;
+        updatedFormData.paybackConfirmed = false;
       }
 
       const selectedChannels = sanitizeChannels(updatedFormData.channel || [], {
@@ -1054,8 +1083,13 @@ export default function ScheduleModal({
     setFormData((prev) => ({
       ...prev,
       paybackExpected: checked,
+      paybackExpectedDate: checked ? prev.paybackExpectedDate || prev.dead || '' : '',
+      paybackExpectedAmount: checked ? prev.paybackExpectedAmount || 0 : 0,
       paybackConfirmed: checked ? Boolean(prev.paybackConfirmed) : false,
     }));
+    if (!checked) {
+      setPaybackAmountSameAsCost(false);
+    }
   };
 
   const handlePaybackConfirmedChange = (checked: boolean) => {
@@ -1546,9 +1580,19 @@ export default function ScheduleModal({
                           mode="single"
                           selected={formData.dead ? new Date(formData.dead) : undefined}
                           onSelect={(date) => {
-                            setFormData({
-                              ...formData,
-                              dead: date ? format(date, 'yyyy-MM-dd') : '',
+                            const nextDead = date ? format(date, 'yyyy-MM-dd') : '';
+                            setFormData((prev) => {
+                              const shouldSyncPaybackDate =
+                                prev.paybackExpected &&
+                                (prev.paybackExpectedDate === '' ||
+                                  prev.paybackExpectedDate === (prev.dead || ''));
+                              return {
+                                ...prev,
+                                dead: nextDead,
+                                paybackExpectedDate: shouldSyncPaybackDate
+                                  ? nextDead
+                                  : prev.paybackExpectedDate,
+                              };
                             });
                             if (date && deadlineError) {
                               setDeadlineError(false);
@@ -2424,18 +2468,117 @@ export default function ScheduleModal({
                     </div>
                   </label>
                   {formData.paybackExpected && (
-                    <label className="flex items-center gap-3 pl-8">
-                      <Checkbox
-                        checked={formData.paybackConfirmed || false}
-                        onCheckedChange={(checked) =>
-                          handlePaybackConfirmedChange(Boolean(checked))
-                        }
-                        className="mt-[2px]"
-                      />
-                      <span className="text-[13px] font-semibold text-neutral-900 translate-y-[1px]">
-                        입금 확인 (정산 완료)
-                      </span>
-                    </label>
+                    <div className="pl-8 space-y-2">
+                      <div>
+                        <label className="block text-[13px] font-semibold text-neutral-800 mb-1.5">
+                          입금예정일 (페이백)
+                        </label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="w-full h-[40px] rounded-[18px] bg-white border border-neutral-200 px-4 text-[14px] text-neutral-900 text-left cursor-pointer focus-visible:outline-none">
+                              {formData.paybackExpectedDate
+                                ? format(new Date(formData.paybackExpectedDate), 'PPP', {
+                                    locale: ko,
+                                  })
+                                : formData.dead
+                                  ? format(new Date(formData.dead), 'PPP', { locale: ko })
+                                  : '날짜 선택'}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={
+                                formData.paybackExpectedDate
+                                  ? new Date(formData.paybackExpectedDate)
+                                  : formData.dead
+                                    ? new Date(formData.dead)
+                                    : undefined
+                              }
+                              onSelect={(date) => {
+                                const next = date ? format(date, 'yyyy-MM-dd') : '';
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  paybackExpectedDate: next,
+                                }));
+                              }}
+                              locale={ko}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <p className="mt-1 text-[12px] text-neutral-500">
+                          기본값은 마감일이며, 필요하면 변경할 수 있어요.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-semibold text-neutral-800 mb-1.5">
+                          입금예정금액
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={formatNumber(formData.paybackExpectedAmount || 0)}
+                          onChange={(e) => {
+                            if (paybackAmountSameAsCost) {
+                              setPaybackAmountSameAsCost(false);
+                            }
+                            setFormData((prev) => ({
+                              ...prev,
+                              paybackExpectedAmount: parseNumber(e.target.value),
+                            }));
+                          }}
+                          className="w-full h-[40px] rounded-[18px] bg-white border border-neutral-200 px-4 text-[14px] text-neutral-900 text-left focus-visible:outline-none"
+                          placeholder="0"
+                        />
+                        <label className="mt-2 flex items-center gap-2 text-[12px] font-semibold text-neutral-700">
+                          <Checkbox
+                            checked={paybackAmountSameAsCost}
+                            onCheckedChange={(checked) => {
+                              const nextChecked = Boolean(checked);
+                              setPaybackAmountSameAsCost(nextChecked);
+                              if (nextChecked) {
+                                const costAmount =
+                                  scheduleIncomeDetails.find(isDefaultCostDetail)?.amount || 0;
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  paybackExpectedAmount: costAmount,
+                                }));
+                              }
+                            }}
+                          />
+                          <span>내가 쓴 지출금액과 같아요</span>
+                        </label>
+                      </div>
+                      <div className="rounded-[18px] border border-neutral-200 bg-white px-4 py-3 mt-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[13px] font-semibold text-neutral-900">
+                              입금 확인 (정산 완료)
+                            </p>
+                            <p className="text-[12px] text-neutral-500">
+                              입금이 완료되면 달력의 💸 표시가 사라져요.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                formData.paybackConfirmed
+                                  ? 'bg-orange-100 text-orange-700'
+                                  : 'bg-neutral-100 text-neutral-500'
+                              }`}
+                            >
+                              {formData.paybackConfirmed ? '완료' : '미완료'}
+                            </span>
+                            <Switch
+                              checked={formData.paybackConfirmed || false}
+                              onCheckedChange={(checked) =>
+                                handlePaybackConfirmedChange(Boolean(checked))
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               </section>

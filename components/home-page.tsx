@@ -133,7 +133,7 @@ const formatDotMonthDay = (dateStr: string) => {
   return `${Number(month)}.${Number(day)}`;
 };
 
-type ViewFilter = 'TODO' | 'DONE';
+type ViewFilter = 'TODO' | 'DONE' | 'PAYBACK';
 type SortOption =
   | 'DEADLINE_SOON'
   | 'DEADLINE_LATE'
@@ -221,7 +221,7 @@ export default function HomePage({
   const [platformFilter, setPlatformFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [paybackFilter, setPaybackFilter] = useState<'ALL' | 'ONLY'>('ALL');
+  // viewFilter에 PAYBACK 탭이 있어 별도 paybackFilter는 사용하지 않음
   const [showAllOnSelectedDate, setShowAllOnSelectedDate] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -329,6 +329,9 @@ export default function HomePage({
     () => schedules.some((schedule) => isTodoSchedule(schedule)),
     [schedules]
   );
+
+  const isPaybackSchedule = (schedule: Schedule) =>
+    Boolean(schedule.paybackExpected && !schedule.paybackConfirmed);
 
   const isOverdueSchedule = (schedule: Schedule) => {
     if (schedule.dead && schedule.dead < today && schedule.status !== '완료') return true;
@@ -469,23 +472,25 @@ export default function HomePage({
         (schedule) =>
           schedule.dead === selectedDate ||
           schedule.visit === selectedDate ||
-          (schedule.additionalDeadlines || []).some((deadline) => deadline.date === selectedDate)
+          (schedule.additionalDeadlines || []).some((deadline) => deadline.date === selectedDate) ||
+          (schedule.paybackExpected &&
+            !schedule.paybackConfirmed &&
+            (schedule.paybackExpectedDate || schedule.dead) === selectedDate)
       )
     : schedules;
 
   const viewBaseList =
     viewFilter === 'TODO'
       ? baseList.filter((schedule) => isTodoSchedule(schedule))
-      : baseList.filter((schedule) => isDoneSchedule(schedule));
+      : viewFilter === 'DONE'
+        ? baseList.filter((schedule) => isDoneSchedule(schedule))
+        : baseList.filter((schedule) => isPaybackSchedule(schedule));
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
   const filteredSchedules = viewBaseList.filter((schedule) => {
     // 1. 플랫폼
     if (platformFilter !== 'ALL' && schedule.platform !== platformFilter) return false;
-
-    // 2. 페이백
-    if (paybackFilter === 'ONLY' && !schedule.paybackExpected) return false;
 
     // 3. 진행상태
     if (statusFilter === 'OVERDUE') {
@@ -584,31 +589,30 @@ export default function HomePage({
 
   const todoCount = baseList.filter((schedule) => isTodoSchedule(schedule)).length;
   const doneCount = baseList.filter((schedule) => isDoneSchedule(schedule)).length;
+  const paybackCount = baseList.filter((schedule) => isPaybackSchedule(schedule)).length;
   const visitCount = filteredSchedules.filter((schedule) =>
     isDateFiltered ? schedule.visit === selectedDate : schedule.visit
   ).length;
 
   const deadlineCount = filteredSchedules.reduce((count, schedule) => {
     let c = 0;
-    if (isDateFiltered) {
-      if (schedule.dead === selectedDate) c++;
-      const additionalCount = (schedule.additionalDeadlines || []).filter(
-        (deadline) => deadline.date === selectedDate
-      ).length;
-      return count + c + additionalCount;
-    } else {
-      if (schedule.dead) c++;
-      const additionalCount = (schedule.additionalDeadlines || []).filter(
-        (deadline) => deadline.date
-      ).length;
-      return count + c + additionalCount;
-    }
-  }, 0);
+      if (isDateFiltered) {
+        if (schedule.dead === selectedDate) c++;
+        const additionalCount = (schedule.additionalDeadlines || []).filter(
+          (deadline) => deadline.date === selectedDate
+        ).length;
+        return count + c + additionalCount;
+      } else {
+        if (schedule.dead) c++;
+        const additionalCount = (schedule.additionalDeadlines || []).filter((deadline) => deadline.date)
+          .length;
+        return count + c + additionalCount;
+      }
+    }, 0);
 
   const isFilterActive =
     sortOption !== 'DEADLINE_SOON' ||
     platformFilter !== 'ALL' ||
-    paybackFilter !== 'ALL' ||
     statusFilter !== 'ALL' ||
     categoryFilter !== 'ALL' ||
     Boolean(searchQuery.trim());
@@ -654,13 +658,16 @@ export default function HomePage({
       (schedule) =>
         schedule.dead === dateStr ||
         schedule.visit === dateStr ||
-        (schedule.additionalDeadlines || []).some((deadline) => deadline.date === dateStr)
+        (schedule.additionalDeadlines || []).some((deadline) => deadline.date === dateStr) ||
+        (schedule.paybackExpected &&
+          !schedule.paybackConfirmed &&
+          (schedule.paybackExpectedDate || schedule.dead) === dateStr)
     );
     const hasTodoForDate = schedulesForDate.some((schedule) => isTodoSchedule(schedule));
     const hasDoneForDate = schedulesForDate.some((schedule) => isDoneSchedule(schedule));
-    const nextFilter = hasTodoForDate ? 'TODO' : hasDoneForDate ? 'DONE' : 'TODO';
+    const hasPaybackForDate = schedulesForDate.some((schedule) => isPaybackSchedule(schedule));
+    const nextFilter = hasPaybackForDate ? 'PAYBACK' : hasTodoForDate ? 'TODO' : hasDoneForDate ? 'DONE' : 'TODO';
     setPlatformFilter('ALL');
-    setPaybackFilter('ALL');
     setStatusFilter('ALL');
     setCategoryFilter('ALL');
     setSearchQuery('');
@@ -684,7 +691,6 @@ export default function HomePage({
     setViewFilter('TODO');
     setSortOption('DEADLINE_SOON');
     setPlatformFilter('ALL');
-    setPaybackFilter('ALL');
     setStatusFilter('ALL');
     setCategoryFilter('ALL');
     setSearchQuery('');
@@ -708,15 +714,18 @@ export default function HomePage({
       (schedule) =>
         schedule.dead === today ||
         schedule.visit === today ||
-        (schedule.additionalDeadlines || []).some((deadline) => deadline.date === today)
+        (schedule.additionalDeadlines || []).some((deadline) => deadline.date === today) ||
+        (schedule.paybackExpected &&
+          !schedule.paybackConfirmed &&
+          (schedule.paybackExpectedDate || schedule.dead) === today)
     );
     const hasTodoForToday = schedulesForToday.some((schedule) => isTodoSchedule(schedule));
     const hasDoneForToday = schedulesForToday.some((schedule) => isDoneSchedule(schedule));
-    const nextFilter = hasTodoForToday ? 'TODO' : hasDoneForToday ? 'DONE' : 'TODO';
+    const hasPaybackForToday = schedulesForToday.some((schedule) => isPaybackSchedule(schedule));
+    const nextFilter = hasPaybackForToday ? 'PAYBACK' : hasTodoForToday ? 'TODO' : hasDoneForToday ? 'DONE' : 'TODO';
     setSelectedDate(today);
     setShowAllOnSelectedDate(false);
     handleViewFilterChange(nextFilter);
-    setSortOption('VISIT_SOON');
     setCalendarCtaDate(null);
     setIsCalendarCtaOpen(false);
   };
@@ -746,11 +755,6 @@ export default function HomePage({
     if (statusFilter === 'OVERDUE') return '마감초과';
     if (statusFilter === 'HIDE_OVERDUE') return '마감초과 제외';
     return statusFilter;
-  };
-
-  const getPaybackFilterLabel = () => {
-    if (paybackFilter === 'ONLY') return '페이백 있음';
-    return '페이백';
   };
 
   const handleFeedbackSubmit = async () => {
@@ -788,9 +792,10 @@ export default function HomePage({
   };
 
   const getPageTitle = () => {
-    const statusText = viewFilter === 'TODO' ? '할 일' : '완료';
+    const statusText =
+      viewFilter === 'TODO' ? '할 일' : viewFilter === 'DONE' ? '완료' : '페이백';
 
-    if (isDateFiltered) {
+    if (isDateFiltered && selectedDate) {
       const [_, m, d] = selectedDate.split('-');
       return `${Number(m)}월 ${Number(d)}일 ${statusText}`;
     }
@@ -801,7 +806,7 @@ export default function HomePage({
   const handleViewFilterChange = (filter: ViewFilter) => {
     setViewFilter(filter);
     if (isDateFiltered) {
-      setSortOption('VISIT_SOON');
+      setSortOption(filter === 'PAYBACK' ? 'DEADLINE_SOON' : 'VISIT_SOON');
       return;
     }
     if (filter === 'DONE') {
@@ -825,7 +830,6 @@ export default function HomePage({
       if (checked) {
         setViewFilter('TODO');
         setPlatformFilter('ALL');
-        setPaybackFilter('ALL');
         setStatusFilter('ALL');
         setCategoryFilter('ALL');
         setSearchQuery('');
@@ -837,20 +841,23 @@ export default function HomePage({
         (schedule) =>
           schedule.dead === today ||
           schedule.visit === today ||
-          (schedule.additionalDeadlines || []).some((deadline) => deadline.date === today)
+          (schedule.additionalDeadlines || []).some((deadline) => deadline.date === today) ||
+          (schedule.paybackExpected &&
+            !schedule.paybackConfirmed &&
+            (schedule.paybackExpectedDate || schedule.dead) === today)
       );
       const hasTodoForToday = schedulesForToday.some((schedule) => isTodoSchedule(schedule));
       const hasDoneForToday = schedulesForToday.some((schedule) => isDoneSchedule(schedule));
-      const nextFilter = hasTodoForToday ? 'TODO' : hasDoneForToday ? 'DONE' : 'TODO';
+      const hasPaybackForToday = schedulesForToday.some((schedule) => isPaybackSchedule(schedule));
+      const nextFilter = hasPaybackForToday ? 'PAYBACK' : hasTodoForToday ? 'TODO' : hasDoneForToday ? 'DONE' : 'TODO';
       setSelectedDate(today);
       setViewFilter(nextFilter);
       setPlatformFilter('ALL');
-      setPaybackFilter('ALL');
       setStatusFilter('ALL');
       setCategoryFilter('ALL');
       setSearchQuery('');
       setSearchInput('');
-      setSortOption('VISIT_SOON');
+      setSortOption(nextFilter === 'PAYBACK' ? 'DEADLINE_SOON' : 'VISIT_SOON');
       setCalendarCtaDate(null);
       setIsCalendarCtaOpen(false);
     },
@@ -881,7 +888,6 @@ export default function HomePage({
   }, [
     categoryFilter,
     hasSchedules,
-    paybackFilter,
     platformFilter,
     scrollToFilterHeader,
     searchQuery,
@@ -927,9 +933,11 @@ export default function HomePage({
               {getPageTitle()}
               <span className="text-neutral-900">{filteredSchedules.length}건</span>
             </h1>
-            <p className="mt-1 text-[12px] font-medium text-neutral-500">
-              방문 {visitCount}건 · 마감 {deadlineCount}건
-            </p>
+            {viewFilter !== 'PAYBACK' && (
+              <p className="mt-1 text-[12px] font-medium text-neutral-500">
+                방문 {visitCount}건 · 마감 {deadlineCount}건
+              </p>
+            )}
           </div>
           <div className="flex">
             {isFilterActive && (
@@ -1039,7 +1047,7 @@ export default function HomePage({
                   ref={filterScrollRef}
                   className="flex items-center gap-2 overflow-x-auto py-0.5 pr-6 scrollbar-hide"
                 >
-                  {/* 1. View Filter 버튼 (할 일 / 완료) - 날짜 선택 시에만 카운트 노출 */}
+                  {/* 1. View Filter 버튼 (할 일 / 완료 / 페이백) */}
                   <div className="flex flex-shrink-0 items-center rounded-full bg-neutral-100 p-1 mr-1 h-8">
                     <button
                       onClick={() => handleViewFilterChange('TODO')}
@@ -1050,13 +1058,11 @@ export default function HomePage({
                       }`}
                     >
                       <span>할 일</span>
-                      {isDateFiltered && (
-                        <span
-                          className={`text-[11px] ${viewFilter === 'TODO' ? 'text-orange-600' : 'text-neutral-400'}`}
-                        >
-                          {todoCount}
-                        </span>
-                      )}
+                      <span
+                        className={`text-[11px] ${viewFilter === 'TODO' ? 'text-orange-600' : 'text-neutral-400'}`}
+                      >
+                        {todoCount}
+                      </span>
                     </button>
                     <button
                       onClick={() => handleViewFilterChange('DONE')}
@@ -1067,13 +1073,28 @@ export default function HomePage({
                       }`}
                     >
                       <span>완료</span>
-                      {isDateFiltered && (
-                        <span
-                          className={`text-[11px] ${viewFilter === 'DONE' ? 'text-green-600' : 'text-neutral-400'}`}
-                        >
-                          {doneCount}
-                        </span>
-                      )}
+                      <span
+                        className={`text-[11px] ${viewFilter === 'DONE' ? 'text-green-600' : 'text-neutral-400'}`}
+                      >
+                        {doneCount}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => handleViewFilterChange('PAYBACK')}
+                      className={`rounded-full px-3 h-full flex items-center gap-1.5 text-[12px] font-bold transition-all ${
+                        viewFilter === 'PAYBACK'
+                          ? 'bg-white text-neutral-900 shadow-sm ring-1 ring-black/5'
+                          : 'text-neutral-500 hover:text-neutral-700'
+                      }`}
+                    >
+                      <span className={viewFilter === 'PAYBACK' ? 'text-orange-600' : undefined}>
+                        페이백
+                      </span>
+                      <span
+                        className={`text-[11px] ${viewFilter === 'PAYBACK' ? 'text-orange-600' : 'text-neutral-400'}`}
+                      >
+                        {paybackCount}
+                      </span>
                     </button>
                   </div>
 
@@ -1244,35 +1265,6 @@ export default function HomePage({
                         </SelectContent>
                       </Select>
 
-                      <Select
-                        value={paybackFilter}
-                        onValueChange={(val) => setPaybackFilter(val as any)}
-                      >
-                        <SelectTrigger
-                          size="sm"
-                          className={`h-7 w-fit gap-2 rounded-full border px-3 text-[12px] font-semibold shadow-sm focus:ring-0 ${
-                            paybackFilter !== 'ALL'
-                              ? 'border-orange-200 bg-orange-50 text-orange-800'
-                              : 'border-neutral-200 bg-white text-neutral-700'
-                          }`}
-                        >
-                          <span>{getPaybackFilterLabel()}</span>
-                        </SelectTrigger>
-                        <SelectContent className="rounded-2xl border border-neutral-100 bg-white p-1 shadow-xl">
-                          <div className="px-3 py-2 text-[11px] font-bold text-neutral-400">
-                            페이백 여부
-                          </div>
-                          <SelectItem value="ALL" className="rounded-xl text-[13px] font-medium">
-                            전체 보기
-                          </SelectItem>
-                          <SelectItem
-                            value="ONLY"
-                            className="rounded-xl text-[13px] font-medium text-orange-600"
-                          >
-                            💰 페이백 있는 건만
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
                     </>
                   ) : null}
                 </div>
@@ -1511,9 +1503,6 @@ function CalendarSection({
       if (statusColor) {
         info.ringStatusColors.push(statusColor);
       }
-      if (schedule.paybackExpected && !schedule.paybackConfirmed) {
-        info.hasPaybackPending = true;
-      }
     }
 
     if (schedule.additionalDeadlines && schedule.additionalDeadlines.length > 0) {
@@ -1536,6 +1525,13 @@ function CalendarSection({
           }
         }
       });
+    }
+
+    if (schedule.paybackExpected && !schedule.paybackConfirmed) {
+      const paybackDate = schedule.paybackExpectedDate || schedule.dead;
+      if (paybackDate) {
+        ensureDayInfo(paybackDate).hasPaybackPending = true;
+      }
     }
 
     if (schedule.visit) {
@@ -1624,7 +1620,10 @@ function CalendarSection({
           const dayInfo = scheduleByDate[dateStr];
           const hasSchedule =
             !!dayInfo &&
-            (dayInfo.deadlineCount > 0 || dayInfo.visitCount > 0 || dayInfo.hasCompleted);
+            (dayInfo.deadlineCount > 0 ||
+              dayInfo.visitCount > 0 ||
+              dayInfo.hasCompleted ||
+              dayInfo.hasPaybackPending);
           const isTodayDate = isToday(day);
           const indicatorType = dayInfo?.overdue
             ? 'overdue'
