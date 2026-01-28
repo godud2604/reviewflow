@@ -217,9 +217,7 @@ export default function LandingPage() {
           className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center px-5"
           style={{ zIndex: Z_INDEX.heroOverlay }}
         >
-          <div
-            className="w-90 max-w-sm bg-white rounded-2xl p-5 shadow-2xl"
-          >
+          <div className="w-90 max-w-sm bg-white rounded-2xl p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-bold text-orange-600 mb-1">사전신청</p>
@@ -457,12 +455,6 @@ export default function LandingPage() {
               </div>
             )}
           </div>
-          <p
-            className="mt-4 text-sm font-semibold text-[#FF5722] animate-fade-in"
-            style={{ animationDelay: '0.6s' }}
-          >
-            회원가입 시 모든 기능을 1개월 무료로 이용할 수 있어요.
-          </p>
         </div>
       </section>
 
