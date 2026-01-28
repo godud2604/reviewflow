@@ -52,9 +52,6 @@ export interface UserProfile {
   snsTiktok: string | null;
   snsYoutube: string | null;
   recentCampaigns: CampaignEntry[];
-  tier: string;
-  tierDurationMonths: number;
-  tierExpiresAt: string | null;
 }
 
 interface UseUserProfileOptions {
@@ -185,9 +182,6 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
                 recentCampaigns: Array.isArray(newProfile.recent_campaigns)
                   ? newProfile.recent_campaigns
                   : [],
-                tier: newProfile.tier ?? 'free',
-                tierDurationMonths: newProfile.tier_duration_months ?? 0,
-                tierExpiresAt: newProfile.tier_expires_at ?? null,
               });
               hasFetchedRef.current = true;
             }
@@ -224,9 +218,6 @@ export function useUserProfile(options: UseUserProfileOptions = {}): UseUserProf
             snsTiktok: data.sns_tiktok ?? null,
             snsYoutube: data.sns_youtube ?? null,
             recentCampaigns: Array.isArray(data.recent_campaigns) ? data.recent_campaigns : [],
-            tier: data.tier ?? 'free',
-            tierDurationMonths: data.tier_duration_months ?? 0,
-            tierExpiresAt: data.tier_expires_at ?? null,
           });
           hasFetchedRef.current = true;
         }

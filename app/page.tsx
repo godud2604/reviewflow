@@ -7,12 +7,10 @@ import StatsPage, { StatsPageSkeleton } from '@/components/stats-page';
 import ProfilePage, { ProfilePageSkeleton } from '@/components/profile-page';
 import PortfolioPage from '@/components/portfolio-page';
 import NavigationBar from '@/components/navigation-bar';
-import MissionCtaBanner from '@/components/mission-cta-banner';
 import ScheduleModal from '@/components/schedule-modal';
 import TodoModal from '@/components/todo-modal';
 import LandingPage from '@/components/landing-page';
 import GlobalHeader from '@/components/global-header';
-import LaunchEventBanner from '@/components/launch-event-banner';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useSchedules } from '@/hooks/use-schedules';
@@ -20,7 +18,6 @@ import { useTodos } from '@/hooks/use-todos';
 import { useChannels } from '@/hooks/use-channels';
 import { useFeaturedPosts } from '@/hooks/use-featured-posts';
 import { useExtraIncomes } from '@/hooks/use-extra-incomes';
-import { resolveTier } from '@/lib/tier';
 import { isInPwaDisplayMode, isNativeAppWebView } from '@/lib/app-launch';
 import type { Schedule } from '@/types';
 
@@ -79,18 +76,13 @@ function PageContent() {
   }, [authLoading, isAppEntry, router, searchParams, user]);
 
   const isLoggedIn = !!user && !isLandingPage;
-  const { profile, refetch: refetchUserProfile } = useUserProfile({ enabled: isLoggedIn });
-  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const { profile } = useUserProfile({ enabled: isLoggedIn });
 
   useEffect(() => {
     if (currentPage !== 'stats') return;
     if (!mainScrollRef.current) return;
     mainScrollRef.current.scrollTo({ top: 0, behavior: 'auto' });
   }, [currentPage]);
-  const { isPro } = resolveTier({
-    profileTier: profile?.tier ?? undefined,
-    metadata,
-  });
 
   const {
     schedules,
@@ -402,9 +394,6 @@ function PageContent() {
               onProfile={handleGoProfile}
             />
           )}
-          {/* 미션 CTA 띠배너: header 바로 아래에만 노출 */}
-          {currentPage === 'home' && <MissionCtaBanner />}
-          {!showPortfolio && <LaunchEventBanner />}
           {showPortfolio ? (
             <PortfolioPage
               schedules={schedules}
@@ -437,18 +426,16 @@ function PageContent() {
                   schedules={schedules}
                   onScheduleItemClick={(schedule) => handleOpenScheduleModal(schedule.id)}
                   isScheduleModalOpen={isScheduleModalOpen}
-                  isPro={isPro}
                 />
               )}
 
               {currentPage === 'profile' && (
-                <ProfilePage profile={profile} refetchUserProfile={refetchUserProfile} />
+                <ProfilePage profile={profile} />
               )}
             </>
           )}
         </main>
 
-        {/* 하단 고정 미션 CTA 배너 (PRO 연장) */}
         <NavigationBar
           currentPage={currentPage}
           onPageChange={handlePageChange}

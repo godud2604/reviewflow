@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Bell, Rocket, Settings } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
@@ -18,22 +17,15 @@ type GlobalHeaderProps = {
 };
 
 export default function GlobalHeader({ title, onNotifications, onProfile }: GlobalHeaderProps) {
-  const router = useRouter();
   const [showKakaoCta, setShowKakaoCta] = useState(false);
-  const [isNativeApp, setIsNativeApp] = useState<boolean | null>(null);
+  const [isNativeApp] = useState(() => isNativeAppWebView());
   const [showAppModal, setShowAppModal] = useState(false);
   const { user } = useAuth();
   const userId = user?.id;
+  const isKakaoCtaVisible = Boolean(userId) && showKakaoCta;
 
   useEffect(() => {
-    setIsNativeApp(isNativeAppWebView());
-  }, []);
-
-  useEffect(() => {
-    if (!userId) {
-      setShowKakaoCta(false);
-      return;
-    }
+    if (!userId) return;
 
     let isMounted = true;
     const fetchTutorialStatus = async () => {
@@ -62,7 +54,7 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
   }, [userId]);
 
   const handleNotificationsClick = async () => {
-    if (showKakaoCta && userId) {
+    if (isKakaoCtaVisible && userId) {
       const supabase = getSupabaseClient();
       try {
         await supabase.from('tutorial_progress').upsert(
@@ -88,17 +80,6 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
           <h1 className="text-[20px] font-semibold text-neutral-900">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => router.push('/event')}
-            className="group flex h-10 items-center gap-2 rounded-full border border-orange-200 bg-white px-3 text-[12px] font-semibold text-orange-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50"
-            aria-label="미션 페이지로 이동"
-          >
-            <span className="flex h-6 items-center justify-center rounded-full text-[16px] transition">
-              🎯
-            </span>
-            미션
-          </button>
           {isNativeApp === false && (
             <>
               <button
@@ -128,21 +109,8 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
                       variant="outline"
                       className="flex-1 text-xs"
                       onClick={() => {
-                        const userAgent =
-                          typeof window !== 'undefined' ? window.navigator.userAgent : '';
-                        const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
-                        if (isIOS) {
-                          window.location.href = 'reviewflow://event';
-                          setTimeout(() => {
-                            window.location.href =
-                              'https://apps.apple.com/kr/app/reviewflow/id6757174544';
-                          }, 1000);
-                        } else {
-                          window.open(
-                            'https://apps.apple.com/kr/app/reviewflow/id6757174544',
-                            '_blank'
-                          );
-                        }
+                        const url = 'https://apps.apple.com/kr/app/reviewflow/id6757174544';
+                        window.open(url, '_blank');
                       }}
                     >
                       iOS 앱 이동
@@ -151,18 +119,9 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
                       variant="outline"
                       className="flex-1 text-xs"
                       onClick={() => {
-                        const userAgent =
-                          typeof window !== 'undefined' ? window.navigator.userAgent : '';
-                        const isAndroid = /Android/i.test(userAgent);
-                        if (isAndroid) {
-                          window.location.href =
-                            'intent://event#Intent;scheme=reviewflow;package=com.reviewflow.reviewflow;S.browser_fallback_url=https://play.google.com/store/apps/details?id=com.reviewflow.reviewflow;end';
-                        } else {
-                          window.open(
-                            'https://play.google.com/store/apps/details?id=com.reviewflow.reviewflow',
-                            '_blank'
-                          );
-                        }
+                        const url =
+                          'https://play.google.com/store/apps/details?id=com.reviewflow.reviewflow';
+                        window.open(url, '_blank');
                       }}
                     >
                       Android 앱 이동
@@ -181,7 +140,7 @@ export default function GlobalHeader({ title, onNotifications, onProfile }: Glob
             >
               <Bell className="h-5 w-5" />
             </button>
-            {showKakaoCta && (
+            {isKakaoCtaVisible && (
               <>
                 <span className="pointer-events-none absolute -right-1 -top-1 h-3 w-3 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 shadow-[0_0_0_2px_rgba(247,247,248,1)] animate-pulse" />
                 <div className="pointer-events-none absolute right-0 top-12 w-[220px] rounded-xl bg-white/95 px-3 py-2 text-[12px] text-neutral-800 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur overflow-hidden">

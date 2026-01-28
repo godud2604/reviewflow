@@ -1024,21 +1024,21 @@ export default function LandingPage() {
           </h2>
           <p className="text-base md:text-lg text-[#6B7684] mb-12">
             누구나 무료로 시작할 수 있어요.
-            <br />더 강력한 기능이 필요하다면 PRO를 선택하세요.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
-            {/* FREE Plan */}
-            <div className="bg-white rounded-[32px] p-10 border border-gray-100 flex flex-col items-start text-left hover:bg-white transition">
-              <h3 className="text-2xl font-bold mb-2 text-[#191F28]">FREE</h3>
-              <p className="text-[#6B7684] mb-6">기본 기능을 모두 무료로 사용하세요.</p>
-              <ul className="text-[16px] text-[#4E5968] space-y-3 mb-8 flex-grow">
+          <div className="mt-10 max-w-xl mx-auto">
+            <div className="bg-white rounded-[32px] p-10 border border-gray-100 flex flex-col items-start text-left">
+              <h3 className="text-2xl font-bold mb-2 text-[#191F28]">무료</h3>
+              <p className="text-[#6B7684] mb-6">리뷰플로우의 모든 기능을 무료로 사용하세요.</p>
+              <ul className="text-[16px] text-[#4E5968] space-y-3 mb-8">
                 <li>✔ 체험단 일정 관리</li>
                 <li>✔ 캘린더 뷰 모드</li>
                 <li>✔ 일정 리스트 (할 일/완료)</li>
                 <li>✔ 일정 리스트 검색 및 필터</li>
-                <li>✔ 이번 달 및 예정 수익/비용 통계</li>
+                <li>✔ 전체 기간 수익/비용 통계</li>
                 <li>✔ 월별 성장 추이 내역 확인</li>
+                <li>✔ 카카오 알림톡 요약 제공</li>
+                <li>✔ 활동 내역 엑셀 다운로드</li>
               </ul>
               <div className="w-full pt-6 border-t border-gray-200">
                 <div className="text-3xl font-bold mb-6 text-[#191F28]">₩0</div>
@@ -1046,41 +1046,7 @@ export default function LandingPage() {
                   onClick={handleFreeTrial}
                   className="w-full bg-[#F9FAFB] border border-gray-300 text-[#191F28] px-6 py-4 rounded-2xl text-lg font-semibold hover:bg-gray-50 transition cursor-pointer"
                 >
-                  무료 체험하기
-                </button>
-              </div>
-            </div>
-
-            {/* PRO Plan */}
-            <div className="bg-white rounded-[32px] p-10 border-2 border-[#FF5722] shadow-xl flex flex-col items-start text-left relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-[#FF5722] text-white text-xs font-bold px-4 py-2 rounded-bl-2xl">
-                POPULAR
-              </div>
-              <h3 className="text-2xl font-bold mb-2 text-[#FF5722]">PRO 기능</h3>
-              <p className="text-[#6B7684] mb-6">더 깊고 편리한 리뷰 관리 기능</p>
-              <ul className="text-[16px] text-[#333D4B] space-y-3 mb-9 flex-grow font-medium">
-                <li>✔ 체험단 일정 관리</li>
-                <li>✔ 캘린더 뷰 모드</li>
-                <li>✔ 일정 리스트 (할 일/완료)</li>
-                <li>✔ 일정 리스트 검색 및 필터</li>
-                <li>✔ 과거 포함 전체 수익/비용 통계</li>
-                <li>✔ 월별 성장 추이 내역 확인</li>
-                <li>✔ 카카오 알림톡으로 요약 제공 </li>
-                <li className="pl-5 mt-[-4px] text-xs">
-                  방문, 마감 일정 또는 마감 초과가 있는 날, <br />
-                  아침에 카카오 알림톡으로 요약해드려요.
-                </li>
-                <li>✔ 활동 내역 엑셀 다운로드</li>
-              </ul>
-              <div className="w-full pt-6 border-t border-gray-100">
-                <div className="flex items-end gap-2 mb-5">
-                  <span className="text-3xl font-bold text-[#191F28]">₩2,900</span>
-                </div>
-                <button
-                  onClick={handleFreeTrial}
-                  className="w-full bg-[#FF5722] text-white px-6 py-4 rounded-2xl text-lg font-bold shadow-lg shadow-orange-500/30 hover:bg-[#E64A19] transition cursor-pointer"
-                >
-                  1개월 무료로 시작하기
+                  무료로 시작하기
                 </button>
               </div>
             </div>
@@ -1100,18 +1066,8 @@ export default function LandingPage() {
                 정말 무료로 사용할 수 있나요?
               </summary>
               <p className="mt-4 text-[#6B7684] text-sm md:text-base leading-relaxed">
-                네! 기본 기능은 완전 무료입니다. 일정 관리, 수익 조회, 이번달 통계 등 핵심 기능을
-                모두 사용하실 수 있어요. 지금 바로 회원가입 후 PRO 1개월 무료 혜택으로 이용해 보세요
-                :)
-              </p>
-            </details>
-            <details className="bg-white rounded-2xl p-6 shadow-sm">
-              <summary className="font-bold text-[#191F28] cursor-pointer text-sm md:text-base">
-                PRO 버전은 언제 필요한가요?
-              </summary>
-              <p className="mt-4 text-[#6B7684] text-sm md:text-base leading-relaxed">
-                마감일·방문일·마감 초과 알림을 카카오 알림톡으로 받고 싶을 때 PRO가 필요해요. 매월
-                가계부처럼 정리해보고 싶을 때도 PRO가 잘 맞아요.
+                네! 리뷰플로우의 기능은 모두 무료입니다. 일정 관리, 수익 조회, 통계, 알림, 다운로드
+                기능까지 전부 사용하실 수 있어요.
               </p>
             </details>
 

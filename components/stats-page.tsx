@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Schedule, ExtraIncome, MonthlyGrowth, HistoryView } from '@/types';
 import { useExtraIncomes } from '@/hooks/use-extra-incomes';
 import ExtraIncomeModal from './extra-income-modal';
@@ -9,15 +8,6 @@ import IncomeHistoryModal from './income-history-modal';
 import { Z_INDEX } from '@/lib/z-index';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import {
   buildIncomeDetailsFromLegacy,
   parseIncomeDetailsJson,
@@ -28,6 +18,43 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useToast } from '@/hooks/use-toast';
 
 const incomeTutorialStorageKey = 'reviewflow-stats-income-tutorial-shown';
+const ALL_MONTH_KEY = 'all';
+
+const parseDateValue = (value?: string) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getMonthStartDateValue = (monthKey: string) => {
+  if (monthKey === ALL_MONTH_KEY) return null;
+  const date = new Date(monthKey);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatFullMonthLabel = (key: string) => {
+  if (key === ALL_MONTH_KEY) return '전체';
+  const date = getMonthStartDateValue(key);
+  if (!date) return key;
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
+};
+
+const formatMonthButtonLabel = (key: string) => {
+  if (key === ALL_MONTH_KEY) return '전체';
+  const date = getMonthStartDateValue(key);
+  if (!date) return key;
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  return `${date.getFullYear()}.${month}`;
+};
+
+const formatShortMonthLabel = (key: string) => {
+  const date = getMonthStartDateValue(key);
+  if (!date) return '';
+  return `${date.getMonth() + 1}월`;
+};
+
+const getScheduleDate = (schedule: Schedule) =>
+  parseDateValue(schedule.visit) || parseDateValue(schedule.dead);
 
 // --- [신규 컴포넌트] 스크롤 가능한 리스트 래퍼 (더보기 버튼 포함) ---
 function ScrollableList({
@@ -104,7 +131,6 @@ type StatsPageProps = {
   schedules: Schedule[];
   onScheduleItemClick: (schedule: Schedule) => void;
   isScheduleModalOpen: boolean;
-  isPro: boolean;
 };
 
 export function StatsPageSkeleton() {
@@ -133,7 +159,6 @@ export default function StatsPage({
   schedules,
   onScheduleItemClick,
   isScheduleModalOpen,
-  isPro,
 }: StatsPageProps) {
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -142,10 +167,8 @@ export default function StatsPage({
   const [editingExtraIncome, setEditingExtraIncome] = useState<ExtraIncome | null>(null);
   const [historyView, setHistoryView] = useState<HistoryView>('all');
   const [isCompletedTooltipOpen, setIsCompletedTooltipOpen] = useState(false);
-  const [showProGateModal, setShowProGateModal] = useState(false);
   const historyDisabled = showIncomeModal || isScheduleModalOpen;
   const cardShadow = 'shadow-[0_14px_40px_rgba(18,34,64,0.08)]';
-  const router = useRouter();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
@@ -174,59 +197,25 @@ export default function StatsPage({
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
   const currentMonthKey = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
-  const allKey = 'all';
   const [selectedMonthKey, setSelectedMonthKey] = useState(currentMonthKey);
 
-  const parseDate = (value?: string) => {
-    if (!value) return null;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-  };
-
-  const getMonthStartDate = (monthKey: string) => {
-    if (monthKey === allKey) return null;
-    const date = new Date(monthKey);
-    return Number.isNaN(date.getTime()) ? null : date;
-  };
-
-  const selectedMonthDate = useMemo(() => getMonthStartDate(selectedMonthKey), [selectedMonthKey]);
-  const isAllSelected = selectedMonthKey === allKey;
-  const isDateInSelectedMonth = (date: Date | null) => {
+  const selectedMonthDate = useMemo(
+    () => getMonthStartDateValue(selectedMonthKey),
+    [selectedMonthKey]
+  );
+  const isAllSelected = selectedMonthKey === ALL_MONTH_KEY;
+  const isDateInSelectedMonth = useCallback((date: Date | null) => {
     if (!date || !selectedMonthDate) return false;
     return (
       date.getFullYear() === selectedMonthDate.getFullYear() &&
       date.getMonth() === selectedMonthDate.getMonth()
     );
-  };
-
-  const formatFullMonthLabel = (key: string) => {
-    if (key === allKey) return '전체';
-    const date = getMonthStartDate(key);
-    if (!date) return key;
-    return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
-  };
-
-  const formatMonthButtonLabel = (key: string) => {
-    if (key === allKey) return '전체';
-    const date = getMonthStartDate(key);
-    if (!date) return key;
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    return `${date.getFullYear()}.${month}`;
-  };
-
-  const formatShortMonthLabel = (key: string) => {
-    const date = getMonthStartDate(key);
-    if (!date) return '';
-    return `${date.getMonth() + 1}월`;
-  };
+  }, [selectedMonthDate]);
 
   const selectedMonthLabel = formatFullMonthLabel(selectedMonthKey);
   const selectedMonthLabelShort = formatShortMonthLabel(selectedMonthKey);
   const displaySelectedMonthLabel = selectedMonthLabel || '선택한 달';
   const displaySelectedRangeLabel = isAllSelected ? '여태까지' : displaySelectedMonthLabel;
-
-  const getScheduleDate = (schedule: Schedule) =>
-    parseDate(schedule.visit) || parseDate(schedule.dead);
 
   const createCategoryMap = (): Record<Schedule['category'], number> => ({
     '맛집/식품': 0,
@@ -276,10 +265,6 @@ export default function StatsPage({
     return deleteExtraIncome(id);
   };
 
-  const openProGateModal = () => {
-    setShowProGateModal(true);
-  };
-
   const handleHistoryScheduleClick = (schedule: Schedule) => {
     onScheduleItemClick(schedule);
   };
@@ -310,15 +295,15 @@ export default function StatsPage({
       isAllSelected
         ? visibleSchedules
         : visibleSchedules.filter((schedule) => isDateInSelectedMonth(getScheduleDate(schedule))),
-    [visibleSchedules, selectedMonthKey, selectedMonthDate, isAllSelected]
+    [visibleSchedules, isAllSelected, isDateInSelectedMonth]
   );
 
   const selectedMonthExtraIncomes = useMemo(
     () =>
       isAllSelected
         ? extraIncomes
-        : extraIncomes.filter((income) => isDateInSelectedMonth(parseDate(income.date))),
-    [extraIncomes, selectedMonthKey, selectedMonthDate, isAllSelected]
+        : extraIncomes.filter((income) => isDateInSelectedMonth(parseDateValue(income.date))),
+    [extraIncomes, isAllSelected, isDateInSelectedMonth]
   );
 
   const groupedExtraIncomes = useMemo(() => {
@@ -484,14 +469,13 @@ export default function StatsPage({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const seen = window.localStorage.getItem(incomeTutorialStorageKey);
-    if (seen === '1' || hasAnyExtraIncome) {
-      setShowIncomeTutorial(false);
-      if (hasAnyExtraIncome) {
-        window.localStorage.setItem(incomeTutorialStorageKey, '1');
-      }
-      return;
+    const nextShow = !(seen === '1' || hasAnyExtraIncome);
+    Promise.resolve().then(() => {
+      setShowIncomeTutorial(nextShow);
+    });
+    if (hasAnyExtraIncome) {
+      window.localStorage.setItem(incomeTutorialStorageKey, '1');
     }
-    setShowIncomeTutorial(true);
   }, [hasAnyExtraIncome]);
 
   useEffect(() => {
@@ -525,7 +509,7 @@ export default function StatsPage({
       return monthMap.get(key)!;
     };
     visibleSchedules.forEach((s) => {
-      const date = parseDate(s.visit) || parseDate(s.dead);
+      const date = parseDateValue(s.visit) || parseDateValue(s.dead);
       if (!date) return;
       const key = toMonthKey(date);
       const entry = ensureEntry(key);
@@ -534,7 +518,7 @@ export default function StatsPage({
       entry.costTotal += toNumber(s.cost);
     });
     extraIncomes.forEach((income) => {
-      const date = parseDate(income.date);
+      const date = parseDateValue(income.date);
       if (!date) return;
       const key = toMonthKey(date);
       const entry = ensureEntry(key);
@@ -558,14 +542,14 @@ export default function StatsPage({
     );
     const options = keys
       .map((key) => {
-        const date = getMonthStartDate(key);
+        const date = getMonthStartDateValue(key);
         if (!date) return null;
         return { key, date, label: formatMonthButtonLabel(key) };
       })
       .filter((option): option is { key: string; date: Date; label: string } => option !== null)
       .sort((a, b) => b.date.getTime() - a.date.getTime());
 
-    return [{ key: allKey, label: '전체' }, ...options];
+    return [{ key: ALL_MONTH_KEY, label: '전체' }, ...options];
   }, [monthlyGrowth, currentMonthKey]);
 
   return (
@@ -582,35 +566,19 @@ export default function StatsPage({
               className="flex-1 flex gap-2 overflow-x-auto pb-1 px-5 -mx-5 scrollbar-hide snap-x mr-0"
             >
               {monthOptions.map((option) => {
-                const isProOnlyOption = option.key === allKey || option.key < currentMonthKey;
-                const isMonthLocked = !isPro && isProOnlyOption;
-                const proBadgeClass =
-                  selectedMonthKey === option.key
-                    ? 'bg-white/20 text-white'
-                    : 'bg-[#fff4d7] text-[#b45309]';
                 return (
                   <button
                     key={option.key}
                     onClick={() => {
-                      if (isMonthLocked) {
-                        openProGateModal();
-                        return;
-                      }
                       setSelectedMonthKey(option.key);
                     }}
-                    aria-disabled={isMonthLocked}
                     className={`mt-1 flex-none snap-start rounded-full px-4 py-2 text-xs font-semibold transition whitespace-nowrap flex items-center gap-2 ${
                       selectedMonthKey === option.key
                         ? 'bg-[#0f172a] text-white shadow-md'
                         : 'bg-white text-[#1f2937] border border-[#e5e7eb]'
-                    } ${isMonthLocked ? 'opacity-50 cursor-pointer' : ''}`}
+                    }`}
                   >
                     <span>{option.label}</span>
-                    {isProOnlyOption && (
-                      <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${proBadgeClass}`}>
-                        PRO
-                      </span>
-                    )}
                   </button>
                 );
               })}
@@ -1030,7 +998,6 @@ export default function StatsPage({
           monthlyGrowth={monthlyGrowth}
           selectedMonthKey={selectedMonthKey}
           selectedMonthLabel={selectedMonthLabelShort || displaySelectedMonthLabel}
-          isPro={isPro}
           isAllSelected={isAllSelected}
         />
       </div>
@@ -1056,36 +1023,6 @@ export default function StatsPage({
         isDisabled={historyDisabled}
       />
 
-      <Dialog open={showProGateModal} onOpenChange={setShowProGateModal}>
-        <DialogContent className="max-w-[360px] rounded-[24px] p-6">
-          <DialogHeader className="text-left">
-            <DialogTitle className="text-[16px] font-bold text-[#0f172a]">
-              PRO 기능이에요
-            </DialogTitle>
-            <DialogDescription className="text-[12.5px] text-[#6b7280] leading-relaxed">
-              전체 기간과 이전 달 통계는 PRO에서 제공돼요.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex flex-col gap-2 sm:flex-col sm:justify-start sm:items-stretch">
-            <Button
-              className="h-11 w-full rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600"
-              onClick={() => {
-                setShowProGateModal(false);
-                router.push('/event');
-              }}
-            >
-              PRO 혜택 받으러가기
-            </Button>
-            <Button
-              variant="outline"
-              className="h-11 w-full rounded-xl text-sm font-semibold"
-              onClick={() => setShowProGateModal(false)}
-            >
-              닫기
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
@@ -1095,14 +1032,12 @@ function TrendChart({
   monthlyGrowth,
   selectedMonthKey,
   selectedMonthLabel,
-  isPro,
   isAllSelected,
 }: {
   currentMonthValue: number;
   monthlyGrowth: MonthlyGrowth[];
   selectedMonthKey: string;
   selectedMonthLabel: string;
-  isPro: boolean;
   isAllSelected: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1135,18 +1070,10 @@ function TrendChart({
   );
 
   const buildChartData = () => {
-    if (isPro) {
-      return uniqueSortedData;
-    }
     if (isAllSelected) {
       return uniqueSortedData;
     }
-    const latest = uniqueSortedData.slice(-4);
-    if (!selectedMonthKey) return latest;
-    if (latest.some((item) => item.monthStart === selectedMonthKey)) return latest;
-    const selectedItem = uniqueSortedData.find((item) => item.monthStart === selectedMonthKey);
-    if (!selectedItem) return latest;
-    return [...latest.slice(1), selectedItem];
+    return uniqueSortedData;
   };
 
   const chartData = buildChartData()
@@ -1197,7 +1124,7 @@ function TrendChart({
       </div>
 
       <div className="text-xs text-[#9ca3af] font-semibold mb-6">
-        {isPro ? '전체 기간의 활동 내역입니다' : '지난 4개월간의 활동입니다'}
+        전체 기간의 활동 내역입니다
       </div>
 
       <div className="relative w-full">

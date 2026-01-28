@@ -85,7 +85,7 @@ const Portfolio = () => {
             <div className="flex-1 space-y-2 text-sm text-white/80">
               <p>전문성 · 성실함 · 반응률 · 크리에이티브 · 신뢰도</p>
               <p className="text-white/90 text-xs">
-                오각형으로 그려진 그래프는 "나는 전반적인 영향력 면에서 균형감 있게 강하다"는
+                오각형으로 그려진 그래프는 &quot;나는 전반적인 영향력 면에서 균형감 있게 강하다&quot;는
                 메시지를 전달합니다.
               </p>
               <div className="flex items-center justify-between text-xs text-white/60">
