@@ -7,12 +7,11 @@ import StatsPage, { StatsPageSkeleton } from '@/components/stats-page';
 import ProfilePage, { ProfilePageSkeleton } from '@/components/profile-page';
 import PortfolioPage from '@/components/portfolio-page';
 import NavigationBar from '@/components/navigation-bar';
-import MissionCtaBanner from '@/components/mission-cta-banner';
 import ScheduleModal from '@/components/schedule-modal';
 import TodoModal from '@/components/todo-modal';
 import LandingPage from '@/components/landing-page';
 import GlobalHeader from '@/components/global-header';
-import LaunchEventBanner from '@/components/launch-event-banner';
+import ProToFreeTransitionModal from '@/components/pro-to-free-transition-modal';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useSchedules } from '@/hooks/use-schedules';
@@ -20,13 +19,15 @@ import { useTodos } from '@/hooks/use-todos';
 import { useChannels } from '@/hooks/use-channels';
 import { useFeaturedPosts } from '@/hooks/use-featured-posts';
 import { useExtraIncomes } from '@/hooks/use-extra-incomes';
-import { resolveTier } from '@/lib/tier';
 import { isInPwaDisplayMode, isNativeAppWebView } from '@/lib/app-launch';
 import type { Schedule } from '@/types';
+
+const PRO_TO_FREE_TRANSITION_DISMISS_KEY = 'reviewflow-pro-to-free-transition-dismissed-v1';
 
 function PageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [showProToFreeModal, setShowProToFreeModal] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -79,18 +80,13 @@ function PageContent() {
   }, [authLoading, isAppEntry, router, searchParams, user]);
 
   const isLoggedIn = !!user && !isLandingPage;
-  const { profile, refetch: refetchUserProfile } = useUserProfile({ enabled: isLoggedIn });
-  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const { profile } = useUserProfile({ enabled: isLoggedIn });
 
   useEffect(() => {
     if (currentPage !== 'stats') return;
     if (!mainScrollRef.current) return;
     mainScrollRef.current.scrollTo({ top: 0, behavior: 'auto' });
   }, [currentPage]);
-  const { isPro } = resolveTier({
-    profileTier: profile?.tier ?? undefined,
-    metadata,
-  });
 
   const {
     schedules,
@@ -129,6 +125,22 @@ function PageContent() {
   };
 
   const isDataLoading = getIsDataLoading();
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isLoggedIn) return;
+    if (isDataLoading) return;
+    if (currentPage !== 'home') return;
+    if (window.localStorage.getItem(PRO_TO_FREE_TRANSITION_DISMISS_KEY) === '1') return;
+    setShowProToFreeModal(true);
+  }, [currentPage, isDataLoading, isLoggedIn]);
+
+  const dismissProToFreeModal = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(PRO_TO_FREE_TRANSITION_DISMISS_KEY, '1');
+    }
+    setShowProToFreeModal(false);
+  };
+
   const scheduleId = searchParams.get('schedule');
   const isNewSchedule = searchParams.get('new') === 'true';
   const initialDeadline = searchParams.get('date') ?? undefined;
@@ -393,6 +405,7 @@ function PageContent() {
   return (
     // 1. 최상단 컨테이너를 fixed로 고정하여 사파리 바운스(튕김)를 방지
     <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
+      <ProToFreeTransitionModal open={showProToFreeModal} onDismiss={dismissProToFreeModal} />
       <div className="w-full md:max-w-[800px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
         <main className="flex-1 flex flex-col overflow-y-auto">
           {showGlobalHeader && (
@@ -402,9 +415,6 @@ function PageContent() {
               onProfile={handleGoProfile}
             />
           )}
-          {/* 미션 CTA 띠배너: header 바로 아래에만 노출 */}
-          {currentPage === 'home' && <MissionCtaBanner />}
-          {!showPortfolio && <LaunchEventBanner />}
           {showPortfolio ? (
             <PortfolioPage
               schedules={schedules}
@@ -437,18 +447,16 @@ function PageContent() {
                   schedules={schedules}
                   onScheduleItemClick={(schedule) => handleOpenScheduleModal(schedule.id)}
                   isScheduleModalOpen={isScheduleModalOpen}
-                  isPro={isPro}
                 />
               )}
 
               {currentPage === 'profile' && (
-                <ProfilePage profile={profile} refetchUserProfile={refetchUserProfile} />
+                <ProfilePage profile={profile} />
               )}
             </>
           )}
         </main>
 
-        {/* 하단 고정 미션 CTA 배너 (PRO 연장) */}
         <NavigationBar
           currentPage={currentPage}
           onPageChange={handlePageChange}

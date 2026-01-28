@@ -303,7 +303,7 @@ export default function ExtraIncomeModal({
               부수입 삭제
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
-              "{extraIncome?.title ?? '부수입'}" 항목을 삭제하시겠습니까?
+              &quot;{extraIncome?.title ?? '부수입'}&quot; 항목을 삭제하시겠습니까?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row justify-center gap-2">

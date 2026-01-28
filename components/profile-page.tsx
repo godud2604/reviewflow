@@ -10,8 +10,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { useSchedules } from '@/hooks/use-schedules';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { UserProfile } from '@/hooks/use-user-profile';
-import { getSupabaseClient } from '@/lib/supabase';
-import { resolveTier } from '@/lib/tier';
 import FeedbackModal from '@/components/feedback-modal';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -65,16 +63,6 @@ const getMonthKeyFromDate = (raw?: string) => {
   return null;
 };
 
-const PRO_TIER_DURATION_MONTHS = 3;
-const COUPON_TIER_DURATION_MONTHS = 3;
-
-const formatExpiryLabel = (value?: string | null) => {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return `${parsed.getFullYear()}년 ${parsed.getMonth() + 1}월 ${parsed.getDate()}일`;
-};
-
 const getDeadlineTimestamp = (schedule: { dead?: string; visit?: string }) => {
   const target = schedule.dead || schedule.visit;
   if (!target) return Number.POSITIVE_INFINITY;
@@ -84,7 +72,6 @@ const getDeadlineTimestamp = (schedule: { dead?: string; visit?: string }) => {
 
 type ProfilePageProps = {
   profile: UserProfile | null;
-  refetchUserProfile: () => Promise<void>;
 };
 
 export function ProfilePageSkeleton() {
@@ -125,7 +112,7 @@ export function ProfilePageSkeleton() {
   );
 }
 
-export default function ProfilePage({ profile, refetchUserProfile }: ProfilePageProps) {
+export default function ProfilePage({ profile }: ProfilePageProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { user: authUser, session, signOut } = useAuth();
@@ -135,21 +122,9 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [downloadScope, setDownloadScope] = useState('all');
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false);
-  const [couponCode, setCouponCode] = useState('');
-  const [isRedeemingCoupon, setIsRedeemingCoupon] = useState(false);
   const [isWithdrawalDialogOpen, setIsWithdrawalDialogOpen] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-
-  const metadata = (authUser?.user_metadata ?? {}) as Record<string, unknown>;
-  const { tier, isPro } = resolveTier({
-    profileTier: profile?.tier ?? undefined,
-    metadata,
-  });
-  const tierDurationMonths = profile?.tierDurationMonths ?? 0;
-  const displayTierDuration =
-    tierDurationMonths > 0 ? tierDurationMonths : PRO_TIER_DURATION_MONTHS;
-  const tierExpiryLabel = formatExpiryLabel(profile?.tierExpiresAt);
 
   const displayName = profile?.nickname ?? '';
   const emailLabel = authUser?.email ?? '등록된 이메일이 없습니다';
@@ -266,85 +241,7 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
     toast({ title: '엑셀 다운로드가 준비되었습니다.' });
   };
 
-  const handleApplyCoupon = async () => {
-    const code = couponCode.trim();
-
-    if (!code) {
-      toast({ title: '쿠폰 코드를 입력해 주세요.', variant: 'destructive' });
-      return;
-    }
-
-    const hasCouponDuration = isPro && tierDurationMonths === COUPON_TIER_DURATION_MONTHS;
-
-    if (hasCouponDuration) {
-      toast({
-        title: '이미 쿠폰 프로 등급입니다.',
-        description: `${COUPON_TIER_DURATION_MONTHS}개월 프로가 이미 적용되어 있습니다.`,
-      });
-      return;
-    }
-
-    if (code.toUpperCase() !== 'HELLO_EARLY') {
-      toast({ title: '유효하지 않은 쿠폰입니다.', variant: 'destructive' });
-      return;
-    }
-
-    if (!authUser?.id) {
-      toast({ title: '로그인이 필요합니다.', variant: 'destructive' });
-      return;
-    }
-
-    setIsRedeemingCoupon(true);
-
-    try {
-      const supabase = getSupabaseClient();
-      const expiresAt = new Date();
-      expiresAt.setMonth(expiresAt.getMonth() + COUPON_TIER_DURATION_MONTHS);
-      const expiresAtIso = expiresAt.toISOString();
-
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .update({
-          tier: 'pro',
-          tier_duration_months: COUPON_TIER_DURATION_MONTHS,
-          tier_expires_at: expiresAtIso,
-        })
-        .eq('id', authUser.id);
-
-      if (profileError) {
-        throw profileError;
-      }
-
-      const { error: metadataError } = await supabase.auth.updateUser({
-        data: {
-          tier: 'pro',
-        },
-      });
-
-      if (metadataError) {
-        throw metadataError;
-      }
-
-      await refetchUserProfile();
-      toast({
-        title: '쿠폰이 적용되었습니다.',
-        description: `${COUPON_TIER_DURATION_MONTHS}개월 동안 PRO 기능을 이용할 수 있습니다.`,
-      });
-      setCouponCode('');
-    } catch (err) {
-      toast({
-        title: '쿠폰 적용에 실패했습니다.',
-        description: err instanceof Error ? err.message : '다시 시도해 주세요.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsRedeemingCoupon(false);
-    }
-  };
-
   const handleGotoNotifications = () => router.push('/notifications');
-  const handleGotoMonthlyReport = () => router.push('/monthlyReport');
-  const handleGotoPricing = () => router.push('/pricing');
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -419,45 +316,15 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
     setIsDownloadDialogOpen(true);
   };
 
-  const handleFeatureClick = (feature: { onClick: () => void; isPro?: boolean }) => {
-    if (feature.isPro && !isPro) {
-      toast({
-        title: 'PRO 전용 기능입니다.',
-        variant: 'destructive',
-        duration: 1000,
-      });
-      return;
-    }
-
-    feature.onClick();
-  };
-
-  const proFeatures = [
+  const features = [
     {
       label: '활동 내역 다운로드',
-      icon: '📂',
-      isPro: true,
       onClick: openDownloadDialog,
     },
     {
       label: '알림 설정',
-      icon: '🔔',
-      isPro: true,
       onClick: handleGotoNotifications,
     },
-    // {
-    //   label: '실시간 랭킹 리포트',
-    //   description: '오늘의 실시간 성장 지표',
-    //   icon: '📊',
-    //   isPro: true,
-    //   onClick: handleGotoMonthlyReport,
-    // },
-    // {
-    //   label: "포트폴리오 보기",
-    //   description: "외부에 공개된 영향력 페이지를 미리 확인해 보세요",
-    //   icon: "🧾",
-    //   onClick: handleGotoPortfolioPreview,
-    // },
   ];
 
   return (
@@ -480,40 +347,6 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
             ) : null}
             <p className="text-[13px] text-neutral-500">{emailLabel}</p>
           </div>
-          {isPro && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-neutral-500">
-              <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">
-                PRO
-              </span>
-              <span>{tierExpiryLabel ? `만료 ${tierExpiryLabel}` : '만료 정보 없음'}</span>
-            </div>
-          )}
-        </section>
-        <section
-          className={`rounded-3xl border px-5 py-4 shadow-sm ${
-            isPro ? 'border-neutral-200 bg-white' : 'border-orange-200 bg-orange-50/70'
-          }`}
-        >
-          <p
-            className={`text-[13px] font-semibold ${
-              isPro ? 'text-neutral-800' : 'text-orange-700'
-            }`}
-          >
-            {isPro ? 'PRO를 더 연장할까요?' : 'PRO 혜택을 사용해 보세요'}
-          </p>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => router.push(isPro ? '/event' : '/event')}
-              className={`w-full rounded-2xl px-4 py-2.5 text-[13px] font-semibold transition ${
-                isPro
-                  ? 'bg-neutral-900 text-white hover:bg-neutral-800'
-                  : 'bg-orange-500 text-white hover:bg-orange-600'
-              }`}
-            >
-              {isPro ? 'PRO 1일 추가하러가기' : 'PRO 혜택 받으러가기'}
-            </button>
-          </div>
         </section>
 
         <button
@@ -532,57 +365,27 @@ export default function ProfilePage({ profile, refetchUserProfile }: ProfilePage
           <span className="text-[18px] text-neutral-300">›</span>
         </button>
         <section className="rounded-3xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
-          <p className="px-2 pb-2 text-[12px] font-semibold text-neutral-500">PRO 기능</p>
-          {proFeatures.map((feature, idx) => {
-            const isFeatureLocked = feature.isPro && !isPro;
+          <p className="px-2 pb-2 text-[12px] font-semibold text-neutral-500">기능</p>
+          {features.map((feature, idx) => {
             return (
               <button
                 key={feature.label}
                 type="button"
-                aria-disabled={isFeatureLocked}
-                onClick={() => handleFeatureClick(feature)}
+                onClick={feature.onClick}
                 className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left transition ${
-                  idx !== proFeatures.length - 1 ? 'border-b border-neutral-100' : ''
-                } ${isFeatureLocked ? 'cursor-not-allowed opacity-60' : 'hover:bg-neutral-50'}`}
+                  idx !== features.length - 1 ? 'border-b border-neutral-100' : ''
+                } hover:bg-neutral-50`}
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-[14px] font-semibold text-neutral-900">
                     {feature.label}
                   </div>
-                  {feature.description && (
-                    <p className="text-[12px] text-neutral-500">{feature.description}</p>
-                  )}
                 </div>
                 <span className="text-[18px] text-neutral-300">›</span>
               </button>
             );
           })}
         </section>
-
-        {/* {isPro && tierDurationMonths !== COUPON_TIER_DURATION_MONTHS && (
-          <section className="rounded-3xl border border-amber-100 bg-white px-5 py-4 shadow-sm">
-            <p className="text-xs font-semibold text-neutral-500">쿠폰 등록</p>
-            <p className="mt-1 text-[12px] font-semibold text-neutral-900">
-              사전신청 시 입력된 이메일로 발송된 쿠폰을 입력하면 등급이 PRO로 전환됩니다.
-            </p>
-            <div className="mt-3 flex gap-2">
-              <input
-                value={couponCode}
-                onChange={(event) => setCouponCode(event.target.value)}
-                placeholder="쿠폰 코드를 입력하세요"
-                className="flex-1 min-w-0 rounded-2xl border border-neutral-200 bg-white px-3 py-3 text-[16px] text-neutral-900 shadow-sm transition focus:border-neutral-300 focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={handleApplyCoupon}
-                disabled={isRedeemingCoupon}
-                className="rounded-2xl bg-neutral-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isRedeemingCoupon ? '적용 중...' : '적용'}
-              </button>
-            </div>
-          </section>
-        )} */}
 
         <button
           type="button"

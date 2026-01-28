@@ -57,7 +57,6 @@ const MonthlyReport = () => {
   return (
     <div className="min-h-screen bg-[#101012] text-white font-sans">
       <div className="mx-auto w-full max-w-[600px] px-6 py-2">
-        {/* PRO Badge & Header */}
         <div className="flex items-center justify-between pt-7 mb-3">
           <button
             type="button"
@@ -71,9 +70,6 @@ const MonthlyReport = () => {
         <header className="mb-4 pt-4 flex justify-between items-end">
           <div>
             <div className="flex items-center gap-1.5 mb-2">
-              <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-[10px] font-black px-2 py-0.5 rounded-sm text-black">
-                PRO
-              </span>
               <span className="text-gray-500 text-xs font-medium">실시간 업데이트 중</span>
             </div>
             {/* <h1 className="text-2xl font-bold tracking-tight leading-tight">
