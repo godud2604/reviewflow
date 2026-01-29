@@ -174,6 +174,14 @@ export default function StatsPage({
   const didAutoSelectDefaultMonthRef = useRef(false);
   const didUserSelectMonthRef = useRef(false);
 
+  const shouldShowDeadlineBasisBanner = useMemo(() => {
+    // KST 기준: 2026-01-30 ~ 2026-02-01 (3일) 노출
+    const now = new Date();
+    const start = new Date('2026-01-30T00:00:00+09:00');
+    const endExclusive = new Date('2026-02-02T00:00:00+09:00');
+    return now >= start && now < endExclusive;
+  }, []);
+
   // --- [Scroll Targets Refs] ---
   const benefitRef = useRef<HTMLElement>(null);
   const incomeRef = useRef<HTMLElement>(null);
@@ -588,6 +596,17 @@ export default function StatsPage({
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto overscroll-contain px-5 pb-24 scrollbar-hide touch-pan-y relative pt-4.5"
       >
+        {shouldShowDeadlineBasisBanner && (
+          <div
+            role="status"
+            className="mb-3 rounded-[18px] border border-[#fed7aa] bg-[#fff7ed] px-4 py-3 text-[13px] leading-snug text-[#9a3412]"
+          >
+            방문일과 마감일이 둘 다 있는 건도 이제 ‘마감일’ 기준으로 통계를 계산해요. (2026-01-30부터)
+            <br />
+            따라서 일부 통계 값이 이전과 달라질 수 있어요. 문의가 있으면 ‘오른쪽 상단 설정 &gt; 피드백 문의’로 알려주세요.
+          </div>
+        )}
+
         {/* 상단 월 선택 영역 */}
         <div className="mb-4 relative">
           <div className="flex items-center gap-3">
