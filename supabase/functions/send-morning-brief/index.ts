@@ -7,7 +7,7 @@ const ALIGO_USERID = Deno.env.get('ALIGO_USER_ID')!;
 const ALIGO_SENDERKEY = Deno.env.get('ALIGO_SENDER_KEY')!;
 const ALIGO_SENDER_PHONE = Deno.env.get('ALIGO_SENDER')!;
 const ALIGO_TEMPLATE_CODE =
-  Deno.env.get('ALIGO_TEMPLATE_CODE') ?? Deno.env.get('ALIGO_KAKAO_TEMPLATE_CODE') ?? 'UF_0839';
+  Deno.env.get('ALIGO_TEMPLATE_CODE') ?? Deno.env.get('ALIGO_KAKAO_TEMPLATE_CODE') ?? 'UF_1593';
 const SUPABASE_URL = Deno.env.get('NEXT_PUBLIC_SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -171,8 +171,8 @@ serve(async (req) => {
                 name: '앱으로 일정 보기',
                 linkType: 'AL',
                 linkTypeName: '앱링크',
-                linkAnd: 'reviewflowapp://home',
-                linkIos: 'reviewflowapp://home',
+                linkAnd: 'reviewflowapp://?source=home',
+                linkIos: 'reviewflowapp://?source=home',
               },
               {
                 name: '웹에서 보기',

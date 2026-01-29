@@ -133,8 +133,8 @@ export const sendDailySummaryAlimtalk = async (payload: AlimtalkDailySummaryPayl
           name: '앱으로 일정 보기',
           linkType: 'AL',
           linkTypeName: '앱링크',
-          linkAnd: 'reviewflowapp://home',
-          linkIos: 'reviewflowapp://home',
+          linkAnd: 'reviewflowapp://?source=home',
+          linkIos: 'reviewflowapp://?source=home',
         },
         {
           name: '웹에서 보기',

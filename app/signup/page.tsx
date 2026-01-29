@@ -155,6 +155,7 @@ export default function SignUpPage() {
               인증 메일이 보이지 않는다면
             </span> <br /> 1. 스팸함도 확인하시고 링크를 클릭해야 로그인할 수 있어요.
             <br /> 2. 잠시 후 새로고침하거나 메일함을 재확인해주세요.
+            <br /> 3. 이메일이 발송이 안됐을 경우 admin@reviewflow.kr로 문의주세요.
           </div>
           <Link
             href="/signin"
