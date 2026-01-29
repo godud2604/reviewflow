@@ -23,6 +23,8 @@ import { isInPwaDisplayMode, isNativeAppWebView } from '@/lib/app-launch';
 import type { Schedule } from '@/types';
 
 const PRO_TO_FREE_TRANSITION_DISMISS_KEY = 'reviewflow-pro-to-free-transition-dismissed-v1';
+// "2026-01-28 17:30(KST) 이후 가입자"에게는 팝업을 노출하지 않습니다.
+const PRO_TO_FREE_TRANSITION_CUTOFF_KST_ISO = '2026-01-28T17:30:00+09:00';
 
 function PageContent() {
   const router = useRouter();
@@ -125,14 +127,24 @@ function PageContent() {
   };
 
   const isDataLoading = getIsDataLoading();
+  const isEligibleForProToFreeModal = (() => {
+    const createdAt = user?.created_at;
+    if (!createdAt) return true;
+    const createdAtMs = new Date(createdAt).getTime();
+    const cutoffMs = new Date(PRO_TO_FREE_TRANSITION_CUTOFF_KST_ISO).getTime();
+    if (Number.isNaN(createdAtMs) || Number.isNaN(cutoffMs)) return true;
+    return createdAtMs < cutoffMs;
+  })();
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!isLoggedIn) return;
     if (isDataLoading) return;
     if (currentPage !== 'home') return;
+    if (!isEligibleForProToFreeModal) return;
     if (window.localStorage.getItem(PRO_TO_FREE_TRANSITION_DISMISS_KEY) === '1') return;
     setShowProToFreeModal(true);
-  }, [currentPage, isDataLoading, isLoggedIn]);
+  }, [currentPage, isDataLoading, isEligibleForProToFreeModal, isLoggedIn]);
 
   const dismissProToFreeModal = () => {
     if (typeof window !== 'undefined') {

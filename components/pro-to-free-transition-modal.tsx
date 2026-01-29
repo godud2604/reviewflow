@@ -55,7 +55,10 @@ Free / Pro 구분 없이
             type="button"
             variant="outline"
             className="h-11 rounded-xl text-sm font-semibold"
-            onClick={() => router.push('/notice')}
+            onClick={() => {
+              onDismiss();
+              router.push('/notice');
+            }}
           >
             자세히 보기
           </Button>

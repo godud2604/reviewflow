@@ -6,6 +6,8 @@ const ALIGO_APIKEY = Deno.env.get('ALIGO_API_KEY')!;
 const ALIGO_USERID = Deno.env.get('ALIGO_USER_ID')!;
 const ALIGO_SENDERKEY = Deno.env.get('ALIGO_SENDER_KEY')!;
 const ALIGO_SENDER_PHONE = Deno.env.get('ALIGO_SENDER')!;
+const ALIGO_TEMPLATE_CODE =
+  Deno.env.get('ALIGO_TEMPLATE_CODE') ?? Deno.env.get('ALIGO_KAKAO_TEMPLATE_CODE') ?? 'UF_0839';
 const SUPABASE_URL = Deno.env.get('NEXT_PUBLIC_SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -70,7 +72,9 @@ serve(async (req) => {
         // (1) DB 조회 - 모든 스케줄 가져오기 (완료 여부 무관)
         const { data: allSchedules, error: schedError } = await supabaseAdmin
           .from('schedules')
-          .select('id, deadline, additional_deadlines, status, visit_date')
+          .select(
+            'id, deadline, additional_deadlines, status, visit_date, payback_expected, payback_expected_date, payback_confirmed'
+          )
           .eq('user_id', user.id);
 
         if (schedError) throw schedError;
@@ -121,8 +125,14 @@ serve(async (req) => {
         // 오늘 방문 일정 카운트 (완료 여부 무관)
         const vCount = schedules.filter((s) => s.visit_date === todayStr).length;
 
+        // 입금예정(페이백) 남은 건 카운트 (완료 여부 무관)
+        const pCount = schedules.filter((s: any) => {
+          if (!s.payback_expected || s.payback_confirmed) return false;
+          return true;
+        }).length;
+
         // 일정이 없으면 null 리턴 (나중에 필터링)
-        if (dCount === 0 && vCount === 0 && oCount === 0) {
+        if (dCount === 0 && vCount === 0 && pCount === 0 && oCount === 0) {
           return null;
         }
 
@@ -134,6 +144,7 @@ serve(async (req) => {
 
 📌 오늘 마감 일정: ${dCount}건
 📍 오늘 방문 일정: ${vCount}건
+💰 입금예정(페이백) 남은 건: ${pCount}건
 ⏰ 마감 초과 일정: ${oCount}건
 
 오늘 하루도 천천히 화이팅이에요 💛
@@ -147,7 +158,7 @@ serve(async (req) => {
           userid: ALIGO_USERID,
           senderkey: ALIGO_SENDERKEY,
           sender: ALIGO_SENDER_PHONE,
-          tpl_code: 'UE_5312',
+          tpl_code: ALIGO_TEMPLATE_CODE,
           receiver_1: user.phone_number.replace(/[^0-9]/g, ''),
           subject_1: '리뷰플로우_오늘일정',
           message_1: message,
@@ -157,7 +168,14 @@ serve(async (req) => {
           button_1: JSON.stringify({
             button: [
               {
-                name: '일정 한눈에 보기',
+                name: '앱으로 일정 보기',
+                linkType: 'AL',
+                linkTypeName: '앱링크',
+                linkAnd: 'reviewflowapp://home',
+                linkIos: 'reviewflowapp://home',
+              },
+              {
+                name: '웹에서 보기',
                 linkType: 'WL',
                 linkTypeName: '웹링크',
                 linkPc: 'https://reviewflow.tech/',
@@ -178,7 +196,7 @@ serve(async (req) => {
 
         return {
           userId: user.id,
-          counts: { d: dCount, v: vCount, o: oCount },
+          counts: { d: dCount, v: vCount, p: pCount, o: oCount },
           success: aligoData.code == 0,
           msg: aligoData.message,
         };
