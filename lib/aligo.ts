@@ -101,19 +101,23 @@ export type AlimtalkDailySummaryPayload = {
   phone: string;
   deadlineToday: number;
   visitToday: number;
+  payback: number;
   overdueCount: number;
 };
 
 export const sendDailySummaryAlimtalk = async (payload: AlimtalkDailySummaryPayload) => {
   const config = getAlimtalkConfig();
   const message =
-    `[리뷰플로우]\n\n` +
-    `좋은 아침이에요 🙂\n` +
+    `[오늘의 일정]\n\n` +
+    `좋은 아침이에요!\n` +
     `오늘 예정된 체험단 일정을 정리해서 알려드릴게요.\n\n` +
     `📌 오늘 마감 일정: ${payload.deadlineToday}건\n` +
     `📍 오늘 방문 일정: ${payload.visitToday}건\n` +
+    `💰 입금예정(페이백) 남은 건: ${payload.payback}건\n` +
     `⏰ 마감 초과 일정: ${payload.overdueCount}건\n\n` +
-    `오늘 하루도 천천히 화이팅이에요 💛`;
+    `오늘 하루도 천천히 화이팅이에요 💛\n\n` +
+    `해당 메시지는 고객님께서 일정 알림 수신에 동의하고 요청하신 경우,\n` +
+    `체험단 일정이 있을 때마다 반복적으로 발송됩니다.`;
 
   const params = new URLSearchParams({
     key: config.apiKey,
@@ -123,6 +127,24 @@ export const sendDailySummaryAlimtalk = async (payload: AlimtalkDailySummaryPayl
     sender: config.sender,
     receiver_1: payload.phone,
     message_1: message,
+    button_1: JSON.stringify({
+      button: [
+        {
+          name: '앱으로 일정 보기',
+          linkType: 'AL',
+          linkTypeName: '앱링크',
+          linkAnd: 'reviewflowapp://home',
+          linkIos: 'reviewflowapp://home',
+        },
+        {
+          name: '웹에서 보기',
+          linkType: 'WL',
+          linkTypeName: '웹링크',
+          linkPc: 'https://reviewflow.tech/',
+          linkMo: 'https://reviewflow.tech/',
+        },
+      ],
+    }),
   });
 
   const res = await fetch(ALIMTALK_ENDPOINT, {

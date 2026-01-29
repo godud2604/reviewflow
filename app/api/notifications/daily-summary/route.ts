@@ -18,6 +18,9 @@ type ScheduleSummary = {
   additional_deadlines?: unknown;
   visit_date: string | null;
   status: string | null;
+  payback_expected: boolean | null;
+  payback_expected_date: string | null;
+  payback_confirmed: boolean | null;
 };
 
 const formatKstDateString = (date: Date) =>
@@ -80,9 +83,10 @@ export async function POST(request: NextRequest) {
     const userIds = eligibleProfiles.map((profile) => profile.id);
     const { data: schedules, error: scheduleError } = await adminClient
       .from('schedules')
-      .select('user_id, deadline, additional_deadlines, visit_date, status')
-      .in('user_id', userIds)
-      .neq('status', '완료');
+      .select(
+        'user_id, deadline, additional_deadlines, visit_date, status, payback_expected, payback_expected_date, payback_confirmed'
+      )
+      .in('user_id', userIds);
 
     if (scheduleError) {
       return NextResponse.json({ error: scheduleError.message }, { status: 500 });
@@ -117,7 +121,7 @@ export async function POST(request: NextRequest) {
       };
 
       const deadlineToday =
-        userSchedules.filter((s) => s.deadline === today).length +
+        userSchedules.filter((s) => s.deadline === today && s.status !== '완료').length +
         userSchedules.reduce((count, s) => {
           const deadlines = parseAdditionalDeadlines(s.additional_deadlines);
           const todayDeadlines = deadlines.filter(
@@ -128,8 +132,14 @@ export async function POST(request: NextRequest) {
 
       const visitToday = userSchedules.filter((s) => s.visit_date === today).length;
 
+      const payback = userSchedules.filter((s) => {
+        if (!s.payback_expected || s.payback_confirmed) return false;
+        return true;
+      }).length;
+
       const overdueCount =
-        userSchedules.filter((s) => s.deadline && s.deadline < today).length +
+        userSchedules.filter((s) => s.deadline && s.deadline < today && s.status !== '완료')
+          .length +
         userSchedules.reduce((count, s) => {
           const deadlines = parseAdditionalDeadlines(s.additional_deadlines);
           const overdueDeadlines = deadlines.filter(
@@ -142,6 +152,7 @@ export async function POST(request: NextRequest) {
         phone,
         deadlineToday,
         visitToday,
+        payback,
         overdueCount,
       });
 
