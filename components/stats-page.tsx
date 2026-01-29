@@ -171,6 +171,8 @@ export default function StatsPage({
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
+  const didAutoSelectDefaultMonthRef = useRef(false);
+  const didUserSelectMonthRef = useRef(false);
 
   // --- [Scroll Targets Refs] ---
   const benefitRef = useRef<HTMLElement>(null);
@@ -551,6 +553,35 @@ export default function StatsPage({
     return [{ key: ALL_MONTH_KEY, label: '전체' }, ...options];
   }, [monthlyGrowth, currentMonthKey]);
 
+  useEffect(() => {
+    if (didAutoSelectDefaultMonthRef.current) return;
+    if (didUserSelectMonthRef.current) return;
+
+    const getMonthKey = (date: Date) => {
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      return `${year}-${month}-01`;
+    };
+
+    const nextMonthKey = getMonthKey(new Date(currentYear, currentMonth + 1, 1));
+    const currentEconValue =
+      monthlyGrowth.find((entry) => entry.monthStart === currentMonthKey)?.econValue ?? 0;
+    const nextEconValue =
+      monthlyGrowth.find((entry) => entry.monthStart === nextMonthKey)?.econValue ?? 0;
+
+    if (selectedMonthKey === currentMonthKey && currentEconValue <= 0 && nextEconValue > 0) {
+      setSelectedMonthKey(nextMonthKey);
+    }
+
+    didAutoSelectDefaultMonthRef.current = true;
+  }, [
+    currentMonth,
+    currentMonthKey,
+    currentYear,
+    monthlyGrowth,
+    selectedMonthKey,
+  ]);
+
   return (
     <>
       <div
@@ -569,6 +600,7 @@ export default function StatsPage({
                   <button
                     key={option.key}
                     onClick={() => {
+                      didUserSelectMonthRef.current = true;
                       setSelectedMonthKey(option.key);
                     }}
                     className={`mt-1 flex-none snap-start rounded-full px-4 py-2 text-xs font-semibold transition whitespace-nowrap flex items-center gap-2 ${
