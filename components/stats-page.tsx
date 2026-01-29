@@ -794,34 +794,31 @@ export default function StatsPage({
             </section>
 
             {/* 2. Income Card (Target) */}
-            <section
-              ref={incomeRef}
-              className={`bg-white rounded-[26px] px-6 pt-6 shadow-sm ${cardShadow} scroll-mt-20`}
-            >
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div>
-                  <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#eef5ff] text-[#2563eb] text-[14px]">
-                      💵
-                    </span>
-                    {isAllSelected ? '누적 수입' : '수입'}
+            {totalInc + totalExtraIncome > 0 && (
+              <section
+                ref={incomeRef}
+                className={`bg-white rounded-[26px] px-6 pt-6 shadow-sm ${cardShadow} scroll-mt-20`}
+              >
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div>
+                    <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#eef5ff] text-[#2563eb] text-[14px]">
+                        💵
+                      </span>
+                      {isAllSelected ? '누적 수입' : '수입'}
+                    </div>
+                    <div className="text-[18px] font-bold text-[#2563eb] mt-1">
+                      {(totalInc + totalExtraIncome).toLocaleString()} 원
+                    </div>
                   </div>
-                  <div className="text-[18px] font-bold text-[#2563eb] mt-1">
-                    {(totalInc + totalExtraIncome).toLocaleString()} 원
-                  </div>
-                </div>
-                {totalInc + totalExtraIncome > 0 && (
                   <button
                     onClick={() => openHistoryModal('income')}
                     className="text-[12px] font-semibold text-[#6b7685] hover:text-[#111827] transition-colors"
                   >
                     전체 내역 보기
                   </button>
-                )}
-              </div>
+                </div>
 
-              {/* 데이터가 없으면 리스트 영역 숨김 (Minimal) */}
-              {totalInc + totalExtraIncome > 0 ? (
                 <ScrollableList maxHeight="max-h-[320px]" className="space-y-4">
                   <div className="mt-3 space-y-3">
                     {incomeEntries.map(([category, amount]) => {
@@ -913,42 +910,35 @@ export default function StatsPage({
                     </div>
                   )}
                 </ScrollableList>
-              ) : (
-                <div className="mt-2 text-[13px] text-gray-400 font-medium">
-                  내역이 아직 없어요.
-                </div>
-              )}
-            </section>
+              </section>
+            )}
 
             {/* 3. Cost Card (Target) */}
-            <section
-              ref={costRef}
-              className={`bg-white rounded-[26px] px-6 pt-6 shadow-sm ${cardShadow} scroll-mt-20`}
-            >
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div>
-                  <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#fee2e2] text-[#ef4444] text-[14px]">
-                      🪙
-                    </span>
-                    {isAllSelected ? '누적 지출' : '지출'}
+            {totalCost > 0 && (
+              <section
+                ref={costRef}
+                className={`bg-white rounded-[26px] px-6 pt-6 shadow-sm ${cardShadow} scroll-mt-20`}
+              >
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div>
+                    <div className="text-[14px] font-semibold text-[#0f172a] flex items-center gap-2">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#fee2e2] text-[#ef4444] text-[14px]">
+                        🪙
+                      </span>
+                      {isAllSelected ? '누적 지출' : '지출'}
+                    </div>
+                    <div className="text-[18px] font-bold text-[#dc2626] mt-1">
+                      {totalCost.toLocaleString()} 원
+                    </div>
                   </div>
-                  <div className="text-[18px] font-bold text-[#dc2626] mt-1">
-                    {totalCost.toLocaleString()} 원
-                  </div>
-                </div>
-                {totalCost > 0 && (
                   <button
                     onClick={() => openHistoryModal('cost')}
                     className="text-[12px] font-semibold text-[#6b7685] hover:text-[#111827] transition-colors"
                   >
                     전체 내역 보기
                   </button>
-                )}
-              </div>
+                </div>
 
-              {/* 데이터가 없으면 리스트 영역 숨김 (Minimal) */}
-              {totalCost > 0 ? (
                 <ScrollableList maxHeight="max-h-[320px]" className="space-y-4">
                   <div className="space-y-3">
                     {costEntries.map(([category, amount]) => {
@@ -1005,12 +995,8 @@ export default function StatsPage({
                     </div>
                   )}
                 </ScrollableList>
-              ) : (
-                <div className="mt-2 text-[13px] text-gray-400 font-medium">
-                  내역이 아직 없어요.
-                </div>
-              )}
-            </section>
+              </section>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-6 gap-2 rounded-[26px] border border-[#eef2f7] bg-white mb-3.5">
@@ -1030,6 +1016,10 @@ export default function StatsPage({
           selectedMonthKey={selectedMonthKey}
           selectedMonthLabel={selectedMonthLabelShort || displaySelectedMonthLabel}
           isAllSelected={isAllSelected}
+          onSelectMonthKey={(monthKey) => {
+            didUserSelectMonthRef.current = true;
+            setSelectedMonthKey(monthKey);
+          }}
         />
       </div>
 
@@ -1064,12 +1054,14 @@ function TrendChart({
   selectedMonthKey,
   selectedMonthLabel,
   isAllSelected,
+  onSelectMonthKey,
 }: {
   currentMonthValue: number;
   monthlyGrowth: MonthlyGrowth[];
   selectedMonthKey: string;
   selectedMonthLabel: string;
   isAllSelected: boolean;
+  onSelectMonthKey?: (monthKey: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -1219,7 +1211,17 @@ function TrendChart({
                   return (
                     <div
                       key={item.monthStart}
-                      className="relative w-12 flex-none flex flex-col items-center group"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${new Date(item.monthStart).getMonth() + 1}월 보기`}
+                      onClick={() => onSelectMonthKey?.(item.monthStart)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          onSelectMonthKey?.(item.monthStart);
+                        }
+                      }}
+                      className="relative w-12 flex-none flex flex-col items-center group cursor-pointer"
                     >
                       <div
                         className="absolute w-full flex justify-center transition-all duration-500"
@@ -1268,6 +1270,16 @@ function TrendChart({
                 return (
                   <div key={item.monthStart} className="w-12 flex-none flex justify-center">
                     <span
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${monthDate.getMonth() + 1}월 보기`}
+                      onClick={() => onSelectMonthKey?.(item.monthStart)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          onSelectMonthKey?.(item.monthStart);
+                        }
+                      }}
                       className={`text-[11px] px-2.5 py-1 rounded-full transition-colors duration-300 font-semibold whitespace-nowrap ${activeStyle}`}
                     >
                       {label}
