@@ -83,7 +83,7 @@ export default function IncomeHistoryModal({
     return {
       id: `schedule-${schedule.id}`,
       title: schedule.title,
-      date: schedule.visit || schedule.dead,
+      date: schedule.dead,
       category: schedule.category,
       type: 'schedule',
       sourceSchedule: schedule,

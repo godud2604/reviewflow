@@ -53,8 +53,7 @@ const formatShortMonthLabel = (key: string) => {
   return `${date.getMonth() + 1}월`;
 };
 
-const getScheduleDate = (schedule: Schedule) =>
-  parseDateValue(schedule.visit) || parseDateValue(schedule.dead);
+const getScheduleDate = (schedule: Schedule) => parseDateValue(schedule.dead);
 
 // --- [신규 컴포넌트] 스크롤 가능한 리스트 래퍼 (더보기 버튼 포함) ---
 function ScrollableList({
@@ -509,7 +508,7 @@ export default function StatsPage({
       return monthMap.get(key)!;
     };
     visibleSchedules.forEach((s) => {
-      const date = parseDateValue(s.visit) || parseDateValue(s.dead);
+      const date = parseDateValue(s.dead);
       if (!date) return;
       const key = toMonthKey(date);
       const entry = ensureEntry(key);
