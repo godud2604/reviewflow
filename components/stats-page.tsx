@@ -213,13 +213,16 @@ export default function StatsPage({
     [selectedMonthKey]
   );
   const isAllSelected = selectedMonthKey === ALL_MONTH_KEY;
-  const isDateInSelectedMonth = useCallback((date: Date | null) => {
-    if (!date || !selectedMonthDate) return false;
-    return (
-      date.getFullYear() === selectedMonthDate.getFullYear() &&
-      date.getMonth() === selectedMonthDate.getMonth()
-    );
-  }, [selectedMonthDate]);
+  const isDateInSelectedMonth = useCallback(
+    (date: Date | null) => {
+      if (!date || !selectedMonthDate) return false;
+      return (
+        date.getFullYear() === selectedMonthDate.getFullYear() &&
+        date.getMonth() === selectedMonthDate.getMonth()
+      );
+    },
+    [selectedMonthDate]
+  );
 
   const selectedMonthLabel = formatFullMonthLabel(selectedMonthKey);
   const selectedMonthLabelShort = formatShortMonthLabel(selectedMonthKey);
@@ -582,13 +585,7 @@ export default function StatsPage({
     }
 
     didAutoSelectDefaultMonthRef.current = true;
-  }, [
-    currentMonth,
-    currentMonthKey,
-    currentYear,
-    monthlyGrowth,
-    selectedMonthKey,
-  ]);
+  }, [currentMonth, currentMonthKey, currentYear, monthlyGrowth, selectedMonthKey]);
 
   return (
     <>
@@ -601,9 +598,11 @@ export default function StatsPage({
             role="status"
             className="mb-3 rounded-[18px] border border-[#fed7aa] bg-[#fff7ed] px-4 py-3 text-[13px] leading-snug text-[#9a3412]"
           >
-            방문일과 마감일이 둘 다 있는 건도 이제 ‘마감일’ 기준으로 통계를 계산해요. (2026-01-30부터)
+            방문일과 마감일이 둘 다 있는 건도 이제 ‘마감일’ 기준으로 통계를 계산해요.
+            (2026-01-30부터 적용)
             <br />
-            따라서 일부 통계 값이 이전과 달라질 수 있어요. 문의가 있으면 ‘오른쪽 상단 설정 &gt; 피드백 문의’로 알려주세요.
+            따라서 일부 통계 값이 이전과 달라질 수 있어요. 궁금하신 점이 있으면 ‘오른쪽 상단 설정
+            &gt; 피드백 문의’로 알려주세요!
           </div>
         )}
 
@@ -1062,7 +1061,6 @@ export default function StatsPage({
         onExtraIncomeItemClick={handleHistoryExtraIncomeClick}
         isDisabled={historyDisabled}
       />
-
     </>
   );
 }
@@ -1165,9 +1163,7 @@ function TrendChart({
         )}
       </div>
 
-      <div className="text-xs text-[#9ca3af] font-semibold mb-6">
-        전체 기간의 활동 내역입니다
-      </div>
+      <div className="text-xs text-[#9ca3af] font-semibold mb-6">전체 기간의 활동 내역입니다</div>
 
       <div className="relative w-full">
         {isScrollable && (
