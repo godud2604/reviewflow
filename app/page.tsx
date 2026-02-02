@@ -99,7 +99,12 @@ function PageContent() {
     deleteSchedule,
   } = useSchedules({ enabled: isLoggedIn });
 
-  useWidgetSyncV1({ schedules, userId: user?.id, enabled: isLoggedIn, resetKey: currentPage });
+  useWidgetSyncV1({
+    schedules,
+    userId: user?.id,
+    enabled: isLoggedIn && !schedulesLoading,
+    resetKey: `${user?.id ?? 'anonymous'}:${currentPage}`,
+  });
 
   const {
     todos,
