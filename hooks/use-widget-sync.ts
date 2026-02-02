@@ -37,6 +37,8 @@ export function useWidgetSyncV1({
 }) {
   const lastSyncedFingerprintRef = useRef<string | null>(null);
   const lastResetKeyRef = useRef<unknown>(undefined);
+  const lastEnabledRef = useRef<boolean>(enabled);
+  const lastUserIdRef = useRef<string | null>(userId ?? null);
   const pendingPayloadRef = useRef<WidgetSyncPayloadV1 | null>(null);
   const debounceTimerRef = useRef<number | null>(null);
   const retryTimerRef = useRef<number | null>(null);
@@ -56,6 +58,11 @@ export function useWidgetSyncV1({
   }, []);
 
   useEffect(() => {
+    const prevEnabled = lastEnabledRef.current;
+    const prevUserId = lastUserIdRef.current;
+    lastEnabledRef.current = enabled;
+    lastUserIdRef.current = userId ?? null;
+
     if (!enabled) return;
     if (!userId) return;
     if (typeof window === 'undefined') return;
@@ -69,6 +76,12 @@ export function useWidgetSyncV1({
       retryTimerRef.current = null;
     }
     retryAttemptsRef.current = 0;
+
+    const becameEnabled = !prevEnabled && enabled;
+    const userChanged = prevUserId !== userId;
+    if (becameEnabled || userChanged) {
+      lastSyncedFingerprintRef.current = null;
+    }
 
     if (resetKey !== lastResetKeyRef.current) {
       lastResetKeyRef.current = resetKey;
