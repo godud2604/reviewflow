@@ -15,13 +15,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getSupabaseClient } from '@/lib/supabase';
-import { postMessageToNative } from '@/lib/native-bridge';
-import {
-  buildWidgetCalendarSnapshotV1,
-  buildWidgetHomeSnapshotV1,
-  buildWidgetTodoSnapshotV1FromSchedules,
-  getWidgetSnapshotsFingerprintV1,
-} from '@/lib/widget-home-snapshot';
 import {
   Drawer,
   DrawerContent,
@@ -261,59 +254,6 @@ export default function HomePage({
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const filterStickyTop = isMobile ? FILTER_STICKY_TOP_MOBILE : FILTER_STICKY_TOP_DESKTOP;
-  const lastWidgetFingerprintRef = useRef<string | null>(null);
-  const widgetSyncTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!user?.id) return;
-
-    if (widgetSyncTimerRef.current) {
-      window.clearTimeout(widgetSyncTimerRef.current);
-    }
-
-    widgetSyncTimerRef.current = window.setTimeout(() => {
-      const homeSnapshot = buildWidgetHomeSnapshotV1({
-        schedules,
-        userId: user.id,
-        maxTodoItems: 5,
-        sortOption: 'DEADLINE_SOON',
-      });
-
-      const calendarSnapshot = buildWidgetCalendarSnapshotV1(homeSnapshot);
-      const todoSnapshot = buildWidgetTodoSnapshotV1FromSchedules({
-        schedules,
-        userId: user.id,
-      });
-
-      const fingerprint = getWidgetSnapshotsFingerprintV1({
-        calendarSnapshot,
-        todoSnapshot,
-      });
-      if (fingerprint === lastWidgetFingerprintRef.current) return;
-      lastWidgetFingerprintRef.current = fingerprint;
-
-      postMessageToNative({
-        type: 'WIDGET_SYNC',
-        version: '1',
-        action: 'bulk_snapshot',
-        payload: { key: 'widget.calendar.v1', snapshot: calendarSnapshot },
-      });
-
-      postMessageToNative({
-        type: 'WIDGET_SYNC',
-        version: '1',
-        action: 'bulk_snapshot',
-        payload: { key: 'widget.todo.v1', snapshot: todoSnapshot },
-      });
-    }, 250);
-
-    return () => {
-      if (widgetSyncTimerRef.current) {
-        window.clearTimeout(widgetSyncTimerRef.current);
-        widgetSyncTimerRef.current = null;
-      }
-    };
-  }, [schedules, user?.id]);
 
   const showScheduleCompleteToast = useCallback(() => {
     toast({ title: '일정을 완료했어요.', duration: 1000 });

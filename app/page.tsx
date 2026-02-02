@@ -19,6 +19,7 @@ import { useTodos } from '@/hooks/use-todos';
 import { useChannels } from '@/hooks/use-channels';
 import { useFeaturedPosts } from '@/hooks/use-featured-posts';
 import { useExtraIncomes } from '@/hooks/use-extra-incomes';
+import { useWidgetSyncV1 } from '@/hooks/use-widget-sync';
 import { isInPwaDisplayMode, isNativeAppWebView } from '@/lib/app-launch';
 import type { Schedule } from '@/types';
 
@@ -97,6 +98,8 @@ function PageContent() {
     updateSchedule,
     deleteSchedule,
   } = useSchedules({ enabled: isLoggedIn });
+
+  useWidgetSyncV1({ schedules, userId: user?.id, enabled: isLoggedIn, resetKey: currentPage });
 
   const {
     todos,
