@@ -20,11 +20,13 @@ export const postMessageToNative = (message: NativeBridgeMessage) => {
 
   try {
     const serialized = JSON.stringify(message);
-    (window as Window & { ReactNativeWebView?: { postMessage?: (data: string) => void } })
-      .ReactNativeWebView?.postMessage?.(serialized);
+    const postMessage = (
+      window as Window & { ReactNativeWebView?: { postMessage?: unknown } }
+    ).ReactNativeWebView?.postMessage;
+    if (typeof postMessage !== 'function') return false;
+    postMessage(serialized);
     return true;
   } catch {
     return false;
   }
 };
-
