@@ -43,6 +43,7 @@ export function useWidgetSyncV1({
   const debounceTimerRef = useRef<number | null>(null);
   const retryTimerRef = useRef<number | null>(null);
   const retryAttemptsRef = useRef(0);
+  const pendingRequestRef = useRef(false);
 
   const sendNow = (payload: WidgetSyncPayloadV1) => {
     const okCalendar = postMessageToNative({
@@ -87,11 +88,64 @@ export function useWidgetSyncV1({
         lastSyncedFingerprintRef.current = pending.fingerprint;
         pendingPayloadRef.current = null;
         retryAttemptsRef.current = 0;
+        pendingRequestRef.current = false;
         return;
       }
 
       scheduleRetry();
     }, delay);
+  };
+
+  const buildPayload = () => {
+    if (!userId) return null;
+
+    const homeSnapshot = buildWidgetHomeSnapshotV1({
+      schedules,
+      userId,
+      maxTodoItems: 5,
+      sortOption: 'DEADLINE_SOON',
+    });
+
+    const calendarSnapshot = buildWidgetCalendarSnapshotV1(homeSnapshot);
+    const todoSnapshot = buildWidgetTodoSnapshotV1FromSchedules({
+      schedules,
+      userId,
+    });
+
+    const fingerprint = getWidgetSnapshotsFingerprintV1({
+      calendarSnapshot,
+      todoSnapshot,
+    });
+
+    return {
+      payload: {
+        fingerprint,
+        calendarSnapshot,
+        todoSnapshot,
+      } satisfies WidgetSyncPayloadV1,
+      fingerprint,
+    };
+  };
+
+  const syncNow = (force: boolean) => {
+    const built = buildPayload();
+    if (!built) return false;
+
+    const { payload, fingerprint } = built;
+    if (!force && fingerprint === lastSyncedFingerprintRef.current) return true;
+
+    pendingPayloadRef.current = payload;
+    const ok = sendNow(payload);
+    if (ok) {
+      lastSyncedFingerprintRef.current = fingerprint;
+      pendingPayloadRef.current = null;
+      retryAttemptsRef.current = 0;
+      pendingRequestRef.current = false;
+      return true;
+    }
+
+    scheduleRetry();
+    return false;
   };
 
   useEffect(() => {
@@ -140,43 +194,7 @@ export function useWidgetSyncV1({
 
     debounceTimerRef.current = window.setTimeout(() => {
       debounceTimerRef.current = null;
-
-      const homeSnapshot = buildWidgetHomeSnapshotV1({
-        schedules,
-        userId,
-        maxTodoItems: 5,
-        sortOption: 'DEADLINE_SOON',
-      });
-
-      const calendarSnapshot = buildWidgetCalendarSnapshotV1(homeSnapshot);
-      const todoSnapshot = buildWidgetTodoSnapshotV1FromSchedules({
-        schedules,
-        userId,
-      });
-
-      const fingerprint = getWidgetSnapshotsFingerprintV1({
-        calendarSnapshot,
-        todoSnapshot,
-      });
-
-      if (fingerprint === lastSyncedFingerprintRef.current) return;
-
-      const payload: WidgetSyncPayloadV1 = {
-        fingerprint,
-        calendarSnapshot,
-        todoSnapshot,
-      };
-      pendingPayloadRef.current = payload;
-
-      const ok = sendNow(payload);
-      if (ok) {
-        lastSyncedFingerprintRef.current = fingerprint;
-        pendingPayloadRef.current = null;
-        retryAttemptsRef.current = 0;
-        return;
-      }
-
-      scheduleRetry();
+      syncNow(pendingRequestRef.current);
     }, debounceMs);
 
     return () => {
@@ -192,8 +210,6 @@ export function useWidgetSyncV1({
   }, [debounceMs, enabled, resetKey, schedules, userId]);
 
   useEffect(() => {
-    if (!enabled) return;
-    if (!userId) return;
     if (typeof window === 'undefined') return;
 
     const handleMessage = (event: MessageEvent) => {
@@ -211,40 +227,9 @@ export function useWidgetSyncV1({
       const typed = data as { type?: string };
       if (typed.type !== 'WIDGET_SYNC_REQUEST') return;
 
-      const homeSnapshot = buildWidgetHomeSnapshotV1({
-        schedules,
-        userId,
-        maxTodoItems: 5,
-        sortOption: 'DEADLINE_SOON',
-      });
-
-      const calendarSnapshot = buildWidgetCalendarSnapshotV1(homeSnapshot);
-      const todoSnapshot = buildWidgetTodoSnapshotV1FromSchedules({
-        schedules,
-        userId,
-      });
-
-      const fingerprint = getWidgetSnapshotsFingerprintV1({
-        calendarSnapshot,
-        todoSnapshot,
-      });
-
-      const payload: WidgetSyncPayloadV1 = {
-        fingerprint,
-        calendarSnapshot,
-        todoSnapshot,
-      };
-
-      pendingPayloadRef.current = payload;
-      const ok = sendNow(payload);
-      if (ok) {
-        lastSyncedFingerprintRef.current = fingerprint;
-        pendingPayloadRef.current = null;
-        retryAttemptsRef.current = 0;
-        return;
-      }
-
-      scheduleRetry();
+      pendingRequestRef.current = true;
+      if (!enabled || !userId) return;
+      syncNow(true);
     };
 
     window.addEventListener('message', handleMessage);
