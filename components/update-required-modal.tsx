@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 type UpdateRequiredModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  userEmail?: string | null;
 };
 
 const IOS_APP_STORE_URL = 'https://apps.apple.com/kr/app/reviewflow/id6757174544';
@@ -30,7 +31,16 @@ const detectPlatform = (): Platform => {
   return 'unknown';
 };
 
-export default function UpdateRequiredModal({ open, onOpenChange }: UpdateRequiredModalProps) {
+export default function UpdateRequiredModal({
+  open,
+  onOpenChange,
+  userEmail,
+}: UpdateRequiredModalProps) {
+  // ees238@naver.com 계정에서만 테스트
+  if (userEmail !== 'ees238@naver.com') {
+    return null;
+  }
+
   const platform = useMemo(() => detectPlatform(), []);
   const storeUrl =
     platform === 'ios' ? IOS_APP_STORE_URL : platform === 'android' ? ANDROID_PLAY_STORE_URL : null;

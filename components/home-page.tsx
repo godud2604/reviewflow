@@ -603,19 +603,20 @@ export default function HomePage({
 
   const deadlineCount = filteredSchedules.reduce((count, schedule) => {
     let c = 0;
-      if (isDateFiltered) {
-        if (schedule.dead === selectedDate) c++;
-        const additionalCount = (schedule.additionalDeadlines || []).filter(
-          (deadline) => deadline.date === selectedDate
-        ).length;
-        return count + c + additionalCount;
-      } else {
-        if (schedule.dead) c++;
-        const additionalCount = (schedule.additionalDeadlines || []).filter((deadline) => deadline.date)
-          .length;
-        return count + c + additionalCount;
-      }
-    }, 0);
+    if (isDateFiltered) {
+      if (schedule.dead === selectedDate) c++;
+      const additionalCount = (schedule.additionalDeadlines || []).filter(
+        (deadline) => deadline.date === selectedDate
+      ).length;
+      return count + c + additionalCount;
+    } else {
+      if (schedule.dead) c++;
+      const additionalCount = (schedule.additionalDeadlines || []).filter(
+        (deadline) => deadline.date
+      ).length;
+      return count + c + additionalCount;
+    }
+  }, 0);
 
   const isFilterActive =
     sortOption !== 'DEADLINE_SOON' ||
@@ -811,8 +812,7 @@ export default function HomePage({
   };
 
   const getPageTitle = () => {
-    const statusText =
-      viewFilter === 'TODO' ? '할 일' : viewFilter === 'DONE' ? '완료' : '페이백';
+    const statusText = viewFilter === 'TODO' ? '할 일' : viewFilter === 'DONE' ? '완료' : '페이백';
 
     if (isDateFiltered && selectedDate) {
       const [_, m, d] = selectedDate.split('-');
@@ -898,9 +898,10 @@ export default function HomePage({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (user?.email !== 'ees238@naver.com') return;
     if (window.localStorage.getItem(WIDGET_BANNER_DISMISS_KEY) === '1') return;
     setShowWidgetBanner(true);
-  }, []);
+  }, [user?.email]);
 
   useEffect(() => {
     if (!hasSchedules) return;
@@ -930,7 +931,11 @@ export default function HomePage({
 
   return (
     <div ref={contentScrollRef} className="flex-1 px-5 pb-24 space-y-3 pt-3 bg-neutral-50/50">
-      <WidgetInfoModal open={showWidgetInfoModal} onDismiss={() => setShowWidgetInfoModal(false)} />
+      <WidgetInfoModal
+        open={showWidgetInfoModal}
+        onOpenChange={setShowWidgetInfoModal}
+        userEmail={user?.email}
+      />
       {showWidgetBanner && (
         <div
           role="status"
@@ -1330,7 +1335,6 @@ export default function HomePage({
                           ))}
                         </SelectContent>
                       </Select>
-
                     </>
                   ) : null}
                 </div>
