@@ -4,7 +4,13 @@ export const APP_LAUNCH_EVENT = 'reviewflow:app-launch-open';
 
 export const isNativeAppWebView = () => {
   if (typeof window === 'undefined') return false;
-  return Boolean((window as Window & { ReactNativeWebView?: unknown }).ReactNativeWebView);
+  const direct = (window as Window & { ReactNativeWebView?: unknown }).ReactNativeWebView;
+  if (direct) return true;
+  const top = window.top as (Window & { ReactNativeWebView?: unknown }) | null;
+  if (top && top !== window && top.ReactNativeWebView) return true;
+  const parent = window.parent as (Window & { ReactNativeWebView?: unknown }) | null;
+  if (parent && parent !== window && parent.ReactNativeWebView) return true;
+  return false;
 };
 
 export const isInPwaDisplayMode = () => {
