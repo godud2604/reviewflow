@@ -228,6 +228,13 @@ export function useWidgetSyncV1({
       if (typed.type !== 'WIDGET_SYNC_REQUEST') return;
 
       pendingRequestRef.current = true;
+      postMessageToNative({
+        type: 'WIDGET_SYNC_ACK',
+        stage: 'request_received',
+        enabled,
+        hasUserId: Boolean(userId),
+        schedulesCount: schedules.length,
+      });
       if (!enabled || !userId) return;
       syncNow(true);
     };
