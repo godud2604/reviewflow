@@ -180,7 +180,6 @@ export function HomePageSkeleton() {
   );
 }
 
-// --- 메인 페이지 ---
 export default function HomePage({
   schedules,
   onScheduleClick,
