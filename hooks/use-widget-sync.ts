@@ -23,12 +23,13 @@ const MAX_RETRY_ATTEMPTS = 8;
 const BASE_RETRY_DELAY_MS = 200;
 const MAX_RETRY_DELAY_MS = 5000;
 
-const isAndroidWebView = () => {
+const isAndroidUserAgent = () => {
   if (typeof window === 'undefined') return false;
-  if (!isNativeAppWebView()) return false;
   const ua = window.navigator.userAgent || '';
   return /Android/i.test(ua);
 };
+
+const isAndroidAppWebView = () => isAndroidUserAgent() && isNativeAppWebView();
 
 export function useWidgetSyncV1({
   schedules,
@@ -69,9 +70,8 @@ export function useWidgetSyncV1({
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const androidWebView = isAndroidWebView();
     const log = (message: string, data?: Record<string, unknown>) => {
-      if (!androidWebView) return;
+      if (!isAndroidUserAgent()) return;
       if (data) {
         console.log(`[WidgetSync][Web] ${message}`, data);
       } else {
@@ -128,6 +128,7 @@ export function useWidgetSyncV1({
         okTodo,
         source: context?.source,
         reason: context?.reason,
+        isApp: isNativeAppWebView(),
       });
 
       return okCalendar || okTodo;
@@ -229,6 +230,7 @@ export function useWidgetSyncV1({
         if (typeof event.data !== 'string') return;
         const data = JSON.parse(event.data);
         if (data?.type !== 'WIDGET_SYNC_REQUEST') return;
+        if (!isAndroidUserAgent()) return;
         const reason = typeof data.reason === 'string' ? data.reason : 'app_request';
         log('request received', { reason });
         if (!enabled || !userId) {
@@ -242,16 +244,12 @@ export function useWidgetSyncV1({
       }
     };
 
-    if (androidWebView) {
-      window.addEventListener('message', handleMessage);
-      document.addEventListener('message', handleMessage);
-    }
+    window.addEventListener('message', handleMessage);
+    document.addEventListener('message', handleMessage);
 
     const cleanup = () => {
-      if (androidWebView) {
-        window.removeEventListener('message', handleMessage);
-        document.removeEventListener('message', handleMessage);
-      }
+      window.removeEventListener('message', handleMessage);
+      document.removeEventListener('message', handleMessage);
       if (debounceTimerRef.current) {
         window.clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
