@@ -44,6 +44,10 @@ export function useWidgetSyncV1({
   const retryTimerRef = useRef<number | null>(null);
   const retryAttemptsRef = useRef(0);
   const pendingRequestRef = useRef(false);
+  const clearGlobalRequest = () => {
+    if (typeof window === 'undefined') return;
+    (window as Window & { __rfWidgetSyncRequested?: boolean }).__rfWidgetSyncRequested = false;
+  };
 
   const sendNow = (payload: WidgetSyncPayloadV1) => {
     const okCalendar = postMessageToNative({
@@ -89,6 +93,7 @@ export function useWidgetSyncV1({
         pendingPayloadRef.current = null;
         retryAttemptsRef.current = 0;
         pendingRequestRef.current = false;
+        clearGlobalRequest();
         return;
       }
 
@@ -141,6 +146,7 @@ export function useWidgetSyncV1({
       pendingPayloadRef.current = null;
       retryAttemptsRef.current = 0;
       pendingRequestRef.current = false;
+      clearGlobalRequest();
       return true;
     }
 
@@ -245,6 +251,37 @@ export function useWidgetSyncV1({
     return () => {
       window.removeEventListener('message', handleMessage);
       document.removeEventListener('message', handleMessage as EventListener);
+    };
+  }, [enabled, schedules, userId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleCustomRequest = () => {
+      pendingRequestRef.current = true;
+      postMessageToNative({
+        type: 'WIDGET_SYNC_ACK',
+        stage: 'custom_event',
+        enabled,
+        hasUserId: Boolean(userId),
+        schedulesCount: schedules.length,
+      });
+      if (!enabled || !userId) return;
+      syncNow(true);
+    };
+
+    window.addEventListener('reviewflow:widget-sync-request', handleCustomRequest as EventListener);
+    document.addEventListener('reviewflow:widget-sync-request', handleCustomRequest as EventListener);
+
+    const initialFlag = (window as Window & { __rfWidgetSyncRequested?: boolean })
+      .__rfWidgetSyncRequested;
+    if (initialFlag) {
+      handleCustomRequest();
+    }
+
+    return () => {
+      window.removeEventListener('reviewflow:widget-sync-request', handleCustomRequest as EventListener);
+      document.removeEventListener('reviewflow:widget-sync-request', handleCustomRequest as EventListener);
     };
   }, [enabled, schedules, userId]);
 }
