@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Megaphone, Check, X } from 'lucide-react';
+import { Megaphone, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   Dialog,
@@ -16,44 +15,10 @@ import { Button } from '@/components/ui/button';
 type WidgetInfoModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userEmail?: string | null;
 };
 
-const IOS_APP_STORE_URL = 'https://apps.apple.com/kr/app/reviewflow/id6757174544';
-const ANDROID_PLAY_STORE_URL =
-  'https://play.google.com/store/apps/details?id=com.reviewflow.reviewflow';
-
-type Platform = 'ios' | 'android' | 'unknown';
-
-const detectPlatform = (): Platform => {
-  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-  if (/iPhone|iPad|iPod/i.test(userAgent)) return 'ios';
-  if (/Android/i.test(userAgent)) return 'android';
-  return 'unknown';
-};
-
-export default function WidgetInfoModal({ open, onOpenChange, userEmail }: WidgetInfoModalProps) {
-  // ees238@naver.com 계정에서만 테스트
-  if (userEmail !== 'ees238@naver.com') {
-    return null;
-  }
-
+export default function WidgetInfoModal({ open, onOpenChange }: WidgetInfoModalProps) {
   const router = useRouter();
-  const platform = useMemo(() => detectPlatform(), []);
-  const storeUrl =
-    platform === 'ios'
-      ? IOS_APP_STORE_URL
-      : platform === 'android'
-        ? ANDROID_PLAY_STORE_URL
-        : IOS_APP_STORE_URL; // 기본값으로 iOS 스토어 사용
-
-  const handleGoStore = () => {
-    try {
-      window.open(storeUrl, '_blank', 'noopener,noreferrer');
-    } catch {
-      window.location.href = storeUrl;
-    }
-  };
 
   const handleReportIssue = () => {
     const prefill = [
@@ -118,11 +83,7 @@ export default function WidgetInfoModal({ open, onOpenChange, userEmail }: Widge
               <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3">
                 <div className="text-[13px] font-semibold text-neutral-700">위젯 추가 방법</div>
                 <p className="text-[13px] text-neutral-500">
-                  {platform === 'ios'
-                    ? 'App Store에서 최신 버전으로 업데이트해주세요.'
-                    : platform === 'android'
-                      ? 'Play 스토어에서 최신 버전으로 업데이트해주세요.'
-                      : '스토어에서 최신 버전으로 업데이트해주세요.'}
+                  앱 스토어에서 최신 버전으로 업데이트해주세요.
                 </p>
                 <div className="mt-2 space-y-3 text-[13px] text-neutral-700">
                   <div className="space-y-1">
@@ -169,23 +130,14 @@ export default function WidgetInfoModal({ open, onOpenChange, userEmail }: Widge
           </div>
 
           <div className="border-t border-neutral-100 px-6 pt-4 pb-[calc(env(safe-area-inset-bottom)+16px)]">
-            <div className="space-y-2">
-              <Button
-                type="button"
-                className="w-full rounded-2xl bg-[#FF5722] text-white hover:bg-[#E64A19]"
-                onClick={handleGoStore}
-              >
-                업데이트하기
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full rounded-2xl border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50"
-                onClick={handleReportIssue}
-              >
-                피드백/오류신고
-              </Button>
-            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full rounded-2xl border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50"
+              onClick={handleReportIssue}
+            >
+              피드백/오류신고
+            </Button>
           </div>
         </div>
       </DialogContent>

@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import {
   Dialog,
@@ -10,55 +9,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 
 type UpdateRequiredModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userEmail?: string | null;
 };
 
-const IOS_APP_STORE_URL = 'https://apps.apple.com/kr/app/reviewflow/id6757174544';
-const ANDROID_PLAY_STORE_URL =
-  'https://play.google.com/store/apps/details?id=com.reviewflow.reviewflow';
-
-type Platform = 'ios' | 'android' | 'unknown';
-
-const detectPlatform = (): Platform => {
-  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-  if (/iPhone|iPad|iPod/i.test(userAgent)) return 'ios';
-  if (/Android/i.test(userAgent)) return 'android';
-  return 'unknown';
-};
-
-export default function UpdateRequiredModal({
-  open,
-  onOpenChange,
-  userEmail,
-}: UpdateRequiredModalProps) {
-  // ees238@naver.com 계정에서만 테스트
-  if (userEmail !== 'ees238@naver.com') {
-    return null;
-  }
-
-  const platform = useMemo(() => detectPlatform(), []);
-  const storeUrl =
-    platform === 'ios'
-      ? IOS_APP_STORE_URL
-      : platform === 'android'
-        ? ANDROID_PLAY_STORE_URL
-        : IOS_APP_STORE_URL; // 기본값으로 iOS 스토어 사용
-
-  const handleGoStore = () => {
-    console.log('Platform detected:', platform);
-    console.log('Store URL:', storeUrl);
-    try {
-      window.open(storeUrl, '_blank', 'noopener,noreferrer');
-    } catch {
-      window.location.href = storeUrl;
-    }
-  };
-
+export default function UpdateRequiredModal({ open, onOpenChange }: UpdateRequiredModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -105,22 +62,8 @@ export default function UpdateRequiredModal({
               </ul>
             </div>
             <p className="text-[13px] text-neutral-600">
-              {platform === 'ios'
-                ? 'App Store에서 최신 버전으로 업데이트해주세요.'
-                : platform === 'android'
-                  ? 'Play 스토어에서 최신 버전으로 업데이트해주세요.'
-                  : '스토어에서 최신 버전으로 업데이트해주세요.'}
+              앱 스토어에서 최신 버전으로 업데이트해주세요.
             </p>
-          </div>
-
-          <div className="mt-6">
-            <Button
-              type="button"
-              className="w-full rounded-2xl bg-[#FF5722] text-white hover:bg-[#E64A19]"
-              onClick={handleGoStore}
-            >
-              업데이트하기
-            </Button>
           </div>
         </div>
       </DialogContent>

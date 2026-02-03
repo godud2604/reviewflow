@@ -559,13 +559,11 @@ function PageContent() {
         <UpdateRequiredModal
           open={showUpdateRequiredModal}
           onOpenChange={handleUpdateRequiredModalOpenChange}
-          userEmail={user?.email}
         />
 
         <WidgetInfoModal
           open={showWidgetInfoModal}
           onOpenChange={handleWidgetInfoModalOpenChange}
-          userEmail={user?.email}
         />
       </div>
     </div>
