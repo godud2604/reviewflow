@@ -43,6 +43,7 @@ export function useWidgetSyncV1({
   const debounceTimerRef = useRef<number | null>(null);
   const retryTimerRef = useRef<number | null>(null);
   const retryAttemptsRef = useRef(0);
+  const pendingRequestRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -58,14 +59,12 @@ export function useWidgetSyncV1({
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const prevEnabled = lastEnabledRef.current;
     const prevUserId = lastUserIdRef.current;
     lastEnabledRef.current = enabled;
     lastUserIdRef.current = userId ?? null;
-
-    if (!enabled) return;
-    if (!userId) return;
-    if (typeof window === 'undefined') return;
 
     if (debounceTimerRef.current) {
       window.clearTimeout(debounceTimerRef.current);
@@ -106,6 +105,34 @@ export function useWidgetSyncV1({
       return okCalendar || okTodo;
     };
 
+    const buildPayload = () => {
+      if (!userId) return null;
+
+      const homeSnapshot = buildWidgetHomeSnapshotV1({
+        schedules,
+        userId,
+        maxTodoItems: 5,
+        sortOption: 'DEADLINE_SOON',
+      });
+
+      const calendarSnapshot = buildWidgetCalendarSnapshotV1(homeSnapshot);
+      const todoSnapshot = buildWidgetTodoSnapshotV1FromSchedules({
+        schedules,
+        userId,
+      });
+
+      const fingerprint = getWidgetSnapshotsFingerprintV1({
+        calendarSnapshot,
+        todoSnapshot,
+      });
+
+      return {
+        fingerprint,
+        calendarSnapshot,
+        todoSnapshot,
+      } as WidgetSyncPayloadV1;
+    };
+
     const scheduleRetry = () => {
       if (retryTimerRef.current) return;
       if (!pendingPayloadRef.current) return;
@@ -137,48 +164,59 @@ export function useWidgetSyncV1({
       }, delay);
     };
 
-    debounceTimerRef.current = window.setTimeout(() => {
-      debounceTimerRef.current = null;
+    const forceSync = (reason: string) => {
+      if (!enabled || !userId) {
+        pendingRequestRef.current = reason;
+        return;
+      }
 
-      const homeSnapshot = buildWidgetHomeSnapshotV1({
-        schedules,
-        userId,
-        maxTodoItems: 5,
-        sortOption: 'DEADLINE_SOON',
-      });
+      if (debounceTimerRef.current) {
+        window.clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+      retryAttemptsRef.current = 0;
 
-      const calendarSnapshot = buildWidgetCalendarSnapshotV1(homeSnapshot);
-      const todoSnapshot = buildWidgetTodoSnapshotV1FromSchedules({
-        schedules,
-        userId,
-      });
+      const payload = buildPayload();
+      if (!payload) return;
 
-      const fingerprint = getWidgetSnapshotsFingerprintV1({
-        calendarSnapshot,
-        todoSnapshot,
-      });
-
-      if (fingerprint === lastSyncedFingerprintRef.current) return;
-
-      const payload: WidgetSyncPayloadV1 = {
-        fingerprint,
-        calendarSnapshot,
-        todoSnapshot,
-      };
       pendingPayloadRef.current = payload;
-
       const ok = sendNow(payload);
       if (ok) {
-        lastSyncedFingerprintRef.current = fingerprint;
+        lastSyncedFingerprintRef.current = payload.fingerprint;
         pendingPayloadRef.current = null;
         retryAttemptsRef.current = 0;
         return;
       }
 
       scheduleRetry();
-    }, debounceMs);
+    };
 
-    return () => {
+    const handleMessage = (event: any) => {
+      try {
+        if (typeof event.data !== 'string') return;
+        const data = JSON.parse(event.data);
+        if (data?.type !== 'WIDGET_SYNC_REQUEST') return;
+        const reason = typeof data.reason === 'string' ? data.reason : 'app_request';
+        if (!enabled || !userId) {
+          pendingRequestRef.current = reason;
+          return;
+        }
+        forceSync(reason);
+      } catch {
+        // ignore malformed messages
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    document.addEventListener('message', handleMessage);
+
+    const cleanup = () => {
+      window.removeEventListener('message', handleMessage);
+      document.removeEventListener('message', handleMessage);
       if (debounceTimerRef.current) {
         window.clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
@@ -188,5 +226,38 @@ export function useWidgetSyncV1({
         retryTimerRef.current = null;
       }
     };
+
+    if (!enabled || !userId) {
+      return cleanup;
+    }
+
+    if (pendingRequestRef.current) {
+      const reason = pendingRequestRef.current;
+      pendingRequestRef.current = null;
+      forceSync(reason);
+    }
+
+    debounceTimerRef.current = window.setTimeout(() => {
+      debounceTimerRef.current = null;
+
+      const payload = buildPayload();
+      if (!payload) return;
+
+      if (payload.fingerprint === lastSyncedFingerprintRef.current) return;
+
+      pendingPayloadRef.current = payload;
+
+      const ok = sendNow(payload);
+      if (ok) {
+        lastSyncedFingerprintRef.current = payload.fingerprint;
+        pendingPayloadRef.current = null;
+        retryAttemptsRef.current = 0;
+        return;
+      }
+
+      scheduleRetry();
+    }, debounceMs);
+
+    return cleanup;
   }, [debounceMs, enabled, resetKey, schedules, userId]);
 }
