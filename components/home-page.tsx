@@ -31,10 +31,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-// --- 날짜/시간 유틸리티 ---
-const formatDateStringKST = (date: Date) =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date);
-
 const getNowInKST = () => {
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Seoul',
@@ -597,19 +593,20 @@ export default function HomePage({
 
   const deadlineCount = filteredSchedules.reduce((count, schedule) => {
     let c = 0;
-      if (isDateFiltered) {
-        if (schedule.dead === selectedDate) c++;
-        const additionalCount = (schedule.additionalDeadlines || []).filter(
-          (deadline) => deadline.date === selectedDate
-        ).length;
-        return count + c + additionalCount;
-      } else {
-        if (schedule.dead) c++;
-        const additionalCount = (schedule.additionalDeadlines || []).filter((deadline) => deadline.date)
-          .length;
-        return count + c + additionalCount;
-      }
-    }, 0);
+    if (isDateFiltered) {
+      if (schedule.dead === selectedDate) c++;
+      const additionalCount = (schedule.additionalDeadlines || []).filter(
+        (deadline) => deadline.date === selectedDate
+      ).length;
+      return count + c + additionalCount;
+    } else {
+      if (schedule.dead) c++;
+      const additionalCount = (schedule.additionalDeadlines || []).filter(
+        (deadline) => deadline.date
+      ).length;
+      return count + c + additionalCount;
+    }
+  }, 0);
 
   const isFilterActive =
     sortOption !== 'DEADLINE_SOON' ||
@@ -805,8 +802,7 @@ export default function HomePage({
   };
 
   const getPageTitle = () => {
-    const statusText =
-      viewFilter === 'TODO' ? '할 일' : viewFilter === 'DONE' ? '완료' : '페이백';
+    const statusText = viewFilter === 'TODO' ? '할 일' : viewFilter === 'DONE' ? '완료' : '페이백';
 
     if (isDateFiltered && selectedDate) {
       const [_, m, d] = selectedDate.split('-');
@@ -1283,7 +1279,6 @@ export default function HomePage({
                           ))}
                         </SelectContent>
                       </Select>
-
                     </>
                   ) : null}
                 </div>
