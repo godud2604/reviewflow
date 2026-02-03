@@ -43,10 +43,15 @@ export default function UpdateRequiredModal({
 
   const platform = useMemo(() => detectPlatform(), []);
   const storeUrl =
-    platform === 'ios' ? IOS_APP_STORE_URL : platform === 'android' ? ANDROID_PLAY_STORE_URL : null;
+    platform === 'ios'
+      ? IOS_APP_STORE_URL
+      : platform === 'android'
+        ? ANDROID_PLAY_STORE_URL
+        : IOS_APP_STORE_URL; // 기본값으로 iOS 스토어 사용
 
   const handleGoStore = () => {
-    if (!storeUrl) return;
+    console.log('Platform detected:', platform);
+    console.log('Store URL:', storeUrl);
     try {
       window.open(storeUrl, '_blank', 'noopener,noreferrer');
     } catch {
@@ -113,7 +118,6 @@ export default function UpdateRequiredModal({
               type="button"
               className="w-full rounded-2xl bg-[#FF5722] text-white hover:bg-[#E64A19]"
               onClick={handleGoStore}
-              disabled={!storeUrl}
             >
               업데이트하기
             </Button>
