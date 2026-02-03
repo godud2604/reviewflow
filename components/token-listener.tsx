@@ -1,21 +1,37 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js'; // ⚠️ 본인의 supabase client 경로로 수정!
-import { postMessageToNative } from '@/lib/native-bridge';
 
 export default function TokenListener() {
+  const inFlightTokenRef = useRef<{ userId: string; token: string } | null>(
+    null,
+  );
+  const lastSavedTokenRef = useRef<{ userId: string; token: string } | null>(
+    null,
+  );
+
   useEffect(() => {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    postMessageToNative({
-      type: 'WIDGET_SYNC_ACK',
-      stage: 'token_listener_mounted',
-      hasRNWV: Boolean((window as any).ReactNativeWebView),
-    });
+    const safeGetLocalStorage = (key: string) => {
+      try {
+        return window.localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    };
+
+    const safeSetLocalStorage = (key: string, value: string) => {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch {
+        // ignore storage failures
+      }
+    };
 
     // 💾 Supabase 저장 함수
     const saveTokenToSupabase = async (token: string) => {
@@ -26,9 +42,22 @@ export default function TokenListener() {
         } = await supabase.auth.getUser();
 
         if (!user) {
-          console.log('로그인 상태가 아니라서 토큰 저장을 건너뜁니다.');
           return;
         }
+
+        const cacheKey = `reviewflow:last_push_token:${user.id}`;
+        const cachedToken =
+          lastSavedTokenRef.current?.userId === user.id
+            ? lastSavedTokenRef.current.token
+            : safeGetLocalStorage(cacheKey);
+        if (cachedToken === token) return;
+        if (
+          inFlightTokenRef.current?.userId === user.id &&
+          inFlightTokenRef.current.token === token
+        ) {
+          return;
+        }
+        inFlightTokenRef.current = { userId: user.id, token };
 
         // 2. profiles 테이블에 토큰 업데이트 (Upsert)
         const { error } = await supabase
@@ -42,10 +71,15 @@ export default function TokenListener() {
         if (error) {
           console.error('❌ Supabase 저장 실패:', error);
         } else {
-          console.log('✅ Supabase 저장 성공!');
+          lastSavedTokenRef.current = { userId: user.id, token };
+          safeSetLocalStorage(cacheKey, token);
         }
       } catch (e) {
         console.error('저장 중 오류 발생:', e);
+      } finally {
+        if (inFlightTokenRef.current?.token === token) {
+          inFlightTokenRef.current = null;
+        }
       }
     };
 
@@ -60,17 +94,11 @@ export default function TokenListener() {
 
         // 2. 메시지 타입 확인 ('PUSH_TOKEN' 인지?)
         if (data.type === 'PUSH_TOKEN' && data.token) {
-          console.log('📲 앱에서 토큰 받음:', data.token);
-
           // 3. Supabase에 저장하기
           await saveTokenToSupabase(data.token);
         }
 
         if (data.type === 'WIDGET_SYNC_REQUEST') {
-          postMessageToNative({
-            type: 'WIDGET_SYNC_ACK',
-            stage: 'token_listener_received',
-          });
           (window as any).__rfWidgetSyncRequested = true;
           window.dispatchEvent(new Event('reviewflow:widget-sync-request'));
           document.dispatchEvent(new Event('reviewflow:widget-sync-request'));

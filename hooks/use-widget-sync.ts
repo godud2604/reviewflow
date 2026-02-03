@@ -168,17 +168,6 @@ export function useWidgetSyncV1({
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    postMessageToNative({
-      type: 'WIDGET_SYNC_ACK',
-      stage: 'hook_mounted',
-      enabled,
-      hasUserId: Boolean(userId),
-      schedulesCount: schedules.length,
-    });
-  }, [enabled, schedules.length, userId]);
-
-  useEffect(() => {
     const prevEnabled = lastEnabledRef.current;
     const prevUserId = lastUserIdRef.current;
     lastEnabledRef.current = enabled;
@@ -245,13 +234,6 @@ export function useWidgetSyncV1({
       if (typed.type !== 'WIDGET_SYNC_REQUEST') return;
 
       pendingRequestRef.current = true;
-      postMessageToNative({
-        type: 'WIDGET_SYNC_ACK',
-        stage: 'request_received',
-        enabled,
-        hasUserId: Boolean(userId),
-        schedulesCount: schedules.length,
-      });
       if (!enabled || !userId) return;
       syncNow(true);
     };
@@ -270,13 +252,6 @@ export function useWidgetSyncV1({
 
     const handleCustomRequest = () => {
       pendingRequestRef.current = true;
-      postMessageToNative({
-        type: 'WIDGET_SYNC_ACK',
-        stage: 'custom_event',
-        enabled,
-        hasUserId: Boolean(userId),
-        schedulesCount: schedules.length,
-      });
       if (!enabled || !userId) return;
       syncNow(true);
     };
