@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js'; // ⚠️ 본인의 supabase client 경로로 수정!
+import { postMessageToNative } from '@/lib/native-bridge';
 
 export default function TokenListener() {
   useEffect(() => {
@@ -9,6 +10,12 @@ export default function TokenListener() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
+
+    postMessageToNative({
+      type: 'WIDGET_SYNC_ACK',
+      stage: 'token_listener_mounted',
+      hasRNWV: Boolean((window as any).ReactNativeWebView),
+    });
 
     // 💾 Supabase 저장 함수
     const saveTokenToSupabase = async (token: string) => {
@@ -57,6 +64,16 @@ export default function TokenListener() {
 
           // 3. Supabase에 저장하기
           await saveTokenToSupabase(data.token);
+        }
+
+        if (data.type === 'WIDGET_SYNC_REQUEST') {
+          postMessageToNative({
+            type: 'WIDGET_SYNC_ACK',
+            stage: 'token_listener_received',
+          });
+          (window as any).__rfWidgetSyncRequested = true;
+          window.dispatchEvent(new Event('reviewflow:widget-sync-request'));
+          document.dispatchEvent(new Event('reviewflow:widget-sync-request'));
         }
       } catch (error) {
         // JSON 형식이 아닌 메시지는 무시

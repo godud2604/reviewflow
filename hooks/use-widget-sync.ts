@@ -168,6 +168,17 @@ export function useWidgetSyncV1({
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    postMessageToNative({
+      type: 'WIDGET_SYNC_ACK',
+      stage: 'hook_mounted',
+      enabled,
+      hasUserId: Boolean(userId),
+      schedulesCount: schedules.length,
+    });
+  }, [enabled, schedules.length, userId]);
+
+  useEffect(() => {
     const prevEnabled = lastEnabledRef.current;
     const prevUserId = lastUserIdRef.current;
     lastEnabledRef.current = enabled;
