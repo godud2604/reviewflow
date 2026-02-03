@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -114,6 +114,7 @@ export function ProfilePageSkeleton() {
 
 export default function ProfilePage({ profile }: ProfilePageProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { user: authUser, session, signOut } = useAuth();
   const { schedules } = useSchedules();
@@ -125,6 +126,10 @@ export default function ProfilePage({ profile }: ProfilePageProps) {
   const [isWithdrawalDialogOpen, setIsWithdrawalDialogOpen] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [feedbackPrefill, setFeedbackPrefill] = useState<string | undefined>(undefined);
+  const [feedbackTypeOverride, setFeedbackTypeOverride] = useState<
+    'feature' | 'bug' | 'feedback' | undefined
+  >(undefined);
 
   const displayName = profile?.nickname ?? '';
   const emailLabel = authUser?.email ?? '등록된 이메일이 없습니다';
@@ -151,6 +156,29 @@ export default function ProfilePage({ profile }: ProfilePageProps) {
       setDownloadScope('all');
     }
   }, [downloadScope, scheduleMonthOptions]);
+
+  useEffect(() => {
+    if (searchParams.get('page') !== 'profile') return;
+    if (searchParams.get('feedback') !== '1') return;
+
+    const typeParam = searchParams.get('feedbackType');
+    const prefillParam = searchParams.get('feedbackPrefill');
+
+    const nextType =
+      typeParam === 'bug' || typeParam === 'feature' || typeParam === 'feedback'
+        ? typeParam
+        : undefined;
+
+    setFeedbackTypeOverride(nextType);
+    setFeedbackPrefill(prefillParam ?? undefined);
+    setIsFeedbackModalOpen(true);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('feedback');
+    params.delete('feedbackType');
+    params.delete('feedbackPrefill');
+    router.replace(`?${params.toString()}`);
+  }, [router, searchParams]);
 
   const filteredSchedules = useMemo(() => {
     if (downloadScope === 'all') {
@@ -483,7 +511,13 @@ export default function ProfilePage({ profile }: ProfilePageProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        <FeedbackModal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} />
+        <FeedbackModal
+          isOpen={isFeedbackModalOpen}
+          onClose={() => setIsFeedbackModalOpen(false)}
+          initialFeedbackType={feedbackTypeOverride}
+          initialContent={feedbackPrefill}
+          source="update_required_modal"
+        />
       </div>
     </div>
   );

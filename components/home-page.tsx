@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getSupabaseClient } from '@/lib/supabase';
+import WidgetInfoModal from '@/components/widget-info-modal';
 import {
   Drawer,
   DrawerContent,
@@ -86,6 +87,9 @@ const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[]
 
 const FILTER_STICKY_TOP_DESKTOP = 159;
 const FILTER_STICKY_TOP_MOBILE = 64;
+
+const WIDGET_BANNER_NOTICE_VERSION = '2026-02-02';
+const WIDGET_BANNER_DISMISS_KEY = `reviewflow-widget-banner-${WIDGET_BANNER_NOTICE_VERSION}-dismissed`;
 
 const getScheduleRingColor = (status: string): string | undefined => CALENDAR_RING_COLORS[status];
 
@@ -218,6 +222,8 @@ export default function HomePage({
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewFilter, setViewFilter] = useState<ViewFilter>('TODO');
   const [sortOption, setSortOption] = useState<SortOption>('DEADLINE_SOON');
+  const [showWidgetBanner, setShowWidgetBanner] = useState(false);
+  const [showWidgetInfoModal, setShowWidgetInfoModal] = useState(false);
   const [platformFilter, setPlatformFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
@@ -891,6 +897,12 @@ export default function HomePage({
   }, [resetFilters, resetSignal, scrollToTop]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.localStorage.getItem(WIDGET_BANNER_DISMISS_KEY) === '1') return;
+    setShowWidgetBanner(true);
+  }, []);
+
+  useEffect(() => {
     if (!hasSchedules) return;
     if (!scrollEffectRanRef.current) {
       scrollEffectRanRef.current = true;
@@ -918,6 +930,41 @@ export default function HomePage({
 
   return (
     <div ref={contentScrollRef} className="flex-1 px-5 pb-24 space-y-3 pt-3 bg-neutral-50/50">
+      <WidgetInfoModal open={showWidgetInfoModal} onDismiss={() => setShowWidgetInfoModal(false)} />
+      {showWidgetBanner && (
+        <div
+          role="status"
+          className="rounded-[18px] border border-[#e0e7ff] bg-[#eef2ff] px-4 py-3 text-[13px] leading-snug text-[#3730a3]"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="font-semibold">홈 화면 위젯이 추가되었어요</div>
+              <div className="mt-0.5 text-[12px] font-medium text-[#4f46e5]">
+                홈 화면에서 달력/이번 주 일정을 빠르게 확인할 수 있어요.
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWidgetInfoModal(true)}
+                className="mt-2 inline-flex items-center rounded-full bg-white/70 px-3 py-1 text-[12px] font-semibold text-[#3730a3] shadow-sm ring-1 ring-inset ring-[#c7d2fe] hover:bg-white"
+              >
+                자세히보기
+              </button>
+            </div>
+            <button
+              type="button"
+              aria-label="닫기"
+              onClick={() => {
+                window.localStorage.setItem(WIDGET_BANNER_DISMISS_KEY, '1');
+                setShowWidgetBanner(false);
+              }}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/70 text-[#3730a3] shadow-sm ring-1 ring-inset ring-[#c7d2fe] hover:bg-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 3. 캘린더 */}
       <CalendarSection
         schedules={schedules}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -10,15 +10,29 @@ import { Z_INDEX } from '@/lib/z-index';
 export default function FeedbackModal({
   isOpen,
   onClose,
+  initialFeedbackType,
+  initialContent,
+  source,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  initialFeedbackType?: 'feature' | 'bug' | 'feedback';
+  initialContent?: string;
+  source?: string;
 }) {
-  const [feedbackType, setFeedbackType] = useState<'feature' | 'bug' | 'feedback'>('feature');
-  const [content, setContent] = useState('');
+  const [feedbackType, setFeedbackType] = useState<'feature' | 'bug' | 'feedback'>(
+    initialFeedbackType ?? 'feature'
+  );
+  const [content, setContent] = useState(initialContent ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialFeedbackType) setFeedbackType(initialFeedbackType);
+    if (typeof initialContent === 'string') setContent(initialContent);
+  }, [initialContent, initialFeedbackType, isOpen]);
 
   if (!isOpen) return null;
 
@@ -52,7 +66,7 @@ export default function FeedbackModal({
         feedback_type: feedbackType,
         content: trimmedContent,
         metadata: {
-          source: 'profile_page',
+          source: source ?? 'profile_page',
           email: user.email ?? null,
         },
       });
