@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 
 import type { Schedule } from '@/types';
+import { isNativeAppWebView } from '@/lib/app-launch';
 import { postMessageToNative } from '@/lib/native-bridge';
 import {
   buildWidgetCalendarSnapshotV1,
@@ -21,6 +22,13 @@ const DEFAULT_DEBOUNCE_MS = 250;
 const MAX_RETRY_ATTEMPTS = 8;
 const BASE_RETRY_DELAY_MS = 200;
 const MAX_RETRY_DELAY_MS = 5000;
+
+const isAndroidWebView = () => {
+  if (typeof window === 'undefined') return false;
+  if (!isNativeAppWebView()) return false;
+  const ua = window.navigator.userAgent || '';
+  return /Android/i.test(ua);
+};
 
 export function useWidgetSyncV1({
   schedules,
@@ -61,6 +69,16 @@ export function useWidgetSyncV1({
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    const androidWebView = isAndroidWebView();
+    const log = (message: string, data?: Record<string, unknown>) => {
+      if (!androidWebView) return;
+      if (data) {
+        console.log(`[WidgetSync][Web] ${message}`, data);
+      } else {
+        console.log(`[WidgetSync][Web] ${message}`);
+      }
+    };
+
     const prevEnabled = lastEnabledRef.current;
     const prevUserId = lastUserIdRef.current;
     lastEnabledRef.current = enabled;
@@ -87,7 +105,10 @@ export function useWidgetSyncV1({
       lastSyncedFingerprintRef.current = null;
     }
 
-    const sendNow = (payload: WidgetSyncPayloadV1) => {
+    const sendNow = (
+      payload: WidgetSyncPayloadV1,
+      context?: { reason?: string; source?: string }
+    ) => {
       const okCalendar = postMessageToNative({
         type: 'WIDGET_SYNC',
         version: '1',
@@ -100,6 +121,13 @@ export function useWidgetSyncV1({
         version: '1',
         action: 'bulk_snapshot',
         payload: { key: 'widget.todo.v1', snapshot: payload.todoSnapshot },
+      });
+
+      log('send', {
+        okCalendar,
+        okTodo,
+        source: context?.source,
+        reason: context?.reason,
       });
 
       return okCalendar || okTodo;
@@ -152,7 +180,7 @@ export function useWidgetSyncV1({
         const pending = pendingPayloadRef.current;
         if (!pending) return;
 
-        const ok = sendNow(pending);
+        const ok = sendNow(pending, { source: 'retry' });
         if (ok) {
           lastSyncedFingerprintRef.current = pending.fingerprint;
           pendingPayloadRef.current = null;
@@ -167,6 +195,7 @@ export function useWidgetSyncV1({
     const forceSync = (reason: string) => {
       if (!enabled || !userId) {
         pendingRequestRef.current = reason;
+        log('request queued', { reason });
         return;
       }
 
@@ -184,7 +213,7 @@ export function useWidgetSyncV1({
       if (!payload) return;
 
       pendingPayloadRef.current = payload;
-      const ok = sendNow(payload);
+      const ok = sendNow(payload, { source: 'request', reason });
       if (ok) {
         lastSyncedFingerprintRef.current = payload.fingerprint;
         pendingPayloadRef.current = null;
@@ -201,8 +230,10 @@ export function useWidgetSyncV1({
         const data = JSON.parse(event.data);
         if (data?.type !== 'WIDGET_SYNC_REQUEST') return;
         const reason = typeof data.reason === 'string' ? data.reason : 'app_request';
+        log('request received', { reason });
         if (!enabled || !userId) {
           pendingRequestRef.current = reason;
+          log('request queued', { reason });
           return;
         }
         forceSync(reason);
@@ -211,12 +242,16 @@ export function useWidgetSyncV1({
       }
     };
 
-    window.addEventListener('message', handleMessage);
-    document.addEventListener('message', handleMessage);
+    if (androidWebView) {
+      window.addEventListener('message', handleMessage);
+      document.addEventListener('message', handleMessage);
+    }
 
     const cleanup = () => {
-      window.removeEventListener('message', handleMessage);
-      document.removeEventListener('message', handleMessage);
+      if (androidWebView) {
+        window.removeEventListener('message', handleMessage);
+        document.removeEventListener('message', handleMessage);
+      }
       if (debounceTimerRef.current) {
         window.clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
@@ -234,6 +269,7 @@ export function useWidgetSyncV1({
     if (pendingRequestRef.current) {
       const reason = pendingRequestRef.current;
       pendingRequestRef.current = null;
+      log('request flush', { reason });
       forceSync(reason);
     }
 
@@ -247,7 +283,7 @@ export function useWidgetSyncV1({
 
       pendingPayloadRef.current = payload;
 
-      const ok = sendNow(payload);
+      const ok = sendNow(payload, { source: 'auto' });
       if (ok) {
         lastSyncedFingerprintRef.current = payload.fingerprint;
         pendingPayloadRef.current = null;
