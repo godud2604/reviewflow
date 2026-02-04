@@ -327,6 +327,8 @@ export default function ProfilePage({ profile }: ProfilePageProps) {
     },
   ];
 
+  const handleGotoNotice = () => router.push('/notice');
+
   return (
     <div className="min-h-screen bg-[#F7F7F8] pb-24 font-sans tracking-tight">
       <div className="mx-auto max-w-[520px] space-y-4 px-5 pt-6">
@@ -364,6 +366,23 @@ export default function ProfilePage({ profile }: ProfilePageProps) {
           </span>
           <span className="text-[18px] text-neutral-300">›</span>
         </button>
+
+        <button
+          type="button"
+          onClick={handleGotoNotice}
+          className="flex w-full items-center justify-between rounded-3xl border border-neutral-200 bg-white px-6 py-4 shadow-sm text-left text-sm font-semibold text-neutral-900 transition hover:border-neutral-300 hover:bg-neutral-50"
+        >
+          <span className="flex items-center gap-3">
+            <span className="flex flex-col gap-1">
+              <span className="text-[14px] font-semibold text-neutral-900">📢 공지사항</span>
+              <span className="text-[12px] font-medium text-neutral-500">
+                위젯 추가, 업데이트 등 새로운 소식을 확인하세요
+              </span>
+            </span>
+          </span>
+          <span className="text-[18px] text-neutral-300">›</span>
+        </button>
+
         <section className="rounded-3xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
           <p className="px-2 pb-2 text-[12px] font-semibold text-neutral-500">기능</p>
           {features.map((feature, idx) => {
