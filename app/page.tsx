@@ -8,14 +8,12 @@ import ProfilePage, { ProfilePageSkeleton } from '@/components/profile-page';
 import PortfolioPage from '@/components/portfolio-page';
 import NavigationBar from '@/components/navigation-bar';
 import ScheduleModal from '@/components/schedule-modal';
-import TodoModal from '@/components/todo-modal';
 import LandingPage from '@/components/landing-page';
 import GlobalHeader from '@/components/global-header';
 import ProToFreeTransitionModal from '@/components/pro-to-free-transition-modal';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useSchedules } from '@/hooks/use-schedules';
-import { useTodos } from '@/hooks/use-todos';
 import { useChannels } from '@/hooks/use-channels';
 import { useFeaturedPosts } from '@/hooks/use-featured-posts';
 import { useExtraIncomes } from '@/hooks/use-extra-incomes';
@@ -106,14 +104,6 @@ function PageContent() {
     resetKey: `${user?.id ?? 'anonymous'}:${currentPage}`,
   });
 
-  const {
-    todos,
-    loading: todosLoading,
-    addTodo,
-    toggleTodo,
-    deleteTodo,
-  } = useTodos({ enabled: isLoggedIn && currentPage === 'home' });
-
   const { channels, loading: channelsLoading } = useChannels({
     enabled: isLoggedIn && showPortfolio,
   });
@@ -128,7 +118,6 @@ function PageContent() {
 
   const getIsDataLoading = () => {
     if (schedulesLoading) return true;
-    if (currentPage === 'home' && todosLoading) return true;
     if (showPortfolio && (channelsLoading || featuredPostsLoading)) return true;
     if (currentPage === 'profile' && extraIncomesLoading) return true;
     return false;
@@ -164,7 +153,6 @@ function PageContent() {
   const scheduleId = searchParams.get('schedule');
   const isNewSchedule = searchParams.get('new') === 'true';
   const initialDeadline = searchParams.get('date') ?? undefined;
-  const isTodoModalOpen = searchParams.get('todo') === 'true';
   const [homeCalendarFocusDate, setHomeCalendarFocusDate] = useState<string | null>(null);
   const [homeResetSignal, setHomeResetSignal] = useState(0);
   const mapSearchRequested = searchParams.get('mapSearch') === 'true';
@@ -276,18 +264,6 @@ function PageContent() {
     await updateSchedule(scheduleId, { additionalDeadlines: updatedDeadlines });
   };
 
-  const handleAddTodo = async (text: string) => {
-    await addTodo(text);
-  };
-
-  const handleToggleTodo = async (id: number) => {
-    await toggleTodo(id);
-  };
-
-  const handleDeleteTodo = async (id: number) => {
-    await deleteTodo(id);
-  };
-
   const handlePageChange = (newPage: 'home' | 'stats') => {
     router.push(`?page=${newPage}`);
   };
@@ -313,18 +289,6 @@ function PageContent() {
   const handleBackFromPortfolio = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete('view');
-    router.push(`?${params.toString()}`);
-  };
-
-  const handleOpenTodoModal = () => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('todo', 'true');
-    router.push(`?${params.toString()}`);
-  };
-
-  const handleCloseTodoModal = () => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('todo');
     router.push(`?${params.toString()}`);
   };
 
@@ -470,9 +434,7 @@ function PageContent() {
                 />
               )}
 
-              {currentPage === 'profile' && (
-                <ProfilePage profile={profile} />
-              )}
+              {currentPage === 'profile' && <ProfilePage profile={profile} />}
             </>
           )}
         </main>
@@ -498,17 +460,6 @@ function PageContent() {
             initialMapSearchOpen={mapSearchRequested}
             initialMapSearchAutoSave={mapSearchAutoSaveRequested}
             statusChangeIntent={statusChangeIntent}
-          />
-        )}
-
-        {isTodoModalOpen && (
-          <TodoModal
-            isOpen={isTodoModalOpen}
-            onClose={handleCloseTodoModal}
-            todos={todos}
-            onAddTodo={handleAddTodo}
-            onToggleTodo={handleToggleTodo}
-            onDeleteTodo={handleDeleteTodo}
           />
         )}
       </div>
