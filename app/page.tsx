@@ -10,7 +10,6 @@ import NavigationBar from '@/components/navigation-bar';
 import ScheduleModal from '@/components/schedule-modal';
 import LandingPage from '@/components/landing-page';
 import GlobalHeader from '@/components/global-header';
-import ProToFreeTransitionModal from '@/components/pro-to-free-transition-modal';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useSchedules } from '@/hooks/use-schedules';
@@ -21,14 +20,9 @@ import { useWidgetSyncV1 } from '@/hooks/use-widget-sync';
 import { isInPwaDisplayMode, isNativeAppWebView } from '@/lib/app-launch';
 import type { Schedule } from '@/types';
 
-const PRO_TO_FREE_TRANSITION_DISMISS_KEY = 'reviewflow-pro-to-free-transition-dismissed-v1';
-// "2026-01-28 17:30(KST) 이후 가입자"에게는 팝업을 노출하지 않습니다.
-const PRO_TO_FREE_TRANSITION_CUTOFF_KST_ISO = '2026-01-28T17:30:00+09:00';
-
 function PageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [showProToFreeModal, setShowProToFreeModal] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -124,31 +118,6 @@ function PageContent() {
   };
 
   const isDataLoading = getIsDataLoading();
-  const isEligibleForProToFreeModal = (() => {
-    const createdAt = user?.created_at;
-    if (!createdAt) return true;
-    const createdAtMs = new Date(createdAt).getTime();
-    const cutoffMs = new Date(PRO_TO_FREE_TRANSITION_CUTOFF_KST_ISO).getTime();
-    if (Number.isNaN(createdAtMs) || Number.isNaN(cutoffMs)) return true;
-    return createdAtMs < cutoffMs;
-  })();
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!isLoggedIn) return;
-    if (isDataLoading) return;
-    if (currentPage !== 'home') return;
-    if (!isEligibleForProToFreeModal) return;
-    if (window.localStorage.getItem(PRO_TO_FREE_TRANSITION_DISMISS_KEY) === '1') return;
-    setShowProToFreeModal(true);
-  }, [currentPage, isDataLoading, isEligibleForProToFreeModal, isLoggedIn]);
-
-  const dismissProToFreeModal = () => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(PRO_TO_FREE_TRANSITION_DISMISS_KEY, '1');
-    }
-    setShowProToFreeModal(false);
-  };
 
   const scheduleId = searchParams.get('schedule');
   const isNewSchedule = searchParams.get('new') === 'true';
@@ -320,7 +289,6 @@ function PageContent() {
   return (
     // 1. 최상단 컨테이너를 fixed로 고정하여 사파리 바운스(튕김)를 방지
     <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
-      <ProToFreeTransitionModal open={showProToFreeModal} onDismiss={dismissProToFreeModal} />
       <div className="w-full md:max-w-[800px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
         <main className="flex-1 flex flex-col overflow-y-auto">
           {showGlobalHeader && (
