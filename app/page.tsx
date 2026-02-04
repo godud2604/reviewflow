@@ -315,75 +315,6 @@ function PageContent() {
     return <LandingPage />;
   }
 
-  if (isDataLoading) {
-    if (currentPage === 'home') {
-      return (
-        <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
-          <div className="w-full md:max-w-[800px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
-            <GlobalHeader
-              title="일정"
-              onNotifications={handleGoNotifications}
-              onProfile={handleGoProfile}
-            />
-            <HomePageSkeleton />
-            <NavigationBar
-              currentPage={currentPage}
-              onPageChange={handlePageChange}
-              onHomeClick={handleHomeTabClick}
-              onAddClick={() => handleOpenScheduleModal()}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (currentPage === 'stats') {
-      return (
-        <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
-          <div className="w-full md:max-w-[800px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
-            <GlobalHeader
-              title="통계"
-              onNotifications={handleGoNotifications}
-              onProfile={handleGoProfile}
-            />
-            <StatsPageSkeleton />
-            <NavigationBar
-              currentPage={currentPage}
-              onPageChange={handlePageChange}
-              onHomeClick={handleHomeTabClick}
-              onAddClick={() => handleOpenScheduleModal()}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (currentPage === 'profile') {
-      return (
-        <div className="fixed inset-0 bg-neutral-200 md:flex md:items-center md:justify-center md:p-4 overflow-hidden">
-          <div className="w-full md:max-w-[800px] h-[100dvh] md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col">
-            <ProfilePageSkeleton />
-            <NavigationBar
-              currentPage={currentPage}
-              onPageChange={handlePageChange}
-              onHomeClick={handleHomeTabClick}
-              onAddClick={() => handleOpenScheduleModal()}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="min-h-screen bg-neutral-200 md:flex md:items-center md:justify-center md:p-4">
-        <div className="w-full md:max-w-[800px] h-screen md:h-[844px] md:max-h-[90vh] bg-[#F7F7F8] relative overflow-hidden md:rounded-[40px] shadow-2xl flex flex-col items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mb-2"></div>
-          <p className="text-gray-500 text-sm">데이터 불러오는 중...</p>
-        </div>
-      </div>
-    );
-  }
-
   const showGlobalHeader = !showPortfolio && (currentPage === 'home' || currentPage === 'stats');
 
   return (
@@ -399,7 +330,20 @@ function PageContent() {
               onProfile={handleGoProfile}
             />
           )}
-          {showPortfolio ? (
+
+          {isDataLoading ? (
+            currentPage === 'home' ? (
+              <HomePageSkeleton />
+            ) : currentPage === 'stats' ? (
+              <StatsPageSkeleton />
+            ) : currentPage === 'profile' ? (
+              <ProfilePageSkeleton />
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500 mb-2"></div>
+              </div>
+            )
+          ) : showPortfolio ? (
             <PortfolioPage
               schedules={schedules}
               channels={channels}
