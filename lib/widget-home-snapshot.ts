@@ -429,7 +429,7 @@ const isTodoScheduleForToday = (schedule: Schedule, today: string, nowMinutes: n
 export const buildWidgetTodoSnapshotV1FromSchedules = ({
   schedules,
   userId,
-  maxItems = 30,
+  maxItems = 500,
 }: {
   schedules: Schedule[];
   userId: string;
@@ -439,7 +439,7 @@ export const buildWidgetTodoSnapshotV1FromSchedules = ({
   const today = meta.today;
   const nowMinutes = meta.nowMinutes;
 
-  const todoSchedules = schedules.filter((s) => isTodoSchedule(s, today, nowMinutes));
+  const todoSchedules = schedules;
 
   // 기본 정렬: 마감 임박순(홈 기본값)
   const sortedAll = [...todoSchedules].sort((a, b) => {
@@ -453,9 +453,7 @@ export const buildWidgetTodoSnapshotV1FromSchedules = ({
     return a.id - b.id;
   });
 
-  const todayItemsRaw = sortedAll.filter((s) => isTodoScheduleForToday(s, today, nowMinutes));
-  const upcomingFallback = sortedAll.slice(0, 3);
-  const chosen = (todayItemsRaw.length > 0 ? todayItemsRaw : upcomingFallback).slice(0, maxItems);
+  const chosen = sortedAll.slice(0, maxItems);
 
   const items: WidgetScheduleLiteV1[] = chosen.map((s) => ({
     id: s.id,
