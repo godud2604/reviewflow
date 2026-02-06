@@ -30,104 +30,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-const getNowInKST = () => {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-  const parts = formatter.formatToParts(new Date());
-  const values = parts.reduce<Record<string, string>>((acc, part) => {
-    if (part.type !== 'literal') {
-      acc[part.type] = part.value;
-    }
-    return acc;
-  }, {});
-  const date = `${values.year}-${values.month}-${values.day}`;
-  const time = `${values.hour}:${values.minute}`;
-  return { date, time };
-};
-
-const toMinutes = (timeStr?: string, fallback = 0) => {
-  if (!timeStr) return fallback;
-  const [rawHour, rawMinute] = timeStr.split(':');
-  const hour = Number(rawHour);
-  const minute = Number(rawMinute);
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return fallback;
-  return hour * 60 + minute;
-};
-
-// --- 상수 ---
-const CALENDAR_RING_COLORS: Record<string, string> = {
-  선정됨: '#f1a0b6',
-  예약완료: '#61cedb',
-  '방문일 예약 완료': '#61cedb',
-  방문: '#5ba768',
-  '제품 배송 완료': 'rgba(240, 221, 73, 1)',
-  '배송 완료': '#f3c742',
-  배송완료: '#f3c742',
-};
-
-const CALENDAR_STATUS_LEGEND: { status: string; color: string; label: string }[] = [
-  { status: '선정됨', color: '#f1a0b6', label: '선정됨' },
-  { status: '방문일 예약 완료', color: '#61cedb', label: '방문 예약' },
-  { status: '방문', color: '#5ba768', label: '방문' },
-  { status: '제품 배송 완료', color: '#f3c742', label: '배송 완료' },
-];
-
-const FILTER_STICKY_TOP_DESKTOP = 159;
-const FILTER_STICKY_TOP_MOBILE = 64;
-
-const getScheduleRingColor = (status: string): string | undefined => CALENDAR_RING_COLORS[status];
-
-const platformLabelMap: Record<string, string> = {
-  instagram: '인스타그램',
-  youtube: '유튜브',
-  tiktok: '틱톡',
-  facebook: '페이스북',
-  'naver blog': '네이버 블로그',
-  naverpost: '네이버 포스트',
-  'naver post': '네이버 포스트',
-  naver쇼핑: '네이버 쇼핑',
-  stylec: '스타일씨',
-  blog: '블로그',
-  insta: '인스타',
-  tiktokshop: '틱톡',
-};
-
-const getPlatformDisplayName = (platform: string) => {
-  const normalized = platform.trim().toLowerCase();
-  return platformLabelMap[normalized] ?? platform;
-};
-
-const STATUS_OPTION_SEED = ['선정됨', '방문일 예약 완료', '방문', '배송완료', '완료'];
-
-const normalizeStatus = (status: string) => {
-  if (status === '제품 배송 완료' || status === '배송 완료' || status === '배송완료') {
-    return '배송완료';
-  }
-  return status;
-};
-
-const formatKoreanMonthDay = (dateStr: string) => {
-  const [, month, day] = dateStr.split('-');
-  return `${Number(month)}월 ${Number(day)}일`;
-};
-
-const formatSlashMonthDay = (dateStr: string) => {
-  const [, month, day] = dateStr.split('-');
-  return `${Number(month)}/${Number(day)}`;
-};
-
-const formatDotMonthDay = (dateStr: string) => {
-  const [, month, day] = dateStr.split('-');
-  return `${Number(month)}.${Number(day)}`;
-};
+import {
+  CALENDAR_STATUS_LEGEND,
+  FILTER_STICKY_TOP_DESKTOP,
+  FILTER_STICKY_TOP_MOBILE,
+  STATUS_OPTION_SEED,
+} from '@/components/home-page/constants';
+import {
+  formatDotMonthDay,
+  formatKoreanMonthDay,
+  formatSlashMonthDay,
+  getNowInKST,
+  getPlatformDisplayName,
+  getScheduleRingColor,
+  normalizeStatus,
+  toMinutes,
+} from '@/components/home-page/utils';
 
 type ViewFilter = 'TODO' | 'DONE' | 'PAYBACK';
 type SortOption =
