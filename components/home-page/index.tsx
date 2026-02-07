@@ -14,7 +14,6 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { getSupabaseClient } from '@/lib/supabase';
 import {
   Drawer,
   DrawerContent,
@@ -37,7 +36,6 @@ import {
   STATUS_OPTION_SEED,
 } from '@/components/home-page/constants';
 import {
-  formatDotMonthDay,
   formatKoreanMonthDay,
   formatSlashMonthDay,
   getNowInKST,
@@ -139,11 +137,6 @@ export default function HomePage({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [showDemo, setShowDemo] = useState(false);
-  const [isNoticeOpen, setIsNoticeOpen] = useState(false);
-  const [feedbackText, setFeedbackText] = useState('');
-  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
-  const [isFeedbackSubmitting, setIsFeedbackSubmitting] = useState(false);
   const filterScrollRef = useRef<HTMLDivElement | null>(null);
   const filterStickySentinelRef = useRef<HTMLDivElement | null>(null);
   const filterStickyRef = useRef<HTMLDivElement | null>(null);
@@ -164,7 +157,6 @@ export default function HomePage({
   const [calendarCtaDate, setCalendarCtaDate] = useState<string | null>(null);
   const [isCalendarCtaOpen, setIsCalendarCtaOpen] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
   const isMobile = useIsMobile();
   const filterStickyTop = isMobile ? FILTER_STICKY_TOP_MOBILE : FILTER_STICKY_TOP_DESKTOP;
 
@@ -194,26 +186,6 @@ export default function HomePage({
       });
     },
     [toast]
-  );
-
-  // Demo Data
-  const demoSchedules = useMemo(
-    () => [
-      {
-        title: '강남 파스타 리뷰',
-        status: '방문 예약 → 마감 3/20',
-        value: '₩55,000',
-        tag: '방문형',
-      },
-      { title: '영양제 제공형', status: '배송 완료 · 3/25 마감', value: '₩32,000', tag: '제공형' },
-      {
-        title: '카페 인스타 포스팅',
-        status: '3/18 방문 · 추가 리뷰 체크',
-        value: '₩24,000',
-        tag: '복수 채널',
-      },
-    ],
-    []
   );
 
   const hasSchedules = schedules.length > 0;
@@ -684,40 +656,6 @@ export default function HomePage({
     return statusFilter;
   };
 
-  const handleFeedbackSubmit = async () => {
-    const trimmedFeedback = feedbackText.trim();
-    if (!trimmedFeedback) {
-      toast({ title: '내용을 입력해주세요', variant: 'destructive', duration: 1000 });
-      return;
-    }
-    if (!user) {
-      toast({ title: '로그인이 필요합니다.', variant: 'destructive', duration: 1000 });
-      return;
-    }
-    setIsFeedbackSubmitting(true);
-    try {
-      const supabase = getSupabaseClient();
-      const { error } = await supabase.from('feedback_messages').insert({
-        user_id: user.id,
-        feedback_type: 'feedback',
-        content: trimmedFeedback,
-        metadata: { source: 'home_notice_card', email: user.email ?? null },
-      });
-      if (error) throw error;
-      toast({
-        title: '피드백을 전송하였습니다.',
-        description: '검토 후 빠른 시일 내에 반영하겠습니다.',
-        duration: 1500,
-      });
-      setFeedbackText('');
-      setFeedbackSubmitted(true);
-    } catch (err) {
-      toast({ title: '피드백 전송에 실패했습니다.', variant: 'destructive' });
-    } finally {
-      setIsFeedbackSubmitting(false);
-    }
-  };
-
   const getPageTitle = () => {
     const statusText = viewFilter === 'TODO' ? '할 일' : viewFilter === 'DONE' ? '완료' : '페이백';
 
@@ -741,14 +679,6 @@ export default function HomePage({
       setSortOption('DEADLINE_SOON');
     }
   };
-
-  const clearSelectedDate = useCallback(() => {
-    setSelectedDate(null);
-    setShowAllOnSelectedDate(false);
-    setCalendarCtaDate(null);
-    setIsCalendarCtaOpen(false);
-    setSortOption(viewFilter === 'DONE' ? 'DEADLINE_LATE' : 'DEADLINE_SOON');
-  }, [viewFilter]);
 
   const handleShowAllToggle = useCallback(
     (checked: boolean) => {
@@ -1232,7 +1162,6 @@ export default function HomePage({
       <div className="space-y-3">
         {!hasSchedules ? (
           <div className="bg-white rounded-3xl p-4 text-center shadow-sm shadow-[0_18px_40px_rgba(15,23,42,0.06)] border border-neutral-100 space-y-4">
-            {/* ... Empty State ... */}
             <div className="space-y-1">
               <p className="text-[13px] font-bold text-neutral-900">아직 체험단 일정이 없어요</p>
               <p className="text-[11px] text-neutral-500 font-medium">
@@ -1363,7 +1292,6 @@ export default function HomePage({
   );
 }
 
-// 캘린더 섹션 (CalendarSection 컴포넌트는 변경 없음 - 그대로 사용)
 function CalendarSection({
   schedules,
   onDateClick,
