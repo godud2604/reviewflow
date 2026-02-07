@@ -17,10 +17,8 @@ export default function WidgetUpdateModal() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    // 로컬스토리지에서 닫은 적이 있는지 확인
     const dismissed = localStorage.getItem(WIDGET_UPDATE_MODAL_KEY);
     if (!dismissed) {
-      // 약간의 딜레이 후 모달 표시 (UX 개선)
       const timer = setTimeout(() => {
         setIsOpen(true);
       }, 500);
