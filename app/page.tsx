@@ -10,6 +10,7 @@ import NavigationBar from '@/components/navigation-bar';
 import ScheduleModal from '@/components/schedule-modal';
 import LandingPage from '@/components/landing-page';
 import GlobalHeader from '@/components/global-header';
+import WidgetUpdateModal from '@/components/widget-update-modal';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useSchedules } from '@/hooks/use-schedules';
@@ -321,21 +322,24 @@ function PageContent() {
           ) : (
             <>
               {currentPage === 'home' && (
-                <HomePage
-                  schedules={schedules}
-                  onScheduleClick={handleOpenScheduleModal}
-                  onCompleteClick={handleCompleteSchedule}
-                  onCompletedClick={handleCompletedStatusEdit}
-                  onPaybackConfirm={handleConfirmPayback}
-                  onAdditionalDeadlineToggle={handleAdditionalDeadlineToggle}
-                  onAddClick={() => handleOpenScheduleModal()}
-                  onCreateSchedule={(dateStr) =>
-                    handleOpenScheduleModal(undefined, { deadDate: dateStr })
-                  }
-                  focusDate={homeCalendarFocusDate}
-                  onFocusDateApplied={() => setHomeCalendarFocusDate(null)}
-                  resetSignal={homeResetSignal}
-                />
+                <>
+                  <WidgetUpdateModal />
+                  <HomePage
+                    schedules={schedules}
+                    onScheduleClick={handleOpenScheduleModal}
+                    onCompleteClick={handleCompleteSchedule}
+                    onCompletedClick={handleCompletedStatusEdit}
+                    onPaybackConfirm={handleConfirmPayback}
+                    onAdditionalDeadlineToggle={handleAdditionalDeadlineToggle}
+                    onAddClick={() => handleOpenScheduleModal()}
+                    onCreateSchedule={(dateStr) =>
+                      handleOpenScheduleModal(undefined, { deadDate: dateStr })
+                    }
+                    focusDate={homeCalendarFocusDate}
+                    onFocusDateApplied={() => setHomeCalendarFocusDate(null)}
+                    resetSignal={homeResetSignal}
+                  />
+                </>
               )}
 
               {currentPage === 'stats' && (

@@ -52,6 +52,8 @@ export type WidgetTodoListV1 = {
   sortOption: WidgetSortOptionV1;
   totalCount: number;
   items: WidgetScheduleLiteV1[];
+  visitItems?: WidgetScheduleLiteV1[];
+  deadlineItems?: WidgetScheduleLiteV1[];
 };
 
 export type WidgetSortOptionV1 =
@@ -187,6 +189,35 @@ const getVisitKey = (schedule: Schedule) => {
   };
 };
 
+const buildWidgetScheduleLite = (schedule: Schedule): WidgetScheduleLiteV1 => ({
+  id: schedule.id,
+  title: schedule.title,
+  status: schedule.status,
+  platform: schedule.platform,
+  reviewType: schedule.reviewType,
+  channel: schedule.channel ?? [],
+  category: schedule.category,
+  regionDetail: schedule.regionDetail,
+  visit: schedule.visit || undefined,
+  visitTime: schedule.visitTime || undefined,
+  dead: schedule.dead || undefined,
+  additionalDeadlines: schedule.additionalDeadlines?.map((deadline) => ({
+    id: deadline.id,
+    label: deadline.label,
+    date: deadline.date,
+    completed: deadline.completed,
+  })),
+  benefit: schedule.benefit,
+  income: schedule.income,
+  cost: schedule.cost,
+  paybackExpected: schedule.paybackExpected,
+  paybackExpectedDate: schedule.paybackExpectedDate,
+  paybackExpectedAmount: schedule.paybackExpectedAmount,
+  paybackConfirmed: schedule.paybackConfirmed,
+  visitReviewChecklist: schedule.visitReviewChecklist,
+  memoExists: Boolean(schedule.memo?.trim()),
+});
+
 const getTotalAmount = (schedule: Schedule) => schedule.benefit + schedule.income - schedule.cost;
 
 const buildWidgetBaseMetaV1 = (userId: string) => {
@@ -318,34 +349,43 @@ export const buildWidgetHomeSnapshotV1 = ({
     return a.id - b.id;
   });
 
-  const todoItems: WidgetScheduleLiteV1[] = sortedTodoSchedules.slice(0, maxTodoItems).map((s) => ({
-    id: s.id,
-    title: s.title,
-    status: s.status,
-    platform: s.platform,
-    reviewType: s.reviewType,
-    channel: s.channel ?? [],
-    category: s.category,
-    regionDetail: s.regionDetail,
-    visit: s.visit || undefined,
-    visitTime: s.visitTime || undefined,
-    dead: s.dead || undefined,
-    additionalDeadlines: s.additionalDeadlines?.map((d) => ({
-      id: d.id,
-      label: d.label,
-      date: d.date,
-      completed: d.completed,
-    })),
-    benefit: s.benefit,
-    income: s.income,
-    cost: s.cost,
-    paybackExpected: s.paybackExpected,
-    paybackExpectedDate: s.paybackExpectedDate,
-    paybackExpectedAmount: s.paybackExpectedAmount,
-    paybackConfirmed: s.paybackConfirmed,
-    visitReviewChecklist: s.visitReviewChecklist,
-    memoExists: Boolean(s.memo?.trim()),
-  }));
+  const visitSchedules = todoSchedules.filter((s) => s.visit);
+  const sortedVisitSchedules = [...visitSchedules].sort((a, b) => {
+    const aVisit = getVisitKey(a);
+    const bVisit = getVisitKey(b);
+    if (!aVisit && !bVisit) return a.id - b.id;
+    if (!aVisit) return 1;
+    if (!bVisit) return -1;
+    const comparison = aVisit.date.localeCompare(bVisit.date);
+    if (comparison !== 0) return comparison;
+    const minutesComparison = aVisit.minutes - bVisit.minutes;
+    if (minutesComparison !== 0) return minutesComparison;
+    return a.id - b.id;
+  });
+
+  const deadlineSchedules = todoSchedules.filter((s) => Boolean(getNearestDeadline(s)));
+  const sortedDeadlineSchedules = [...deadlineSchedules].sort((a, b) => {
+    const aKey = getNearestDeadline(a);
+    const bKey = getNearestDeadline(b);
+    if (!aKey && !bKey) return a.id - b.id;
+    if (!aKey) return 1;
+    if (!bKey) return -1;
+    const comparison = aKey.localeCompare(bKey);
+    if (comparison !== 0) return comparison;
+    return a.id - b.id;
+  });
+
+  const todoItems: WidgetScheduleLiteV1[] = sortedTodoSchedules
+    .slice(0, maxTodoItems)
+    .map(buildWidgetScheduleLite);
+
+  const visitItems: WidgetScheduleLiteV1[] = sortedVisitSchedules
+    .slice(0, maxTodoItems)
+    .map(buildWidgetScheduleLite);
+
+  const deadlineItems: WidgetScheduleLiteV1[] = sortedDeadlineSchedules
+    .slice(0, maxTodoItems)
+    .map(buildWidgetScheduleLite);
 
   return {
     version: meta.version,
@@ -362,6 +402,8 @@ export const buildWidgetHomeSnapshotV1 = ({
       sortOption,
       totalCount: todoSchedules.length,
       items: todoItems,
+      visitItems,
+      deadlineItems,
     },
   };
 };
@@ -455,34 +497,41 @@ export const buildWidgetTodoSnapshotV1FromSchedules = ({
 
   const chosen = sortedAll.slice(0, maxItems);
 
-  const items: WidgetScheduleLiteV1[] = chosen.map((s) => ({
-    id: s.id,
-    title: s.title,
-    status: s.status,
-    platform: s.platform,
-    reviewType: s.reviewType,
-    channel: s.channel ?? [],
-    category: s.category,
-    regionDetail: s.regionDetail,
-    visit: s.visit || undefined,
-    visitTime: s.visitTime || undefined,
-    dead: s.dead || undefined,
-    additionalDeadlines: s.additionalDeadlines?.map((d) => ({
-      id: d.id,
-      label: d.label,
-      date: d.date,
-      completed: d.completed,
-    })),
-    benefit: s.benefit,
-    income: s.income,
-    cost: s.cost,
-    paybackExpected: s.paybackExpected,
-    paybackExpectedDate: s.paybackExpectedDate,
-    paybackExpectedAmount: s.paybackExpectedAmount,
-    paybackConfirmed: s.paybackConfirmed,
-    visitReviewChecklist: s.visitReviewChecklist,
-    memoExists: Boolean(s.memo?.trim()),
-  }));
+  const items: WidgetScheduleLiteV1[] = chosen.map(buildWidgetScheduleLite);
+
+  const visitSchedules = todoSchedules.filter((s) => s.visit);
+  const sortedVisitSchedules = [...visitSchedules].sort((a, b) => {
+    const aVisit = getVisitKey(a);
+    const bVisit = getVisitKey(b);
+    if (!aVisit && !bVisit) return a.id - b.id;
+    if (!aVisit) return 1;
+    if (!bVisit) return -1;
+    const comparison = aVisit.date.localeCompare(bVisit.date);
+    if (comparison !== 0) return comparison;
+    const minutesComparison = aVisit.minutes - bVisit.minutes;
+    if (minutesComparison !== 0) return minutesComparison;
+    return a.id - b.id;
+  });
+
+  const deadlineSchedules = todoSchedules.filter((s) => Boolean(getNearestDeadline(s)));
+  const sortedDeadlineSchedules = [...deadlineSchedules].sort((a, b) => {
+    const aKey = getNearestDeadline(a);
+    const bKey = getNearestDeadline(b);
+    if (!aKey && !bKey) return a.id - b.id;
+    if (!aKey) return 1;
+    if (!bKey) return -1;
+    const comparison = aKey.localeCompare(bKey);
+    if (comparison !== 0) return comparison;
+    return a.id - b.id;
+  });
+
+  const visitItems: WidgetScheduleLiteV1[] = sortedVisitSchedules
+    .slice(0, maxItems)
+    .map(buildWidgetScheduleLite);
+
+  const deadlineItems: WidgetScheduleLiteV1[] = sortedDeadlineSchedules
+    .slice(0, maxItems)
+    .map(buildWidgetScheduleLite);
 
   return {
     version: meta.version,
@@ -495,6 +544,8 @@ export const buildWidgetTodoSnapshotV1FromSchedules = ({
       sortOption: 'DEADLINE_SOON',
       totalCount: todoSchedules.length,
       items,
+      visitItems,
+      deadlineItems,
     },
   };
 };

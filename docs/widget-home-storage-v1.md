@@ -121,6 +121,8 @@ type WidgetTodoListV1 = {
 
   totalCount: number; // TODO 스케줄 전체 개수
   items: WidgetScheduleLiteV1[]; // 위젯에 표시할 상위 N개(정렬 적용 후 slice)
+  visitItems?: WidgetScheduleLiteV1[]; // 방문일 기준 리스트(옵션)
+  deadlineItems?: WidgetScheduleLiteV1[]; // 마감일 기준 리스트(옵션)
 };
 ```
 
@@ -141,6 +143,11 @@ isTodoSchedule(schedule) =
   hasIncompleteAdditionalDeadlines(schedule) ||
   isVisitUpcoming(schedule)
 ```
+
+#### 4-3-2. 방문/마감일 리스트(옵션)
+
+- `visitItems`: `visit`이 있는 TODO 스케줄을 방문일/시간 오름차순으로 정렬한 뒤 상위 N개를 저장합니다.
+- `deadlineItems`: `dead` 또는 `additionalDeadlines`가 있는 TODO 스케줄을 가장 가까운 마감일 오름차순으로 정렬한 뒤 상위 N개를 저장합니다.
 
 ### 4-4. Schedule Lite: `WidgetScheduleLiteV1`
 
@@ -258,4 +265,3 @@ type WidgetScheduleLiteV1 = {
 
 - 일정 상세: `reviewflow://schedule/{id}`
 - 특정 날짜 홈: `reviewflow://home?date=YYYY-MM-DD`
-

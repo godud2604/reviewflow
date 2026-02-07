@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-const WIDGET_UPDATE_MODAL_KEY = 'widget-update-modal-dismissed';
+const WIDGET_UPDATE_MODAL_KEY = 'widget-update-modal-v2-dismissed';
 
 export default function WidgetUpdateModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -61,10 +61,12 @@ export default function WidgetUpdateModal() {
             🎉
           </div>
           <DialogTitle className="text-[20px] font-bold text-neutral-900">
-            홈 화면 위젯이 추가되었어요!
+            위젯 기능이 업데이트되었어요!
           </DialogTitle>
           <DialogDescription className="text-[14px] leading-relaxed text-neutral-700">
-            일정을 한눈에 확인할 수 있는 홈 화면 위젯이 추가되었습니다.
+            위젯 달력/리스트가 개선되어
+            <br />
+            방문 일정과 마감일을 리스트로 볼 수 있어요.
             <br />
             <span className="font-semibold text-orange-600">
               스토어에서 최신 버전으로 업데이트해주세요.
@@ -74,32 +76,22 @@ export default function WidgetUpdateModal() {
 
         <div className="space-y-3 rounded-2xl border border-orange-100 bg-white/70 p-4 backdrop-blur-sm">
           <div className="space-y-2">
-            <p className="text-[13px] font-bold text-neutral-900">
-              🌟 갤럭시 위젯 동기화 문제 해결됨!
-            </p>
+            <p className="text-[13px] font-bold text-neutral-900">업데이트 내용</p>
             <div className="space-y-1.5 pl-2 text-[12px] text-neutral-600">
               <p className="flex items-start gap-2">
-                <span className="font-bold text-orange-600">1️⃣</span>
-                <span>
-                  기존 위젯 삭제 후 다시 추가
-                  <br />→ 앱 재로그인
-                </span>
+                <span className="font-bold text-orange-600">1</span>
+                <span>위젯 달력 개선</span>
               </p>
               <p className="flex items-start gap-2">
-                <span className="font-bold text-orange-600">2️⃣</span>
-                <span>그래도 동기화가 안 된다면, 피드백 {'>'} 오류 신고로 문의해주세요.</span>
+                <span className="font-bold text-orange-600">2</span>
+                <span>위젯에서 방문 일정, 마감일을 리스트로 확인</span>
               </p>
             </div>
           </div>
         </div>
 
         <DialogFooter className="flex flex-col gap-2 pt-2">
-          <Button
-            onClick={handleOpenStore}
-            className="h-12 w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-[15px] font-bold text-white shadow-lg shadow-orange-500/30 transition hover:from-orange-600 hover:to-orange-700"
-          >
-            스토어에서 업데이트하기
-          </Button>
+         
           <Button
             variant="ghost"
             onClick={handleClose}
