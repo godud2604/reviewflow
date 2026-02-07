@@ -218,7 +218,13 @@ export default function ScheduleItem({
 
   if (schedule.additionalDeadlines) {
     schedule.additionalDeadlines.forEach((deadline) => {
-      if (!deadline.date) return;
+      if (!deadline.date) {
+        undatedItems.push({
+          key: `additional-${deadline.id}-unknown`,
+          label: `${deadline.label} (마감일 미지정)`,
+        });
+        return;
+      }
       const isActiveDeadline = selectedDate && deadline.date === selectedDate;
       dateItems.push({
         key: `additional-${deadline.id}`,
