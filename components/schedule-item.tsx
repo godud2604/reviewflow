@@ -269,6 +269,14 @@ export default function ScheduleItem({
       visitReviewChecklist.googleReview ||
       visitReviewChecklist.other)
   );
+  const visitReviewExtraLabel = (() => {
+    if (!hasVisitReviewExtra) return '';
+    if (visitReviewChecklist?.other) {
+      const otherText = visitReviewChecklist.otherText?.trim();
+      return otherText ? `추가리뷰: ${otherText}` : '추가리뷰';
+    }
+    return '추가리뷰';
+  })();
   const hasMemo = Boolean(schedule.memo?.trim());
 
   return (
@@ -438,7 +446,7 @@ export default function ScheduleItem({
           )}
           {hasVisitReviewExtra && (
             <p className="text-[10.5px] font-semibold text-amber-700 rounded-[10px] border border-amber-200 bg-amber-50 px-2 py-[2px] w-fit">
-              영수증 리뷰
+              {visitReviewExtraLabel}
             </p>
           )}
           {hasMemo && (
