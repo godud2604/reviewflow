@@ -2459,16 +2459,13 @@ export default function ScheduleModal({
                       <span className="text-[14px] font-semibold text-neutral-900">
                         광고주에게 돌려받아야 할 돈이 있나요?
                       </span>
-                      <p className="text-[12px] text-neutral-500">
-                        구매비용을 페이백 받기로 한 의뢰가 있는 경우 체크하세요.
-                      </p>
                       <p className="text-[12px] text-orange-400">
                         입금 확인 전까지 달력에 💸 표시로 잊지 않게 알려드려요.
                       </p>
                     </div>
                   </label>
                   {formData.paybackExpected && (
-                    <div className="pl-8 space-y-2">
+                    <div className="pl-8 space-y-5 mt-3">
                       <div>
                         <label className="block text-[13px] font-semibold text-neutral-800 mb-1.5">
                           입금예정일 (페이백)
@@ -2506,9 +2503,6 @@ export default function ScheduleModal({
                             />
                           </PopoverContent>
                         </Popover>
-                        <p className="mt-1 text-[12px] text-neutral-500">
-                          기본값은 마감일이며, 필요하면 변경할 수 있어요.
-                        </p>
                       </div>
                       <div>
                         <label className="block text-[13px] font-semibold text-neutral-800 mb-1.5">
