@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-// 마감일(필수) 영역에 스크롤하기 위한 ref
-const deadlineSectionRef = React.createRef<HTMLDivElement>();
 import type {
   Schedule,
   GuideFile,
@@ -59,146 +57,30 @@ import { ko } from 'date-fns/locale';
 import { Check, Copy, Loader2, Search, Trash2, X, ArrowUp, ArrowDown } from 'lucide-react';
 import NaverMapSearchModal, { MapPlaceSelection } from '@/components/naver-map-search-modal';
 import { Z_INDEX } from '@/lib/z-index';
-
-const getTodayInKST = () =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
-
-const CATEGORY_OPTIONS: Array<{
-  value: Schedule['category'];
-  label: string;
-  description: string;
-  icon: string;
-}> = [
-  { value: '맛집/식품', label: '맛집/식품', description: '맛집, 식품, 음료', icon: '🍽️' },
-  { value: '뷰티', label: '뷰티', description: '화장품, 스킨/바디, 향수', icon: '💄' },
-  { value: '생활/리빙', label: '생활/리빙', description: '생활용품, 홈데코/인테리어', icon: '🏡' },
-  { value: '출산/육아', label: '출산/육아', description: '유아동, 출산 용품', icon: '🤱' },
-  { value: '주방/가전', label: '주방/가전', description: '주방용품, 가전디지털', icon: '🧺' },
-  { value: '반려동물', label: '반려동물', description: '반려동물 용품/서비스', icon: '🐶' },
-  { value: '여행/레저', label: '여행/레저', description: '여행, 숙박, 체험/레저', icon: '✈️' },
-  { value: '데이트', label: '데이트', description: '데이트 코스, 커플 체험', icon: '💑' },
-  {
-    value: '웨딩',
-    label: '웨딩',
-    description: '웨딩 스냅, 부케, 예복, 스튜디오',
-    icon: '💍',
-  },
-  {
-    value: '티켓/문화생활',
-    label: '티켓/문화생활',
-    description: '공연, 전시, 영화, 티켓',
-    icon: '🎫',
-  },
-  {
-    value: '디지털/전자기기',
-    label: '디지털/전자기기',
-    description: 'IT주변기기, 모바일, 카메라',
-    icon: '🎧',
-  },
-  { value: '건강/헬스', label: '건강/헬스', description: '건강식품, 영양제, 운동용품', icon: '💪' },
-  {
-    value: '자동차/모빌리티',
-    label: '자동차/모빌리티',
-    description: '자동차, 모빌리티 용품',
-    icon: '🚗',
-  },
-  { value: '문구/오피스', label: '문구/오피스', description: '문구류, 오피스 용품', icon: '✏️' },
-  { value: '기타', label: '기타', description: '그 외 모든 카테고리', icon: '📦' },
-];
-
-const DEFAULT_VISIT_REVIEW_CHECKLIST: NonNullable<Schedule['visitReviewChecklist']> = {
-  naverReservation: false,
-  platformAppReview: false,
-  cafeReview: false,
-  googleReview: false,
-  other: false,
-  otherText: '',
-};
-
-const BENEFIT_FIELD = {
-  field: 'benefit' as const,
-  label: '제품/서비스 가격',
-  description: '제품/서비스 가격',
-};
-
-const MANAGE_BUTTON_CLASS =
-  'flex items-center gap-1 rounded-[16px] border border-[#FF5722]/40 bg-white px-3 py-1 text-[12px] font-semibold text-[#FF5722] transition hover:bg-[#FF5722] hover:text-white hover:shadow-[0_10px_22px_rgba(255,87,34,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/50';
-
-type VisitReviewChecklist = NonNullable<Schedule['visitReviewChecklist']>;
-type VisitReviewToggleKey = Exclude<keyof VisitReviewChecklist, 'otherText'>;
-const VISIT_REVIEW_OPTIONS: Array<{ key: VisitReviewToggleKey; label: string }> = [
-  { key: 'naverReservation', label: '네이버 예약 리뷰' },
-  { key: 'googleReview', label: '구글 리뷰' },
-  { key: 'other', label: '기타' },
-];
-
-const STATUS_ORDER: Schedule['status'][] = [
-  '선정됨',
-  '방문일 예약 완료',
-  '방문',
-  '구매 완료',
-  '제품 배송 완료',
-  '완료',
-  '재확인',
-];
-
-const COMMON_STATUSES: Schedule['status'][] = ['선정됨', '완료'];
-
-const STATUS_BY_REVIEW_TYPE: Record<Schedule['reviewType'], Schedule['status'][]> = {
-  방문형: ['방문일 예약 완료', '방문'],
-  구매형: ['구매 완료'],
-  제공형: ['제품 배송 완료'],
-  기자단: [],
-  '미션/인증': [],
-};
-
-const getStatusOptions = (reviewType: Schedule['reviewType'] | undefined): Schedule['status'][] => {
-  const extras = reviewType ? STATUS_BY_REVIEW_TYPE[reviewType] || [] : [];
-  const allowed = new Set<Schedule['status']>([...COMMON_STATUSES, ...extras]);
-  return STATUS_ORDER.filter((status) => allowed.has(status));
-};
-
-const sanitizeStatusForReviewType = (
-  status: Schedule['status'] | undefined,
-  reviewType: Schedule['reviewType'] | undefined
-): Schedule['status'] => {
-  if (!reviewType) return status || '선정됨';
-  const options = getStatusOptions(reviewType);
-  if (status && options.includes(status)) return status;
-  return options[0] || '선정됨';
-};
-
-const createEmptyFormData = (): Partial<Schedule> => ({
-  title: '',
-  status: '선정됨',
-  platform: '',
-  reviewType: '제공형',
-  channel: [],
-  category: '맛집/식품',
-  visit: '',
-  visitTime: '',
-  dead: '',
-  additionalDeadlines: [],
-  benefit: 0,
-  income: 0,
-  cost: 0,
-  postingLink: '',
-  purchaseLink: '',
-  guideFiles: [],
-  memo: '',
-  reconfirmReason: '',
-  visitReviewChecklist: { ...DEFAULT_VISIT_REVIEW_CHECKLIST },
-  paybackExpected: false,
-  paybackExpectedDate: '',
-  paybackExpectedAmount: 0,
-  paybackConfirmed: false,
-  region: '',
-  regionDetail: '',
-  phone: '',
-  ownerPhone: '',
-  lat: undefined,
-  lng: undefined,
-});
+import {
+  BENEFIT_FIELD,
+  CATEGORY_OPTIONS,
+  DEFAULT_VISIT_REVIEW_CHECKLIST,
+  MANAGE_BUTTON_CLASS,
+  VISIT_REVIEW_OPTIONS,
+  type VisitReviewToggleKey,
+} from '@/components/schedule-modal/constants';
+import GuideFilesSection from '@/components/schedule-modal/guide-files-section';
+import { useActiveTab, useGuideFilePreviews, useViewportStyle } from '@/components/schedule-modal/hooks';
+import StatusFields from '@/components/schedule-modal/status-fields';
+import {
+  TIME_OPTIONS,
+  arraysEqual,
+  createAdditionalDeadlineId,
+  createEmptyFormData,
+  formatAmountInput,
+  formatNumber,
+  formatPhoneInput,
+  getTodayInKST,
+  parseNumber,
+  parseVisitTime,
+  sanitizeStatusForReviewType,
+} from '@/components/schedule-modal/utils';
 
 export default function ScheduleModal({
   isOpen,
@@ -230,11 +112,7 @@ export default function ScheduleModal({
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData());
 
   const [purchaseLink, setPurchaseLink] = useState<string>('');
-
-  const [viewportStyle, setViewportStyle] = useState<{ height: string; top: string }>({
-    height: '100%',
-    top: '0px',
-  });
+  const viewportStyle = useViewportStyle(isOpen);
 
   const [newPlatform, setNewPlatform] = useState('');
   const [platformToDelete, setPlatformToDelete] = useState<string | null>(null);
@@ -253,7 +131,6 @@ export default function ScheduleModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [fileToDelete, setFileToDelete] = useState<{ file: GuideFile; index: number } | null>(null);
-  const [guideFilePreviews, setGuideFilePreviews] = useState<Record<string, string>>({});
   const [titleError, setTitleError] = useState(false);
   const [deadlineError, setDeadlineError] = useState(false);
   const [showCategoryManagement, setShowCategoryManagement] = useState(false);
@@ -280,7 +157,7 @@ export default function ScheduleModal({
   const [newDeadlineLabel, setNewDeadlineLabel] = useState('');
   const deadlineComposingRef = useRef(false);
   const deadlineSubmitPendingRef = useRef(false);
-  const [activeTab, setActiveTab] = useState<string>('basicInfo');
+  const deadlineSectionRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   // 메모장 자동 높이 조절을 위한 ref와 함수
@@ -329,28 +206,6 @@ export default function ScheduleModal({
       container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     }
   };
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleResize = () => {
-      if (window.visualViewport) {
-        setViewportStyle({
-          height: `${window.visualViewport.height}px`,
-          top: `${window.visualViewport.offsetTop}px`,
-        });
-      }
-    };
-
-    handleResize();
-    window.visualViewport?.addEventListener('resize', handleResize);
-    window.visualViewport?.addEventListener('scroll', handleResize);
-
-    return () => {
-      window.visualViewport?.removeEventListener('resize', handleResize);
-      window.visualViewport?.removeEventListener('scroll', handleResize);
-    };
-  }, [isOpen]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -405,60 +260,6 @@ export default function ScheduleModal({
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const basicInfo = basicInfoRef.current;
-      const progressInfo = progressInfoRef.current;
-      const assetManagement = assetManagementRef.current;
-      const memo = memoRef.current;
-      const guideFiles = guideFilesSectionRef.current;
-
-      const containerTop = container.scrollTop;
-      const containerHeight = container.clientHeight;
-      const scrollHeight = container.scrollHeight;
-      const scrollBottom = containerTop + containerHeight;
-      const offset = 180;
-
-      const isBottom = Math.abs(scrollHeight - scrollBottom) < 20;
-
-      const posBasic = basicInfo?.offsetTop ?? 0;
-      const posProgress = progressInfo?.offsetTop ?? 0;
-      const posAsset = assetManagement?.offsetTop ?? 0;
-      const posMemo = memo?.offsetTop ?? 0;
-      const posGuide = guideFiles?.offsetTop ?? 0;
-
-      let currentTab = 'basicInfo';
-
-      if (isBottom) {
-        if (guideFiles) currentTab = 'guideFiles';
-        else currentTab = 'memo';
-      } else {
-        if (guideFiles && containerTop >= posGuide - offset) {
-          currentTab = 'guideFiles';
-        } else if (containerTop >= posMemo - offset) {
-          currentTab = 'memo';
-        } else if (containerTop >= posAsset - offset) {
-          currentTab = 'assetManagement';
-        } else if (containerTop >= posProgress - offset) {
-          currentTab = 'progressInfo';
-        } else {
-          currentTab = 'basicInfo';
-        }
-      }
-
-      setActiveTab((prev) => (prev !== currentTab ? currentTab : prev));
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    // Initial check
-    handleScroll();
-
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [guideFilesSectionRef.current]);
-
   const allPlatforms = React.useMemo(() => {
     return [...userPlatforms].sort((a, b) => a.localeCompare(b, 'ko'));
   }, [userPlatforms]);
@@ -498,11 +299,6 @@ export default function ScheduleModal({
     },
     [categoryValues]
   );
-
-  const arraysEqual = (a: string[], b: string[]) => {
-    if (a.length !== b.length) return false;
-    return a.every((item, idx) => item === b[idx]);
-  };
 
   const getIncomeDetailKey = (type: ScheduleTransactionItem['type'], label: string) =>
     `${type}:${label.trim()}`;
@@ -595,49 +391,6 @@ export default function ScheduleModal({
   }, [formData.paybackExpected, paybackAmountSameAsCost, scheduleIncomeDetails]);
 
   useEffect(() => {
-    let isActive = true;
-    const files = formData.guideFiles || [];
-
-    if (files.length === 0) {
-      setGuideFilePreviews({});
-      return () => {
-        isActive = false;
-      };
-    }
-
-    const fetchPreviews = async () => {
-      const entries = await Promise.all(
-        files.map(async (file) => {
-          try {
-            const url = await getGuideFileUrl(file.path);
-            return url ? { path: file.path, url } : null;
-          } catch (error) {
-            console.error('가이드 파일 미리보기 로드 실패:', error);
-            return null;
-          }
-        })
-      );
-
-      if (!isActive) return;
-
-      setGuideFilePreviews(
-        entries.reduce<Record<string, string>>((acc, entry) => {
-          if (entry) {
-            acc[entry.path] = entry.url;
-          }
-          return acc;
-        }, {})
-      );
-    };
-
-    fetchPreviews();
-
-    return () => {
-      isActive = false;
-    };
-  }, [formData.guideFiles]);
-
-  useEffect(() => {
     const sanitized = sanitizeCategories(userCategories);
     if (!arraysEqual(selectedCategories, sanitized)) {
       setSelectedCategories(sanitized);
@@ -645,6 +398,17 @@ export default function ScheduleModal({
   }, [userCategories, sanitizeCategories, selectedCategories]);
 
   const guideFilesCount = formData.guideFiles?.length ?? 0;
+  const guideFilePreviews = useGuideFilePreviews(formData.guideFiles, getGuideFileUrl);
+  const activeTab = useActiveTab({
+    containerRef: scrollContainerRef,
+    basicInfoRef,
+    progressInfoRef,
+    assetManagementRef,
+    memoRef,
+    guideFilesSectionRef,
+    enabled: isOpen,
+    guideFilesCount,
+  });
 
   useEffect(() => {
     if (!focusGuideFiles || !isOpen) return;
@@ -829,18 +593,6 @@ export default function ScheduleModal({
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      setPendingFiles((prev) => [...prev, ...files]);
-      toast({
-        title: `${files.length}개의 파일이 선택되었습니다.`,
-        duration: 1000,
-      });
-    }
-    e.target.value = '';
-  };
-
   const handleDownloadFile = async (file: GuideFile) => {
     toast({
       title: '다운로드 시작',
@@ -885,39 +637,6 @@ export default function ScheduleModal({
     });
 
     setFileToDelete(null);
-  };
-
-  const handleRemovePendingFile = (index: number) => {
-    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const formatNumber = (value: number) => {
-    return value.toLocaleString();
-  };
-
-  const parseNumber = (value: string) => {
-    return Number(value.replace(/,/g, ''));
-  };
-
-  const formatAmountInput = (value: string) => {
-    const digits = value.replace(/[^\d]/g, '');
-    if (!digits) return '';
-    return Number(digits).toLocaleString();
-  };
-
-  const formatPhoneInput = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 11);
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 7) {
-      return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    }
-    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
   };
 
   const handleToggleCategory = async (value: Schedule['category']) => {
@@ -1020,9 +739,6 @@ export default function ScheduleModal({
   const handleRemoveScheduleIncomeDetail = (id: string) => {
     setScheduleIncomeDetails((prev) => prev.filter((detail) => detail.id !== id));
   };
-
-  const createAdditionalDeadlineId = () =>
-    `deadline-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
   const handleAddDeadlineTemplate = () => {
     const trimmedLabel = newDeadlineLabel.trim();
@@ -1269,27 +985,8 @@ export default function ScheduleModal({
     setChannelToDelete(null);
   };
 
-  if (!isOpen) return null;
-
-  const parseVisitTime = (value: string) => {
-    if (!value || !/^\d{2}:\d{2}$/.test(value)) return { period: '오전', hour: '09', minute: '00' };
-    const [rawHour, minute] = value.split(':');
-    const hourNum = Number(rawHour);
-    const period = hourNum >= 12 ? '오후' : '오전';
-    const hour12 = hourNum % 12 === 0 ? 12 : hourNum % 12;
-    const hour = hour12.toString().padStart(2, '0');
-    return { period, hour, minute };
-  };
-
-  const timeOptions = {
-    periods: ['오전', '오후'],
-    hours: Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')),
-    minutes: Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0')),
-  };
-
   const { period, hour, minute } = parseVisitTime(formData.visitTime || '');
   const displayVisitTime = formData.visitTime ? formatKoreanTime(formData.visitTime) : '시간 선택';
-  const hasLocation = Boolean(formData.region || formData.regionDetail);
   const defaultIncomeDetail = scheduleIncomeDetails.find(isDefaultIncomeDetail);
   const defaultCostDetail = scheduleIncomeDetails.find(isDefaultCostDetail);
   const customIncomeDetails = React.useMemo(
@@ -1337,38 +1034,7 @@ export default function ScheduleModal({
     }
   }, [formData.visit, formData.visitTime, formData.status, applyStatusChange]);
 
-  const statusFields = (
-    <div className="space-y-6">
-      <div>
-        <label
-          className={`block text-[15px] font-bold ${showCompletionOnboarding && schedule ? 'text-orange-500' : 'text-neutral-500'} mb-2`}
-        >
-          진행 상태
-        </label>
-        <Select
-          value={formData.status}
-          onValueChange={(value) => handleStatusChange(value as Schedule['status'])}
-        >
-          <SelectTrigger
-            size="default"
-            className={`w-full ${showCompletionOnboarding && schedule ? 'bg-orange-100 border-orange-100' : 'bg-[#F7F7F8] border-none'} rounded-xl text-[16px]}`}
-          >
-            <SelectValue placeholder="선택하세요" />
-          </SelectTrigger>
-          <SelectContent>
-            {getStatusOptions(formData.reviewType || '제공형').map((statusOption) => (
-              <SelectItem key={statusOption} value={statusOption} className="text-[15px]">
-                {statusOption}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {showCompletionOnboarding && schedule && (
-          <p className="text-[13px] text-orange-700 mt-2">진행 상태를 변경 후 저장해주세요.</p>
-        )}
-      </div>
-    </div>
-  );
+  if (!isOpen) return null;
 
   return (
     <>
@@ -1559,7 +1225,13 @@ export default function ScheduleModal({
 
                   {schedule && (
                     <div ref={statusSectionRef} className="space-y-6 scroll-mt-[70px]">
-                      {statusFields}
+                      <StatusFields
+                        value={formData.status as Schedule['status']}
+                        reviewType={formData.reviewType}
+                        onChange={handleStatusChange}
+                        showCompletionOnboarding={showCompletionOnboarding}
+                        isEditing={Boolean(schedule)}
+                      />
                     </div>
                   )}
 
@@ -1985,7 +1657,7 @@ export default function ScheduleModal({
                                       </span>
                                       <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
                                         <div className="p-1 space-y-1">
-                                          {timeOptions.periods.map((p) => (
+                                          {TIME_OPTIONS.periods.map((p) => (
                                             <button
                                               key={p}
                                               className={`w-full rounded-md px-3 py-2 text-sm font-semibold text-left cursor-pointer transition-colors ${
@@ -2007,7 +1679,7 @@ export default function ScheduleModal({
                                       </span>
                                       <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
                                         <div className="p-1 grid grid-cols-2 gap-1">
-                                          {timeOptions.hours.map((h) => (
+                                          {TIME_OPTIONS.hours.map((h) => (
                                             <button
                                               key={h}
                                               className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
@@ -2029,7 +1701,7 @@ export default function ScheduleModal({
                                       </span>
                                       <ScrollArea className="h-44 rounded-lg border border-neutral-200 bg-white">
                                         <div className="p-1 grid grid-cols-2 gap-1">
-                                          {timeOptions.minutes.map((m) => (
+                                          {TIME_OPTIONS.minutes.map((m) => (
                                             <button
                                               key={m}
                                               className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
@@ -2614,61 +2286,13 @@ export default function ScheduleModal({
               {!visitMode && <></>}
             </div>
             {formData.guideFiles && formData.guideFiles.length > 0 && (
-              <div ref={guideFilesSectionRef} className="scroll-mt-[70px] mt-6 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[15px] font-bold text-neutral-500">영수증</span>
-                  <span className="text-xs text-neutral-400">{formData.guideFiles.length}개</span>
-                </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {formData.guideFiles.map((file, index) => {
-                    const previewUrl = guideFilePreviews[file.path];
-                    const isImage = file.type.startsWith('image/');
-                    return (
-                      <div
-                        key={file.path}
-                        className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3"
-                      >
-                        <div className="h-28 w-full overflow-hidden rounded-xl bg-neutral-200">
-                          {isImage && previewUrl ? (
-                            <img
-                              src={previewUrl}
-                              alt={file.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full flex-col items-center justify-center text-[11px] font-semibold text-neutral-500">
-                              <span className="tracking-tight">미리보기 없음</span>
-                              <span className="mt-1 text-[10px] uppercase">
-                                {file.type.split('/')[1] || '파일'}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-2 flex items-center justify-between gap-2">
-                          <span className="text-[13px] font-semibold text-neutral-700 truncate">
-                            {file.name}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadFile(file)}
-                              className="text-[11px] font-semibold text-[#FF5722] hover:text-[#d14500] shrink-0"
-                            >
-                              다운로드
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setFileToDelete({ file, index })}
-                              className="text-[11px] font-semibold text-red-600 hover:text-red-800 shrink-0"
-                            >
-                              삭제
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              <div ref={guideFilesSectionRef}>
+                <GuideFilesSection
+                  guideFiles={formData.guideFiles}
+                  guideFilePreviews={guideFilePreviews}
+                  onDownload={handleDownloadFile}
+                  onRequestDelete={(file, index) => setFileToDelete({ file, index })}
+                />
               </div>
             )}
           </div>
@@ -2741,7 +2365,6 @@ export default function ScheduleModal({
 
       {/* 나머지 모달들 (Platform, Channel, Confirm 등) 코드 생략 없이 유지 */}
       {showPlatformManagement && (
-        /* ... 플랫폼 관리 모달 코드 ... */
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
@@ -2828,7 +2451,6 @@ export default function ScheduleModal({
       )}
 
       {showChannelManagement && (
-        /* ... 채널 관리 모달 코드 ... */
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
@@ -2915,7 +2537,6 @@ export default function ScheduleModal({
       )}
 
       {showCategoryManagement && (
-        /* ... 카테고리 관리 모달 코드 ... */
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
@@ -2994,7 +2615,7 @@ export default function ScheduleModal({
           <AlertDialogHeader>
             <AlertDialogTitle>플랫폼 삭제</AlertDialogTitle>
             <AlertDialogDescription>
-              '{platformToDelete}' 플랫폼을 삭제하시겠습니까?
+              &apos;{platformToDelete}&apos; 플랫폼을 삭제하시겠습니까?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -3064,7 +2685,7 @@ export default function ScheduleModal({
           <AlertDialogHeader>
             <AlertDialogTitle>작성할 채널 삭제</AlertDialogTitle>
             <AlertDialogDescription>
-              '{channelToDelete}' 작성할 채널을 삭제하시겠습니까?
+              &apos;{channelToDelete}&apos; 작성할 채널을 삭제하시겠습니까?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -3198,7 +2819,7 @@ export default function ScheduleModal({
               파일 삭제
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-neutral-600 leading-relaxed">
-              '{fileToDelete?.file.name}' 파일을 삭제하시겠습니까?
+              &apos;{fileToDelete?.file.name}&apos; 파일을 삭제하시겠습니까?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row justify-center gap-2">
@@ -3227,7 +2848,6 @@ export default function ScheduleModal({
       />
 
       {showDeadlineManagement && (
-        /* ... 할일 관리 모달 코드 ... */
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
