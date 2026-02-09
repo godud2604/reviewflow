@@ -7,6 +7,7 @@ import type {
   ScheduleChannel,
   ScheduleTransactionItem,
   AdditionalDeadline,
+  CampaignGuidelineAnalysis,
 } from '@/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -52,9 +53,9 @@ import {
 } from '@/lib/schedule-income-details';
 import { stripLegacyScheduleMemo } from '@/lib/schedule-memo-legacy';
 import { formatKoreanTime } from '@/lib/time-utils';
-import { format } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Check, Copy, Loader2, Search, Trash2, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { Check, Copy, Loader2, Search, Trash2, X, ArrowUp, ArrowDown, Sparkles } from 'lucide-react';
 import NaverMapSearchModal, { MapPlaceSelection } from '@/components/naver-map-search-modal';
 import { Z_INDEX } from '@/lib/z-index';
 import {
@@ -68,6 +69,8 @@ import {
 import GuideFilesSection from '@/components/schedule-modal/guide-files-section';
 import { useActiveTab, useGuideFilePreviews, useViewportStyle } from '@/components/schedule-modal/hooks';
 import StatusFields from '@/components/schedule-modal/status-fields';
+import GuidelineAnalysisModal from '@/components/guideline-analysis-modal';
+import GuidelineInfoModal from '@/components/guideline-info-modal';
 import {
   TIME_OPTIONS,
   arraysEqual,
@@ -135,6 +138,9 @@ export default function ScheduleModal({
   const [deadlineError, setDeadlineError] = useState(false);
   const [showCategoryManagement, setShowCategoryManagement] = useState(false);
   const [showMapSearchModal, setShowMapSearchModal] = useState(false);
+  const [showGuidelineAnalysisModal, setShowGuidelineAnalysisModal] = useState(false);
+  const [showGuidelineInfoModal, setShowGuidelineInfoModal] = useState(false);
+  const [guidelineAnalysis, setGuidelineAnalysis] = useState<CampaignGuidelineAnalysis | null>(null);
   useEffect(() => {
     if (isOpen && initialMapSearchOpen) {
       setShowMapSearchModal(true);
@@ -437,6 +443,126 @@ export default function ScheduleModal({
     if (formData.platform) return;
     setFormData((prev) => ({ ...prev, platform: defaultPlatform }));
   }, [allPlatforms, schedule, formData.platform]);
+
+  // 가이드라인 분석 데이터를 폼에 적용하는 함수
+  const applyGuidelineAnalysis = useCallback((analysis: CampaignGuidelineAnalysis) => {
+    setGuidelineAnalysis(analysis);
+    
+    // 유효한 카테고리 목록
+    const validCategories = [
+      '맛집/식품',
+      '뷰티',
+      '생활/리빙',
+      '출산/육아',
+      '주방/가전',
+      '반려동물',
+      '여행/레저',
+      '데이트',
+      '웨딩',
+      '티켓/문화생활',
+      '디지털/전자기기',
+      '건강/헬스',
+      '자동차/모빌리티',
+      '문구/오피스',
+      '기타',
+    ] as const;
+    
+    // 카테고리 검증: 유효한 카테고리만 사용, 없으면 "기타"
+    const selectedCategory = (analysis.category && validCategories.includes(analysis.category as any))
+      ? (analysis.category as typeof validCategories[number])
+      : '기타';
+    
+    const shouldEnableVisitMode = Boolean(analysis.visitInfo);
+
+    // 기본 정보 추출
+    const updates: Partial<Schedule> = {
+      title: analysis.title || '',
+      benefit: analysis.points || 0,
+      dead: analysis.reviewRegistrationPeriod?.end || '',
+      phone: analysis.phone || '',
+      platform: analysis.platform || '',
+      category: selectedCategory,
+      channel: analysis.reviewChannel ? [analysis.reviewChannel] : [],
+      ...(shouldEnableVisitMode
+        ? {
+            reviewType: '방문형',
+            status: sanitizeStatusForReviewType(
+              (formData.status as Schedule['status']) || '선정됨',
+              '방문형'
+            ),
+            visitReviewChecklist: formData.visitReviewChecklist || {
+              ...DEFAULT_VISIT_REVIEW_CHECKLIST,
+            },
+          }
+        : {}),
+    };
+
+    if (analysis.visitInfo) {
+      updates.regionDetail = analysis.visitInfo;
+    }
+
+    // 추가 마감일 설정
+    const additionalDeadlines: AdditionalDeadline[] = (analysis.deadlines || []).map((deadline) => ({
+      id: createAdditionalDeadlineId(),
+      label: deadline.label || '',
+      date: deadline.date || '',
+    }));
+    
+    if (additionalDeadlines.length > 0) {
+      updates.additionalDeadlines = additionalDeadlines;
+    }
+
+    // 메모에 가이드라인 정보 추가
+    const memoLines = [
+      `[캠페인 가이드라인]`,
+      `- 포인트: ${analysis.points ? analysis.points.toLocaleString() : '0'}P`,
+      `- 제공: ${analysis.rewardInfo?.productInfo || analysis.rewardInfo?.description || ''}`,
+      `- 모집기간: ${analysis.recruitPeriod?.start || ''} ~ ${analysis.recruitPeriod?.end || ''}`,
+    ];
+    
+    if (analysis.platform) {
+      memoLines.push(`- 플랫폼: ${analysis.platform}`);
+    }
+    
+    if (analysis.reviewChannel) {
+      memoLines.push(`- 리뷰채널: ${analysis.reviewChannel}`);
+    }
+    
+    if (analysis.visitInfo) {
+      memoLines.push(`- 방문정보: ${analysis.visitInfo}`);
+    }
+    
+    if (analysis.phone) {
+      memoLines.push(`- 전화번호: ${analysis.phone}`);
+    }
+    
+    if (analysis.contentRequirements?.titleKeywords && analysis.contentRequirements.titleKeywords.length > 0) {
+      memoLines.push(`- 제목 키워드: ${analysis.contentRequirements.titleKeywords.map((k) => k.name).join(', ')}`);
+    }
+    
+    updates.memo = memoLines.join('\n');
+
+    setFormData((prev) => ({ ...prev, ...updates }));
+    setVisitMode(shouldEnableVisitMode);
+    if (analysis.visitInfo) {
+      setLocationDetailEnabled(true);
+    }
+    
+    // 가이드라인 정보 모달 열기
+    setShowGuidelineAnalysisModal(false);
+    setShowGuidelineInfoModal(true);
+    
+    toast({
+      title: '성공',
+      description: '가이드라인 정보가 일정에 적용되었습니다',
+    });
+  }, [
+    formData.status,
+    formData.visitReviewChecklist,
+    setLocationDetailEnabled,
+    setVisitMode,
+    toast,
+  ]);
 
   const handleSave = async (overrideFormData?: Partial<Schedule>) => {
     if (isSubmittingRef.current) return;
@@ -987,6 +1113,8 @@ export default function ScheduleModal({
 
   const { period, hour, minute } = parseVisitTime(formData.visitTime || '');
   const displayVisitTime = formData.visitTime ? formatKoreanTime(formData.visitTime) : '시간 선택';
+  const parsedVisitDate = formData.visit ? parseISO(formData.visit) : null;
+  const visitDateForDisplay = parsedVisitDate && isValid(parsedVisitDate) ? parsedVisitDate : null;
   const defaultIncomeDetail = scheduleIncomeDetails.find(isDefaultIncomeDetail);
   const defaultCostDetail = scheduleIncomeDetails.find(isDefaultCostDetail);
   const customIncomeDetails = React.useMemo(
@@ -1222,6 +1350,26 @@ export default function ScheduleModal({
                       </button>
                     </div>
                   </div>
+
+                  {/* AI 가이드라인 분석 버튼 */}
+                  <button
+                    type="button"
+                    onClick={() => setShowGuidelineAnalysisModal(true)}
+                    className="w-full h-[44px] rounded-[18px] bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 hover:border-blue-300 text-blue-700 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <Sparkles size={16} />
+                    AI로 가이드라인 분석하기
+                  </button>
+
+                  {guidelineAnalysis && (
+                    <button
+                      type="button"
+                      onClick={() => setShowGuidelineInfoModal(true)}
+                      className="w-full h-[44px] rounded-[18px] bg-purple-50 border border-purple-200 hover:border-purple-300 text-purple-700 font-semibold text-[14px] transition-colors"
+                    >
+                      📋 분석된 가이드라인 정보 보기
+                    </button>
+                  )}
 
                   {schedule && (
                     <div ref={statusSectionRef} className="space-y-6 scroll-mt-[70px]">
@@ -1619,15 +1767,15 @@ export default function ScheduleModal({
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <button className="w-full rounded-[18px] bg-[#F2F4F6] px-4 py-2 text-[16px] font-semibold text-neutral-900 text-left">
-                                    {formData.visit
-                                      ? format(new Date(formData.visit), 'PPP', { locale: ko })
+                                    {visitDateForDisplay
+                                      ? format(visitDateForDisplay, 'PPP', { locale: ko })
                                       : '날짜 선택'}
                                   </button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
                                   <Calendar
                                     mode="single"
-                                    selected={formData.visit ? new Date(formData.visit) : undefined}
+                                    selected={visitDateForDisplay ?? undefined}
                                     onSelect={(date) =>
                                       setFormData({
                                         ...formData,
@@ -2949,6 +3097,20 @@ export default function ScheduleModal({
           </div>
         </>
       )}
+
+      {/* 가이드라인 분석 모달 */}
+      <GuidelineAnalysisModal
+        isOpen={showGuidelineAnalysisModal}
+        onClose={() => setShowGuidelineAnalysisModal(false)}
+        onApply={applyGuidelineAnalysis}
+      />
+
+      {/* 가이드라인 정보 모달 */}
+      <GuidelineInfoModal
+        isOpen={showGuidelineInfoModal}
+        onClose={() => setShowGuidelineInfoModal(false)}
+        analysis={guidelineAnalysis}
+      />
     </>
   );
 }

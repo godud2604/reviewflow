@@ -167,3 +167,78 @@ export interface NotificationSettings {
   hour: number;
   minute: number;
 }
+
+// Campaign Guideline Analysis Types
+export interface CampaignGuidelineKeyword {
+  name: string;
+  description?: string;
+}
+
+export interface CampaignGuidelineRequirement {
+  type: 'title' | 'body' | 'image' | 'video' | 'link' | 'length' | 'keyword';
+  label: string;
+  value: string | number;
+  description?: string;
+}
+
+export interface CampaignGuidelineDeadline {
+  label: string;
+  date: string;
+  description?: string;
+}
+
+export interface CampaignGuidelineMission {
+  title: string;
+  description: string;
+  examples?: string[];
+}
+
+export interface CampaignGuidelineAnalysis {
+  title: string;
+  points: number | null;
+  
+  // 플랫폼 정보
+  platform?: string; // 예: "네이버 블로그", "인스타그램", "카페" 등
+  category?: string; // 제품/서비스 카테고리
+  reviewChannel?: string; // 리뷰 채널 (블로그, 인스타그램, 쿠팡 등)
+  visitInfo?: string; // 방문정보 (주소, 위치 등)
+  phone?: string; // 전화번호
+  
+  recruitPeriod: {
+    start: string;
+    end: string;
+  };
+  reviewerAnnouncement: string;
+  reviewRegistrationPeriod: {
+    start: string;
+    end: string;
+  };
+  deadlines: CampaignGuidelineDeadline[];
+  
+  // 보상정보
+  rewardInfo: {
+    description: string;
+    points: number;
+    deliveryMethod: string;
+    productInfo?: string;
+  };
+  
+  // 컨텐츠 요구사항
+  contentRequirements: {
+    titleKeywords: CampaignGuidelineKeyword[];
+    bodyKeywords: CampaignGuidelineKeyword[];
+    requirements: CampaignGuidelineRequirement[];
+  };
+  
+  // 필수 공지 문구
+  requiredNotices: string[];
+  
+  // 미션 세부사항
+  missions: CampaignGuidelineMission[];
+  
+  // 기타 중요사항
+  importantNotes: string[];
+  
+  // 주의사항
+  warnings: string[];
+}
