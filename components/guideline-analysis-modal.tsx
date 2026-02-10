@@ -15,6 +15,14 @@ interface GuidelineAnalysisModalProps {
   onApply: (analysis: CampaignGuidelineAnalysis) => void;
 }
 
+const toList = (items?: string[]) => (Array.isArray(items) ? items.filter(Boolean) : []);
+
+const visitTypeLabel: Record<string, string> = {
+  visit: '방문형',
+  delivery: '배송형',
+  hybrid: '방문+배송형',
+};
+
 export default function GuidelineAnalysisModal({
   isOpen,
   onClose,
@@ -23,7 +31,8 @@ export default function GuidelineAnalysisModal({
   const [guideline, setGuideline] = useState('');
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<CampaignGuidelineAnalysis | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedJson, setCopiedJson] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -79,9 +88,16 @@ export default function GuidelineAnalysisModal({
   const handleCopyJson = () => {
     if (analysis) {
       navigator.clipboard.writeText(JSON.stringify(analysis, null, 2));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedJson(true);
+      setTimeout(() => setCopiedJson(false), 2000);
     }
+  };
+
+  const copyText = async (key: string, value: string) => {
+    if (!value.trim()) return;
+    await navigator.clipboard.writeText(value);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 1500);
   };
 
   const handleApply = () => {
@@ -91,12 +107,62 @@ export default function GuidelineAnalysisModal({
     }
   };
 
+  const renderCopyRows = (title: string, items: string[], keyPrefix: string) => (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold text-neutral-700">{title}</p>
+      {items.length > 0 ? (
+        <div className="space-y-2">
+          {items.map((item, idx) => {
+            const key = `${keyPrefix}-${idx}`;
+            return (
+              <div key={key} className="flex items-center gap-2 rounded-md border bg-white px-2 py-1.5">
+                <p className="flex-1 text-xs text-neutral-700 break-all">{item}</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2"
+                  onClick={() => copyText(key, item)}
+                >
+                  {copiedKey === key ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-xs text-neutral-400">정보 없음</p>
+      )}
+    </div>
+  );
+
+  const renderListSection = (title: string, items: string[]) => (
+    <div>
+      <p className="font-semibold mb-1">{title}</p>
+      {items.length > 0 ? (
+        <ul className="space-y-1 list-disc list-inside">
+          {items.map((item, idx) => (
+            <li key={`${title}-${idx}`}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-neutral-400">정보 없음</p>
+      )}
+    </div>
+  );
+
   if (!isOpen) return null;
+
+  const cards = analysis?.reviewCards;
+  const scheduleCard = cards?.scheduleAction;
+  const missionCard = cards?.missionSpec;
+  const copyCard = cards?.copyPack;
+  const appealCard = cards?.productAppeal;
+  const riskCard = cards?.riskManagement;
 
   return (
     <div className="fixed inset-0 z-[250] bg-black/50 flex items-center justify-center" style={{ zIndex: Z_INDEX.guidelineAnalysisBackdrop }}>
       <div className="bg-white rounded-xl w-[90%] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" style={{ zIndex: Z_INDEX.guidelineAnalysisModal }}>
-        {/* Header */}
         <div className="border-b px-6 py-4 flex justify-between items-center">
           <h2 className="text-xl font-bold">캠페인 가이드라인 분석</h2>
           <button
@@ -107,7 +173,6 @@ export default function GuidelineAnalysisModal({
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {!analysis ? (
             <div className="p-6 space-y-4">
@@ -123,145 +188,88 @@ export default function GuidelineAnalysisModal({
                 />
               </div>
               <p className="text-xs text-neutral-500">
-                💡 팁: 전체 가이드라인 텍스트를 복사해서 붙여넣으면 정확한 분석이 가능합니다
+                전체 가이드라인 텍스트를 복사해 붙여넣으면 5개 카드로 자동 정리됩니다.
               </p>
             </div>
           ) : (
-            <div className="p-6 space-y-6">
-              {/* 기본 정보 */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="font-semibold text-neutral-800 mb-3">📋 기본 정보</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-neutral-600">제목</p>
-                    <p className="font-medium">{analysis.title || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-neutral-600">포인트</p>
-                    <p className="font-medium">{analysis.points ? analysis.points.toLocaleString() : '-'}P</p>
-                  </div>
-                  <div>
-                    <p className="text-neutral-600">모집기간</p>
-                    <p className="font-medium">
-                      {analysis.recruitPeriod?.start || '-'} ~ {analysis.recruitPeriod?.end || '-'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-neutral-600">리뷰 등록기간</p>
-                    <p className="font-medium">
-                      {analysis.reviewRegistrationPeriod?.start || '-'} ~ {analysis.reviewRegistrationPeriod?.end || '-'}
-                    </p>
-                  </div>
+            <div className="p-6 space-y-4">
+              <div className="rounded-xl border bg-slate-50 p-4 text-sm">
+                <p className="font-semibold text-neutral-800">{analysis.title || '-'}</p>
+                <p className="text-neutral-600 mt-1">
+                  {analysis.points ? analysis.points.toLocaleString() : '0'}P | 마감 {analysis.reviewRegistrationPeriod?.end || '-'}
+                </p>
+              </div>
+
+              <div className="rounded-xl border bg-blue-50 p-4">
+                <h3 className="font-semibold text-neutral-900 mb-3">1. 일정 및 예약</h3>
+                <div className="space-y-1 text-sm text-neutral-700">
+                  <p>유형: {scheduleCard?.visitType ? visitTypeLabel[scheduleCard.visitType] ?? scheduleCard.visitType : '-'}</p>
+                  <p>주소: {scheduleCard?.address || analysis.visitInfo || '-'}</p>
+                  <p>예약 방법: {scheduleCard?.reservationMethod || analysis.phone || '-'}</p>
+                  <p>가능 시간: {scheduleCard?.availableHours || '-'}</p>
+                  <p>마감 기한: {scheduleCard?.deliveryDeadline || analysis.reviewRegistrationPeriod?.end || '-'}</p>
                 </div>
               </div>
 
-              {/* 보상정보 */}
-              <div className="bg-purple-50 rounded-lg p-4">
-                <h3 className="font-semibold text-neutral-800 mb-3">💰 보상정보</h3>
-                <div className="space-y-2 text-sm">
-                  <p>
-                    <span className="text-neutral-600">포인트:</span>
-                    <span className="font-medium ml-2">{analysis.rewardInfo?.points ? analysis.rewardInfo.points.toLocaleString() : '-'}P</span>
-                  </p>
-                  <p>
-                    <span className="text-neutral-600">배송:</span>
-                    <span className="font-medium ml-2">{analysis.rewardInfo?.deliveryMethod || '-'}</span>
-                  </p>
-                  {analysis.rewardInfo?.productInfo && (
-                    <p>
-                      <span className="text-neutral-600">제품:</span>
-                      <span className="font-medium ml-2">{analysis.rewardInfo.productInfo}</span>
-                    </p>
-                  )}
+              <div className="rounded-xl border bg-orange-50 p-4">
+                <h3 className="font-semibold text-neutral-900 mb-3">2. 콘텐츠 미션</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-neutral-700">
+                  <p>글자 수: {missionCard?.minChars ? `${missionCard.minChars}자` : '-'}</p>
+                  <p>사진 수: {missionCard?.minPhotos ? `${missionCard.minPhotos}장` : '-'}</p>
+                  <p>영상 필수: {missionCard?.videoRequired === undefined ? '-' : missionCard.videoRequired ? '필수' : '선택'}</p>
                 </div>
-              </div>
-
-              {/* 컨텐츠 요구사항 */}
-              <div className="bg-orange-50 rounded-lg p-4">
-                <h3 className="font-semibold text-neutral-800 mb-3">📝 컨텐츠 요구사항</h3>
-                <div className="space-y-3 text-sm">
-                  {analysis.contentRequirements?.titleKeywords && analysis.contentRequirements.titleKeywords.length > 0 && (
-                    <div>
-                      <p className="font-medium text-neutral-700 mb-1">제목 키워드</p>
-                      <div className="flex flex-wrap gap-1">
-                        {analysis.contentRequirements.titleKeywords.map((kw, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-1 bg-white border border-orange-200 rounded text-orange-700 text-xs"
-                          >
-                            {kw.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {analysis.contentRequirements?.bodyKeywords && analysis.contentRequirements.bodyKeywords.length > 0 && (
-                    <div>
-                      <p className="font-medium text-neutral-700 mb-1">본문 키워드</p>
-                      <div className="flex flex-wrap gap-1">
-                        {analysis.contentRequirements.bodyKeywords.map((kw, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-1 bg-white border border-orange-200 rounded text-orange-700 text-xs"
-                          >
-                            {kw.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {analysis.contentRequirements?.requirements && analysis.contentRequirements.requirements.length > 0 && (
-                    <div>
-                      <p className="font-medium text-neutral-700 mb-1">요구사항</p>
-                      {analysis.contentRequirements.requirements.map((req, idx) => (
-                        <p key={idx} className="text-neutral-600 text-xs">
-                          • {req.label}: {req.value}
-                          {req.description ? ` (${req.description})` : ''}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 미션 세부사항 */}
-              {analysis.missions && analysis.missions.length > 0 && (
-                <div className="bg-pink-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-neutral-800 mb-3">🎯 미션 세부사항</h3>
-                  <div className="space-y-3 text-sm">
-                    {analysis.missions.map((mission, idx) => (
-                      <div key={idx} className="bg-white p-3 rounded border border-pink-200">
-                        <p className="font-medium text-neutral-800">{mission.title || '-'}</p>
-                        <p className="text-neutral-600 mt-1">{mission.description || '-'}</p>
-                        {mission.examples && mission.examples.length > 0 && (
-                          <ul className="mt-2 ml-4 text-xs text-neutral-600 list-disc">
-                            {mission.examples.map((ex, i) => (
-                              <li key={i}>{ex}</li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 주의사항 */}
-              {analysis.warnings && analysis.warnings.length > 0 && (
-                <div className="bg-red-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-neutral-800 mb-3">⚠️ 주의사항</h3>
-                  <ul className="space-y-1 text-sm text-red-700 list-disc list-inside">
-                    {analysis.warnings.map((warning, idx) => (
-                      <li key={idx}>{warning}</li>
+                {toList(missionCard?.requirements).length > 0 && (
+                  <ul className="mt-3 space-y-1 text-xs text-neutral-700 list-disc list-inside">
+                    {toList(missionCard?.requirements).map((item, idx) => (
+                      <li key={idx}>{item}</li>
                     ))}
                   </ul>
+                )}
+              </div>
+
+              <div className="rounded-xl border bg-emerald-50 p-4">
+                <h3 className="font-semibold text-neutral-900 mb-3">3. 키워드 및 태그 (복사 전용)</h3>
+                <div className="space-y-3">
+                  {renderCopyRows('제목 키워드', toList(copyCard?.titleKeywords), 'title')}
+                  {renderCopyRows('본문 키워드', toList(copyCard?.bodyKeywords), 'body')}
+                  {renderCopyRows('해시태그', toList(copyCard?.hashtags), 'hash')}
+                  {renderCopyRows('사람 태그', toList(copyCard?.mentionTags), 'mention')}
                 </div>
-              )}
+              </div>
+
+              <div className="rounded-xl border bg-indigo-50 p-4">
+                <h3 className="font-semibold text-neutral-900 mb-3">4. 제품 소구점</h3>
+                <div className="space-y-3 text-xs text-neutral-700">
+                  {renderListSection('핵심 장점', toList(appealCard?.coreBenefits))}
+                  {renderListSection('비교 포인트', toList(appealCard?.comparisonPoints))}
+                  {renderListSection('권장 사용 상황', toList(appealCard?.recommendedUseCases))}
+                  {renderListSection('추천 타깃 독자', toList(appealCard?.targetAudience))}
+                  {renderListSection('해결되는 고민', toList(appealCard?.painPoints))}
+                  {renderListSection('핵심 성분/스펙/수치', toList(appealCard?.keyIngredientsOrSpecs))}
+                  {renderListSection('사용 팁', toList(appealCard?.usageTips))}
+                  {renderListSection('전/후 변화 포인트', toList(appealCard?.beforeAfterPoints))}
+                  {renderListSection('신뢰 근거', toList(appealCard?.trustSignals))}
+                  {renderListSection('FAQ 아이디어', toList(appealCard?.faqIdeas))}
+                  {renderListSection('도입 훅 문장 소재', toList(appealCard?.narrativeHooks))}
+                  {renderListSection('추천 본문 구성', toList(appealCard?.recommendedStructure))}
+                  {renderListSection('마무리 CTA 문구', toList(appealCard?.callToAction))}
+                  {renderListSection('카피 작성 시 주의', toList(appealCard?.bannedOrCautionInCopy))}
+                </div>
+              </div>
+
+              <div className="rounded-xl border bg-rose-50 p-4">
+                <h3 className="font-semibold text-neutral-900 mb-3">5. 주의사항</h3>
+                <div className="space-y-2 text-xs text-neutral-700">
+                  <p><span className="font-semibold">필수 문구:</span> {toList(riskCard?.requiredNotices).join(' / ') || '-'}</p>
+                  <p><span className="font-semibold">금지 표현:</span> {toList(riskCard?.bannedPhrases).join(' / ') || '-'}</p>
+                  <p><span className="font-semibold">유지 기간:</span> {toList(riskCard?.retentionPeriod).join(' / ') || '-'}</p>
+                  <p><span className="font-semibold">리스크:</span> {toList(riskCard?.warnings).join(' / ') || '-'}</p>
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Footer */}
         <div className="border-t px-6 py-4 flex gap-2 justify-end bg-neutral-50">
           {analysis && (
             <Button
@@ -269,8 +277,8 @@ export default function GuidelineAnalysisModal({
               onClick={handleCopyJson}
               className="flex items-center gap-2"
             >
-              {copied ? <Check size={16} /> : <Copy size={16} />}
-              {copied ? 'JSON 복사됨' : 'JSON 복사'}
+              {copiedJson ? <Check size={16} /> : <Copy size={16} />}
+              {copiedJson ? 'JSON 복사됨' : 'JSON 복사'}
             </Button>
           )}
           <Button variant="outline" onClick={onClose}>

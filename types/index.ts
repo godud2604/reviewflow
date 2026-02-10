@@ -175,7 +175,7 @@ export interface CampaignGuidelineKeyword {
 }
 
 export interface CampaignGuidelineRequirement {
-  type: 'title' | 'body' | 'image' | 'video' | 'link' | 'length' | 'keyword';
+  type: string;
   label: string;
   value: string | number;
   description?: string;
@@ -183,57 +183,116 @@ export interface CampaignGuidelineRequirement {
 
 export interface CampaignGuidelineMission {
   title: string;
-  description: string;
+  description?: string;
   examples?: string[];
+}
+
+export interface GuidelineScheduleActionCard {
+  visitType?: 'visit' | 'delivery' | 'hybrid';
+  address?: string;
+  reservationMethod?: string;
+  availableHours?: string;
+  deliveryDeadline?: string;
+  pickupRequired?: boolean;
+  actionItems?: string[];
+}
+
+export interface GuidelineMissionSpecCard {
+  minChars?: number;
+  minPhotos?: number;
+  videoRequired?: boolean;
+  requiredShots?: string[];
+  linkRequirements?: string[];
+  requirements?: string[];
+}
+
+export interface GuidelineCopyCard {
+  titleKeywords?: string[];
+  bodyKeywords?: string[];
+  hashtags?: string[];
+  mentionTags?: string[];
+}
+
+export interface GuidelineProductAppealCard {
+  coreBenefits?: string[];
+  comparisonPoints?: string[];
+  recommendedUseCases?: string[];
+  targetAudience?: string[];
+  painPoints?: string[];
+  keyIngredientsOrSpecs?: string[];
+  usageTips?: string[];
+  beforeAfterPoints?: string[];
+  trustSignals?: string[];
+  faqIdeas?: string[];
+  narrativeHooks?: string[];
+  recommendedStructure?: string[];
+  callToAction?: string[];
+  bannedOrCautionInCopy?: string[];
+}
+
+export interface GuidelineRiskManagementCard {
+  requiredNotices?: string[];
+  bannedPhrases?: string[];
+  retentionPeriod?: string[];
+  warnings?: string[];
 }
 
 export interface CampaignGuidelineAnalysis {
   title: string;
-  points: number | null;
+  points?: number | null;
   
   // 플랫폼 정보
-  platform?: string; // 예: "네이버 블로그", "인스타그램", "카페" 등
-  category?: string; // 제품/서비스 카테고리
-  reviewChannel?: string; // 리뷰 채널 (블로그, 인스타그램, 쿠팡 등)
-  visitInfo?: string; // 방문정보 (주소, 위치 등)
-  phone?: string; // 전화번호
+  platform?: string | null; // 예: "네이버 블로그", "인스타그램", "카페" 등
+  category?: string | null; // 제품/서비스 카테고리
+  reviewChannel?: string | null; // 리뷰 채널 (블로그, 인스타그램, 쿠팡 등)
+  visitInfo?: string | null; // 방문정보 (주소, 위치 등)
+  phone?: string | null; // 전화번호
   
-  recruitPeriod: {
+  recruitPeriod?: {
     start: string;
     end: string;
   };
-  reviewerAnnouncement: string;
-  reviewRegistrationPeriod: {
+  reviewerAnnouncement?: string;
+  reviewRegistrationPeriod?: {
     start: string;
     end: string;
   };
   
   // 보상정보
-  rewardInfo: {
-    description: string;
-    points: number;
-    deliveryMethod: string;
-    productInfo?: string;
-  };
+  rewardInfo?: {
+    description?: string | null;
+    points?: number | null;
+    deliveryMethod?: string | null;
+    productInfo?: string | null;
+  } | null;
   
   // 컨텐츠 요구사항
-  contentRequirements: {
-    titleKeywords: CampaignGuidelineKeyword[];
-    bodyKeywords: CampaignGuidelineKeyword[];
-    requirements: CampaignGuidelineRequirement[];
+  contentRequirements?: {
+    titleKeywords?: CampaignGuidelineKeyword[];
+    bodyKeywords?: CampaignGuidelineKeyword[];
+    requirements?: CampaignGuidelineRequirement[];
     // 방문형 리뷰 필수 항목
     visitReviewTypes?: Array<'naverReservation' | 'googleReview' | 'other'>;
   };
   
   // 필수 공지 문구
-  requiredNotices: string[];
+  requiredNotices?: string[];
   
   // 미션 세부사항
-  missions: CampaignGuidelineMission[];
+  missions?: CampaignGuidelineMission[];
   
   // 기타 중요사항
-  importantNotes: string[];
+  importantNotes?: string[];
   
   // 주의사항
-  warnings: string[];
+  warnings?: string[];
+
+  // 리뷰어 작성용 5대 카드
+  reviewCards?: {
+    scheduleAction?: GuidelineScheduleActionCard;
+    missionSpec?: GuidelineMissionSpecCard;
+    copyPack?: GuidelineCopyCard;
+    productAppeal?: GuidelineProductAppealCard;
+    riskManagement?: GuidelineRiskManagementCard;
+  };
 }

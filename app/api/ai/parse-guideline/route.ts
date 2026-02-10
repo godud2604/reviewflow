@@ -33,6 +33,54 @@ const ContentRequirementsSchema = z.object({
   visitReviewTypes: z.array(z.enum(['naverReservation', 'googleReview', 'other'])).optional(),
 });
 
+const ReviewCardsSchema = z.object({
+  scheduleAction: z.object({
+    visitType: z.enum(['visit', 'delivery', 'hybrid']).optional(),
+    address: z.string().optional(),
+    reservationMethod: z.string().optional(),
+    availableHours: z.string().optional(),
+    deliveryDeadline: z.string().optional(),
+    pickupRequired: z.boolean().optional(),
+    actionItems: z.array(z.string()).optional(),
+  }).optional(),
+  missionSpec: z.object({
+    minChars: z.number().optional(),
+    minPhotos: z.number().optional(),
+    videoRequired: z.boolean().optional(),
+    requiredShots: z.array(z.string()).optional(),
+    linkRequirements: z.array(z.string()).optional(),
+    requirements: z.array(z.string()).optional(),
+  }).optional(),
+  copyPack: z.object({
+    titleKeywords: z.array(z.string()).optional(),
+    bodyKeywords: z.array(z.string()).optional(),
+    hashtags: z.array(z.string()).optional(),
+    mentionTags: z.array(z.string()).optional(),
+  }).optional(),
+  productAppeal: z.object({
+    coreBenefits: z.array(z.string()).optional(),
+    comparisonPoints: z.array(z.string()).optional(),
+    recommendedUseCases: z.array(z.string()).optional(),
+    targetAudience: z.array(z.string()).optional(),
+    painPoints: z.array(z.string()).optional(),
+    keyIngredientsOrSpecs: z.array(z.string()).optional(),
+    usageTips: z.array(z.string()).optional(),
+    beforeAfterPoints: z.array(z.string()).optional(),
+    trustSignals: z.array(z.string()).optional(),
+    faqIdeas: z.array(z.string()).optional(),
+    narrativeHooks: z.array(z.string()).optional(),
+    recommendedStructure: z.array(z.string()).optional(),
+    callToAction: z.array(z.string()).optional(),
+    bannedOrCautionInCopy: z.array(z.string()).optional(),
+  }).optional(),
+  riskManagement: z.object({
+    requiredNotices: z.array(z.string()).optional(),
+    bannedPhrases: z.array(z.string()).optional(),
+    retentionPeriod: z.array(z.string()).optional(),
+    warnings: z.array(z.string()).optional(),
+  }).optional(),
+}).optional();
+
 const CampaignGuidelineAnalysisSchema = z.object({
   title: z.string(),
   points: z.number().nullable().optional(),
@@ -60,6 +108,7 @@ const CampaignGuidelineAnalysisSchema = z.object({
   })).optional(),
   importantNotes: z.array(z.string()).optional(),
   warnings: z.array(z.string()).optional(),
+  reviewCards: ReviewCardsSchema,
 });
 
 // StructuredOutputParser 생성
@@ -110,6 +159,14 @@ function sanitizeKeywordsArray(
 }
 
 function normalizeOptionList(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+
+  return input
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter((value) => value.length > 0);
+}
+
+function normalizeStringArray(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
 
   return input
@@ -222,20 +279,10 @@ function inferPlatformFromGuideline(guideline: string, userPlatforms: string[]):
 const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인 분석 전문가입니다.
 
 ### 목표
-아래 가이드라인 텍스트에서 일정/보상/미션/컨텐츠요구사항/주의사항을 추출해, 스키마에 맞는 단일 JSON 객체로 반환하세요.
+아래 가이드라인 텍스트를 리뷰 작성용 5대 카드로 분류하고, 스키마에 맞는 단일 JSON 객체로 반환하세요.
 
 ### 추론 방식 (문맥 기반 CoT, 내부 수행)
 아래 절차를 내부적으로 단계별 수행한 뒤, 최종 결과만 JSON으로 출력하세요.
-1. 문서 구조 파악: 제목/섹션/라벨(신청 기간, 당첨 발표, 제공내역 등)을 먼저 식별
-2. 후보 추출: 각 필드에 들어갈 수 있는 텍스트 후보를 모두 수집
-3. 문맥 판정: 후보가 어떤 필드에 대응되는지 주변 문맥(앞뒤 문장, 섹션명, 단위, 키워드)으로 결정
-4. 충돌 해소: 여러 후보가 있으면 최신성/명시성/정확성이 높은 값 우선
-5. 정규화: 날짜, 숫자, 전화번호, 키워드 형식을 스키마 규칙에 맞게 변환
-6. 자기검증: 필수 형식 위반(문자열 배열, 잘못된 날짜, 숫자 타입 오류) 여부 점검 후 출력
-
-중요:
-- 내부 추론 과정(CoT)은 절대 출력하지 마세요.
-- 최종 출력은 JSON 객체 하나만 반환하세요.
 
 ### 출력 규칙 (최우선)
 1. 반드시 유효한 JSON 객체만 반환하세요. 코드블록, 설명문, 마크다운 금지.
@@ -262,6 +309,35 @@ const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인
    - 미션 제목/설명/예시 → missions[]
    - 금지/패널티/불이익 → warnings[]
    - 운영상 중요 안내 → importantNotes[]
+
+### 5대 카드 매핑 (reviewCards)
+아래 5개 카드를 reviewCards 하위에 반드시 매핑하세요. 근거가 없으면 필드 생략 가능.
+1. 일정 및 예약 → reviewCards.scheduleAction
+   - visitType(visit/delivery/hybrid), address, reservationMethod, availableHours
+   - deliveryDeadline, pickupRequired, actionItems
+2. 콘텐츠 미션 → reviewCards.missionSpec
+   - minChars, minPhotos, videoRequired
+   - requiredShots, linkRequirements, requirements
+3. 키워드 및 태그 → reviewCards.copyPack
+   - titleKeywords, bodyKeywords, hashtags, mentionTags (모두 문자열 배열)
+4. 제품 소구점(블로그 소스) → reviewCards.productAppeal
+   - coreBenefits, comparisonPoints, recommendedUseCases
+   - targetAudience, painPoints, keyIngredientsOrSpecs
+   - usageTips, beforeAfterPoints, trustSignals
+   - faqIdeas, narrativeHooks, recommendedStructure
+   - callToAction, bannedOrCautionInCopy
+5. 주의사항 → reviewCards.riskManagement
+   - requiredNotices, bannedPhrases, retentionPeriod, warnings
+
+### 4번 카드 강화 규칙 (중요)
+- 4번 카드는 "블로그 글 작성에 바로 쓰는 재료"를 최대한 풍부하게 채우세요.
+- 단순 나열보다 "문장으로 확장 가능한 단서"를 우선 추출하세요.
+- 원문 근거가 약한 경우 과장/추측 생성 금지, 근거 있는 범위만 채우세요.
+- 제품 상세페이지/가이드 문맥에서 아래를 적극 추출:
+  - 어떤 사람에게 맞는지(targetAudience), 어떤 고민 해결인지(painPoints)
+  - 성분/스펙/수치(keyIngredientsOrSpecs), 사용 팁(usageTips)
+  - 비교 우위(comparisonPoints), 신뢰 근거(trustSignals)
+  - 글 도입 훅(narrativeHooks), 본문 구성안(recommendedStructure), CTA(callToAction)
 
 ### contentRequirements.visitReviewTypes 판별 (방문형 캠페인일 때만)
 - naverReservation:
@@ -295,6 +371,7 @@ titleKeywords/bodyKeywords는 항상 아래 형식:
 - 미션 세부사항 -> missions[{title, description, examples}]
 - 주의/제한/패널티 -> warnings
 - 일정 준수/제출 방식 등 운영 안내 -> importantNotes
+- 5대 카드 -> reviewCards.scheduleAction / missionSpec / copyPack / productAppeal / riskManagement
 
 ${formatInstructions}`;
 
@@ -413,6 +490,94 @@ export async function POST(request: NextRequest) {
       if (parsedJson.rewardInfo?.points !== undefined) {
         parsedJson.rewardInfo.points = normalizePointsValue(parsedJson.rewardInfo.points);
       }
+      if (parsedJson.reviewCards?.copyPack) {
+        parsedJson.reviewCards.copyPack.titleKeywords = normalizeStringArray(
+          parsedJson.reviewCards.copyPack.titleKeywords
+        );
+        parsedJson.reviewCards.copyPack.bodyKeywords = normalizeStringArray(
+          parsedJson.reviewCards.copyPack.bodyKeywords
+        );
+        parsedJson.reviewCards.copyPack.hashtags = normalizeStringArray(
+          parsedJson.reviewCards.copyPack.hashtags
+        );
+        parsedJson.reviewCards.copyPack.mentionTags = normalizeStringArray(
+          parsedJson.reviewCards.copyPack.mentionTags
+        );
+      }
+      if (parsedJson.reviewCards?.missionSpec) {
+        parsedJson.reviewCards.missionSpec.requiredShots = normalizeStringArray(
+          parsedJson.reviewCards.missionSpec.requiredShots
+        );
+        parsedJson.reviewCards.missionSpec.linkRequirements = normalizeStringArray(
+          parsedJson.reviewCards.missionSpec.linkRequirements
+        );
+        parsedJson.reviewCards.missionSpec.requirements = normalizeStringArray(
+          parsedJson.reviewCards.missionSpec.requirements
+        );
+      }
+      if (parsedJson.reviewCards?.productAppeal) {
+        parsedJson.reviewCards.productAppeal.coreBenefits = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.coreBenefits
+        );
+        parsedJson.reviewCards.productAppeal.comparisonPoints = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.comparisonPoints
+        );
+        parsedJson.reviewCards.productAppeal.recommendedUseCases = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.recommendedUseCases
+        );
+        parsedJson.reviewCards.productAppeal.targetAudience = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.targetAudience
+        );
+        parsedJson.reviewCards.productAppeal.painPoints = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.painPoints
+        );
+        parsedJson.reviewCards.productAppeal.keyIngredientsOrSpecs = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.keyIngredientsOrSpecs
+        );
+        parsedJson.reviewCards.productAppeal.usageTips = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.usageTips
+        );
+        parsedJson.reviewCards.productAppeal.beforeAfterPoints = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.beforeAfterPoints
+        );
+        parsedJson.reviewCards.productAppeal.trustSignals = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.trustSignals
+        );
+        parsedJson.reviewCards.productAppeal.faqIdeas = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.faqIdeas
+        );
+        parsedJson.reviewCards.productAppeal.narrativeHooks = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.narrativeHooks
+        );
+        parsedJson.reviewCards.productAppeal.recommendedStructure = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.recommendedStructure
+        );
+        parsedJson.reviewCards.productAppeal.callToAction = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.callToAction
+        );
+        parsedJson.reviewCards.productAppeal.bannedOrCautionInCopy = normalizeStringArray(
+          parsedJson.reviewCards.productAppeal.bannedOrCautionInCopy
+        );
+      }
+      if (parsedJson.reviewCards?.riskManagement) {
+        parsedJson.reviewCards.riskManagement.requiredNotices = normalizeStringArray(
+          parsedJson.reviewCards.riskManagement.requiredNotices
+        );
+        parsedJson.reviewCards.riskManagement.bannedPhrases = normalizeStringArray(
+          parsedJson.reviewCards.riskManagement.bannedPhrases
+        );
+        parsedJson.reviewCards.riskManagement.retentionPeriod = normalizeStringArray(
+          parsedJson.reviewCards.riskManagement.retentionPeriod
+        );
+        parsedJson.reviewCards.riskManagement.warnings = normalizeStringArray(
+          parsedJson.reviewCards.riskManagement.warnings
+        );
+      }
+      if (parsedJson.reviewCards?.scheduleAction) {
+        parsedJson.reviewCards.scheduleAction.actionItems = normalizeStringArray(
+          parsedJson.reviewCards.scheduleAction.actionItems
+        );
+      }
 
       const validated = CampaignGuidelineAnalysisSchema.safeParse(parsedJson);
 
@@ -432,6 +597,65 @@ export async function POST(request: NextRequest) {
     }
     if (analysis.rewardInfo?.points !== undefined) {
       analysis.rewardInfo.points = normalizePointsValue(analysis.rewardInfo.points);
+    }
+
+    if (analysis.reviewCards?.copyPack) {
+      analysis.reviewCards.copyPack.titleKeywords = normalizeStringArray(
+        analysis.reviewCards.copyPack.titleKeywords
+      );
+      analysis.reviewCards.copyPack.bodyKeywords = normalizeStringArray(
+        analysis.reviewCards.copyPack.bodyKeywords
+      );
+      analysis.reviewCards.copyPack.hashtags = normalizeStringArray(
+        analysis.reviewCards.copyPack.hashtags
+      );
+      analysis.reviewCards.copyPack.mentionTags = normalizeStringArray(
+        analysis.reviewCards.copyPack.mentionTags
+      );
+    }
+    if (analysis.reviewCards?.productAppeal) {
+      analysis.reviewCards.productAppeal.coreBenefits = normalizeStringArray(
+        analysis.reviewCards.productAppeal.coreBenefits
+      );
+      analysis.reviewCards.productAppeal.comparisonPoints = normalizeStringArray(
+        analysis.reviewCards.productAppeal.comparisonPoints
+      );
+      analysis.reviewCards.productAppeal.recommendedUseCases = normalizeStringArray(
+        analysis.reviewCards.productAppeal.recommendedUseCases
+      );
+      analysis.reviewCards.productAppeal.targetAudience = normalizeStringArray(
+        analysis.reviewCards.productAppeal.targetAudience
+      );
+      analysis.reviewCards.productAppeal.painPoints = normalizeStringArray(
+        analysis.reviewCards.productAppeal.painPoints
+      );
+      analysis.reviewCards.productAppeal.keyIngredientsOrSpecs = normalizeStringArray(
+        analysis.reviewCards.productAppeal.keyIngredientsOrSpecs
+      );
+      analysis.reviewCards.productAppeal.usageTips = normalizeStringArray(
+        analysis.reviewCards.productAppeal.usageTips
+      );
+      analysis.reviewCards.productAppeal.beforeAfterPoints = normalizeStringArray(
+        analysis.reviewCards.productAppeal.beforeAfterPoints
+      );
+      analysis.reviewCards.productAppeal.trustSignals = normalizeStringArray(
+        analysis.reviewCards.productAppeal.trustSignals
+      );
+      analysis.reviewCards.productAppeal.faqIdeas = normalizeStringArray(
+        analysis.reviewCards.productAppeal.faqIdeas
+      );
+      analysis.reviewCards.productAppeal.narrativeHooks = normalizeStringArray(
+        analysis.reviewCards.productAppeal.narrativeHooks
+      );
+      analysis.reviewCards.productAppeal.recommendedStructure = normalizeStringArray(
+        analysis.reviewCards.productAppeal.recommendedStructure
+      );
+      analysis.reviewCards.productAppeal.callToAction = normalizeStringArray(
+        analysis.reviewCards.productAppeal.callToAction
+      );
+      analysis.reviewCards.productAppeal.bannedOrCautionInCopy = normalizeStringArray(
+        analysis.reviewCards.productAppeal.bannedOrCautionInCopy
+      );
     }
 
     // 포인트 후처리: 모델이 points를 누락한 경우 원문에서 보상 금액을 추출해 보정
@@ -458,6 +682,73 @@ export async function POST(request: NextRequest) {
         analysis.platform = inferredPlatform;
       }
     }
+
+    const fallbackTitleKeywords = analysis.contentRequirements?.titleKeywords?.map((item) => item.name) ?? [];
+    const fallbackBodyKeywords = analysis.contentRequirements?.bodyKeywords?.map((item) => item.name) ?? [];
+    const fallbackRequirements = analysis.contentRequirements?.requirements
+      ?.map((item) => `${item.label}${item.value !== undefined ? `: ${item.value}` : ''}`)
+      ?? [];
+    const fallbackRequiredNotices = normalizeStringArray(analysis.requiredNotices);
+    const fallbackWarnings = normalizeStringArray(analysis.warnings);
+    const fallbackActionItems = normalizeStringArray(analysis.importantNotes);
+
+    const copyPack = analysis.reviewCards?.copyPack;
+    const missionSpec = analysis.reviewCards?.missionSpec;
+    const productAppeal = analysis.reviewCards?.productAppeal;
+    const riskManagement = analysis.reviewCards?.riskManagement;
+    const scheduleAction = analysis.reviewCards?.scheduleAction;
+    const fallbackCoreBenefits = normalizeStringArray([
+      analysis.rewardInfo?.productInfo ?? '',
+      analysis.rewardInfo?.description ?? '',
+    ]);
+    const fallbackNarrativeHooks = normalizeStringArray([
+      analysis.title ?? '',
+      ...(analysis.missions?.map((mission) => mission.title || '') ?? []),
+    ]);
+
+    analysis.reviewCards = {
+      ...(analysis.reviewCards ?? {}),
+      scheduleAction: {
+        ...(scheduleAction ?? {}),
+        address: scheduleAction?.address ?? analysis.visitInfo ?? undefined,
+        actionItems: (scheduleAction?.actionItems && scheduleAction.actionItems.length > 0)
+          ? scheduleAction.actionItems
+          : fallbackActionItems,
+      },
+      missionSpec: {
+        ...(missionSpec ?? {}),
+        requirements: (missionSpec?.requirements && missionSpec.requirements.length > 0)
+          ? missionSpec.requirements
+          : fallbackRequirements,
+      },
+      copyPack: {
+        ...(copyPack ?? {}),
+        titleKeywords: (copyPack?.titleKeywords && copyPack.titleKeywords.length > 0)
+          ? copyPack.titleKeywords
+          : fallbackTitleKeywords,
+        bodyKeywords: (copyPack?.bodyKeywords && copyPack.bodyKeywords.length > 0)
+          ? copyPack.bodyKeywords
+          : fallbackBodyKeywords,
+      },
+      productAppeal: {
+        ...(productAppeal ?? {}),
+        coreBenefits: (productAppeal?.coreBenefits && productAppeal.coreBenefits.length > 0)
+          ? productAppeal.coreBenefits
+          : fallbackCoreBenefits,
+        narrativeHooks: (productAppeal?.narrativeHooks && productAppeal.narrativeHooks.length > 0)
+          ? productAppeal.narrativeHooks
+          : fallbackNarrativeHooks,
+      },
+      riskManagement: {
+        ...(riskManagement ?? {}),
+        requiredNotices: (riskManagement?.requiredNotices && riskManagement.requiredNotices.length > 0)
+          ? riskManagement.requiredNotices
+          : fallbackRequiredNotices,
+        warnings: (riskManagement?.warnings && riskManagement.warnings.length > 0)
+          ? riskManagement.warnings
+          : fallbackWarnings,
+      },
+    };
 
     return NextResponse.json({
       success: true,

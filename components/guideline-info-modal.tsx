@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { CampaignGuidelineAnalysis } from '@/types';
 import {
   Dialog,
@@ -9,7 +10,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Copy, Check } from 'lucide-react';
 import { Z_INDEX } from '@/lib/z-index';
 
 interface GuidelineInfoModalProps {
@@ -18,208 +20,230 @@ interface GuidelineInfoModalProps {
   analysis: CampaignGuidelineAnalysis | null;
 }
 
+const toList = (items?: string[]) => (Array.isArray(items) ? items.filter(Boolean) : []);
+
+const visitTypeLabel: Record<string, string> = {
+  visit: '방문형',
+  delivery: '배송형',
+  hybrid: '방문+배송형',
+};
+
 export default function GuidelineInfoModal({
   isOpen,
   onClose,
   analysis,
 }: GuidelineInfoModalProps) {
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
   if (!analysis) return null;
+
+  const cards = analysis.reviewCards;
+  const scheduleCard = cards?.scheduleAction;
+  const missionCard = cards?.missionSpec;
+  const copyCard = cards?.copyPack;
+  const appealCard = cards?.productAppeal;
+  const riskCard = cards?.riskManagement;
+
+  const copyText = async (key: string, value: string) => {
+    if (!value.trim()) return;
+    await navigator.clipboard.writeText(value);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 1500);
+  };
+
+  const renderCopyRows = (title: string, items: string[], keyPrefix: string) => (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold text-neutral-700">{title}</p>
+      {items.length > 0 ? (
+        <div className="space-y-2">
+          {items.map((item, idx) => {
+            const key = `${keyPrefix}-${idx}`;
+            return (
+              <div key={key} className="flex items-center gap-2 rounded-md border bg-white px-2 py-1.5">
+                <p className="flex-1 text-xs text-neutral-700 break-all">{item}</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2"
+                  onClick={() => copyText(key, item)}
+                >
+                  {copiedKey === key ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-xs text-neutral-400">정보 없음</p>
+      )}
+    </div>
+  );
+
+  const renderListSection = (title: string, items: string[]) => (
+    <div>
+      <p className="font-semibold mb-1">{title}</p>
+      {items.length > 0 ? (
+        <ul className="space-y-1 list-disc list-inside">
+          {items.map((item, idx) => (
+            <li key={`${title}-${idx}`}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-neutral-400">정보 없음</p>
+      )}
+    </div>
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
+      <DialogContent
         className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
         style={{ zIndex: Z_INDEX.guidelineAnalysisModal }}
       >
         <DialogHeader>
           <DialogTitle className="text-lg">{analysis.title || 'n/a'} - 캠페인 가이드라인</DialogTitle>
           <DialogDescription>
-            {analysis.points ? analysis.points.toLocaleString() : '0'}P | 모집기간: {analysis.recruitPeriod?.start || ''} ~{' '}
-            {analysis.recruitPeriod?.end || ''}
+            {analysis.points ? analysis.points.toLocaleString() : '0'}P | 마감: {analysis.reviewRegistrationPeriod?.end || '-'}
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="flex-1 w-full">
-          <Tabs defaultValue="reward" className="w-full">
-            <TabsList className="w-full justify-start border-b rounded-none bg-transparent px-4">
-              <TabsTrigger value="reward">보상정보</TabsTrigger>
-              <TabsTrigger value="content">컨텐츠 요구사항</TabsTrigger>
-              <TabsTrigger value="missions">미션</TabsTrigger>
-              <TabsTrigger value="notices">필수 공지</TabsTrigger>
-              <TabsTrigger value="important">중요사항</TabsTrigger>
-              <TabsTrigger value="warnings">주의사항</TabsTrigger>
-            </TabsList>
-
-            {/* 보상정보 */}
-            <TabsContent value="reward" className="p-4 space-y-4">
-              <div className="bg-purple-50 rounded-lg p-4">
-                <h3 className="font-semibold text-neutral-800 mb-3">지급 포인트</h3>
-                <p className="text-lg font-bold text-purple-600">
-                  {analysis.rewardInfo?.points ? analysis.rewardInfo.points.toLocaleString() : '0'}P
-                </p>
+          <div className="p-4 space-y-4">
+            <div className="rounded-xl border bg-blue-50 p-4">
+              <h3 className="font-semibold text-neutral-900 mb-3">1. 일정 및 예약</h3>
+              <div className="space-y-1 text-sm text-neutral-700">
+                <p>유형: {scheduleCard?.visitType ? visitTypeLabel[scheduleCard.visitType] ?? scheduleCard.visitType : '-'}</p>
+                <p>주소: {scheduleCard?.address || analysis.visitInfo || '-'}</p>
+                <p>예약 방법: {scheduleCard?.reservationMethod || analysis.phone || '-'}</p>
+                <p>가능 시간: {scheduleCard?.availableHours || '-'}</p>
+                <p>마감 기한: {scheduleCard?.deliveryDeadline || analysis.reviewRegistrationPeriod?.end || '-'}</p>
+                <p>회수 여부: {scheduleCard?.pickupRequired === undefined ? '-' : scheduleCard.pickupRequired ? '회수 있음' : '회수 없음'}</p>
               </div>
-
-              <div className="bg-purple-50 rounded-lg p-4">
-                <h3 className="font-semibold text-neutral-800 mb-3">배송 방법</h3>
-                <p className="text-neutral-700">{analysis.rewardInfo?.deliveryMethod || '-'}</p>
-              </div>
-
-              {analysis.rewardInfo?.productInfo && (
-                <div className="bg-purple-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-neutral-800 mb-3">제공 내역</h3>
-                  <p className="text-neutral-700">{analysis.rewardInfo.productInfo}</p>
-                </div>
-              )}
-
-              <div className="bg-purple-50 rounded-lg p-4">
-                <h3 className="font-semibold text-neutral-800 mb-3">상세 설명</h3>
-                <p className="text-neutral-700 text-sm whitespace-pre-wrap">
-                  {analysis.rewardInfo?.description || '-'}
-                </p>
-              </div>
-            </TabsContent>
-
-            {/* 컨텐츠 요구사항 */}
-            <TabsContent value="content" className="p-4 space-y-4">
-              {analysis.contentRequirements?.titleKeywords && analysis.contentRequirements.titleKeywords.length > 0 && (
-                <div className="bg-orange-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-neutral-800 mb-3">제목 키워드</h3>
-                  <p className="text-sm text-neutral-600 mb-2">다음 중 1개를 선택하여 제목에 포함하세요</p>
-                  <div className="flex flex-wrap gap-2">
-                    {analysis.contentRequirements.titleKeywords.map((kw, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 bg-white border border-orange-300 rounded-full text-sm font-medium text-orange-700"
-                      >
-                        {kw.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {analysis.contentRequirements?.bodyKeywords && analysis.contentRequirements.bodyKeywords.length > 0 && (
-                <div className="bg-orange-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-neutral-800 mb-3">본문 키워드</h3>
-                  <p className="text-sm text-neutral-600 mb-2">
-                    다음 중 1개를 선택하여 본문에 4번 이상 포함하세요
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {analysis.contentRequirements.bodyKeywords.map((kw, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 bg-white border border-orange-300 rounded-full text-sm font-medium text-orange-700"
-                      >
-                        {kw.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {analysis.contentRequirements?.requirements && analysis.contentRequirements.requirements.length > 0 && (
-                <div className="bg-orange-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-neutral-800 mb-3">필수 요구사항</h3>
-                  <div className="space-y-2">
-                    {analysis.contentRequirements.requirements.map((req, idx) => (
-                      <div key={idx} className="flex justify-between items-center py-2 border-b border-orange-200 last:border-0">
-                        <span className="text-neutral-700">{req.label}</span>
-                        <span className="font-bold text-orange-600">
-                          {req.type === 'length' ? `${req.value}자 이상` : req.value}
-                          {req.type === 'image' && '장'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-
-            {/* 미션 */}
-            <TabsContent value="missions" className="p-4 space-y-4">
-              {analysis.missions && analysis.missions.length > 0 ? (
-                analysis.missions.map((mission, idx) => (
-                  <div key={idx} className="bg-pink-50 rounded-lg p-4 border border-pink-200">
-                    <h4 className="font-semibold text-neutral-800 mb-2">미션 {idx + 1}: {mission.title || '-'}</h4>
-                    <p className="text-neutral-700 text-sm mb-3">{mission.description || '-'}</p>
-                    {mission.examples && mission.examples.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-neutral-600 mb-2">예시:</p>
-                        <ul className="space-y-1">
-                          {mission.examples.map((example, i) => (
-                            <li key={i} className="text-xs text-neutral-600 flex items-start gap-2">
-                              <span className="text-pink-500 mt-1">•</span>
-                              <span>{example}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <p className="text-neutral-400 text-sm">미션 정보가 없습니다</p>
-              )}
-            </TabsContent>
-
-            {/* 필수 공지 문구 */}
-            <TabsContent value="notices" className="p-4 space-y-4">
-              {analysis.requiredNotices && analysis.requiredNotices.length > 0 ? (
-                <>
-                  {analysis.requiredNotices.map((notice, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400 text-sm text-neutral-700"
-                    >
-                      <p className="font-medium text-blue-900 mb-1">✓ 필수 공지 {idx + 1}</p>
-                      <p className="text-neutral-700">{notice}</p>
-                    </div>
+              {toList(scheduleCard?.actionItems).length > 0 && (
+                <ul className="mt-3 space-y-1 text-xs text-neutral-700 list-disc list-inside">
+                  {toList(scheduleCard?.actionItems).map((item, idx) => (
+                    <li key={idx}>{item}</li>
                   ))}
-                  <div className="bg-blue-100 rounded-lg p-3 text-xs text-blue-900 border border-blue-300">
-                    <p className="font-semibold mb-1">💡 팁</p>
-                    <p>
-                      이 문구들은 리뷰 작성 시 반드시 포함되어야 합니다. 특히 공정위 관련 대가성 문구는 리뷰
-                      상단에 기재해야 합니다.
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <p className="text-neutral-400 text-sm">필수 공지 정보가 없습니다</p>
+                </ul>
               )}
-            </TabsContent>
+            </div>
 
-            {/* 중요사항 */}
-            <TabsContent value="important" className="p-4 space-y-3">
-              {analysis.importantNotes && analysis.importantNotes.length > 0 ? (
-                analysis.importantNotes.map((note, idx) => (
-                  <div key={idx} className="bg-green-50 rounded-lg p-4 border border-green-200">
-                    <p className="text-neutral-700 text-sm flex items-start gap-2">
-                      <span className="text-green-600 font-bold text-lg leading-none mt-0.5">✓</span>
-                      <span>{note}</span>
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-neutral-400 text-sm">중요사항이 없습니다</p>
+            <div className="rounded-xl border bg-orange-50 p-4">
+              <h3 className="font-semibold text-neutral-900 mb-3">2. 콘텐츠 미션</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-neutral-700">
+                <p>글자 수: {missionCard?.minChars ? `${missionCard.minChars}자` : '-'}</p>
+                <p>사진 수: {missionCard?.minPhotos ? `${missionCard.minPhotos}장` : '-'}</p>
+                <p>영상 필수: {missionCard?.videoRequired === undefined ? '-' : missionCard.videoRequired ? '필수' : '선택'}</p>
+              </div>
+              {toList(missionCard?.requiredShots).length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-semibold text-neutral-700 mb-1">필수 촬영 컷</p>
+                  <ul className="space-y-1 text-xs text-neutral-700 list-disc list-inside">
+                    {toList(missionCard?.requiredShots).map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
               )}
-            </TabsContent>
+              {toList(missionCard?.linkRequirements).length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-semibold text-neutral-700 mb-1">링크 삽입 정보</p>
+                  <ul className="space-y-1 text-xs text-neutral-700 list-disc list-inside">
+                    {toList(missionCard?.linkRequirements).map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {toList(missionCard?.requirements).length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-semibold text-neutral-700 mb-1">기타 규격</p>
+                  <ul className="space-y-1 text-xs text-neutral-700 list-disc list-inside">
+                    {toList(missionCard?.requirements).map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
 
-            {/* 주의사항 */}
-            <TabsContent value="warnings" className="p-4 space-y-3">
-              {analysis.warnings && analysis.warnings.length > 0 ? (
-                analysis.warnings.map((warning, idx) => (
-                  <div key={idx} className="bg-red-50 rounded-lg p-4 border border-red-200">
-                    <p className="text-red-700 text-sm flex items-start gap-2">
-                      <span className="text-red-600 font-bold text-lg leading-none mt-0.5">!</span>
-                      <span>{warning}</span>
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-neutral-400 text-sm">주의사항이 없습니다</p>
-              )}
-            </TabsContent>
-          </Tabs>
+            <div className="rounded-xl border bg-emerald-50 p-4">
+              <h3 className="font-semibold text-neutral-900 mb-3">3. 키워드 및 태그 (복사 전용)</h3>
+              <div className="space-y-3">
+                {renderCopyRows('제목 키워드', toList(copyCard?.titleKeywords), 'title')}
+                {renderCopyRows('본문 키워드', toList(copyCard?.bodyKeywords), 'body')}
+                {renderCopyRows('해시태그', toList(copyCard?.hashtags), 'hash')}
+                {renderCopyRows('사람 태그', toList(copyCard?.mentionTags), 'mention')}
+              </div>
+            </div>
+
+            <div className="rounded-xl border bg-indigo-50 p-4">
+              <h3 className="font-semibold text-neutral-900 mb-3">4. 제품 소구점</h3>
+              <div className="space-y-3 text-xs text-neutral-700">
+                {renderListSection('핵심 장점', toList(appealCard?.coreBenefits))}
+                {renderListSection('비교 포인트', toList(appealCard?.comparisonPoints))}
+                {renderListSection('권장 사용 상황', toList(appealCard?.recommendedUseCases))}
+                {renderListSection('추천 타깃 독자', toList(appealCard?.targetAudience))}
+                {renderListSection('해결되는 고민', toList(appealCard?.painPoints))}
+                {renderListSection('핵심 성분/스펙/수치', toList(appealCard?.keyIngredientsOrSpecs))}
+                {renderListSection('사용 팁', toList(appealCard?.usageTips))}
+                {renderListSection('전/후 변화 포인트', toList(appealCard?.beforeAfterPoints))}
+                {renderListSection('신뢰 근거', toList(appealCard?.trustSignals))}
+                {renderListSection('FAQ 아이디어', toList(appealCard?.faqIdeas))}
+                {renderListSection('도입 훅 문장 소재', toList(appealCard?.narrativeHooks))}
+                {renderListSection('추천 본문 구성', toList(appealCard?.recommendedStructure))}
+                {renderListSection('마무리 CTA 문구', toList(appealCard?.callToAction))}
+                {renderListSection('카피 작성 시 주의', toList(appealCard?.bannedOrCautionInCopy))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border bg-rose-50 p-4">
+              <h3 className="font-semibold text-neutral-900 mb-3">5. 주의사항</h3>
+              <div className="space-y-3 text-xs text-neutral-700">
+                <div>
+                  <p className="font-semibold mb-1">필수 문구</p>
+                  {toList(riskCard?.requiredNotices).length > 0 ? (
+                    <ul className="space-y-1 list-disc list-inside">
+                      {toList(riskCard?.requiredNotices).map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : <p className="text-neutral-400">정보 없음</p>}
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">금지어/금지 표현</p>
+                  {toList(riskCard?.bannedPhrases).length > 0 ? (
+                    <ul className="space-y-1 list-disc list-inside">
+                      {toList(riskCard?.bannedPhrases).map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : <p className="text-neutral-400">정보 없음</p>}
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">유지 기간</p>
+                  {toList(riskCard?.retentionPeriod).length > 0 ? (
+                    <ul className="space-y-1 list-disc list-inside">
+                      {toList(riskCard?.retentionPeriod).map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : <p className="text-neutral-400">정보 없음</p>}
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">기타 리스크</p>
+                  {toList(riskCard?.warnings).length > 0 ? (
+                    <ul className="space-y-1 list-disc list-inside text-rose-700">
+                      {toList(riskCard?.warnings).map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : <p className="text-neutral-400">정보 없음</p>}
+                </div>
+              </div>
+            </div>
+          </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>
