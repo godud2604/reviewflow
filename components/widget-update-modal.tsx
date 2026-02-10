@@ -11,12 +11,18 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-const WIDGET_UPDATE_MODAL_KEY = 'widget-update-modal-v2-dismissed';
+const WIDGET_UPDATE_MODAL_KEY = 'widget-update-modal-v3-dismissed';
 
 export default function WidgetUpdateModal() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isIos = /iphone|ipad|ipod/.test(userAgent);
+    if (!isIos) {
+      return;
+    }
+
     const dismissed = localStorage.getItem(WIDGET_UPDATE_MODAL_KEY);
     if (!dismissed) {
       const timer = setTimeout(() => {
@@ -78,10 +84,6 @@ export default function WidgetUpdateModal() {
             <div className="space-y-1.5 pl-2 text-[12px] text-neutral-600">
               <p className="flex items-start gap-2">
                 <span className="font-bold text-orange-600">1</span>
-                <span>위젯 달력 개선</span>
-              </p>
-              <p className="flex items-start gap-2">
-                <span className="font-bold text-orange-600">2</span>
                 <span>위젯에서 방문 일정, 마감일을 리스트로 확인</span>
               </p>
             </div>
