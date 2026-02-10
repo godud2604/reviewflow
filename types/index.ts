@@ -181,12 +181,6 @@ export interface CampaignGuidelineRequirement {
   description?: string;
 }
 
-export interface CampaignGuidelineDeadline {
-  label: string;
-  date: string;
-  description?: string;
-}
-
 export interface CampaignGuidelineMission {
   title: string;
   description: string;
@@ -213,7 +207,6 @@ export interface CampaignGuidelineAnalysis {
     start: string;
     end: string;
   };
-  deadlines: CampaignGuidelineDeadline[];
   
   // 보상정보
   rewardInfo: {
@@ -228,6 +221,8 @@ export interface CampaignGuidelineAnalysis {
     titleKeywords: CampaignGuidelineKeyword[];
     bodyKeywords: CampaignGuidelineKeyword[];
     requirements: CampaignGuidelineRequirement[];
+    // 방문형 리뷰 필수 항목
+    visitReviewTypes?: Array<'naverReservation' | 'googleReview' | 'other'>;
   };
   
   // 필수 공지 문구

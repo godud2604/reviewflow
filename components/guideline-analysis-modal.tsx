@@ -155,23 +155,6 @@ export default function GuidelineAnalysisModal({
                 </div>
               </div>
 
-              {/* 주요 일정 */}
-              <div className="bg-green-50 rounded-lg p-4">
-                <h3 className="font-semibold text-neutral-800 mb-3">📅 주요 일정</h3>
-                <div className="space-y-2 text-sm">
-                  {analysis.deadlines && analysis.deadlines.length > 0 ? (
-                    analysis.deadlines.map((deadline, idx) => (
-                      <div key={idx} className="flex justify-between">
-                        <span className="text-neutral-600">{deadline.label}</span>
-                        <span className="font-medium">{deadline.date}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-neutral-400">일정 정보가 없습니다</p>
-                  )}
-                </div>
-              </div>
-
               {/* 보상정보 */}
               <div className="bg-purple-50 rounded-lg p-4">
                 <h3 className="font-semibold text-neutral-800 mb-3">💰 보상정보</h3>

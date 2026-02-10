@@ -14,13 +14,6 @@ if (!apiKey) {
 
 const client = new GoogleGenerativeAI(apiKey || '');
 
-// Zod 스키마 정의
-const DeadlineSchema = z.object({
-  label: z.string(),
-  date: z.string(),
-  description: z.string(),
-});
-
 const ContentRequirementsSchema = z.object({
   titleKeywords: z.array(z.object({
     name: z.string(),
@@ -36,32 +29,28 @@ const ContentRequirementsSchema = z.object({
     value: z.number(),
     description: z.string(),
   })).optional(),
+  // 방문형 리뷰 필수 항목 (네이버예약, 구글리뷰, 기타)
+  visitReviewTypes: z.array(z.enum(['naverReservation', 'googleReview', 'other'])).optional(),
 });
 
 const CampaignGuidelineAnalysisSchema = z.object({
   title: z.string(),
   points: z.number().nullable().optional(),
-  platform: z.string().optional(),
-  category: z.string().optional(),
-  reviewChannel: z.string().optional(),
-  visitInfo: z.string().optional(),
-  phone: z.string().optional(),
-  recruitPeriod: z.object({
-    start: z.string(),
-    end: z.string(),
-  }).optional(),
-  reviewerAnnouncement: z.string().optional(),
+  platform: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+  reviewChannel: z.string().nullable().optional(),
+  visitInfo: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
   reviewRegistrationPeriod: z.object({
     start: z.string(),
     end: z.string(),
   }).optional(),
-  deadlines: z.array(DeadlineSchema).optional(),
   rewardInfo: z.object({
-    description: z.string().optional(),
-    points: z.number().optional(),
-    deliveryMethod: z.string().optional(),
-    productInfo: z.string().optional(),
-  }).optional(),
+    description: z.string().nullable().optional(),
+    points: z.number().nullable().optional(),
+    deliveryMethod: z.string().nullable().optional(),
+    productInfo: z.string().nullable().optional(),
+  }).nullable().optional(),
   contentRequirements: ContentRequirementsSchema.optional(),
   requiredNotices: z.array(z.string()).optional(),
   missions: z.array(z.object({
@@ -120,68 +109,192 @@ function sanitizeKeywordsArray(
     .filter((item): item is { name: string; description: string } => item !== null && item.name);
 }
 
+function normalizeOptionList(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+
+  return input
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter((value) => value.length > 0);
+}
+
+function normalizeForMatch(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, '');
+}
+
+function parseKoreanNumberFragment(value: string): number | null {
+  const cleaned = value.replace(/\s+/g, '');
+  const unitMap: Record<string, number> = {
+    억: 100000000,
+    만: 10000,
+    천: 1000,
+    백: 100,
+    십: 10,
+  };
+
+  const unitMatches = [...cleaned.matchAll(/(\d+(?:\.\d+)?)(억|만|천|백|십)/g)];
+  if (unitMatches.length > 0) {
+    return unitMatches.reduce((sum, match) => {
+      const numberValue = Number(match[1]);
+      const unitValue = unitMap[match[2]] ?? 1;
+      return sum + numberValue * unitValue;
+    }, 0);
+  }
+
+  const numeric = cleaned.replace(/[^0-9.]/g, '');
+  if (!numeric) return null;
+  return Number(numeric);
+}
+
+function normalizePointsValue(value: unknown): number | null | undefined {
+  if (value === null || value === undefined) return value as null | undefined;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value !== 'string') return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const normalized = trimmed
+    .replace(/,/g, '')
+    .replace(/포인트|point|points|p\b/gi, '')
+    .replace(/\s+/g, '');
+
+  if (/[~\-]/.test(normalized)) {
+    const parts = normalized.split(/[~\-]/).map((part) => part.trim()).filter(Boolean);
+    const values = parts
+      .map((part) => parseKoreanNumberFragment(part))
+      .filter((part): part is number => typeof part === 'number' && !Number.isNaN(part));
+    if (values.length > 0) return Math.max(...values);
+  }
+
+  const parsed = parseKoreanNumberFragment(normalized);
+  if (parsed === null || Number.isNaN(parsed)) return null;
+  return Math.round(parsed);
+}
+
+function extractPointsFromGuideline(guideline: string): number | null {
+  if (!guideline?.trim()) return null;
+
+  const rewardContextPattern =
+    /(포인트|리워드|체험권|쿠폰|제공내역|제공|추가\s*결제|결제|구매|금액|가격)/i;
+
+  const candidateSegments = guideline
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && rewardContextPattern.test(line));
+
+  const rangePattern = /\d[\d,]*(?:\.\d+)?\s*[~\-]\s*\d[\d,]*(?:\.\d+)?\s*(?:원|p|포인트|points?)?/gi;
+  const koreanUnitPattern = /\d+(?:\.\d+)?(?:억|만|천|백|십)(?:\d+(?:\.\d+)?(?:만|천|백|십))?\s*(?:원|p|포인트|points?)?/gi;
+  const plainAmountPattern = /\d[\d,]*(?:\.\d+)?\s*(?:원|p|포인트|points?)/gi;
+
+  const parsedValues: number[] = [];
+  const collect = (value: string) => {
+    const normalized = normalizePointsValue(value);
+    if (typeof normalized === 'number' && Number.isFinite(normalized) && normalized > 0) {
+      parsedValues.push(normalized);
+    }
+  };
+
+  candidateSegments.forEach((segment) => {
+    const rangeMatches = segment.match(rangePattern) ?? [];
+    const koreanUnitMatches = segment.match(koreanUnitPattern) ?? [];
+    const plainMatches = segment.match(plainAmountPattern) ?? [];
+
+    [...rangeMatches, ...koreanUnitMatches, ...plainMatches].forEach(collect);
+  });
+
+  if (parsedValues.length === 0) return null;
+  return Math.max(...parsedValues);
+}
+
+function inferPlatformFromGuideline(guideline: string, userPlatforms: string[]): string | null {
+  if (!guideline?.trim() || userPlatforms.length === 0) {
+    return null;
+  }
+
+  const normalizedGuideline = normalizeForMatch(guideline);
+  const matched = userPlatforms.find((platform) =>
+    normalizedGuideline.includes(normalizeForMatch(platform))
+  );
+
+  return matched ?? null;
+}
+
 const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인 분석 전문가입니다.
 
-## 분석 과정 (Chain-of-Thought):
+### 목표
+아래 가이드라인 텍스트에서 일정/보상/미션/컨텐츠요구사항/주의사항을 추출해, 스키마에 맞는 단일 JSON 객체로 반환하세요.
 
-1. **문맥 파악**: 가이드라인 텍스트를 읽으며 어떤 플랫폼/사이트의 체험단인지, 어떤 구조인지 파악하세요.
-2. **카테고리 식별**: 제품/서비스 카테고리를 다음 중에서만 선택하세요:
+### 추론 방식 (문맥 기반 CoT, 내부 수행)
+아래 절차를 내부적으로 단계별 수행한 뒤, 최종 결과만 JSON으로 출력하세요.
+1. 문서 구조 파악: 제목/섹션/라벨(신청 기간, 당첨 발표, 제공내역 등)을 먼저 식별
+2. 후보 추출: 각 필드에 들어갈 수 있는 텍스트 후보를 모두 수집
+3. 문맥 판정: 후보가 어떤 필드에 대응되는지 주변 문맥(앞뒤 문장, 섹션명, 단위, 키워드)으로 결정
+4. 충돌 해소: 여러 후보가 있으면 최신성/명시성/정확성이 높은 값 우선
+5. 정규화: 날짜, 숫자, 전화번호, 키워드 형식을 스키마 규칙에 맞게 변환
+6. 자기검증: 필수 형식 위반(문자열 배열, 잘못된 날짜, 숫자 타입 오류) 여부 점검 후 출력
+
+중요:
+- 내부 추론 과정(CoT)은 절대 출력하지 마세요.
+- 최종 출력은 JSON 객체 하나만 반환하세요.
+
+### 출력 규칙 (최우선)
+1. 반드시 유효한 JSON 객체만 반환하세요. 코드블록, 설명문, 마크다운 금지.
+2. 필드는 실제 근거가 있을 때만 포함하세요. 불필요한 빈 배열/빈 객체/null을 임의 생성하지 마세요.
+3. 날짜는 현재 기준 2026-02-10에 맞춰 YYYY-MM-DD로 정규화하세요.
+4. 숫자 필드는 정수로 반환하세요.
+5. 카테고리는 아래 허용 목록에서만 선택하세요. 없으면 "기타".
    - 맛집/식품, 뷰티, 생활/리빙, 출산/육아, 주방/가전, 반려동물, 여행/레저, 데이트, 웨딩, 티켓/문화생활, 디지털/전자기기, 건강/헬스, 자동차/모빌리티, 문구/오피스, 기타
-3. **플랫폼 및 리뷰채널 추출**:
-   - **플랫폼**: 가이드라인에서 명시된 플랫폼 (예: "네이버 블로그", "인스타그램", "유튜브", "쿠팡")
-   - **리뷰채널**: 리뷰를 작성해야 하는 채널 (예: "블로그", "인스타그램", "쿠팡")
-4. **장소 정보 추출**: 
-   - **방문정보**: 주소, 위치, 매장명 등 방문해야 할 장소
-   - **전화번호**: 매장 전화, 고객센터 전화 등
-5. **날짜 필드 식별**: 문맥에 맞게 다음과 같은 날짜들을 찾으세요:
-   - 모집 마감일: "모집 마감", "신청 마감", "모집 기간 종료" 등
-   - 선정자 발표일: "선정자 발표", "당선자 발표", "선정 공지" 등
-   - 리뷰 제출 기한: "리뷰 제출", "리뷰 작성 마감", "포스팅 기한" 등
-   - 기타 일정: "배송 예상일", "제품 회수일" 등
-6. **의미 해석**: 각 날짜가 정확히 무엇을 의미하는지 파악하고, 실제 의미 있는 라벨을 생성하세요.
-7. **상대적 표현 계산**: "선정일 기준 +10일", "배송 후 7일" 같은 표현을 계산하여 구체적인 날짜로 변환하세요.
-8. **JSON 생성**: 추출한 정보를 구조화된 JSON으로 반환하세요.
 
-## contentRequirements 필드 - titleKeywords와 bodyKeywords 형식:
+### 추출 대상
+1. 기본 정보
+   - title, platform, category, reviewChannel, visitInfo, phone
+2. 일정
+   - 리뷰/포스팅 제출 기간 또는 마감 → reviewRegistrationPeriod
+3. 보상
+   - 포인트/리워드/체험권/지급 관련 수치 → points 또는 rewardInfo.points
+   - 설명/전달방식/제품정보 → rewardInfo 하위 필드
+4. 컨텐츠 요구사항
+   - 제목 키워드 → contentRequirements.titleKeywords
+   - 본문 키워드/필수 문구/필수 작성 리뷰 → contentRequirements.bodyKeywords
+   - 이미지/영상/링크/글자수 등 정량 요구 → contentRequirements.requirements
+   - 필수 고지 문구(법적/플랫폼 정책) → requiredNotices
+5. 미션/주의사항
+   - 미션 제목/설명/예시 → missions[]
+   - 금지/패널티/불이익 → warnings[]
+   - 운영상 중요 안내 → importantNotes[]
 
-**매우 중요**: titleKeywords와 bodyKeywords는 항상 다음 형식이어야 합니다:
-\`\`\`
+### contentRequirements.visitReviewTypes 판별 (방문형 캠페인일 때만)
+- naverReservation:
+  - "네이버 예약", "예약자 리뷰", "예약고객 리뷰", "네이버 예약 리뷰 필수" 등 표현이 있으면 포함
+- googleReview:
+  - "구글 리뷰", "Google Review", "구글평점" 등 표현이 있으면 포함
+- other:
+  - 카카오맵/카카오지도/기타 리뷰 플랫폼/추가 리뷰/기타 리뷰/선택 리뷰 표현이 있으면 포함
+- 복수 조건 충족 시 복수 포함
+- 근거가 없으면 visitReviewTypes 필드를 만들지 마세요.
+
+### 키워드 필드 형식 (엄수)
+titleKeywords/bodyKeywords는 항상 아래 형식:
 [
-  {
-    "name": "키워드1",
-    "description": "설명1"
-  },
-  {
-    "name": "키워드2", 
-    "description": "설명2"
-  }
+  {"name":"키워드","description":"설명"}
 ]
-\`\`\`
+- 문자열 배열 금지
+- 임의 키 이름 금지
+- 각 항목은 반드시 name, description 포함
+- "필수 작성" 맥락이면 description에 "필수"를 반영
 
-**틀린 형식 (절대 사용하면 안 됨)**:
-- ❌ \`[{"name":"#라운지엑스","#라운지엑스24h"}]\` - 두 번째 필드가 설명이 아님
-- ❌ \`["keyword1", "keyword2"]\` - 문자열 배열
-- ❌ \`[{"#라운지엑스": "설명"}]\` - 키 이름이 이상함
+### 포인트 정규화 규칙 (엄수)
+- 보상 문맥의 숫자를 우선 사용
+- 예: "15,000P" -> 15000
+- 예: "1만" -> 10000, "1만5천" -> 15000, "2.5만" -> 25000
+- 범위는 최대값 사용: "1~2만" -> 20000, "5,000-10,000P" -> 10000
+- 포인트 정보가 없으면 null 가능
 
-**올바른 형식 (필수)**:
-- ✅ \`[{"name":"#라운지엑스","description":""},{"name":"#라운지엑스24h","description":""}]\`
-
-각 키워드/본문 요구사항은 반드시 객체여야 하며, "name"과 "description" 필드를 가져야 합니다.
-
-## 주의사항:
-- 모든 날짜를 현재 기준(2026-02-09)으로 YYYY-MM-DD 형식으로 변환하세요
-- **카테고리**: 반드시 위의 목록 중 하나를 선택하세요. 없으면 "기타"로 설정하세요.
-- **플랫폼/리뷰채널**: 가이드라인에 명시된 플랫폼/채널을 그대로 추출하세요.
-- **방문정보**: 매장명, 주소, 위치 등 방문해야 할 장소 정보 추출
-- **전화번호**: 숫자와 하이픈만 포함 (예: "02-1234-5678", "010-1234-5678")
-- **포인트 필드**: "P", "포인트", "체험권" 등의 가치를 찾으세요. 숫자만 추출 (예: "15,000P" → 15000)
-- 포인트/가격을 찾을 수 없으면 null로 설정하세요
-- deadlines 배열의 "label"은 원문의 실제 표현을 반영하세요
-- 상대적 표현은 반드시 구체적인 날짜로 계산하세요
-- 숫자는 정수로 변환하세요
-- 빈 배열이나 null 값을 사용하지 말고, 실제 있는 데이터만 포함하세요
-- **titleKeywords/bodyKeywords는 항상 올바른 형식으로 생성하세요** - 이것은 필수 요구사항입니다
-- 반드시 유효한 JSON 객체만 반환하세요
+### 매핑 체크리스트
+- 컨텐츠 요구사항 -> contentRequirements / requiredNotices
+- 미션 세부사항 -> missions[{title, description, examples}]
+- 주의/제한/패널티 -> warnings
+- 일정 준수/제출 방식 등 운영 안내 -> importantNotes
 
 ${formatInstructions}`;
 
@@ -233,19 +346,20 @@ export async function POST(request: NextRequest) {
     }
 
     // 사용자의 옵션 추출
-    const userPlatforms = userProfile?.platforms || [];
-    const userCategories = userProfile?.categories || [];
-    const userReviewChannels = userProfile?.schedule_channels || [];
+    const userPlatforms = normalizeOptionList(userProfile?.platforms);
+    const userCategories = normalizeOptionList(userProfile?.categories);
+    const userReviewChannels = normalizeOptionList(userProfile?.schedule_channels);
 
     // 프롬프트 동적 생성 (사용자 옵션 포함)
     const dynamicPrompt = `${GUIDELINE_ANALYSIS_PROMPT}
 
-## 사용자 정의 옵션 (이 목록에서만 선택하세요):
+## 사용자 정의 옵션 (가능하면 이 목록에 맞춰 정규화하세요):
 - **플랫폼**: ${userPlatforms.length > 0 ? userPlatforms.join(', ') : '없음'}
 - **카테고리**: ${userCategories.length > 0 ? userCategories.join(', ') : '없음'}
 - **리뷰채널**: ${userReviewChannels.length > 0 ? userReviewChannels.join(', ') : '없음'}
 
-반드시 위의 사용자 정의 옵션에서만 값을 선택하세요. 없으면 빈 문자열로 설정하세요.`;
+플랫폼/카테고리/리뷰채널은 가이드라인에서 먼저 추출하고, 사용자 정의 옵션과 일치하는 값이 있으면 그 값을 우선 사용하세요.
+일치값이 없으면 가이드라인에서 추출한 값을 유지하세요.`;
 
     const model = client.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
@@ -293,6 +407,13 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      if (parsedJson.points !== undefined) {
+        parsedJson.points = normalizePointsValue(parsedJson.points);
+      }
+      if (parsedJson.rewardInfo?.points !== undefined) {
+        parsedJson.rewardInfo.points = normalizePointsValue(parsedJson.rewardInfo.points);
+      }
+
       const validated = CampaignGuidelineAnalysisSchema.safeParse(parsedJson);
 
       if (!validated.success) {
@@ -304,6 +425,38 @@ export async function POST(request: NextRequest) {
       }
 
       analysis = validated.data as CampaignGuidelineAnalysis;
+    }
+
+    if (analysis.points !== undefined) {
+      analysis.points = normalizePointsValue(analysis.points);
+    }
+    if (analysis.rewardInfo?.points !== undefined) {
+      analysis.rewardInfo.points = normalizePointsValue(analysis.rewardInfo.points);
+    }
+
+    // 포인트 후처리: 모델이 points를 누락한 경우 원문에서 보상 금액을 추출해 보정
+    const extractedPoints = extractPointsFromGuideline(guideline);
+    const hasTopLevelPoints = typeof analysis.points === 'number' && Number.isFinite(analysis.points);
+    const hasRewardPoints = typeof analysis.rewardInfo?.points === 'number'
+      && Number.isFinite(analysis.rewardInfo?.points);
+
+    if (!hasTopLevelPoints && extractedPoints !== null) {
+      analysis.points = extractedPoints;
+    }
+
+    if (!hasRewardPoints && extractedPoints !== null) {
+      analysis.rewardInfo = {
+        ...(analysis.rewardInfo ?? {}),
+        points: extractedPoints,
+      };
+    }
+
+    // 플랫폼 후처리: 모델 결과가 비어있거나 사용자 옵션과 불일치하면 가이드라인 텍스트 기준으로 보정
+    if (!analysis.platform?.trim()) {
+      const inferredPlatform = inferPlatformFromGuideline(guideline, userPlatforms);
+      if (inferredPlatform) {
+        analysis.platform = inferredPlatform;
+      }
     }
 
     return NextResponse.json({

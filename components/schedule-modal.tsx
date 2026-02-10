@@ -474,6 +474,29 @@ export default function ScheduleModal({
     
     const shouldEnableVisitMode = Boolean(analysis.visitInfo);
 
+    // 방문형인 경우 리뷰 체크리스트 자동 설정
+    let visitReviewChecklist = formData.visitReviewChecklist || {
+      ...DEFAULT_VISIT_REVIEW_CHECKLIST,
+    };
+
+    // AI 분석 결과의 visitReviewTypes를 체크리스트에 적용
+    if (shouldEnableVisitMode && analysis.contentRequirements?.visitReviewTypes) {
+      const reviewTypes = analysis.contentRequirements.visitReviewTypes;
+      
+      if (reviewTypes.includes('naverReservation')) {
+        visitReviewChecklist.naverReservation = true;
+      }
+      if (reviewTypes.includes('googleReview')) {
+        visitReviewChecklist.googleReview = true;
+      }
+      if (reviewTypes.includes('other')) {
+        visitReviewChecklist.other = true;
+      }
+    }
+
+    // 리뷰채널 초기값 설정
+    let reviewChannels = analysis.reviewChannel ? [analysis.reviewChannel] : [];
+
     // 기본 정보 추출
     const updates: Partial<Schedule> = {
       title: analysis.title || '',
@@ -482,7 +505,7 @@ export default function ScheduleModal({
       phone: analysis.phone || '',
       platform: analysis.platform || '',
       category: selectedCategory,
-      channel: analysis.reviewChannel ? [analysis.reviewChannel] : [],
+      channel: reviewChannels,
       ...(shouldEnableVisitMode
         ? {
             reviewType: '방문형',
@@ -490,26 +513,13 @@ export default function ScheduleModal({
               (formData.status as Schedule['status']) || '선정됨',
               '방문형'
             ),
-            visitReviewChecklist: formData.visitReviewChecklist || {
-              ...DEFAULT_VISIT_REVIEW_CHECKLIST,
-            },
+            visitReviewChecklist,
           }
         : {}),
     };
 
     if (analysis.visitInfo) {
       updates.regionDetail = analysis.visitInfo;
-    }
-
-    // 추가 마감일 설정
-    const additionalDeadlines: AdditionalDeadline[] = (analysis.deadlines || []).map((deadline) => ({
-      id: createAdditionalDeadlineId(),
-      label: deadline.label || '',
-      date: deadline.date || '',
-    }));
-    
-    if (additionalDeadlines.length > 0) {
-      updates.additionalDeadlines = additionalDeadlines;
     }
 
     // 메모에 가이드라인 정보 추가
