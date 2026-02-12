@@ -68,11 +68,17 @@ export default function GuidelineAnalysisModal({
       }
 
       const result = await response.json();
-      setAnalysis(result.data);
+      const analysisData = result.data;
+      
       toast({
         title: '성공',
         description: '가이드라인이 분석되었습니다',
       });
+      
+      // 분석 완료 후 바로 적용하고 모달 닫기
+      onApply(analysisData);
+      onClose();
+      
     } catch (error) {
       console.error('분석 오류:', error);
       toast({
@@ -139,15 +145,11 @@ export default function GuidelineAnalysisModal({
   const renderListSection = (title: string, items: string[]) => (
     <div>
       <p className="font-semibold mb-1">{title}</p>
-      {items.length > 0 ? (
-        <ul className="space-y-1 list-disc list-inside">
-          {items.map((item, idx) => (
-            <li key={`${title}-${idx}`}>{item}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-neutral-400">정보 없음</p>
-      )}
+      <ul className="space-y-1 list-disc list-inside">
+        {items.map((item, idx) => (
+          <li key={`${title}-${idx}`}>{item}</li>
+        ))}
+      </ul>
     </div>
   );
 
@@ -159,6 +161,22 @@ export default function GuidelineAnalysisModal({
   const copyCard = cards?.copyPack;
   const appealCard = cards?.productAppeal;
   const riskCard = cards?.riskManagement;
+  const productAppealSections = [
+    { title: '핵심 장점', items: toList(appealCard?.coreBenefits) },
+    { title: '비교 포인트', items: toList(appealCard?.comparisonPoints) },
+    { title: '권장 사용 상황', items: toList(appealCard?.recommendedUseCases) },
+    { title: '추천 타깃 독자', items: toList(appealCard?.targetAudience) },
+    { title: '해결되는 고민', items: toList(appealCard?.painPoints) },
+    { title: '핵심 성분/스펙/수치', items: toList(appealCard?.keyIngredientsOrSpecs) },
+    { title: '사용 팁', items: toList(appealCard?.usageTips) },
+    { title: '전/후 변화 포인트', items: toList(appealCard?.beforeAfterPoints) },
+    { title: '신뢰 근거', items: toList(appealCard?.trustSignals) },
+    { title: 'FAQ 아이디어', items: toList(appealCard?.faqIdeas) },
+    { title: '도입 훅 문장 소재', items: toList(appealCard?.narrativeHooks) },
+    { title: '추천 본문 구성', items: toList(appealCard?.recommendedStructure) },
+    { title: '마무리 CTA 문구', items: toList(appealCard?.callToAction) },
+    { title: '카피 작성 시 주의', items: toList(appealCard?.bannedOrCautionInCopy) },
+  ].filter((section) => section.items.length > 0);
 
   return (
     <div className="fixed inset-0 z-[250] bg-black/50 flex items-center justify-center" style={{ zIndex: Z_INDEX.guidelineAnalysisBackdrop }}>
@@ -237,25 +255,16 @@ export default function GuidelineAnalysisModal({
                 </div>
               </div>
 
-              <div className="rounded-xl border bg-indigo-50 p-4">
-                <h3 className="font-semibold text-neutral-900 mb-3">4. 제품 소구점</h3>
-                <div className="space-y-3 text-xs text-neutral-700">
-                  {renderListSection('핵심 장점', toList(appealCard?.coreBenefits))}
-                  {renderListSection('비교 포인트', toList(appealCard?.comparisonPoints))}
-                  {renderListSection('권장 사용 상황', toList(appealCard?.recommendedUseCases))}
-                  {renderListSection('추천 타깃 독자', toList(appealCard?.targetAudience))}
-                  {renderListSection('해결되는 고민', toList(appealCard?.painPoints))}
-                  {renderListSection('핵심 성분/스펙/수치', toList(appealCard?.keyIngredientsOrSpecs))}
-                  {renderListSection('사용 팁', toList(appealCard?.usageTips))}
-                  {renderListSection('전/후 변화 포인트', toList(appealCard?.beforeAfterPoints))}
-                  {renderListSection('신뢰 근거', toList(appealCard?.trustSignals))}
-                  {renderListSection('FAQ 아이디어', toList(appealCard?.faqIdeas))}
-                  {renderListSection('도입 훅 문장 소재', toList(appealCard?.narrativeHooks))}
-                  {renderListSection('추천 본문 구성', toList(appealCard?.recommendedStructure))}
-                  {renderListSection('마무리 CTA 문구', toList(appealCard?.callToAction))}
-                  {renderListSection('카피 작성 시 주의', toList(appealCard?.bannedOrCautionInCopy))}
+              {productAppealSections.length > 0 && (
+                <div className="rounded-xl border bg-indigo-50 p-4">
+                  <h3 className="font-semibold text-neutral-900 mb-3">4. 제품 소구점</h3>
+                  <div className="space-y-3 text-xs text-neutral-700">
+                    {productAppealSections.map((section) =>
+                      renderListSection(section.title, section.items)
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="rounded-xl border bg-rose-50 p-4">
                 <h3 className="font-semibold text-neutral-900 mb-3">5. 주의사항</h3>

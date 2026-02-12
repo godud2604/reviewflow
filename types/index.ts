@@ -188,53 +188,23 @@ export interface CampaignGuidelineMission {
 }
 
 export interface GuidelineScheduleActionCard {
-  visitType?: 'visit' | 'delivery' | 'hybrid';
-  address?: string;
-  reservationMethod?: string;
-  availableHours?: string;
-  deliveryDeadline?: string;
-  pickupRequired?: boolean;
-  actionItems?: string[];
+  [key: string]: any; // 자유로운 필드 구조 - 일정/예약/액션 관련 정보
 }
 
 export interface GuidelineMissionSpecCard {
-  minChars?: number;
-  minPhotos?: number;
-  videoRequired?: boolean;
-  requiredShots?: string[];
-  linkRequirements?: string[];
-  requirements?: string[];
+  [key: string]: any; // 자유로운 필드 구조 - 콘텐츠 미션 관련 정보
 }
 
 export interface GuidelineCopyCard {
-  titleKeywords?: string[];
-  bodyKeywords?: string[];
-  hashtags?: string[];
-  mentionTags?: string[];
+  [key: string]: any; // 자유로운 필드 구조 - 키워드/태그 관련 정보
 }
 
 export interface GuidelineProductAppealCard {
-  coreBenefits?: string[];
-  comparisonPoints?: string[];
-  recommendedUseCases?: string[];
-  targetAudience?: string[];
-  painPoints?: string[];
-  keyIngredientsOrSpecs?: string[];
-  usageTips?: string[];
-  beforeAfterPoints?: string[];
-  trustSignals?: string[];
-  faqIdeas?: string[];
-  narrativeHooks?: string[];
-  recommendedStructure?: string[];
-  callToAction?: string[];
-  bannedOrCautionInCopy?: string[];
+  [key: string]: any; // 자유로운 필드 구조 - 제품 소구점 관련 정보
 }
 
 export interface GuidelineRiskManagementCard {
-  requiredNotices?: string[];
-  bannedPhrases?: string[];
-  retentionPeriod?: string[];
-  warnings?: string[];
+  [key: string]: any; // 자유로운 필드 구조 - 주의사항 관련 정보
 }
 
 export interface CampaignGuidelineAnalysis {

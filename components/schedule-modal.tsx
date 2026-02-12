@@ -496,6 +496,12 @@ export default function ScheduleModal({
 
     // 리뷰채널 초기값 설정
     let reviewChannels = analysis.reviewChannel ? [analysis.reviewChannel] : [];
+    const normalizedAnalysisPlatform = analysis.platform?.trim();
+    const shouldKeepDefaultPlatform =
+      !normalizedAnalysisPlatform || normalizedAnalysisPlatform === '기타';
+    const resolvedPlatform = shouldKeepDefaultPlatform
+      ? formData.platform || allPlatforms[0] || ''
+      : normalizedAnalysisPlatform;
 
     // 기본 정보 추출
     const updates: Partial<Schedule> = {
@@ -503,7 +509,7 @@ export default function ScheduleModal({
       benefit: analysis.points || 0,
       dead: analysis.reviewRegistrationPeriod?.end || '',
       phone: analysis.phone || '',
-      platform: analysis.platform || '',
+      platform: resolvedPlatform,
       category: selectedCategory,
       channel: reviewChannels,
       ...(shouldEnableVisitMode
@@ -522,35 +528,8 @@ export default function ScheduleModal({
       updates.regionDetail = analysis.visitInfo;
     }
 
-    // 메모에 가이드라인 정보 추가
-    const memoLines = [
-      `[캠페인 가이드라인]`,
-      `- 포인트: ${analysis.points ? analysis.points.toLocaleString() : '0'}P`,
-      `- 제공: ${analysis.rewardInfo?.productInfo || analysis.rewardInfo?.description || ''}`,
-      `- 모집기간: ${analysis.recruitPeriod?.start || ''} ~ ${analysis.recruitPeriod?.end || ''}`,
-    ];
-    
-    if (analysis.platform) {
-      memoLines.push(`- 플랫폼: ${analysis.platform}`);
-    }
-    
-    if (analysis.reviewChannel) {
-      memoLines.push(`- 리뷰채널: ${analysis.reviewChannel}`);
-    }
-    
-    if (analysis.visitInfo) {
-      memoLines.push(`- 방문정보: ${analysis.visitInfo}`);
-    }
-    
-    if (analysis.phone) {
-      memoLines.push(`- 전화번호: ${analysis.phone}`);
-    }
-    
-    if (analysis.contentRequirements?.titleKeywords && analysis.contentRequirements.titleKeywords.length > 0) {
-      memoLines.push(`- 제목 키워드: ${analysis.contentRequirements.titleKeywords.map((k) => k.name).join(', ')}`);
-    }
-    
-    updates.memo = memoLines.join('\n');
+    // 메모장은 가이드라인 적용 시 공란 유지
+    updates.memo = '';
 
     setFormData((prev) => ({ ...prev, ...updates }));
     setVisitMode(shouldEnableVisitMode);
@@ -567,6 +546,8 @@ export default function ScheduleModal({
       description: '가이드라인 정보가 일정에 적용되었습니다',
     });
   }, [
+    allPlatforms,
+    formData.platform,
     formData.status,
     formData.visitReviewChecklist,
     setLocationDetailEnabled,
