@@ -168,43 +168,9 @@ export interface NotificationSettings {
   minute: number;
 }
 
-// Campaign Guideline Analysis Types
-export interface CampaignGuidelineKeyword {
-  name: string;
-  description?: string;
-}
-
-export interface CampaignGuidelineRequirement {
-  type: string;
-  label: string;
-  value: string | number;
-  description?: string;
-}
-
-export interface CampaignGuidelineMission {
+export interface GuidelineDigestSection {
   title: string;
-  description?: string;
-  examples?: string[];
-}
-
-export interface GuidelineScheduleActionCard {
-  [key: string]: any; // 자유로운 필드 구조 - 일정/예약/액션 관련 정보
-}
-
-export interface GuidelineMissionSpecCard {
-  [key: string]: any; // 자유로운 필드 구조 - 콘텐츠 미션 관련 정보
-}
-
-export interface GuidelineCopyCard {
-  [key: string]: any; // 자유로운 필드 구조 - 키워드/태그 관련 정보
-}
-
-export interface GuidelineProductAppealCard {
-  [key: string]: any; // 자유로운 필드 구조 - 제품 소구점 관련 정보
-}
-
-export interface GuidelineRiskManagementCard {
-  [key: string]: any; // 자유로운 필드 구조 - 주의사항 관련 정보
+  items: string[];
 }
 
 export interface CampaignGuidelineAnalysis {
@@ -217,12 +183,7 @@ export interface CampaignGuidelineAnalysis {
   reviewChannel?: string | null; // 리뷰 채널 (블로그, 인스타그램, 쿠팡 등)
   visitInfo?: string | null; // 방문정보 (주소, 위치 등)
   phone?: string | null; // 전화번호
-  
-  recruitPeriod?: {
-    start: string;
-    end: string;
-  };
-  reviewerAnnouncement?: string;
+
   reviewRegistrationPeriod?: {
     start: string;
     end: string;
@@ -238,31 +199,13 @@ export interface CampaignGuidelineAnalysis {
   
   // 컨텐츠 요구사항
   contentRequirements?: {
-    titleKeywords?: CampaignGuidelineKeyword[];
-    bodyKeywords?: CampaignGuidelineKeyword[];
-    requirements?: CampaignGuidelineRequirement[];
     // 방문형 리뷰 필수 항목
     visitReviewTypes?: Array<'naverReservation' | 'googleReview' | 'other'>;
   };
-  
-  // 필수 공지 문구
-  requiredNotices?: string[];
-  
-  // 미션 세부사항
-  missions?: CampaignGuidelineMission[];
-  
-  // 기타 중요사항
-  importantNotes?: string[];
-  
-  // 주의사항
-  warnings?: string[];
 
-  // 리뷰어 작성용 5대 카드
-  reviewCards?: {
-    scheduleAction?: GuidelineScheduleActionCard;
-    missionSpec?: GuidelineMissionSpecCard;
-    copyPack?: GuidelineCopyCard;
-    productAppeal?: GuidelineProductAppealCard;
-    riskManagement?: GuidelineRiskManagementCard;
+  // 가이드라인 전체 정리 정보
+  guidelineDigest?: {
+    summary?: string;
+    sections?: GuidelineDigestSection[];
   };
 }

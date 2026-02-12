@@ -18,11 +18,10 @@ import {
   Copy,
   Check,
   Calendar,
-  Target,
-  Hash,
-  AlertCircle,
-  ShoppingBag,
-  ChevronRight,
+  Gift,
+  MapPin,
+  Phone,
+  ListChecks,
   Loader2,
   Sparkles,
   Settings2,
@@ -89,7 +88,6 @@ export default function GuidelineInfoModal({
   onClose,
   analysis,
 }: GuidelineInfoModalProps) {
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [showDraftSettings, setShowDraftSettings] = useState(false);
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
@@ -103,79 +101,16 @@ export default function GuidelineInfoModal({
 
   if (!analysis) return null;
 
-  const cards = analysis.reviewCards;
-  const contentRequirements = analysis.contentRequirements;
-  const copyPack = cards?.copyPack;
-
-  const missionRequirements = contentRequirements?.requirements ?? [];
-  const contentKeywordGroups = [
-    {
-      key: 'titleKeywords',
-      label: '제목 키워드',
-      items: contentRequirements?.titleKeywords ?? [],
-    },
-    {
-      key: 'bodyKeywords',
-      label: '본문 키워드',
-      items: contentRequirements?.bodyKeywords ?? [],
-    },
-  ].filter((group) => group.items.length > 0);
-
-  const keyLabelMap: Record<string, string> = {
-    titleKeywords: '제목 키워드',
-    bodyKeywords: '본문 키워드',
-    hashtags: '해시태그',
-    mentionTags: '멘션 태그',
-    accountTag: '계정 태그',
-    accountTags: '계정 태그',
-    requiredNotices: '공정위 문구',
+  const visitReviewTypeLabels: Record<string, string> = {
+    naverReservation: '네이버 예약/영수증 리뷰',
+    googleReview: '구글 리뷰',
+    other: '기타 리뷰',
   };
-
-  const hasDisplayableValue = (value: any) => {
-    if (Array.isArray(value)) {
-      return value.some((item) => {
-        if (typeof item === 'object' && item !== null) {
-          return Boolean(item.name && String(item.name).trim());
-        }
-        return Boolean(String(item ?? '').trim());
-      });
-    }
-    if (typeof value === 'object' && value !== null) {
-      return Object.values(value).some((v) => Boolean(String(v ?? '').trim()));
-    }
-    return Boolean(String(value ?? '').trim());
-  };
-
-  const copyPackEntries = Object.entries(copyPack ?? {}).filter(([, value]) => hasDisplayableValue(value));
-
-  const toCopyItems = (value: any): string[] => {
-    if (Array.isArray(value)) {
-      return value
-        .map((item) => {
-          if (typeof item === 'object' && item !== null) {
-            return String(item.name ?? item.value ?? '').trim();
-          }
-          return String(item ?? '').trim();
-        })
-        .filter(Boolean);
-    }
-
-    if (typeof value === 'object' && value !== null) {
-      return Object.values(value)
-        .flatMap((item) => toCopyItems(item))
-        .filter(Boolean);
-    }
-
-    const text = String(value ?? '').trim();
-    return text ? [text] : [];
-  };
-
-  const copyText = async (key: string, value: string) => {
-    if (!value || !value.trim()) return;
-    await navigator.clipboard.writeText(value);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 1500);
-  };
+  const visitReviewTypes = (analysis.contentRequirements?.visitReviewTypes ?? [])
+    .map((type) => visitReviewTypeLabels[type] ?? type);
+  const displayPoints = analysis.rewardInfo?.points ?? analysis.points;
+  const digestSections = (analysis.guidelineDigest?.sections ?? [])
+    .filter((section) => section?.title && Array.isArray(section.items) && section.items.length > 0);
 
   const handleGenerateDraft = async () => {
     setIsDraftOpen(true);
@@ -252,162 +187,62 @@ export default function GuidelineInfoModal({
 
           <ScrollArea className="flex-1 min-h-0 w-full outline-none">
             <div className="px-5 py-2 pb-10">
-              {cards?.scheduleAction && (
-                <SectionCard title="일정 및 예약" icon={Calendar}>
-                  <div className="grid grid-cols-1 gap-5">
-                    {Object.entries(cards.scheduleAction).map(([key, value]) => (
-                      value && <InfoRow key={key} label={key}>{String(value)}</InfoRow>
-                    ))}
-                  </div>
+              <SectionCard title="기본 정보" icon={Sparkles}>
+                <InfoRow label="플랫폼">{analysis.platform || '-'}</InfoRow>
+                <InfoRow label="카테고리">{analysis.category || '-'}</InfoRow>
+                <InfoRow label="리뷰 채널">{analysis.reviewChannel || '-'}</InfoRow>
+              </SectionCard>
+
+              <SectionCard title="일정 정보" icon={Calendar}>
+                <InfoRow label="시작일">{analysis.reviewRegistrationPeriod?.start || '-'}</InfoRow>
+                <InfoRow label="마감일">{analysis.reviewRegistrationPeriod?.end || '-'}</InfoRow>
+              </SectionCard>
+
+              <SectionCard title="리워드 정보" icon={Gift}>
+                <InfoRow label="보상 금액">{displayPoints ? `${displayPoints.toLocaleString()}P` : '-'}</InfoRow>
+                <InfoRow label="리워드 설명">{analysis.rewardInfo?.description || '-'}</InfoRow>
+                <InfoRow label="제공 방식">{analysis.rewardInfo?.deliveryMethod || '-'}</InfoRow>
+                <InfoRow label="제품 정보">{analysis.rewardInfo?.productInfo || '-'}</InfoRow>
+              </SectionCard>
+
+              {(analysis.visitInfo || analysis.phone || visitReviewTypes.length > 0) && (
+                <SectionCard title="방문 정보" icon={MapPin}>
+                  <InfoRow label="주소/위치">{analysis.visitInfo || '-'}</InfoRow>
+                  <InfoRow label="전화번호">
+                    <span className="inline-flex items-center gap-1">
+                      <Phone className="w-4 h-4 text-slate-400" />
+                      {analysis.phone || '-'}
+                    </span>
+                  </InfoRow>
+                  <InfoRow label="방문 리뷰 필수 항목">
+                    {visitReviewTypes.length > 0 ? visitReviewTypes.join(', ') : '-'}
+                  </InfoRow>
                 </SectionCard>
               )}
 
-              {(cards?.missionSpec || missionRequirements.length > 0) && (
-                <SectionCard title="콘텐츠 미션" icon={Target}>
-                  <div className="space-y-4">
-                    {cards?.missionSpec && Object.entries(cards.missionSpec).map(([key, value]) => (
-                      value ? (
-                        <div key={key} className="p-5 bg-slate-50 rounded-[20px] border border-slate-100">
-                          <p className="text-[12px] font-bold text-slate-400 mb-2 uppercase tracking-wider">{key}</p>
-                          <p className="text-[15px] text-slate-800 whitespace-pre-wrap leading-snug font-medium">
-                            {String(value)}
-                          </p>
-                        </div>
-                      ) : null
-                    ))}
-
-                    {missionRequirements.map((requirement, idx) => (
-                      <div
-                        key={`requirement-${idx}`}
-                        className="p-5 bg-slate-50 rounded-[20px] border border-slate-100"
-                      >
-                        <p className="text-[12px] font-bold text-slate-400 mb-2 uppercase tracking-wider">
-                          {requirement.label || requirement.type || 'requirement'}
-                        </p>
-                        <p className="text-[15px] text-slate-800 whitespace-pre-wrap leading-snug font-medium">
-                          {requirement.description ||
-                            `${requirement.value}${requirement.type ? ` (${requirement.type})` : ''}`}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </SectionCard>
-              )}
-
-              {(copyPackEntries.length > 0 || contentKeywordGroups.length > 0) && (
-                <SectionCard title="키워드 및 태그" icon={Hash}>
-                  {copyPackEntries.map(([key, value]) => (
-                    <div key={key} className="space-y-3">
-                      <p className="text-[13px] font-semibold text-slate-400 flex items-center gap-1">
-                        <ChevronRight className="w-3 h-3" /> {keyLabelMap[key] ?? key}
+              {(analysis.guidelineDigest?.summary || digestSections.length > 0) && (
+                <SectionCard title="가이드라인 정리" icon={ListChecks}>
+                  {analysis.guidelineDigest?.summary && (
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                      <p className="text-[14px] text-slate-700 leading-relaxed whitespace-pre-wrap">
+                        {analysis.guidelineDigest.summary}
                       </p>
-                      <div className="flex flex-wrap gap-2">
-                        {toCopyItems(value).map((text, idx) => {
-                          const id = `${key}-${idx}`;
-                          return (
-                            <button
-                              key={id}
-                              onClick={() => copyText(id, text)}
-                              className={cn(
-                                "group flex items-center gap-1.5 px-4 py-2 rounded-full transition-all border",
-                                copiedKey === id
-                                  ? "bg-orange-50 border-orange-200"
-                                  : "bg-white border-slate-200 hover:border-slate-300 active:scale-95"
-                              )}
-                            >
-                              <span className={cn(
-                                "text-[14px] font-medium",
-                                copiedKey === id ? "text-[#FF5722]" : "text-slate-700"
-                              )}>
-                                {text}
-                              </span>
-                              {copiedKey === id ? (
-                                <Check className="w-3.5 h-3.5 text-[#FF5722] animate-in zoom-in" />
-                              ) : (
-                                <Copy className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
+                    </div>
+                  )}
+
+                  {digestSections.map((section, sectionIdx) => (
+                    <div key={`${section.title}-${sectionIdx}`} className="space-y-2">
+                      <p className="text-[14px] font-bold text-slate-900">{section.title}</p>
+                      <ul className="space-y-1.5">
+                        {section.items.map((item, itemIdx) => (
+                          <li key={`${section.title}-${itemIdx}`} className="flex gap-2">
+                            <span className="mt-2 inline-block w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0" />
+                            <span className="text-[14px] text-slate-700 leading-relaxed">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   ))}
-
-                  {contentKeywordGroups
-                    .filter((group) => !(copyPack && group.key in copyPack))
-                    .map((group) => (
-                    <div key={group.key} className="space-y-3">
-                      <p className="text-[13px] font-semibold text-slate-400 flex items-center gap-1">
-                        <ChevronRight className="w-3 h-3" /> {group.label}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {group.items.map((item, idx) => {
-                          const text = item.name;
-                          const id = `${group.key}-${idx}`;
-                          return (
-                            <button
-                              key={id}
-                              onClick={() => copyText(id, text)}
-                              className={cn(
-                                "group flex items-center gap-1.5 px-4 py-2 rounded-full transition-all border",
-                                copiedKey === id
-                                  ? "bg-orange-50 border-orange-200"
-                                  : "bg-white border-slate-200 hover:border-slate-300 active:scale-95"
-                              )}
-                            >
-                              <span className={cn(
-                                "text-[14px] font-medium",
-                                copiedKey === id ? "text-[#FF5722]" : "text-slate-700"
-                              )}>
-                                {text}
-                              </span>
-                              {copiedKey === id ? (
-                                <Check className="w-3.5 h-3.5 text-[#FF5722] animate-in zoom-in" />
-                              ) : (
-                                <Copy className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </SectionCard>
-              )}
-
-              {cards?.productAppeal && (
-                <SectionCard title="제품 소구점" icon={ShoppingBag}>
-                  <div className="space-y-5">
-                    {Object.entries(cards.productAppeal).map(([key, value]) => (
-                      value && (
-                        <div key={key} className="flex gap-4">
-                          <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-2.5 flex-shrink-0" />
-                          <div className="space-y-1">
-                            <p className="text-[15px] font-bold text-slate-900">{key}</p>
-                            <p className="text-[14px] text-slate-500 leading-relaxed">
-                              {Array.isArray(value) ? value.join(', ') : String(value)}
-                            </p>
-                          </div>
-                        </div>
-                      )
-                    ))}
-                  </div>
-                </SectionCard>
-              )}
-
-              {cards?.riskManagement && (
-                <SectionCard title="주의사항" icon={AlertCircle} className="bg-rose-50/50 border-rose-100">
-                  <div className="space-y-3">
-                    {Object.entries(cards.riskManagement).map(([key, value]) => (
-                      value && (
-                        <div key={key} className="flex items-start gap-2 bg-white/60 p-3 rounded-xl border border-rose-100/50">
-                          <span className="text-[14px] font-semibold text-rose-600 leading-relaxed italic">
-                            ! {String(value)}
-                          </span>
-                        </div>
-                      )
-                    ))}
-                  </div>
                 </SectionCard>
               )}
             </div>
