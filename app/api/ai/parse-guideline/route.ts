@@ -269,6 +269,35 @@ function normalizeDeadlineValue(value: unknown): string | null {
   return trimmed;
 }
 
+function normalizeAnalysisTitle(value: unknown, guideline: string): string {
+  const fallback = guideline
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .find((line) => line.length > 0) ?? '캠페인';
+
+  const raw = typeof value === 'string' ? value.trim() : '';
+  const source = raw || fallback;
+
+  const normalized = source
+    .replace(/\s+/g, ' ')
+    .replace(/[|/]+/g, ' ')
+    .replace(/\((모집|이벤트|가이드라인|안내)\)/gi, '')
+    .replace(/(체험단|캠페인)\s*(모집|이벤트|안내|가이드라인)/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  const candidate = normalized || fallback;
+  if (candidate.length <= 24) return candidate;
+
+  const splitCandidate = candidate
+    .split(/[-:·]/)
+    .map((part) => part.trim())
+    .find((part) => part.length >= 4 && part.length <= 24);
+
+  if (splitCandidate) return splitCandidate;
+  return `${candidate.slice(0, 24).trim()}...`;
+}
+
 const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인 분석 전문가입니다.
 
 ### 목표
@@ -286,9 +315,10 @@ const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인
 이 필드들은 캠페인 관리의 핵심이므로 가이드라인에서 최우선으로 찾아 정확하게 추출해야 합니다.
 
 1. **title** (제목): 
-   - 캠페인/체험단의 공식 제목 추출
-   - 브랜드명이나 제품명이 포함된 전체 제목을 추출하세요
-   - 예: "ABC 브랜드 신제품 체험단 모집", "OO카페 방문 리뷰 이벤트"
+   - 캠페인의 핵심만 담아 짧게 요약한 제목으로 작성하세요.
+   - 공식 제목을 그대로 길게 복사하지 말고, 브랜드/제품/핵심 주제만 남기세요.
+   - 24자 이내, 불필요한 수식어(예: 모집, 이벤트 안내, 가이드라인)는 제거하세요.
+   - 예: "ABC 신제품 체험", "OO카페 방문 리뷰"
    
 2. **points** (제품/서비스 가격): 
    - 포인트, 리워드, 체험권, 제품 가격 등의 금액을 숫자로 추출
@@ -493,6 +523,7 @@ export async function POST(request: NextRequest) {
       if (parsedJson.points !== undefined) {
         parsedJson.points = normalizePointsValue(parsedJson.points);
       }
+      parsedJson.title = normalizeAnalysisTitle(parsedJson.title, guideline);
       if (parsedJson.guidelineDigest !== undefined) {
         parsedJson.guidelineDigest = normalizeGuidelineDigest(parsedJson.guidelineDigest);
       }
@@ -516,6 +547,7 @@ export async function POST(request: NextRequest) {
     if (analysis.points !== undefined) {
       analysis.points = normalizePointsValue(analysis.points);
     }
+    analysis.title = normalizeAnalysisTitle(analysis.title, guideline);
     if (analysis.guidelineDigest !== undefined) {
       analysis.guidelineDigest = normalizeGuidelineDigest(analysis.guidelineDigest);
     }

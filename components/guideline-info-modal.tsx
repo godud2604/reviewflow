@@ -941,7 +941,7 @@ export default function GuidelineInfoModal({
                       {analysisKeywords.length > 0 && (
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-[15px] font-bold text-[#4E5968]">필수 키워드</p>
+                            <p className="text-[15px] font-bold text-[#4E5968]">키워드</p>
                             <button onClick={handleCopyKeywords} className="text-[12px] text-[#8B95A1] flex items-center gap-1">
                               {copiedKeywords ? <Check className="w-3 h-3 text-[#FF5722]" /> : <Copy className="w-3 h-3" />} 복사
                             </button>
