@@ -97,6 +97,12 @@ const PERSONA_OPTIONS = [
   { key: 'honest', label: '솔직 리뷰어' },
   { key: 'lifestyle', label: '라이프스타일형' },
 ] as const;
+const DRAFT_LOADING_STEPS = [
+  '가이드라인 핵심 조건을 정리하고 있어요...',
+  '선택한 말투와 페르소나를 반영하고 있어요...',
+  '본문 흐름을 구성하고 있어요...',
+  '최종 문장을 다듬고 있어요...',
+] as const;
 
 type DraftLength = (typeof LENGTH_OPTIONS)[number];
 type DraftTone = (typeof TONE_OPTIONS)[number]['key'];
@@ -138,6 +144,9 @@ export default function GuidelineInfoModal({
   const [isCheckingDraftQuota, setIsCheckingDraftQuota] = useState(false);
   const [canGenerateDraftToday, setCanGenerateDraftToday] = useState(true);
   const [draftText, setDraftText] = useState('');
+  const [displayDraftText, setDisplayDraftText] = useState('');
+  const [isTypingDraft, setIsTypingDraft] = useState(false);
+  const [draftLoadingStepIndex, setDraftLoadingStepIndex] = useState(0);
   const [copiedDraft, setCopiedDraft] = useState(false);
   const [copiedKeywords, setCopiedKeywords] = useState(false);
   const [keywordInput, setKeywordInput] = useState('');
@@ -155,6 +164,8 @@ export default function GuidelineInfoModal({
   useEffect(() => {
     if (!isOpen) return;
     setDraftText(initialDraftText || '');
+    setDisplayDraftText(initialDraftText || '');
+    setIsTypingDraft(false);
     if (!initialDraftOptions) {
       setDraftLength(1000);
       setDraftTone('auto');
@@ -168,6 +179,43 @@ export default function GuidelineInfoModal({
     setDraftEmphasis(initialDraftOptions.emphasis || '');
     setDraftKeywords(normalizeDraftKeywords(initialDraftOptions.keywords ?? []));
   }, [initialDraftOptions, initialDraftText, isOpen]);
+
+  useEffect(() => {
+    if (!isGeneratingDraft) return;
+    setDraftLoadingStepIndex(0);
+    const timer = window.setInterval(() => {
+      setDraftLoadingStepIndex((prev) =>
+        prev < DRAFT_LOADING_STEPS.length - 1 ? prev + 1 : prev
+      );
+    }, 1200);
+    return () => window.clearInterval(timer);
+  }, [isGeneratingDraft]);
+
+  useEffect(() => {
+    if (!isTypingDraft) {
+      setDisplayDraftText(draftText);
+      return;
+    }
+    if (!draftText) {
+      setDisplayDraftText('');
+      setIsTypingDraft(false);
+      return;
+    }
+
+    let index = 0;
+    const chunkSize = Math.max(1, Math.ceil(draftText.length / 220));
+    setDisplayDraftText('');
+    const timer = window.setInterval(() => {
+      index = Math.min(index + chunkSize, draftText.length);
+      setDisplayDraftText(draftText.slice(0, index));
+      if (index >= draftText.length) {
+        window.clearInterval(timer);
+        setIsTypingDraft(false);
+      }
+    }, 18);
+
+    return () => window.clearInterval(timer);
+  }, [draftText, isTypingDraft]);
 
   useEffect(() => {
     if (!isOpen || !analysis) return;
@@ -244,7 +292,11 @@ export default function GuidelineInfoModal({
     }
 
     setIsGeneratingDraft(true);
+    setDraftLoadingStepIndex(0);
     setCopiedDraft(false);
+    setDraftText('');
+    setDisplayDraftText('');
+    setIsTypingDraft(false);
     try {
       const response = await fetch('/api/ai/generate-blog-draft', {
         method: 'POST',
@@ -281,6 +333,7 @@ export default function GuidelineInfoModal({
         keywords: draftKeywords,
       };
       setDraftText(nextDraft);
+      setIsTypingDraft(true);
       setCanGenerateDraftToday(false);
       onDraftGenerated?.({
         draft: nextDraft,
@@ -300,7 +353,7 @@ export default function GuidelineInfoModal({
   };
 
   const handleCopyDraft = async () => {
-    if (!draftText.trim()) return;
+    if (!displayDraftText.trim()) return;
     await navigator.clipboard.writeText(draftText);
     setCopiedDraft(true);
     setTimeout(() => setCopiedDraft(false), 1500);
@@ -336,6 +389,9 @@ export default function GuidelineInfoModal({
     handleAddKeyword();
   };
 
+  const draftLoadingStep = DRAFT_LOADING_STEPS[draftLoadingStepIndex] ?? DRAFT_LOADING_STEPS[0];
+  const draftLoadingProgress = `${Math.round(((draftLoadingStepIndex + 1) / DRAFT_LOADING_STEPS.length) * 100)}%`;
+
   return (
     <>
       {/* 1. 메인 가이드라인 모달 */}
@@ -363,6 +419,7 @@ export default function GuidelineInfoModal({
                     <InfoRow label="마감일" icon={Calendar}>{analysis.reviewRegistrationPeriod?.end || '-'}</InfoRow>
                     <InfoRow label="플랫폼">{analysis.platform || '-'}</InfoRow>
                     <InfoRow label="리뷰 채널">{analysis.reviewChannel || '-'}</InfoRow>
+                    <InfoRow label="카테고리">{analysis.category || '-'}</InfoRow>
                     <InfoRow label="전화번호" icon={Phone}>{analysis.phone || '-'}</InfoRow>
                     <InfoRow label="방문 리뷰 항목">{visitReviewTypes.join(', ') || '-'}</InfoRow>
                   </div>
@@ -547,22 +604,38 @@ export default function GuidelineInfoModal({
 
               <div className="bg-white rounded-[24px] p-6 min-h-[260px] flex flex-col justify-center border border-gray-100 shadow-sm">
                 {isGeneratingDraft ? (
-                  <div className="flex flex-col items-center py-12 gap-3">
+                  <div className="flex flex-col items-center py-12 gap-3 text-center">
                     <Loader2 className="w-8 h-8 text-[#FF5722] animate-spin" />
-                    <p className="text-[15px] font-medium text-[#8B95A1]">초안을 작성하고 있어요</p>
+                    <p className="text-[15px] font-semibold text-[#4E5968]">AI가 초안을 작성하고 있어요</p>
+                    <p className="text-[13px] text-[#8B95A1]">{draftLoadingStep}</p>
+                    <div className="mt-1 h-1.5 w-full max-w-[280px] rounded-full bg-orange-100">
+                      <div
+                        className="h-full rounded-full bg-[#FF5722] transition-all duration-500"
+                        style={{ width: draftLoadingProgress }}
+                      />
+                    </div>
                   </div>
                 ) : draftText ? (
                   <div className="space-y-4 animate-in fade-in">
-                    <div className="text-[15px] text-[#333D4B] leading-loose whitespace-pre-wrap font-medium">{draftText}</div>
-                    <Button onClick={handleCopyDraft} className="w-full h-14 bg-[#F2F4F6] hover:bg-gray-200 text-[#4E5968] rounded-2xl font-bold transition-colors">
+                    <div className="text-[15px] text-[#333D4B] leading-loose whitespace-pre-wrap font-medium">
+                      {displayDraftText}
+                      {isTypingDraft && <span className="animate-pulse text-[#FF5722]">|</span>}
+                    </div>
+                    <Button
+                      onClick={handleCopyDraft}
+                      disabled={isTypingDraft}
+                      className="w-full h-14 bg-[#F2F4F6] hover:bg-gray-200 text-[#4E5968] rounded-2xl font-bold transition-colors"
+                    >
                       {copiedDraft ? <Check className="mr-2 h-4 w-4 text-[#FF5722]" /> : <Copy className="mr-2 h-4 w-4" />} 초안 복사하기
                     </Button>
                     <button
                       onClick={handleGenerateDraft}
-                      disabled={!canGenerateDraftToday || isCheckingDraftQuota}
+                      disabled={!canGenerateDraftToday || isCheckingDraftQuota || isTypingDraft}
                       className="w-full text-[13px] text-[#8B95A1] underline disabled:opacity-50 disabled:no-underline"
                     >
-                      {isCheckingDraftQuota
+                      {isTypingDraft
+                        ? '초안 출력 중...'
+                        : isCheckingDraftQuota
                         ? '사용 가능 여부 확인 중...'
                         : canGenerateDraftToday
                           ? '내용이 마음에 안 드시나요? 다시 만들기'

@@ -14,4 +14,5 @@ export const Z_INDEX = {
   mapSearchModal: 240,
   guidelineAnalysisBackdrop: 250,
   guidelineAnalysisModal: 251,
+  alertDialog: 260,
 } as const;
