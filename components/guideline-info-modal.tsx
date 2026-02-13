@@ -345,6 +345,22 @@ export default function GuidelineInfoModal({
   })();
   const digestSections = (effectiveAnalysis.guidelineDigest?.sections ?? [])
     .filter((section) => section?.title && Array.isArray(section.items) && section.items.length > 0);
+  const hasPoints = typeof displayPoints === 'number';
+  const hasEndDate = Boolean(effectiveAnalysis.reviewRegistrationPeriod?.end?.trim());
+  const hasPlatform = Boolean(effectiveAnalysis.platform?.trim());
+  const hasReviewChannels = reviewChannels.length > 0;
+  const hasCategory = Boolean(effectiveAnalysis.category?.trim());
+  const hasPhone = Boolean(effectiveAnalysis.phone?.trim());
+  const hasVisitReviewTypes = visitReviewTypes.length > 0;
+  const hasCoreInfoData = [
+    hasPoints,
+    hasEndDate,
+    hasPlatform,
+    hasReviewChannels,
+    hasCategory,
+    hasPhone,
+    hasVisitReviewTypes,
+  ].some(Boolean);
 
   const mergedPlatformOptions = Array.from(
     new Set(
@@ -555,6 +571,7 @@ export default function GuidelineInfoModal({
           <div className="flex-1 overflow-hidden">
             <ScrollArea className="h-full">
               <div className="px-3 sm:px-5 space-y-4 pb-28">
+                {hasCoreInfoData && (
                 <SectionCard
                   title="핵심 정보"
                   headerAction={
@@ -574,10 +591,11 @@ export default function GuidelineInfoModal({
                       isEditMode ? 'grid grid-cols-1' : 'grid grid-cols-2 md:grid-cols-4'
                     )}
                   >
+                    {(isEditMode || hasPoints) && (
                     <InfoRow label="금액" icon={Wallet}>
                       {isEditMode ? (
                         <Input
-                          value={displayPoints ? displayPoints.toLocaleString() : ''}
+                          value={hasPoints ? displayPoints.toLocaleString() : ''}
                           onChange={(e) => {
                             const digits = e.target.value.replace(/[^0-9]/g, '');
                             const next = digits ? Number(digits) : null;
@@ -599,10 +617,12 @@ export default function GuidelineInfoModal({
                         />
                       ) : (
                         <span className="text-[#FF5722] font-bold">
-                          {displayPoints ? `${displayPoints.toLocaleString()}P` : '-'}
+                          {hasPoints ? `${displayPoints.toLocaleString()}P` : '-'}
                         </span>
                       )}
                     </InfoRow>
+                    )}
+                    {(isEditMode || hasEndDate) && (
                     <InfoRow label="마감일" icon={CalendarIcon}>
                       {isEditMode ? (
                         <Popover>
@@ -651,6 +671,8 @@ export default function GuidelineInfoModal({
                         effectiveAnalysis.reviewRegistrationPeriod?.end || '-'
                       )}
                     </InfoRow>
+                    )}
+                    {(isEditMode || hasPlatform) && (
                     <InfoRow label="플랫폼">
                       {isEditMode ? (
                         <Select
@@ -675,6 +697,8 @@ export default function GuidelineInfoModal({
                         effectiveAnalysis.platform || '-'
                       )}
                     </InfoRow>
+                    )}
+                    {(isEditMode || hasReviewChannels) && (
                     <InfoRow label="리뷰 채널" className={isEditMode ? 'md:col-span-1' : ''}>
                       {isEditMode ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -695,6 +719,8 @@ export default function GuidelineInfoModal({
                         reviewChannels.join(', ') || '-'
                       )}
                     </InfoRow>
+                    )}
+                    {(isEditMode || hasCategory) && (
                     <InfoRow label="카테고리">
                       {isEditMode ? (
                         <Select
@@ -719,6 +745,8 @@ export default function GuidelineInfoModal({
                         effectiveAnalysis.category || '-'
                       )}
                     </InfoRow>
+                    )}
+                    {(isEditMode || hasPhone) && (
                     <InfoRow label="사장님 전화번호" icon={Phone}>
                       {isEditMode ? (
                         <Input
@@ -732,6 +760,8 @@ export default function GuidelineInfoModal({
                         effectiveAnalysis.phone || '-'
                       )}
                     </InfoRow>
+                    )}
+                    {(isEditMode || hasVisitReviewTypes) && (
                     <InfoRow label="방문 리뷰 항목" className={isEditMode ? 'md:col-span-1' : ''}>
                       {isEditMode ? (
                         <div className="space-y-2">
@@ -778,6 +808,7 @@ export default function GuidelineInfoModal({
                         visitReviewTypes.join(', ') || '-'
                       )}
                     </InfoRow>
+                    )}
                   </div>
                   <div className="">
                     {/* [수정] 내 일정에 반영하기 버튼 디자인 */}
@@ -791,6 +822,7 @@ export default function GuidelineInfoModal({
                     </Button>
                   </div>
                 </SectionCard>
+                )}
 
                 <SectionCard 
                   title="가이드라인"
@@ -1015,9 +1047,6 @@ export default function GuidelineInfoModal({
             </div>
           </ScrollArea>
 
-          <div className="p-4 sm:p-6 bg-white border-t border-gray-50 flex gap-3">
-            <Button variant="outline" onClick={() => setIsDraftOpen(false)} className="flex-1 h-12 rounded-[22px] border-none bg-[#F2F4F6] text-[#4E5968] font-bold hover:bg-gray-200">닫기</Button>
-          </div>
         </DialogContent>
       </Dialog>
     </>

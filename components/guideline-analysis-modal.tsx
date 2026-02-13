@@ -145,7 +145,7 @@ export default function GuidelineAnalysisModal({
         {/* Header */}
         <div className="px-6 py-4 border-b border-neutral-50 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-blue-500 fill-blue-50" />
+            <Sparkles className="w-4 h-4 text-orange-500 fill-orange-50" />
             <h2 className="text-[16px] font-bold text-neutral-900">AI 가이드라인 분석</h2>
           </div>
           <button
@@ -160,11 +160,11 @@ export default function GuidelineAnalysisModal({
         <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
           {/* Toss Style Info Cards */}
           <div className="space-y-2 mb-4">
-            <div className="flex items-center gap-3 rounded-[16px] bg-blue-50/50 px-4 py-3.5">
-              <AlertCircle className="w-4 h-4 text-blue-500 shrink-0" />
+            <div className="flex items-center gap-3 rounded-[16px] bg-orange-50/50 px-4 py-3.5">
+              <AlertCircle className="w-4 h-4 text-orange-500 shrink-0" />
               <div className="text-[13px] leading-tight">
-                <span className="font-semibold text-blue-900 mr-1.5">베타 서비스</span>
-                <span className="text-blue-700/80">하루에 한 번만 쓸 수 있어요.</span>
+                <span className="font-semibold text-orange-900 mr-1.5">베타 서비스</span>
+                <span className="text-orange-700/80">하루에 한 번만 쓸 수 있어요.</span>
               </div>
             </div>
 
@@ -187,17 +187,17 @@ export default function GuidelineAnalysisModal({
           {loading ? (
             <div className="space-y-3 mb-4">
               <label className="text-[14px] font-bold text-neutral-800 px-0.5">AI 분석 진행중</label>
-              <div className="rounded-[20px] border border-blue-100 bg-blue-50/30 p-6 min-h-[260px] flex flex-col justify-center space-y-4 animate-in fade-in">
+              <div className="rounded-[20px] border border-orange-100 bg-orange-50/30 p-6 min-h-[260px] flex flex-col justify-center space-y-4 animate-in fade-in">
                 <div className="flex justify-between items-center">
-                  <p className="text-[13px] font-bold text-blue-700 flex items-center gap-2">
+                  <p className="text-[13px] font-bold text-orange-700 flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     {currentStep}
                   </p>
-                  <span className="text-[11px] font-black text-blue-500">{Math.round(progressPercent)}%</span>
+                  <span className="text-[11px] font-black text-orange-500">{Math.round(progressPercent)}%</span>
                 </div>
-                <div className="h-1.5 w-full rounded-full bg-blue-100/50 overflow-hidden">
+                <div className="h-1.5 w-full rounded-full bg-orange-100/50 overflow-hidden">
                   <div
-                    className="h-full bg-blue-500 transition-all duration-700 ease-out shadow-[0_0_8px_rgba(59,130,246,0.3)]"
+                    className="h-full bg-orange-500 transition-all duration-700 ease-out shadow-[0_0_8px_rgba(249,115,22,0.3)]"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
@@ -206,7 +206,7 @@ export default function GuidelineAnalysisModal({
           ) : (
             <div className="space-y-3 mb-4">
               <label className="text-[14px] font-bold text-neutral-800 px-0.5">가이드라인 본문</label>
-              <div className="mt-2 relative group border border-neutral-200 rounded-[20px] overflow-hidden bg-white focus-within:ring-4 focus-within:ring-blue-50 focus-within:border-blue-200 transition-all duration-200">
+              <div className="mt-2 relative group border border-neutral-200 rounded-[20px] overflow-hidden bg-white focus-within:ring-4 focus-within:ring-orange-50 focus-within:border-orange-200 transition-all duration-200">
                 <Textarea
                   value={guideline}
                   onChange={(e) => handleGuidelineChange(e.target.value)}
@@ -248,7 +248,7 @@ export default function GuidelineAnalysisModal({
           <Button
             onClick={handleAnalyze}
             disabled={loading || quotaLoading || !canAnalyzeToday || !guideline.trim()}
-            className="min-w-[140px] h-12 rounded-[12px] text-[15px] font-bold shadow-none bg-blue-600 hover:bg-blue-700 disabled:bg-neutral-100 disabled:text-neutral-400"
+            className="min-w-[140px] h-12 rounded-[12px] text-[15px] font-bold shadow-none bg-orange-500 hover:bg-orange-600 disabled:bg-neutral-100 disabled:text-neutral-400"
           >
             {loading ? '분석하는 중...' : '분석하기'}
           </Button>
