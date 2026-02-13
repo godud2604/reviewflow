@@ -58,6 +58,8 @@ interface GuidelineInfoModalProps {
     options: BlogDraftOptions;
     updatedAt: string;
   }) => void;
+  openDraftOnOpen?: boolean;
+  draftOnlyMode?: boolean;
 }
 
 /**
@@ -176,6 +178,8 @@ export default function GuidelineInfoModal({
   initialDraftText,
   initialDraftOptions,
   onDraftGenerated,
+  openDraftOnOpen = false,
+  draftOnlyMode = false,
 }: GuidelineInfoModalProps) {
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [guidelineView, setGuidelineView] = useState<'digest' | 'original'>('digest');
@@ -276,7 +280,7 @@ export default function GuidelineInfoModal({
         setCanGenerateDraftToday(Boolean(result?.data?.blogDraft?.allowed));
       } catch (error) {
         if (active) setCanGenerateDraftToday(true);
-        console.error('블로그 초안 쿼터 조회 오류:', error);
+        console.error('블로그 글쓰기 쿼터 조회 오류:', error);
       } finally {
         if (active) setIsCheckingDraftQuota(false);
       }
@@ -287,6 +291,12 @@ export default function GuidelineInfoModal({
       active = false;
     };
   }, [isDraftOpen, userId]);
+
+  useEffect(() => {
+    if (!isOpen || !openDraftOnOpen) return;
+    setIsDraftOpen(true);
+    setCopiedDraft(false);
+  }, [isOpen, openDraftOnOpen]);
 
   if (!analysis) return null;
   if (!editableAnalysis) return null;
@@ -408,11 +418,25 @@ export default function GuidelineInfoModal({
     setCopiedDraft(false);
   };
 
+  const handleCloseDraftModal = () => {
+    setIsDraftOpen(false);
+    if (draftOnlyMode) onClose();
+  };
+
   const handleGenerateDraft = async () => {
+    if (!draftEmphasis.trim()) {
+      toast({
+        title: 'AI가 참고할 내용을 입력해주세요',
+        description: 'AI가 블로그 글을 작성할 때 참고하는 필수 항목입니다.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!canGenerateDraftToday) {
       toast({
         title: '오늘 사용 완료',
-        description: '블로그 초안 생성은 하루 1회만 가능합니다. 내일 다시 시도해주세요.',
+        description: '블로그 글 생성은 하루 1회만 가능합니다. 내일 다시 시도해주세요.',
         variant: 'destructive',
       });
       return;
@@ -449,7 +473,7 @@ export default function GuidelineInfoModal({
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        throw new Error(payload?.error || '블로그 초안 생성에 실패했습니다.');
+        throw new Error(payload?.error || '블로그 글 생성에 실패했습니다.');
       }
       if (!response.body) {
         throw new Error('스트리밍 응답을 받을 수 없습니다. 잠시 후 다시 시도해주세요.');
@@ -506,7 +530,7 @@ export default function GuidelineInfoModal({
           throw new Error(
             typeof payload.error === 'string' && payload.error.trim()
               ? payload.error
-              : '블로그 초안 생성 중 오류가 발생했습니다.'
+              : '블로그 글 생성 중 오류가 발생했습니다.'
           );
         }
       };
@@ -592,12 +616,13 @@ export default function GuidelineInfoModal({
   return (
     <>
       {/* 1. 메인 가이드라인 모달 */}
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent
-          className="w-[calc(100vw-1.25rem)] max-w-[540px] h-[85vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col shadow-2xl"
-          style={{ zIndex: Z_INDEX.guidelineAnalysisModal, borderRadius: '32px' }}
-          onInteractOutside={(e) => e.preventDefault()}
-        >
+      {!draftOnlyMode && (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogContent
+            className="w-[calc(100vw-1.25rem)] max-w-[540px] h-[85vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col shadow-2xl"
+            style={{ zIndex: Z_INDEX.guidelineAnalysisModal, borderRadius: '32px' }}
+            onInteractOutside={(e) => e.preventDefault()}
+          >
           <DialogHeader className="relative p-4 pr-14 bg-white/80 backdrop-blur-md sticky top-0 z-10">
             <div className="flex items-start gap-3">
               <DialogTitle className="min-w-0 flex-1 text-[14px] font-bold text-[#191F28] tracking-tight break-words">
@@ -888,7 +913,7 @@ export default function GuidelineInfoModal({
                       onClick={handleOpenDraftModal}
                       className="mt-1 h-10 text-[13px] sm:text-[13px] font-bold text-[#FF5722] inline-flex items-center justify-center gap-1.5 px-4 bg-white border border-[#FFD7C2] rounded-full hover:bg-[#FFF7F2] shadow-sm transition-colors"
                     >
-                      <Sparkles className="w-2.5 h-2.5 fill-[#FF5722]" /> 블로그 초안 작성 (Beta)
+                      <Sparkles className="w-2.5 h-2.5 fill-[#FF5722]" /> 블로그 글쓰기 (Beta)
                     </button>
                   }
                 >
@@ -956,21 +981,28 @@ export default function GuidelineInfoModal({
               </div>
             </ScrollArea>
           </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
-      {/* 2. 블로그 초안 모달 (기존 디자인 유지) */}
-      <Dialog open={isDraftOpen} onOpenChange={setIsDraftOpen}>
+      {/* 2. 블로그 글쓰기 모달 (기존 디자인 유지) */}
+      <Dialog
+        open={isDraftOpen}
+        onOpenChange={(open) => {
+          setIsDraftOpen(open);
+          if (!open && draftOnlyMode) onClose();
+        }}
+      >
         <DialogContent 
           showCloseButton={false}
           className="w-[calc(100vw-1.25rem)] max-w-[600px] h-[90vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col shadow-2xl"
           style={{ zIndex: Z_INDEX.guidelineAnalysisModal + 1, borderRadius: '32px' }}
         >
           <DialogHeader className="relative p-4 pr-14 bg-white">
-            <DialogTitle className="text-[14px] font-bold text-[#191F28]">블로그 초안 작성</DialogTitle>
+            <DialogTitle className="text-[14px] font-bold text-[#191F28]">블로그 글쓰기</DialogTitle>
             <button
               type="button"
-              onClick={() => setIsDraftOpen(false)}
+              onClick={handleCloseDraftModal}
               className="absolute right-5 top-4 z-50 flex h-8 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-all hover:bg-neutral-200 hover:text-neutral-900 active:scale-95"
               aria-label="닫기"
             >
@@ -980,16 +1012,18 @@ export default function GuidelineInfoModal({
 
           <ScrollArea className="flex-1 min-h-0">
             <div className="py-1 px-5 space-y-4">
-              <div className="bg-white rounded-[24px] p-6 space-y-4 border border-gray-100">
+              <div className="bg-white rounded-[24px] p-6 space-y-3 border border-gray-100">
                 <p className="text-[14px] font-bold text-[#191F28]">키워드 설정</p>
-                <div className="flex flex-wrap gap-2">
-                  {draftKeywords.map((k) => (
-                    <span key={k} className="inline-flex max-w-full break-all items-center gap-1 px-3 py-1.5 bg-[#F9FAFB] text-[#FF5722] rounded-full text-[13px] font-bold border border-orange-100">
-                      {k} <X className="w-3 h-3 cursor-pointer" onClick={() => handleRemoveKeyword(k)} />
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-2">
+                  {draftKeywords.length > 0 && (
+                    <div className="min-h-[48px] rounded-xl bg-[#F9FAFB] border border-dashed border-gray-200 px-3 py-2 flex flex-wrap items-center gap-2">
+                      {draftKeywords.map((k) => (
+                        <span key={k} className="inline-flex max-w-full break-all items-center gap-1 px-3 py-1.5 bg-white text-[#FF5722] rounded-full text-[13px] font-bold border border-orange-100">
+                          {k} <X className="w-3 h-3 cursor-pointer" onClick={() => handleRemoveKeyword(k)} />
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                <div className="flex gap-2 mb-4">
                   <input 
                     value={keywordInput}
                     onChange={(e) => setKeywordInput(e.target.value)}
@@ -998,6 +1032,18 @@ export default function GuidelineInfoModal({
                     className="flex-1 h-12 bg-[#F9FAFB] border-none rounded-xl px-4 text-[14px] focus:ring-1 focus:ring-[#FF5722] outline-none"
                   />
                   <Button onClick={handleAddKeyword} variant="outline" className="h-12 rounded-xl border-gray-200 font-bold text-[#4E5968]">추가</Button>
+                </div>
+
+                <div className="space-y-3 pt-1">
+                  <p className="text-[14px] font-bold text-[#191F28]">
+                    AI가 참고할 내용 <span className="text-[#FF5722]">(필수)</span>
+                  </p>
+                  <Textarea
+                    value={draftEmphasis}
+                    onChange={(e) => setDraftEmphasis(e.target.value)}
+                    placeholder="예: 제품 차별점, 꼭 언급할 기능/성분, 20대 여성 대상임을 강조 등"
+                    className="border-none bg-[#F9FAFB] rounded-2xl min-h-[80px] focus-visible:ring-1 focus-visible:ring-[#FF5722]"
+                  />
                 </div>
 
                 <button 
@@ -1055,77 +1101,55 @@ export default function GuidelineInfoModal({
                         </div>
                       </div>
                     </div>
-                    <div className="space-y-3">
-                      <p className="text-[14px] font-bold text-[#191F28]">강조할 내용</p>
-                      <Textarea value={draftEmphasis} onChange={(e) => setDraftEmphasis(e.target.value)} placeholder="요청사항을 입력하세요." className="border-none bg-[#F9FAFB] rounded-2xl min-h-[80px] focus-visible:ring-1 focus-visible:ring-[#FF5722]" />
-                    </div>
                   </div>
                 )}
               </div>
 
-              <div className="bg-white rounded-[24px] p-6 min-h-[180px] flex flex-col justify-center border border-gray-100 shadow-sm">
-                {isGeneratingDraft && !draftText ? (
-                  <div className="flex flex-col items-center py-12 gap-3 text-center">
-                    <Loader2 className="w-8 h-8 text-[#FF5722] animate-spin" />
-                    <p className="text-[15px] font-semibold text-[#4E5968]">AI가 초안을 작성하고 있어요</p>
-                    <p className="text-[13px] text-[#8B95A1]">{draftLoadingStep}</p>
-                    <div className="mt-1 h-1.5 w-full max-w-[280px] rounded-full bg-orange-100">
-                      <div
-                        className="h-full rounded-full bg-[#FF5722] transition-all duration-500"
-                        style={{ width: draftLoadingProgress }}
-                      />
+                {draftText ? (
+                  <div className="bg-white rounded-[24px] p-6 flex flex-col justify-center border border-gray-100 shadow-sm">
+                    <div className="space-y-4 animate-in fade-in">
+                      <div className="text-[15px] text-[#333D4B] leading-loose whitespace-pre-wrap font-medium">
+                        {displayDraftText}
+                        {isTypingDraft && <span className="animate-pulse text-[#FF5722]">|</span>}
+                      </div>
+                      <Button
+                        onClick={handleCopyDraft}
+                        disabled={isGeneratingDraft}
+                        className="w-full h-14 bg-[#F2F4F6] hover:bg-gray-200 text-[#4E5968] rounded-2xl font-bold transition-colors"
+                      >
+                        {copiedDraft ? <Check className="mr-2 h-4 w-4 text-[#FF5722]" /> : <Copy className="mr-2 h-4 w-4" />} 초안 복사하기
+                      </Button>
+                      <button
+                        onClick={handleGenerateDraft}
+                        disabled={!canGenerateDraftToday || isCheckingDraftQuota || isGeneratingDraft}
+                        className="w-full text-[13px] text-[#8B95A1] underline disabled:opacity-50 disabled:no-underline"
+                      >
+                        {isGeneratingDraft
+                          ? '초안 출력 중...'
+                          : isCheckingDraftQuota
+                          ? '사용 가능 여부 확인 중...'
+                          : canGenerateDraftToday
+                            ? '내용이 마음에 안 드시나요? 다시 만들기'
+                            : 'Beta · 하루 1회만 생성할 수 있습니다.'}
+                      </button>
                     </div>
-                  </div>
-                ) : draftText ? (
-                  <div className="space-y-4 animate-in fade-in">
-                    <div className="text-[15px] text-[#333D4B] leading-loose whitespace-pre-wrap font-medium">
-                      {displayDraftText}
-                      {isTypingDraft && <span className="animate-pulse text-[#FF5722]">|</span>}
-                    </div>
-                    <Button
-                      onClick={handleCopyDraft}
-                      disabled={isGeneratingDraft}
-                      className="w-full h-14 bg-[#F2F4F6] hover:bg-gray-200 text-[#4E5968] rounded-2xl font-bold transition-colors"
-                    >
-                      {copiedDraft ? <Check className="mr-2 h-4 w-4 text-[#FF5722]" /> : <Copy className="mr-2 h-4 w-4" />} 초안 복사하기
-                    </Button>
-                    <button
-                      onClick={handleGenerateDraft}
-                      disabled={!canGenerateDraftToday || isCheckingDraftQuota || isGeneratingDraft}
-                      className="w-full text-[13px] text-[#8B95A1] underline disabled:opacity-50 disabled:no-underline"
-                    >
-                      {isGeneratingDraft
-                        ? '초안 출력 중...'
-                        : isCheckingDraftQuota
-                        ? '사용 가능 여부 확인 중...'
-                        : canGenerateDraftToday
-                          ? '내용이 마음에 안 드시나요? 다시 만들기'
-                          : 'Beta · 하루 1회만 생성할 수 있습니다.'}
-                    </button>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center text-center gap-6">
-                    <div className="space-y-2">
-                      <div className="w-8 h-8 bg-[#FFF0E6] rounded-full flex items-center justify-center mx-auto">
-                        <Sparkles className="w-4 h-4 text-[#FF5722] fill-[#FF5722]" />
-                      </div>
-                      <p className="text-[13px] text-[#8B95A1]">가이드를 분석해 블로그 글을 써드릴게요</p>
-                    </div>
                     <Button 
                       onClick={handleGenerateDraft}
-                      disabled={!canGenerateDraftToday || isCheckingDraftQuota}
+                      disabled={!canGenerateDraftToday || isCheckingDraftQuota || !draftEmphasis.trim()}
                       className="w-full h-10 bg-[#FF5722] hover:bg-[#FF7A4C] text-white rounded-[20px] font-bold text-[14px] shadow-lg shadow-orange-100 transition-all active:scale-[0.98]"
                     >
                       {isCheckingDraftQuota
                         ? '사용 가능 여부 확인 중...'
                         : canGenerateDraftToday
-                          ? '블로그 초안 생성'
+                          ? '블로그 글 생성'
                           : '하루 1회만 가능해요. 내일 다시 시도해주세요'}
                     </Button>
                   </div>
                 )}
               </div>
-            </div>
           </ScrollArea>
 
         </DialogContent>

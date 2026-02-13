@@ -9,7 +9,7 @@ const client = new GoogleGenerativeAI(apiKey || '');
 
 const RequestSchema = z.object({
   analysis: z.any(),
-  userId: z.string().uuid().optional(),
+  userId: z.string().min(1).optional(),
   scheduleId: z.union([z.number(), z.string()]).optional(),
   originalGuideline: z.string().optional(),
   options: z.object({
@@ -23,8 +23,8 @@ const RequestSchema = z.object({
     ]),
     tone: z.enum(['auto', 'haeyo', 'hamnida', 'banmal']),
     persona: z.enum(['balanced', 'friendly', 'expert', 'honest', 'lifestyle']),
-    emphasis: z.string().max(300).optional(),
-    keywords: z.array(z.string().min(1).max(24)).max(20).optional(),
+    emphasis: z.string().max(1000).optional(),
+    keywords: z.array(z.string().min(1).max(40)).max(20).optional(),
   }),
 });
 
@@ -125,8 +125,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = RequestSchema.safeParse(body);
     if (!parsed.success) {
+      const details = parsed.error.issues
+        .map((issue) => `${issue.path.join('.') || 'root'}: ${issue.message}`)
+        .join(' | ');
       return NextResponse.json(
-        { error: '요청 형식이 올바르지 않습니다.' },
+        { error: '요청 형식이 올바르지 않습니다.', details },
         { status: 400 }
       );
     }
@@ -139,13 +142,8 @@ export async function POST(request: NextRequest) {
         : typeof parsedScheduleIdRaw === 'string' && parsedScheduleIdRaw.trim()
           ? Number(parsedScheduleIdRaw)
           : null;
-    const userId = parsed.data.userId;
-    if (!userId) {
-      return NextResponse.json(
-        { error: '사용자 ID가 필요합니다.' },
-        { status: 400 }
-      );
-    }
+    const userId = parsed.data.userId?.trim();
+    const isValidUuidUserId = Boolean(userId && z.string().uuid().safeParse(userId).success);
     const originalGuideline = parsed.data.originalGuideline?.trim();
     const emphasis = options.emphasis?.trim() ?? '';
     const keywords = (options.keywords ?? [])
@@ -154,34 +152,37 @@ export async function POST(request: NextRequest) {
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Supabase configuration missing');
-      return NextResponse.json({ error: 'Supabase 설정이 없습니다.' }, { status: 500 });
-    }
+    const canUseSupabaseForQuotaAndPersistence = Boolean(
+      isValidUuidUserId && supabaseUrl && supabaseServiceKey
+    );
+    const supabase = canUseSupabaseForQuotaAndPersistence
+      ? createClient(supabaseUrl as string, supabaseServiceKey as string)
+      : null;
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { data: userProfile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('last_guideline_analysis_at, last_blog_draft_generated_at')
-      .eq('id', userId)
-      .maybeSingle();
+    if (canUseSupabaseForQuotaAndPersistence && supabase && userId) {
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('last_guideline_analysis_at, last_blog_draft_generated_at')
+        .eq('id', userId)
+        .maybeSingle();
 
-    if (profileError) {
-      return NextResponse.json({ error: '사용자 정보를 조회할 수 없습니다.' }, { status: 400 });
-    }
+      if (profileError) {
+        return NextResponse.json({ error: '사용자 정보를 조회할 수 없습니다.' }, { status: 400 });
+      }
 
-    const quotaStatus = getAiQuotaStatus({
-      lastGuidelineAnalysisAt: userProfile?.last_guideline_analysis_at ?? null,
-      lastBlogDraftGeneratedAt: userProfile?.last_blog_draft_generated_at ?? null,
-    });
-    if (!quotaStatus.blogDraft.allowed) {
-      return NextResponse.json(
-        {
-          error: getAiQuotaBlockedMessage('blogDraft'),
-          quota: quotaStatus,
-        },
-        { status: 429 }
-      );
+      const quotaStatus = getAiQuotaStatus({
+        lastGuidelineAnalysisAt: userProfile?.last_guideline_analysis_at ?? null,
+        lastBlogDraftGeneratedAt: userProfile?.last_blog_draft_generated_at ?? null,
+      });
+      if (!quotaStatus.blogDraft.allowed) {
+        return NextResponse.json(
+          {
+            error: getAiQuotaBlockedMessage('blogDraft'),
+            quota: quotaStatus,
+          },
+          { status: 429 }
+        );
+      }
     }
 
     const sanitizedAnalysis = buildDraftAnalysisContext(analysis);
@@ -268,7 +269,12 @@ export async function POST(request: NextRequest) {
 
           const updatedAt = new Date().toISOString();
           let persistedToSchedule = false;
-          if (parsedScheduleId !== null && Number.isFinite(parsedScheduleId)) {
+          if (
+            supabase &&
+            userId &&
+            parsedScheduleId !== null &&
+            Number.isFinite(parsedScheduleId)
+          ) {
             const { error: persistError } = await supabase
               .from('schedules')
               .update({
@@ -288,13 +294,15 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          const { error: quotaUpdateError } = await supabase
-            .from('user_profiles')
-            .update({ last_blog_draft_generated_at: updatedAt })
-            .eq('id', userId);
+          if (supabase && userId) {
+            const { error: quotaUpdateError } = await supabase
+              .from('user_profiles')
+              .update({ last_blog_draft_generated_at: updatedAt })
+              .eq('id', userId);
 
-          if (quotaUpdateError) {
-            console.error('블로그 초안 쿼터 시간 저장 실패:', quotaUpdateError);
+            if (quotaUpdateError) {
+              console.error('블로그 초안 쿼터 시간 저장 실패:', quotaUpdateError);
+            }
           }
 
           controller.enqueue(
