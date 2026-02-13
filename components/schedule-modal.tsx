@@ -40,6 +40,7 @@ import {
   deleteGuideFile,
   getGuideFileUrl,
 } from '@/lib/storage';
+import { getSupabaseClient } from '@/lib/supabase';
 import { DEFAULT_SCHEDULE_CHANNEL_OPTIONS, sanitizeChannels } from '@/lib/schedule-channels';
 import {
   DEFAULT_COST_LABEL,
@@ -131,6 +132,8 @@ export default function ScheduleModal({
   statusChangeIntent?: boolean;
 }) {
   type AiActionIntent = 'autoSchedule' | 'blogDraft' | null;
+  type AiFeatureFeedbackChoice = 'like' | 'dislike' | null;
+  const AI_FEATURE_FEEDBACK_STORAGE_KEY = 'schedule_modal_ai_feature_feedback_v1';
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData());
 
   const [purchaseLink, setPurchaseLink] = useState<string>('');
@@ -160,6 +163,12 @@ export default function ScheduleModal({
   const [showGuidelineAnalysisModal, setShowGuidelineAnalysisModal] = useState(false);
   const [showGuidelineInfoModal, setShowGuidelineInfoModal] = useState(false);
   const [showAiActionOptions, setShowAiActionOptions] = useState(false);
+  const [showAiFeatureFeedbackPrompt, setShowAiFeatureFeedbackPrompt] = useState(false);
+  const [aiFeatureFeedbackChoice, setAiFeatureFeedbackChoice] =
+    useState<AiFeatureFeedbackChoice>(null);
+  const [aiFeatureFeedbackText, setAiFeatureFeedbackText] = useState('');
+  const [isAiFeatureFeedbackSubmitting, setIsAiFeatureFeedbackSubmitting] = useState(false);
+  const [canShowAiFeatureFeedbackPrompt, setCanShowAiFeatureFeedbackPrompt] = useState(false);
   const [aiActionIntent, setAiActionIntent] = useState<AiActionIntent>(null);
   const [openDraftOnGuidelineInfoOpen, setOpenDraftOnGuidelineInfoOpen] = useState(false);
   const [draftOnlyMode, setDraftOnlyMode] = useState(false);
@@ -192,6 +201,17 @@ export default function ScheduleModal({
       setShowMapSearchModal(true);
     }
   }, [isOpen, initialMapSearchOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const savedChoice = window.localStorage.getItem(AI_FEATURE_FEEDBACK_STORAGE_KEY);
+    const alreadySubmitted = savedChoice === 'like' || savedChoice === 'dislike';
+    setCanShowAiFeatureFeedbackPrompt(!alreadySubmitted);
+    setShowAiFeatureFeedbackPrompt(false);
+    setAiFeatureFeedbackChoice(null);
+    setAiFeatureFeedbackText('');
+    setIsAiFeatureFeedbackSubmitting(false);
+  }, [isOpen]);
   const [showCompletionOnboarding, setShowCompletionOnboarding] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<Schedule['category'][]>([]);
   const [visitMode, setVisitMode] = useState(false);
@@ -643,6 +663,9 @@ export default function ScheduleModal({
 
   const handleSelectAiAction = useCallback(
     (intent: Exclude<AiActionIntent, null>) => {
+      if (canShowAiFeatureFeedbackPrompt) {
+        setShowAiFeatureFeedbackPrompt(true);
+      }
       if (intent === 'blogDraft') {
         setDraftOnlyMode(!effectiveGuidelineAnalysis);
         setOpenDraftOnGuidelineInfoOpen(true);
@@ -659,8 +682,109 @@ export default function ScheduleModal({
 
       handleApplyGuidelineToSchedule(effectiveGuidelineAnalysis);
     },
-    [effectiveGuidelineAnalysis, handleApplyGuidelineToSchedule]
+    [canShowAiFeatureFeedbackPrompt, effectiveGuidelineAnalysis, handleApplyGuidelineToSchedule]
   );
+
+  const handleAiFeatureFeedbackSelect = useCallback(
+    (choice: Exclude<AiFeatureFeedbackChoice, null>) => {
+      setAiFeatureFeedbackChoice(choice);
+    },
+    []
+  );
+
+  const handleSubmitAiFeatureFeedback = useCallback(async () => {
+    const trimmedContent = aiFeatureFeedbackText.trim();
+
+    if (!aiFeatureFeedbackChoice) {
+      toast({
+        title: '좋아요/별로에요를 먼저 선택해주세요.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+
+    if (!trimmedContent) {
+      toast({
+        title: '피드백 내용을 입력해주세요.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: '로그인이 필요합니다.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+
+    setIsAiFeatureFeedbackSubmitting(true);
+
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.from('feedback_messages').insert({
+        user_id: user.id,
+        feedback_type: aiFeatureFeedbackChoice === 'like' ? 'feature' : 'bug',
+        content: `[AI 작성하기 신규 기능 피드백 - ${aiFeatureFeedbackChoice === 'like' ? '좋아요' : '별로에요'}]\n${trimmedContent}`,
+        metadata: {
+          source: 'schedule_modal_ai_feature_feedback',
+          email: user.email ?? null,
+          sentiment: aiFeatureFeedbackChoice,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      try {
+        const userMetadata = user.user_metadata as { full_name?: string; name?: string } | null;
+
+        await fetch('/api/feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            feedbackType: aiFeatureFeedbackChoice === 'like' ? 'feature' : 'bug',
+            content: `[AI 작성하기 신규 기능 피드백 - ${aiFeatureFeedbackChoice === 'like' ? '좋아요' : '별로에요'}]\n${trimmedContent}`,
+            author: {
+              id: user.id,
+              email: user.email ?? null,
+              name: userMetadata?.full_name ?? userMetadata?.name ?? null,
+            },
+          }),
+          keepalive: true,
+        });
+      } catch (notifyError) {
+        console.error('Failed to notify Google Chat:', notifyError);
+      }
+
+      window.localStorage.setItem(AI_FEATURE_FEEDBACK_STORAGE_KEY, aiFeatureFeedbackChoice);
+      setCanShowAiFeatureFeedbackPrompt(false);
+      setShowAiFeatureFeedbackPrompt(false);
+      setAiFeatureFeedbackChoice(null);
+      setAiFeatureFeedbackText('');
+
+      toast({
+        title: '피드백을 전송했어요.',
+        description: '하나하나 꼼꼼히 읽어볼게요.',
+        duration: 1500,
+      });
+    } catch (error) {
+      toast({
+        title: '피드백 전송에 실패했습니다.',
+        description: error instanceof Error ? error.message : '다시 시도해 주세요.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAiFeatureFeedbackSubmitting(false);
+    }
+  }, [aiFeatureFeedbackChoice, aiFeatureFeedbackText, toast, user]);
 
   const handleCloseGuidelineAnalysisModal = useCallback(() => {
     setShowGuidelineAnalysisModal(false);
@@ -2539,6 +2663,79 @@ export default function ScheduleModal({
           </div>
 
           {/* 항상 표시되는 플로팅 버튼 - schedule(체험단 수정)일 때만 표시 */}
+          {showAiFeatureFeedbackPrompt && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-[86px] z-[65] flex justify-center px-4">
+              <div className="pointer-events-auto w-full max-w-[360px] rounded-2xl border border-orange-200 bg-white px-4 py-3 shadow-[0_14px_36px_rgba(15,23,42,0.16)]">
+                <div className="mb-2.5 flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-neutral-900">
+                      새로운 추가된 AI 기능 어떠셨나요? <br/>
+                      하나하나 꼼꼼히 읽어볼게요.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAiFeatureFeedbackPrompt(false);
+                      setAiFeatureFeedbackChoice(null);
+                      setAiFeatureFeedbackText('');
+                    }}
+                    className="rounded-full p-1 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+                    aria-label="피드백 팝업 닫기"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {!aiFeatureFeedbackChoice ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAiFeatureFeedbackSelect('like')}
+                      className="h-9 flex-1 rounded-xl border border-orange-200 bg-orange-50 text-[12px] font-semibold text-orange-700 transition-colors hover:bg-orange-100"
+                    >
+                      좋아요
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAiFeatureFeedbackSelect('dislike')}
+                      className="h-9 flex-1 rounded-xl border border-neutral-200 bg-neutral-50 text-[12px] font-semibold text-neutral-700 transition-colors hover:bg-neutral-100"
+                    >
+                      별로에요
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    
+                    <textarea
+                      value={aiFeatureFeedbackText}
+                      onChange={(event) => setAiFeatureFeedbackText(event.target.value)}
+                      placeholder={
+                        aiFeatureFeedbackChoice === 'like'
+                          ? '어떤 점이 좋았는지 알려주세요'
+                          : '아쉬웠던 점을 알려주세요'
+                      }
+                      className="h-[88px] w-full resize-none rounded-xl border border-neutral-200 bg-white px-3 py-2 text-[12px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200"
+                      maxLength={500}
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-neutral-400">
+                        {aiFeatureFeedbackText.length}/500
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleSubmitAiFeatureFeedback}
+                        disabled={isAiFeatureFeedbackSubmitting}
+                        className="h-8 rounded-lg bg-orange-500 px-3 text-[12px] font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isAiFeatureFeedbackSubmitting ? '전송 중...' : '피드백 전송하기'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {schedule && (
             <div className="absolute bottom-[90px] right-5 z-50 flex flex-col gap-2 pointer-events-none">
               <button
