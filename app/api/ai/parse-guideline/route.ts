@@ -29,6 +29,7 @@ const SafeVisitReviewTypesSchema = z
 const ContentRequirementsSchema = z.object({
   // 방문형 리뷰 필수 항목 (네이버예약, 구글리뷰, 기타)
   visitReviewTypes: SafeVisitReviewTypesSchema,
+  visitReviewOtherText: z.string().nullable().optional(),
 });
 
 const GuidelineDigestSchema = z.object({
@@ -48,11 +49,12 @@ const CampaignGuidelineAnalysisSchema = z.object({
   platform: z.string().nullable().optional(),
   category: z.string().nullable().optional(),
   reviewChannel: z.string().nullable().optional(),
+  reviewChannels: z.array(z.string()).optional(),
   visitInfo: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
   reviewRegistrationPeriod: z.object({
-    start: z.string(),
-    end: z.string(),
+    start: z.string().nullable().optional(),
+    end: z.string().nullable().optional(),
   }).optional(),
   rewardInfo: z.object({
     description: z.string().nullable().optional(),
@@ -265,6 +267,13 @@ function extractPhoneFromGuideline(guideline: string): string | null {
   if (!firstMatch) return null;
   const normalized = normalizePhoneNumber(firstMatch);
   return normalized || null;
+}
+
+function normalizeDeadlineValue(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '-' || trimmed.toLowerCase() === 'null') return null;
+  return trimmed;
 }
 
 const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인 분석 전문가입니다.
@@ -530,6 +539,16 @@ export async function POST(request: NextRequest) {
       analysis.guidelineDigest = normalizeGuidelineDigest(analysis.guidelineDigest);
     }
     analysis.keywords = normalizeKeywords(analysis.keywords);
+    const normalizedEnd = normalizeDeadlineValue(analysis.reviewRegistrationPeriod?.end);
+    analysis.reviewRegistrationPeriod = analysis.reviewRegistrationPeriod
+      ? {
+          ...analysis.reviewRegistrationPeriod,
+          end: normalizedEnd,
+        }
+      : { end: null };
+    if (analysis.phone?.trim()) {
+      analysis.phone = normalizePhoneNumber(analysis.phone);
+    }
 
     // 포인트 후처리: 모델이 points를 누락한 경우 원문에서 보상 금액을 추출해 보정
     const extractedPoints = extractPointsFromGuideline(guideline);

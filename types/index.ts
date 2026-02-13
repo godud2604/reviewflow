@@ -187,12 +187,13 @@ export interface CampaignGuidelineAnalysis {
   platform?: string | null; // 예: "네이버 블로그", "인스타그램", "카페" 등
   category?: string | null; // 제품/서비스 카테고리
   reviewChannel?: string | null; // 리뷰 채널 (블로그, 인스타그램, 쿠팡 등)
+  reviewChannels?: string[]; // 복수 리뷰 채널
   visitInfo?: string | null; // 방문정보 (주소, 위치 등)
   phone?: string | null; // 전화번호
 
   reviewRegistrationPeriod?: {
-    start: string;
-    end: string;
+    start?: string | null;
+    end?: string | null;
   };
   
   // 보상정보
@@ -207,6 +208,7 @@ export interface CampaignGuidelineAnalysis {
   contentRequirements?: {
     // 방문형 리뷰 필수 항목
     visitReviewTypes?: Array<'naverReservation' | 'googleReview' | 'other'>;
+    visitReviewOtherText?: string | null;
   };
 
   // 가이드라인 전체 정리 정보

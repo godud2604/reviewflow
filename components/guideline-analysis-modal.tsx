@@ -174,35 +174,7 @@ export default function GuidelineAnalysisModal({
             </div>
           </div>
 
-          {/* Textarea Section with Margin Bottom */}
-          <div className="space-y-3 mb-4"> {/* margin-bottom 추가하여 아래 요소와 간격 확보 */}
-            <label className="text-[14px] font-bold text-neutral-800 px-0.5">가이드라인 본문</label>
-            <div className="mt-2 relative group border border-neutral-200 rounded-[20px] overflow-hidden bg-white focus-within:ring-4 focus-within:ring-blue-50 focus-within:border-blue-200 transition-all duration-200">
-              <Textarea
-                value={guideline}
-                onChange={(e) => handleGuidelineChange(e.target.value)}
-                placeholder="브랜드명, 필수 키워드, 마감일 등 전체 내용을 적어주세요."
-                className={cn(
-                  "min-h-[260px] max-h-[360px] p-5 pb-16 text-[15px] leading-relaxed border-none focus-visible:ring-0 resize-none overflow-y-auto placeholder:text-neutral-300",
-                  isLimitReached && "bg-red-50/10"
-                )}
-                disabled={loading}
-              />
-              {/* Floating Counter */}
-              <div className="absolute bottom-4 right-5 pointer-events-none">
-                <div 
-                  className={cn(
-                    "px-2.5 py-1 rounded-full text-[14px] font-bold transition-all border bg-white/90 backdrop-blur-sm pointer-events-auto shadow-sm",
-                    isLimitReached ? "text-red-500 border-red-100" : "text-neutral-400 border-neutral-100"
-                  )}
-                >
-                  {guideline.length.toLocaleString()} <span className="mx-0.5 text-neutral-200 font-normal">/</span> {MAX_GUIDELINE_LENGTH.toLocaleString()}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Error Message - Space Inside Scroll Area */}
+                {/* Error Message - Space Inside Scroll Area */}
           {!canAnalyzeToday && !loading && (
             <div className="flex items-start gap-2 p-4 rounded-[16px] bg-red-50 text-red-600 border border-red-100 animate-in fade-in slide-in-from-top-1 mb-6">
               <AlertCircle size={16} className="shrink-0 mt-0.5" />
@@ -212,24 +184,56 @@ export default function GuidelineAnalysisModal({
             </div>
           )}
 
-          {/* Loading View */}
-          {loading && (
-            <div className="rounded-[20px] border border-blue-100 bg-blue-50/30 p-5 space-y-4 animate-in fade-in">
-              <div className="flex justify-between items-center">
-                <p className="text-[13px] font-bold text-blue-700 flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {currentStep}
-                </p>
-                <span className="text-[11px] font-black text-blue-500">{Math.round(progressPercent)}%</span>
+          {loading ? (
+            <div className="space-y-3 mb-4">
+              <label className="text-[14px] font-bold text-neutral-800 px-0.5">AI 분석 진행중</label>
+              <div className="rounded-[20px] border border-blue-100 bg-blue-50/30 p-6 min-h-[260px] flex flex-col justify-center space-y-4 animate-in fade-in">
+                <div className="flex justify-between items-center">
+                  <p className="text-[13px] font-bold text-blue-700 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {currentStep}
+                  </p>
+                  <span className="text-[11px] font-black text-blue-500">{Math.round(progressPercent)}%</span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-blue-100/50 overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500 transition-all duration-700 ease-out shadow-[0_0_8px_rgba(59,130,246,0.3)]"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-1.5 w-full rounded-full bg-blue-100/50 overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 transition-all duration-700 ease-out shadow-[0_0_8px_rgba(59,130,246,0.3)]"
-                  style={{ width: `${progressPercent}%` }}
+            </div>
+          ) : (
+            <div className="space-y-3 mb-4">
+              <label className="text-[14px] font-bold text-neutral-800 px-0.5">가이드라인 본문</label>
+              <div className="mt-2 relative group border border-neutral-200 rounded-[20px] overflow-hidden bg-white focus-within:ring-4 focus-within:ring-blue-50 focus-within:border-blue-200 transition-all duration-200">
+                <Textarea
+                  value={guideline}
+                  onChange={(e) => handleGuidelineChange(e.target.value)}
+                  placeholder="브랜드명, 필수 키워드, 마감일 등 전체 내용을 적어주세요."
+                  className={cn(
+                    "min-h-[260px] max-h-[360px] p-5 pb-16 text-[15px] leading-relaxed border-none focus-visible:ring-0 resize-none overflow-y-auto placeholder:text-neutral-300",
+                    isLimitReached && "bg-red-50/10"
+                  )}
+                  disabled={loading}
                 />
+                {/* Floating Counter */}
+                <div className="absolute bottom-4 right-5 pointer-events-none">
+                  <div
+                    className={cn(
+                      "px-2.5 py-1 rounded-full text-[14px] font-bold transition-all border bg-white/90 backdrop-blur-sm pointer-events-auto shadow-sm",
+                      isLimitReached ? "text-red-500 border-red-100" : "text-neutral-400 border-neutral-100"
+                    )}
+                  >
+                    {guideline.length.toLocaleString()} <span className="mx-0.5 text-neutral-200 font-normal">/</span> {MAX_GUIDELINE_LENGTH.toLocaleString()}
+                  </div>
+                </div>
               </div>
             </div>
           )}
+
+    
+
         </div>
 
         {/* Footer - Fixed Bottom */}

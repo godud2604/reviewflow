@@ -103,13 +103,6 @@ const VALID_AI_CATEGORIES = [
   '기타',
 ] as const;
 
-type GuidelineProfileSuggestion = {
-  analysis: CampaignGuidelineAnalysis;
-  platform?: string;
-  reviewChannel?: string;
-  category?: Schedule['category'];
-};
-
 export default function ScheduleModal({
   isOpen,
   onClose,
@@ -166,12 +159,12 @@ export default function ScheduleModal({
   const [showGuidelineAnalysisModal, setShowGuidelineAnalysisModal] = useState(false);
   const [showGuidelineInfoModal, setShowGuidelineInfoModal] = useState(false);
   const [guidelineAnalysis, setGuidelineAnalysis] = useState<CampaignGuidelineAnalysis | null>(null);
-  const [guidelineProfileSuggestion, setGuidelineProfileSuggestion] =
-    useState<GuidelineProfileSuggestion | null>(null);
   const [originalGuidelineText, setOriginalGuidelineText] = useState('');
   const [blogDraftText, setBlogDraftText] = useState('');
   const [blogDraftOptions, setBlogDraftOptions] = useState<Schedule['blogDraftOptions']>(null);
   const [blogDraftUpdatedAt, setBlogDraftUpdatedAt] = useState<string | undefined>(undefined);
+  const effectiveGuidelineAnalysis = guidelineAnalysis ?? formData.guidelineAnalysis ?? null;
+  const effectiveOriginalGuidelineText = originalGuidelineText || formData.originalGuidelineText || '';
   useEffect(() => {
     if (isOpen && initialMapSearchOpen) {
       setShowMapSearchModal(true);
@@ -322,6 +315,12 @@ export default function ScheduleModal({
   }, [allChannels, formData.channel]);
 
   const categoryValues = React.useMemo(() => CATEGORY_OPTIONS.map((option) => option.value), []);
+  const categoryOptions = React.useMemo(() => {
+    if (formData.category && !selectedCategories.includes(formData.category)) {
+      return [...selectedCategories, formData.category];
+    }
+    return selectedCategories;
+  }, [formData.category, selectedCategories]);
 
   const sanitizeCategories = React.useCallback(
     (list: string[] | undefined | null) => {
@@ -512,50 +511,14 @@ export default function ScheduleModal({
       : '기타';
   }, []);
 
-  const normalizeValue = useCallback((value: string) => value.trim().toLowerCase(), []);
-
-  const getGuidelineProfileSuggestion = useCallback((analysis: CampaignGuidelineAnalysis) => {
-    const suggestion: GuidelineProfileSuggestion = { analysis };
-    const normalizedPlatforms = new Set(allPlatforms.map((value) => normalizeValue(value)));
-    const normalizedChannels = new Set(allChannels.map((value) => normalizeValue(value)));
-    const normalizedSelectedCategories = new Set(selectedCategories.map((value) => normalizeValue(value)));
-    const suggestedPlatform = analysis.platform?.trim();
-    const suggestedReviewChannel = analysis.reviewChannel?.trim();
-    const selectedCategory = resolveAnalysisCategory(analysis);
-
-    if (
-      suggestedPlatform &&
-      suggestedPlatform !== '기타' &&
-      !normalizedPlatforms.has(normalizeValue(suggestedPlatform))
-    ) {
-      suggestion.platform = suggestedPlatform;
-    }
-
-    if (
-      suggestedReviewChannel &&
-      !normalizedChannels.has(normalizeValue(suggestedReviewChannel))
-    ) {
-      suggestion.reviewChannel = suggestedReviewChannel;
-    }
-
-    if (
-      analysis.category?.trim() &&
-      VALID_AI_CATEGORIES.includes(analysis.category.trim() as Schedule['category']) &&
-      !normalizedSelectedCategories.has(normalizeValue(selectedCategory))
-    ) {
-      suggestion.category = selectedCategory;
-    }
-
-    return suggestion;
-  }, [allChannels, allPlatforms, normalizeValue, resolveAnalysisCategory, selectedCategories]);
-
   const applyGuidelineDataToSchedule = useCallback((
     analysis: CampaignGuidelineAnalysis,
     options?: { useDefaultPlatform?: boolean }
   ) => {
     const selectedCategory = resolveAnalysisCategory(analysis);
 
-    const shouldEnableVisitMode = Boolean(analysis.visitInfo);
+    const hasVisitReviewTypes = Boolean(analysis.contentRequirements?.visitReviewTypes?.length);
+    const shouldEnableVisitMode = Boolean(analysis.visitInfo) || hasVisitReviewTypes;
     const visitReviewChecklist = formData.visitReviewChecklist || {
       ...DEFAULT_VISIT_REVIEW_CHECKLIST,
     };
@@ -570,10 +533,22 @@ export default function ScheduleModal({
       }
       if (reviewTypes.includes('other')) {
         visitReviewChecklist.other = true;
+        visitReviewChecklist.otherText = analysis.contentRequirements.visitReviewOtherText || '';
       }
     }
 
-    const reviewChannels = analysis.reviewChannel ? [analysis.reviewChannel] : [];
+    const parsedReviewChannels = Array.isArray(analysis.reviewChannels)
+      ? analysis.reviewChannels.map((item) => item.trim()).filter(Boolean)
+      : [];
+    const reviewChannels =
+      parsedReviewChannels.length > 0
+        ? parsedReviewChannels
+        : analysis.reviewChannel
+          ? analysis.reviewChannel
+              .split(',')
+              .map((item) => item.trim())
+              .filter(Boolean)
+          : [];
     const normalizedAnalysisPlatform = analysis.platform?.trim();
     const preferredDefaultPlatform = allPlatforms.includes('레뷰')
       ? '레뷰'
@@ -590,7 +565,7 @@ export default function ScheduleModal({
       title: analysis.title || '',
       benefit: analysis.points || 0,
       dead: analysis.reviewRegistrationPeriod?.end || '',
-      phone: analysis.phone || '',
+      ownerPhone: analysis.phone || '',
       platform: resolvedPlatform,
       category: selectedCategory,
       channel: reviewChannels,
@@ -632,65 +607,15 @@ export default function ScheduleModal({
     toast,
   ]);
 
-  const handleApplyGuidelineToSchedule = useCallback(() => {
-    if (!guidelineAnalysis) return;
-    const suggestion = getGuidelineProfileSuggestion(guidelineAnalysis);
-    if (!suggestion.platform && !suggestion.reviewChannel && !suggestion.category) {
-      applyGuidelineDataToSchedule(guidelineAnalysis);
-      return;
-    }
-    setGuidelineProfileSuggestion(suggestion);
-  }, [applyGuidelineDataToSchedule, getGuidelineProfileSuggestion, guidelineAnalysis]);
-
-  const handleApplyWithProfileSync = useCallback(async () => {
-    const suggestion = guidelineProfileSuggestion;
-    if (!suggestion) return;
-
-    const failedKeys: string[] = [];
-
-    if (suggestion.platform) {
-      const added = await addPlatform(suggestion.platform);
-      if (!added) failedKeys.push('플랫폼');
-    }
-
-    if (suggestion.reviewChannel) {
-      const added = await addScheduleChannel(suggestion.reviewChannel);
-      if (!added) failedKeys.push('리뷰 채널');
-    }
-
-    if (suggestion.category) {
-      const nextCategories = selectedCategories.includes(suggestion.category)
-        ? selectedCategories
-        : [...selectedCategories, suggestion.category];
-      if (nextCategories !== selectedCategories) {
-        const updated = await updateCategories(nextCategories);
-        if (updated) {
-          setSelectedCategories(nextCategories);
-        } else {
-          failedKeys.push('카테고리');
-        }
-      }
-    }
-
-    if (failedKeys.length > 0) {
-      toast({
-        title: '일부 항목을 추가하지 못했습니다.',
-        description: `${failedKeys.join(', ')} 추가에 실패했지만 일정에는 반영했어요.`,
-        variant: 'destructive',
-      });
-    }
-
-    applyGuidelineDataToSchedule(suggestion.analysis);
-    setGuidelineProfileSuggestion(null);
-  }, [
-    addPlatform,
-    addScheduleChannel,
-    applyGuidelineDataToSchedule,
-    guidelineProfileSuggestion,
-    selectedCategories,
-    toast,
-    updateCategories,
-  ]);
+  const handleApplyGuidelineToSchedule = useCallback(
+    (nextAnalysis?: CampaignGuidelineAnalysis) => {
+      const targetAnalysis = nextAnalysis ?? effectiveGuidelineAnalysis;
+      if (!targetAnalysis) return;
+      setGuidelineAnalysis(targetAnalysis);
+      applyGuidelineDataToSchedule(targetAnalysis);
+    },
+    [applyGuidelineDataToSchedule, effectiveGuidelineAnalysis]
+  );
 
   const handleSave = async (overrideFormData?: Partial<Schedule>) => {
     if (isSubmittingRef.current) return;
@@ -720,8 +645,8 @@ export default function ScheduleModal({
     try {
       const updatedFormData: Partial<Schedule> = { ...mergedFormData };
       updatedFormData.title = trimmedTitle;
-      updatedFormData.guidelineAnalysis = guidelineAnalysis;
-      updatedFormData.originalGuidelineText = originalGuidelineText;
+      updatedFormData.guidelineAnalysis = effectiveGuidelineAnalysis;
+      updatedFormData.originalGuidelineText = effectiveOriginalGuidelineText;
       updatedFormData.blogDraft = blogDraftText;
       updatedFormData.blogDraftOptions = blogDraftOptions;
       updatedFormData.blogDraftUpdatedAt = blogDraftUpdatedAt;
@@ -1485,7 +1410,7 @@ export default function ScheduleModal({
                   </div>
 
                   {/* AI 가이드라인 분석 버튼 */}
-                  {!guidelineAnalysis && (
+                  {!effectiveGuidelineAnalysis && (
                     <div className="space-y-1.5">
                       <button
                         type="button"
@@ -1498,7 +1423,7 @@ export default function ScheduleModal({
                     </div>
                   )}
 
-                  {guidelineAnalysis && (
+                  {effectiveGuidelineAnalysis && (
                     <div className="space-y-1.5">
                       <button
                         type="button"
@@ -1775,8 +1700,8 @@ export default function ScheduleModal({
                     </label>
                     <div className="rounded-[24px] bg-white/90">
                       <div className="flex flex-wrap items-center gap-2">
-                        {selectedCategories.length > 0 ? (
-                          selectedCategories.map((category) => {
+                        {categoryOptions.length > 0 ? (
+                          categoryOptions.map((category) => {
                             const meta = CATEGORY_OPTIONS.find((c) => c.value === category);
                             const isActive = formData.category === category;
                             return (
@@ -2904,7 +2829,7 @@ export default function ScheduleModal({
           }
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-[560px] overflow-hidden">
           <AlertDialogHeader>
             <AlertDialogTitle>플랫폼 삭제</AlertDialogTitle>
             <AlertDialogDescription>
@@ -3255,8 +3180,11 @@ export default function ScheduleModal({
       <GuidelineInfoModal
         isOpen={showGuidelineInfoModal}
         onClose={() => setShowGuidelineInfoModal(false)}
-        analysis={guidelineAnalysis}
-        originalGuideline={originalGuidelineText}
+        analysis={effectiveGuidelineAnalysis}
+        originalGuideline={effectiveOriginalGuidelineText}
+        platformOptions={allPlatforms}
+        reviewChannelOptions={allChannels}
+        categoryOptions={CATEGORY_OPTIONS.map((option) => option.value)}
         userId={user?.id}
         scheduleId={schedule?.id}
         initialDraftText={blogDraftText}
@@ -3268,49 +3196,6 @@ export default function ScheduleModal({
         }}
         onApplyToSchedule={handleApplyGuidelineToSchedule}
       />
-
-      <AlertDialog
-        open={guidelineProfileSuggestion !== null}
-        onOpenChange={(open) => {
-          if (!open) setGuidelineProfileSuggestion(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>관심 정보에 추가할까요?</AlertDialogTitle>
-            <AlertDialogDescription>
-              분석 결과에 현재 설정에 없는 항목이 있어요. 추가하면 다음 일정 작성부터 더 쉽게 선택할 수 있어요.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2 rounded-lg bg-neutral-50 px-3 py-2.5 text-[14px] text-neutral-700">
-            {guidelineProfileSuggestion?.platform ? (
-              <p>플랫폼: {guidelineProfileSuggestion.platform}</p>
-            ) : null}
-            {guidelineProfileSuggestion?.reviewChannel ? (
-              <p>리뷰 채널: {guidelineProfileSuggestion.reviewChannel}</p>
-            ) : null}
-            {guidelineProfileSuggestion?.category ? (
-              <p>카테고리: {guidelineProfileSuggestion.category}</p>
-            ) : null}
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                if (!guidelineProfileSuggestion) return;
-                applyGuidelineDataToSchedule(guidelineProfileSuggestion.analysis, {
-                  useDefaultPlatform: true,
-                });
-                setGuidelineProfileSuggestion(null);
-              }}
-            >
-              이번만 보기
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleApplyWithProfileSync}>
-              추가하고 반영
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

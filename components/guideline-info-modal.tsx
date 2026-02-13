@@ -12,6 +12,17 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar as CalendarPicker } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import {
   Copy,
@@ -25,16 +36,22 @@ import {
   ChevronDown,
   ChevronRight,
   Wallet,
-  Calendar,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import { Z_INDEX } from '@/lib/z-index';
 import { cn } from '@/lib/utils';
+import { formatPhoneInput } from '@/components/schedule-modal/utils';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
 interface GuidelineInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   analysis: CampaignGuidelineAnalysis | null;
-  onApplyToSchedule: () => void;
+  onApplyToSchedule: (analysis: CampaignGuidelineAnalysis) => void;
+  platformOptions?: string[];
+  reviewChannelOptions?: string[];
+  categoryOptions?: string[];
   originalGuideline?: string;
   scheduleId?: number;
   userId?: string;
@@ -60,9 +77,9 @@ const SectionCard = ({
   headerAction?: React.ReactNode;
 }) => (
   <div className="bg-white rounded-[24px] sm:rounded-[28px] p-5 sm:p-7 mb-4 shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
-    <div className="mb-6 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:gap-4">
+    <div className="mb-6 flex min-w-0 items-center justify-between gap-3">
       <h3 className="min-w-0 flex-1 break-words font-bold text-[18px] sm:text-[19px] text-[#191F28] tracking-tight">{title}</h3>
-      {headerAction ? <div className="w-full sm:w-auto sm:ml-auto">{headerAction}</div> : null}
+      {headerAction ? <div className="ml-auto shrink-0">{headerAction}</div> : null}
     </div>
     <div className="space-y-6">{children}</div>
   </div>
@@ -71,13 +88,23 @@ const SectionCard = ({
 /**
  * 정보 행 컴포넌트
  */
-const InfoRow = ({ label, children, icon: Icon }: { label: string, children: React.ReactNode, icon?: any }) => (
-  <div className="flex min-w-0 flex-col gap-1.5">
+const InfoRow = ({
+  label,
+  children,
+  icon: Icon,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  icon?: any;
+  className?: string;
+}) => (
+  <div className={cn('flex min-w-0 flex-col gap-1.5', className)}>
     <span className="text-[13px] font-medium text-[#8B95A1] flex items-center gap-1">
       {Icon && <Icon className="w-3.5 h-3.5" />}
       {label}
     </span>
-    <div className="text-[16px] text-[#333D4B] leading-relaxed font-semibold break-words">
+    <div className="text-[14px] text-[#333D4B] leading-relaxed font-semibold break-words">
       {children}
     </div>
   </div>
@@ -125,11 +152,25 @@ function normalizeDraftKeywords(input: unknown): string[] {
   return result;
 }
 
+function parseReviewChannels(input: CampaignGuidelineAnalysis): string[] {
+  if (Array.isArray(input.reviewChannels)) {
+    return input.reviewChannels.map((item) => item.trim()).filter(Boolean);
+  }
+  if (!input.reviewChannel) return [];
+  return input.reviewChannel
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 export default function GuidelineInfoModal({
   isOpen,
   onClose,
   analysis,
   onApplyToSchedule,
+  platformOptions = [],
+  reviewChannelOptions = [],
+  categoryOptions = [],
   originalGuideline,
   scheduleId,
   userId,
@@ -155,11 +196,31 @@ export default function GuidelineInfoModal({
   const [draftTone, setDraftTone] = useState<DraftTone>('auto');
   const [draftPersona, setDraftPersona] = useState<DraftPersona>('balanced');
   const [draftEmphasis, setDraftEmphasis] = useState('');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editableAnalysis, setEditableAnalysis] = useState<CampaignGuidelineAnalysis | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) setGuidelineView('digest');
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !analysis) return;
+    setIsEditMode(false);
+    setEditableAnalysis({
+      ...analysis,
+      reviewRegistrationPeriod: analysis.reviewRegistrationPeriod
+        ? { ...analysis.reviewRegistrationPeriod }
+        : undefined,
+      rewardInfo: analysis.rewardInfo ? { ...analysis.rewardInfo } : analysis.rewardInfo,
+      contentRequirements: analysis.contentRequirements
+        ? {
+            ...analysis.contentRequirements,
+            visitReviewTypes: [...(analysis.contentRequirements.visitReviewTypes ?? [])],
+          }
+        : analysis.contentRequirements,
+    });
+  }, [analysis, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -253,17 +314,26 @@ export default function GuidelineInfoModal({
   }, [isDraftOpen, userId]);
 
   if (!analysis) return null;
+  if (!editableAnalysis) return null;
 
   const visitReviewTypeLabels: Record<string, string> = {
     naverReservation: '네이버 예약/영수증 리뷰',
     googleReview: '구글 리뷰',
     other: '기타 리뷰',
   };
-  const visitReviewTypes = (analysis.contentRequirements?.visitReviewTypes ?? [])
-    .map((type) => visitReviewTypeLabels[type] ?? type);
-  const displayPoints = analysis.rewardInfo?.points ?? analysis.points;
+  const effectiveAnalysis = editableAnalysis;
+  const reviewChannels = parseReviewChannels(effectiveAnalysis);
+  const visitReviewTypesRaw = effectiveAnalysis.contentRequirements?.visitReviewTypes ?? [];
+  const visitReviewOtherText = effectiveAnalysis.contentRequirements?.visitReviewOtherText?.trim() || '';
+  const visitReviewTypes = visitReviewTypesRaw.map((type) => {
+    if (type === 'other' && visitReviewOtherText) {
+      return `기타 리뷰 (${visitReviewOtherText})`;
+    }
+    return visitReviewTypeLabels[type] ?? type;
+  });
+  const displayPoints = effectiveAnalysis.rewardInfo?.points ?? effectiveAnalysis.points;
   const hasOriginalGuideline = Boolean(originalGuideline?.trim());
-  const analysisKeywords = normalizeDraftKeywords(analysis.keywords ?? []);
+  const analysisKeywords = normalizeDraftKeywords(effectiveAnalysis.keywords ?? []);
   const digestSummary = (() => {
     const structured = typeof analysis.guidelineDigest?.summary === 'string'
       ? analysis.guidelineDigest.summary.trim()
@@ -273,8 +343,73 @@ export default function GuidelineInfoModal({
       : '';
     return structured || legacy;
   })();
-  const digestSections = (analysis.guidelineDigest?.sections ?? [])
+  const digestSections = (effectiveAnalysis.guidelineDigest?.sections ?? [])
     .filter((section) => section?.title && Array.isArray(section.items) && section.items.length > 0);
+
+  const mergedPlatformOptions = Array.from(
+    new Set(
+      [
+        ...platformOptions,
+        effectiveAnalysis.platform || '',
+      ].filter(Boolean)
+    )
+  );
+  const mergedReviewChannelOptions = Array.from(
+    new Set(
+      [
+        ...reviewChannelOptions,
+        ...reviewChannels,
+      ].filter(Boolean)
+    )
+  );
+  const mergedCategoryOptions = Array.from(
+    new Set(
+      [
+        ...categoryOptions,
+        effectiveAnalysis.category || '',
+      ].filter(Boolean)
+    )
+  );
+
+  const updateAnalysis = (patch: Partial<CampaignGuidelineAnalysis>) => {
+    setEditableAnalysis((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const toggleVisitReviewType = (value: 'naverReservation' | 'googleReview' | 'other') => {
+    setEditableAnalysis((prev) => {
+      if (!prev) return prev;
+      const current = prev.contentRequirements?.visitReviewTypes ?? [];
+      const hasValue = current.includes(value);
+      const next = hasValue ? current.filter((item) => item !== value) : [...current, value];
+      return {
+        ...prev,
+        contentRequirements: {
+          ...(prev.contentRequirements ?? {}),
+          visitReviewTypes: next,
+          visitReviewOtherText:
+            value === 'other' && hasValue
+              ? null
+              : prev.contentRequirements?.visitReviewOtherText ?? null,
+        },
+      };
+    });
+  };
+
+  const toggleReviewChannel = (channel: string) => {
+    setEditableAnalysis((prev) => {
+      if (!prev) return prev;
+      const current = parseReviewChannels(prev);
+      const hasChannel = current.includes(channel);
+      const nextChannels = hasChannel
+        ? current.filter((item) => item !== channel)
+        : [...current, channel];
+      return {
+        ...prev,
+        reviewChannels: nextChannels,
+        reviewChannel: nextChannels.join(', ') || null,
+      };
+    });
+  };
 
   const handleOpenDraftModal = () => {
     setIsDraftOpen(true);
@@ -399,50 +534,272 @@ export default function GuidelineInfoModal({
         <DialogContent
           className="w-[calc(100vw-1.25rem)] max-w-[540px] h-[85vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col shadow-2xl"
           style={{ zIndex: Z_INDEX.guidelineAnalysisModal, borderRadius: '32px' }}
+          onInteractOutside={(e) => e.preventDefault()}
         >
-          <DialogHeader className="p-7 pb-4 bg-white/80 backdrop-blur-md sticky top-0 z-10">
-            <DialogTitle className="text-[22px] font-bold text-[#191F28] tracking-tight">
-              {analysis.title || '캠페인 가이드라인'}
-            </DialogTitle>
+          <DialogHeader className="relative p-4 pr-14 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+            <div className="flex items-start gap-3">
+              <DialogTitle className="min-w-0 flex-1 text-[14px] font-bold text-[#191F28] tracking-tight break-words">
+                {analysis.title || '캠페인 가이드라인'}
+              </DialogTitle>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-4 top-3 z-50 flex h-8 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-all hover:bg-neutral-200 hover:text-neutral-900 active:scale-95"
+              aria-label="닫기"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </DialogHeader>
 
           <div className="flex-1 overflow-hidden">
             <ScrollArea className="h-full">
-              <div className="px-3 sm:px-5 py-4 space-y-4 pb-28">
-                <SectionCard title="핵심 정보">
-                  <div className="grid grid-cols-2 gap-y-6 gap-x-4">
-                    <InfoRow label="보상 금액" icon={Wallet}>
-                      <span className="text-[#FF5722] font-bold">
-                        {displayPoints ? `${displayPoints.toLocaleString()}P` : '-'}
-                      </span>
+              <div className="px-3 sm:px-5 space-y-4 pb-28">
+                <SectionCard
+                  title="핵심 정보"
+                  headerAction={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsEditMode((prev) => !prev)}
+                      className="h-8.5 rounded-full text-[12px] font-bold text-[#4E5968] bg-white hover:bg-[#F9FAFB] transition-colors"
+                    >
+                      {isEditMode ? '수정 완료' : '수정하기'}
+                    </Button>
+                  }
+                >
+                  <div
+                    className={cn(
+                      'gap-y-4 gap-x-4',
+                      isEditMode ? 'grid grid-cols-1' : 'grid grid-cols-2 md:grid-cols-4'
+                    )}
+                  >
+                    <InfoRow label="금액" icon={Wallet}>
+                      {isEditMode ? (
+                        <Input
+                          value={displayPoints ? displayPoints.toLocaleString() : ''}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/[^0-9]/g, '');
+                            const next = digits ? Number(digits) : null;
+                            setEditableAnalysis((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    points: next,
+                                    rewardInfo: {
+                                      ...(prev.rewardInfo ?? {}),
+                                      points: next,
+                                    },
+                                  }
+                                : prev
+                            );
+                          }}
+                          className="h-10 w-full text-[13px] font-semibold"
+                          placeholder="숫자만"
+                        />
+                      ) : (
+                        <span className="text-[#FF5722] font-bold">
+                          {displayPoints ? `${displayPoints.toLocaleString()}P` : '-'}
+                        </span>
+                      )}
                     </InfoRow>
-                    <InfoRow label="마감일" icon={Calendar}>{analysis.reviewRegistrationPeriod?.end || '-'}</InfoRow>
-                    <InfoRow label="플랫폼">{analysis.platform || '-'}</InfoRow>
-                    <InfoRow label="리뷰 채널">{analysis.reviewChannel || '-'}</InfoRow>
-                    <InfoRow label="카테고리">{analysis.category || '-'}</InfoRow>
-                    <InfoRow label="전화번호" icon={Phone}>{analysis.phone || '-'}</InfoRow>
-                    <InfoRow label="방문 리뷰 항목">{visitReviewTypes.join(', ') || '-'}</InfoRow>
+                    <InfoRow label="마감일" icon={CalendarIcon}>
+                      {isEditMode ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-10 w-full justify-start px-3 text-[13px] font-semibold"
+                            >
+                              {effectiveAnalysis.reviewRegistrationPeriod?.end
+                                ? format(new Date(effectiveAnalysis.reviewRegistrationPeriod.end), 'PPP', {
+                                    locale: ko,
+                                  })
+                                : '날짜 선택'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-auto p-0"
+                            align="start"
+                            style={{ zIndex: Z_INDEX.guidelineAnalysisModal + 20 }}
+                          >
+                            <CalendarPicker
+                              mode="single"
+                              selected={
+                                effectiveAnalysis.reviewRegistrationPeriod?.end
+                                  ? new Date(effectiveAnalysis.reviewRegistrationPeriod.end)
+                                  : undefined
+                              }
+                              onSelect={(date) =>
+                                setEditableAnalysis((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        reviewRegistrationPeriod: {
+                                          ...(prev.reviewRegistrationPeriod ?? {}),
+                                          end: date ? format(date, 'yyyy-MM-dd') : null,
+                                        },
+                                      }
+                                    : prev
+                                )
+                              }
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        effectiveAnalysis.reviewRegistrationPeriod?.end || '-'
+                      )}
+                    </InfoRow>
+                    <InfoRow label="플랫폼">
+                      {isEditMode ? (
+                        <Select
+                          value={effectiveAnalysis.platform || '__none'}
+                          onValueChange={(value) =>
+                            updateAnalysis({ platform: value === '__none' ? null : value })
+                          }
+                        >
+                          <SelectTrigger className="h-10 w-full text-[13px] font-semibold">
+                            <SelectValue placeholder="선택 안 함" />
+                          </SelectTrigger>
+                          <SelectContent style={{ zIndex: Z_INDEX.guidelineAnalysisModal + 10 }}>
+                            <SelectItem value="__none">선택 안 함</SelectItem>
+                          {mergedPlatformOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        effectiveAnalysis.platform || '-'
+                      )}
+                    </InfoRow>
+                    <InfoRow label="리뷰 채널" className={isEditMode ? 'md:col-span-1' : ''}>
+                      {isEditMode ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {mergedReviewChannelOptions.map((option) => (
+                            <label
+                              key={option}
+                              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-2 min-w-0"
+                            >
+                              <Checkbox
+                                checked={reviewChannels.includes(option)}
+                                onCheckedChange={(checked) => toggleReviewChannel(option)}
+                              />
+                              <span className="text-[12px] font-semibold text-[#4E5968] break-keep">{option}</span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        reviewChannels.join(', ') || '-'
+                      )}
+                    </InfoRow>
+                    <InfoRow label="카테고리">
+                      {isEditMode ? (
+                        <Select
+                          value={effectiveAnalysis.category || '__none'}
+                          onValueChange={(value) =>
+                            updateAnalysis({ category: value === '__none' ? null : value })
+                          }
+                        >
+                          <SelectTrigger className="h-10 w-full text-[13px] font-semibold">
+                            <SelectValue placeholder="선택 안 함" />
+                          </SelectTrigger>
+                          <SelectContent style={{ zIndex: Z_INDEX.guidelineAnalysisModal + 10 }}>
+                            <SelectItem value="__none">선택 안 함</SelectItem>
+                            {mergedCategoryOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        effectiveAnalysis.category || '-'
+                      )}
+                    </InfoRow>
+                    <InfoRow label="사장님 전화번호" icon={Phone}>
+                      {isEditMode ? (
+                        <Input
+                          type="text"
+                          value={effectiveAnalysis.phone || ''}
+                          onChange={(e) => updateAnalysis({ phone: formatPhoneInput(e.target.value) || null })}
+                          className="h-10 w-full text-[13px] font-semibold"
+                          placeholder="010-0000-0000"
+                        />
+                      ) : (
+                        effectiveAnalysis.phone || '-'
+                      )}
+                    </InfoRow>
+                    <InfoRow label="방문 리뷰 항목" className={isEditMode ? 'md:col-span-1' : ''}>
+                      {isEditMode ? (
+                        <div className="space-y-2">
+                          {(['naverReservation', 'googleReview', 'other'] as const).map((type) => {
+                            const selected = visitReviewTypesRaw.includes(type);
+                            return (
+                              <label
+                                key={type}
+                                className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-2"
+                              >
+                                <Checkbox
+                                  checked={selected}
+                                  onCheckedChange={() => toggleVisitReviewType(type)}
+                                />
+                                <span className="text-[12px] font-semibold text-[#4E5968]">
+                                  {visitReviewTypeLabels[type]}
+                                </span>
+                              </label>
+                            );
+                          })}
+                          {visitReviewTypesRaw.includes('other') && (
+                            <Input
+                              value={visitReviewOtherText}
+                              onChange={(e) =>
+                                setEditableAnalysis((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        contentRequirements: {
+                                          ...(prev.contentRequirements ?? {}),
+                                          visitReviewTypes: prev.contentRequirements?.visitReviewTypes ?? ['other'],
+                                          visitReviewOtherText: e.target.value || null,
+                                        },
+                                      }
+                                    : prev
+                                )
+                              }
+                              className="h-10 w-full text-[13px] font-semibold"
+                              placeholder="기타 리뷰 항목 입력"
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        visitReviewTypes.join(', ') || '-'
+                      )}
+                    </InfoRow>
                   </div>
-                  <div className="pt-2">
+                  <div className="">
                     {/* [수정] 내 일정에 반영하기 버튼 디자인 */}
-                    <button 
-                      onClick={onApplyToSchedule}
-                      className="w-full h-[56px] bg-[#FFF0E6] text-[#FF5722] rounded-[18px] text-[16px] font-bold flex items-center justify-center gap-1 hover:bg-[#FFE8D9] transition-all active:scale-[0.98]"
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => onApplyToSchedule(effectiveAnalysis)}
+                      className="w-full h-[44px] bg-[#FFF0E6] text-[#FF5722] rounded-[16px] text-[14px] font-bold flex items-center justify-center gap-1 hover:bg-[#FFE8D9] transition-all active:scale-[0.98]"
                     >
                       내 일정에 반영하기 <ChevronRight className="w-5 h-5" />
-                    </button>
+                    </Button>
                   </div>
                 </SectionCard>
 
                 <SectionCard 
-                  title="체크리스트"
+                  title="가이드라인"
                   headerAction={
-                    /* [수정] 블로그 초안 작성 버튼 디자인 */
                     <button 
                       onClick={handleOpenDraftModal}
-                      className="w-full sm:w-auto h-10 text-[13px] sm:text-[14px] font-bold text-[#FF5722] inline-flex items-center justify-center gap-1.5 px-4 bg-white border border-[#FFD7C2] rounded-full hover:bg-[#FFF7F2] shadow-sm transition-colors"
+                      className="mt-1 h-10 text-[13px] sm:text-[13px] font-bold text-[#FF5722] inline-flex items-center justify-center gap-1.5 px-4 bg-white border border-[#FFD7C2] rounded-full hover:bg-[#FFF7F2] shadow-sm transition-colors"
                     >
-                      <Sparkles className="w-3.5 h-3.5 fill-[#FF5722]" /> 블로그 초안 작성 (Beta)
+                      <Sparkles className="w-2.5 h-2.5 fill-[#FF5722]" /> 블로그 초안 작성 (Beta)
                     </button>
                   }
                 >
@@ -455,12 +812,12 @@ export default function GuidelineInfoModal({
                           guidelineView === v ? "bg-white text-[#191F28] shadow-sm border border-gray-100" : "text-[#8B95A1]"
                         )}
                         onClick={() => setGuidelineView(v as any)}
-                      >{v === 'digest' ? '가이드 요약' : '원본 보기'}</button>
+                      >{v === 'digest' ? '가이드 정리' : '원본 보기'}</button>
                     ))}
                   </div>
 
                   {guidelineView === 'digest' ? (
-                    <div className="space-y-6 pt-2">
+                    <div className="space-y-6">
                       {digestSummary && (
                         <div className="rounded-2xl bg-[#F9FAFB] border border-gray-100 p-4 space-y-2">
                           <p className="text-[13px] font-bold text-[#6B7684]">한눈에 요약</p>
@@ -509,10 +866,6 @@ export default function GuidelineInfoModal({
               </div>
             </ScrollArea>
           </div>
-
-          <div className="p-4 sm:p-6 bg-white border-t border-gray-50">
-            <Button onClick={onClose} className="w-full h-14 rounded-[22px] bg-[#191F28] text-white text-[17px] font-bold active:scale-[0.98] transition-transform">확인</Button>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -522,12 +875,11 @@ export default function GuidelineInfoModal({
           className="w-[calc(100vw-1.25rem)] max-w-[600px] h-[90vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col shadow-2xl"
           style={{ zIndex: Z_INDEX.guidelineAnalysisModal + 1, borderRadius: '32px' }}
         >
-          <DialogHeader className="p-7 bg-white">
-            <DialogTitle className="text-[20px] font-bold text-[#191F28]">블로그 초안 작성</DialogTitle>
-            <DialogDescription className="text-[#8B95A1] mt-1">AI가 가이드에 맞춰 초안을 작성합니다</DialogDescription>
-            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
+          <DialogHeader className="p-6 bg-white">
+            <DialogTitle className="text-[16px] font-bold text-[#191F28]">블로그 초안 작성</DialogTitle>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
               <p className="text-[12px] font-semibold text-amber-700">
-                Beta · 블로그 초안은 사용자당 하루 1회만 생성할 수 있습니다.
+                Beta · 블로그 초안은 하루 1회만 생성할 수 있습니다.
               </p>
             </div>
           </DialogHeader>
@@ -535,10 +887,6 @@ export default function GuidelineInfoModal({
           <ScrollArea className="flex-1 min-h-0">
             <div className="py-1 px-5 space-y-4">
               <div className="bg-white rounded-[24px] p-6 space-y-4 border border-gray-100">
-                <div className="space-y-1">
-                  <p className="text-[15px] font-bold text-[#191F28]">초안 옵션 설정</p>
-                  <p className="text-[13px] text-[#8B95A1]">키워드와 스타일을 정하면 가이드에 맞춰 초안을 생성합니다.</p>
-                </div>
                 <p className="text-[14px] font-bold text-[#191F28]">키워드 설정</p>
                 <div className="flex flex-wrap gap-2">
                   {draftKeywords.map((k) => (
@@ -560,7 +908,7 @@ export default function GuidelineInfoModal({
 
                 <button 
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="flex items-center justify-between w-full py-4 border-t border-gray-50 mt-2 text-[14px] font-bold text-[#8B95A1] hover:text-[#4E5968]"
+                  className="flex items-center justify-between w-full py-4 border-t border-gray-50 mt-2 text-[14px] font-bold text-[#4E5968]"
                 >
                   <div className="flex items-center gap-2"><Settings2 className="w-4 h-4" /> 고급 설정 (페르소나, 말투 등)</div>
                   <ChevronDown className={cn("w-4 h-4 transition-transform", showAdvanced && "rotate-180")} />
@@ -602,7 +950,7 @@ export default function GuidelineInfoModal({
                 )}
               </div>
 
-              <div className="bg-white rounded-[24px] p-6 min-h-[260px] flex flex-col justify-center border border-gray-100 shadow-sm">
+              <div className="bg-white rounded-[24px] p-6 min-h-[180px] flex flex-col justify-center border border-gray-100 shadow-sm">
                 {isGeneratingDraft ? (
                   <div className="flex flex-col items-center py-12 gap-3 text-center">
                     <Loader2 className="w-8 h-8 text-[#FF5722] animate-spin" />
@@ -643,18 +991,17 @@ export default function GuidelineInfoModal({
                     </button>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center text-center gap-6 py-8">
+                  <div className="flex flex-col items-center text-center gap-6">
                     <div className="space-y-2">
-                      <div className="w-16 h-16 bg-[#FFF0E6] rounded-full flex items-center justify-center mx-auto">
-                        <Sparkles className="w-8 h-8 text-[#FF5722] fill-[#FF5722]" />
+                      <div className="w-8 h-8 bg-[#FFF0E6] rounded-full flex items-center justify-center mx-auto">
+                        <Sparkles className="w-4 h-4 text-[#FF5722] fill-[#FF5722]" />
                       </div>
-                      <p className="text-[16px] font-bold text-[#191F28]">설정이 완료되었습니다</p>
                       <p className="text-[13px] text-[#8B95A1]">가이드를 분석해 블로그 글을 써드릴게요</p>
                     </div>
                     <Button 
                       onClick={handleGenerateDraft}
                       disabled={!canGenerateDraftToday || isCheckingDraftQuota}
-                      className="w-full h-16 bg-[#FF5722] hover:bg-[#FF7A4C] text-white rounded-[20px] font-bold text-[17px] shadow-lg shadow-orange-100 transition-all active:scale-[0.98]"
+                      className="w-full h-12 bg-[#FF5722] hover:bg-[#FF7A4C] text-white rounded-[20px] font-bold text-[16px] shadow-lg shadow-orange-100 transition-all active:scale-[0.98]"
                     >
                       {isCheckingDraftQuota
                         ? '사용 가능 여부 확인 중...'
