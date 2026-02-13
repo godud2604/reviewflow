@@ -5,6 +5,7 @@ import { StructuredOutputParser } from '@langchain/core/output_parsers';
 import { createClient } from '@supabase/supabase-js';
 import { jsonrepair } from 'jsonrepair';
 import { z } from 'zod';
+import { getAiQuotaBlockedMessage, getAiQuotaStatus } from '@/lib/ai-quota';
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -418,7 +419,7 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { data: userProfile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('platforms, categories, schedule_channels')
+      .select('platforms, categories, schedule_channels, last_guideline_analysis_at, last_blog_draft_generated_at')
       .eq('id', userId)
       .single();
 
@@ -434,6 +435,20 @@ export async function POST(request: NextRequest) {
     const userPlatforms = normalizeOptionList(userProfile?.platforms);
     const userCategories = normalizeOptionList(userProfile?.categories);
     const userReviewChannels = normalizeOptionList(userProfile?.schedule_channels);
+    const quotaStatus = getAiQuotaStatus({
+      lastGuidelineAnalysisAt: userProfile?.last_guideline_analysis_at,
+      lastBlogDraftGeneratedAt: userProfile?.last_blog_draft_generated_at,
+    });
+
+    if (!quotaStatus.guideline.allowed) {
+      return NextResponse.json(
+        {
+          error: getAiQuotaBlockedMessage('guideline'),
+          quota: quotaStatus,
+        },
+        { status: 429 }
+      );
+    }
 
     // 프롬프트 동적 생성 (사용자 옵션 포함)
     const dynamicPrompt = `${GUIDELINE_ANALYSIS_PROMPT}
@@ -565,6 +580,15 @@ export async function POST(request: NextRequest) {
       } else {
         persistedToSchedule = true;
       }
+    }
+
+    const { error: quotaUpdateError } = await supabase
+      .from('user_profiles')
+      .update({ last_guideline_analysis_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (quotaUpdateError) {
+      console.error('가이드라인 분석 쿼터 시간 저장 실패:', quotaUpdateError);
     }
 
     return NextResponse.json({

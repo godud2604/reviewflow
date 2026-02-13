@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
+import { getAiQuotaBlockedMessage, getAiQuotaStatus } from '@/lib/ai-quota';
 
 const apiKey = process.env.GEMINI_API_KEY;
 const client = new GoogleGenerativeAI(apiKey || '');
@@ -68,11 +69,49 @@ export async function POST(request: NextRequest) {
           ? Number(parsedScheduleIdRaw)
           : null;
     const userId = parsed.data.userId;
+    if (!userId) {
+      return NextResponse.json(
+        { error: '사용자 ID가 필요합니다.' },
+        { status: 400 }
+      );
+    }
     const originalGuideline = parsed.data.originalGuideline?.trim();
     const emphasis = options.emphasis?.trim() ?? '';
     const keywords = (options.keywords ?? [])
       .map((value) => value.trim())
       .filter((value, index, arr) => value.length > 0 && arr.indexOf(value) === index);
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Supabase configuration missing');
+      return NextResponse.json({ error: 'Supabase 설정이 없습니다.' }, { status: 500 });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('last_guideline_analysis_at, last_blog_draft_generated_at')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (profileError) {
+      return NextResponse.json({ error: '사용자 정보를 조회할 수 없습니다.' }, { status: 400 });
+    }
+
+    const quotaStatus = getAiQuotaStatus({
+      lastGuidelineAnalysisAt: userProfile?.last_guideline_analysis_at ?? null,
+      lastBlogDraftGeneratedAt: userProfile?.last_blog_draft_generated_at ?? null,
+    });
+    if (!quotaStatus.blogDraft.allowed) {
+      return NextResponse.json(
+        {
+          error: getAiQuotaBlockedMessage('blogDraft'),
+          quota: quotaStatus,
+        },
+        { status: 429 }
+      );
+    }
 
     const prompt = `
     당신은 '네이버 블로그 상위 1% 인플루언서'이자 '마케팅 원고 전문가'입니다.
@@ -124,35 +163,33 @@ export async function POST(request: NextRequest) {
     }
 
     let persistedToSchedule = false;
-    if (
-      userId &&
-      parsedScheduleId !== null &&
-      Number.isFinite(parsedScheduleId)
-    ) {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (!supabaseUrl || !supabaseServiceKey) {
-        console.error('Supabase configuration missing');
-      } else {
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        const { error: persistError } = await supabase
-          .from('schedules')
-          .update({
-            blog_draft: text,
-            blog_draft_options: options,
-            blog_draft_updated_at: new Date().toISOString(),
-            guideline_analysis: analysis,
-            original_guideline_text: originalGuideline || null,
-          })
-          .eq('id', parsedScheduleId)
-          .eq('user_id', userId);
+    if (parsedScheduleId !== null && Number.isFinite(parsedScheduleId)) {
+      const { error: persistError } = await supabase
+        .from('schedules')
+        .update({
+          blog_draft: text,
+          blog_draft_options: options,
+          blog_draft_updated_at: new Date().toISOString(),
+          guideline_analysis: analysis,
+          original_guideline_text: originalGuideline || null,
+        })
+        .eq('id', parsedScheduleId)
+        .eq('user_id', userId);
 
-        if (persistError) {
-          console.error('블로그 초안 데이터 저장 실패:', persistError);
-        } else {
-          persistedToSchedule = true;
-        }
+      if (persistError) {
+        console.error('블로그 초안 데이터 저장 실패:', persistError);
+      } else {
+        persistedToSchedule = true;
       }
+    }
+
+    const { error: quotaUpdateError } = await supabase
+      .from('user_profiles')
+      .update({ last_blog_draft_generated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (quotaUpdateError) {
+      console.error('블로그 초안 쿼터 시간 저장 실패:', quotaUpdateError);
     }
 
     return NextResponse.json({

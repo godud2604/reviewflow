@@ -135,6 +135,8 @@ export default function GuidelineInfoModal({
   const [guidelineView, setGuidelineView] = useState<'digest' | 'original'>('digest');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
+  const [isCheckingDraftQuota, setIsCheckingDraftQuota] = useState(false);
+  const [canGenerateDraftToday, setCanGenerateDraftToday] = useState(true);
   const [draftText, setDraftText] = useState('');
   const [copiedDraft, setCopiedDraft] = useState(false);
   const [copiedKeywords, setCopiedKeywords] = useState(false);
@@ -173,6 +175,35 @@ export default function GuidelineInfoModal({
     setDraftKeywords(normalizeDraftKeywords(analysis.keywords ?? []));
   }, [analysis, initialDraftOptions?.keywords, isOpen]);
 
+  useEffect(() => {
+    if (!isDraftOpen || !userId) return;
+
+    let active = true;
+    const fetchQuota = async () => {
+      setIsCheckingDraftQuota(true);
+      try {
+        const response = await fetch(`/api/ai/quota-status?userId=${encodeURIComponent(userId)}`);
+        if (!response.ok) {
+          if (active) setCanGenerateDraftToday(true);
+          return;
+        }
+        const result = await response.json();
+        if (!active) return;
+        setCanGenerateDraftToday(Boolean(result?.data?.blogDraft?.allowed));
+      } catch (error) {
+        if (active) setCanGenerateDraftToday(true);
+        console.error('블로그 초안 쿼터 조회 오류:', error);
+      } finally {
+        if (active) setIsCheckingDraftQuota(false);
+      }
+    };
+
+    fetchQuota();
+    return () => {
+      active = false;
+    };
+  }, [isDraftOpen, userId]);
+
   if (!analysis) return null;
 
   const visitReviewTypeLabels: Record<string, string> = {
@@ -203,6 +234,15 @@ export default function GuidelineInfoModal({
   };
 
   const handleGenerateDraft = async () => {
+    if (!canGenerateDraftToday) {
+      toast({
+        title: '오늘 사용 완료',
+        description: '블로그 초안 생성은 하루 1회만 가능합니다. 내일 다시 시도해주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsGeneratingDraft(true);
     setCopiedDraft(false);
     try {
@@ -224,7 +264,10 @@ export default function GuidelineInfoModal({
         }),
       });
 
-      if (!response.ok) throw new Error('블로그 초안 생성에 실패했습니다.');
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || '블로그 초안 생성에 실패했습니다.');
+      }
 
       const result = await response.json();
       const nextDraft = String(result?.data?.draft ?? '').trim();
@@ -238,6 +281,7 @@ export default function GuidelineInfoModal({
         keywords: draftKeywords,
       };
       setDraftText(nextDraft);
+      setCanGenerateDraftToday(false);
       onDraftGenerated?.({
         draft: nextDraft,
         options: usedOptions,
@@ -341,7 +385,7 @@ export default function GuidelineInfoModal({
                       onClick={handleOpenDraftModal}
                       className="w-full sm:w-auto h-10 text-[13px] sm:text-[14px] font-bold text-[#FF5722] inline-flex items-center justify-center gap-1.5 px-4 bg-white border border-[#FFD7C2] rounded-full hover:bg-[#FFF7F2] shadow-sm transition-colors"
                     >
-                      <Sparkles className="w-3.5 h-3.5 fill-[#FF5722]" /> 블로그 초안 작성
+                      <Sparkles className="w-3.5 h-3.5 fill-[#FF5722]" /> 블로그 초안 작성 (Beta)
                     </button>
                   }
                 >
@@ -424,6 +468,11 @@ export default function GuidelineInfoModal({
           <DialogHeader className="p-7 bg-white">
             <DialogTitle className="text-[20px] font-bold text-[#191F28]">블로그 초안 작성</DialogTitle>
             <DialogDescription className="text-[#8B95A1] mt-1">AI가 가이드에 맞춰 초안을 작성합니다</DialogDescription>
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
+              <p className="text-[12px] font-semibold text-amber-700">
+                Beta · 블로그 초안은 사용자당 하루 1회만 생성할 수 있습니다.
+              </p>
+            </div>
           </DialogHeader>
 
           <ScrollArea className="flex-1 min-h-0">
@@ -508,7 +557,17 @@ export default function GuidelineInfoModal({
                     <Button onClick={handleCopyDraft} className="w-full h-14 bg-[#F2F4F6] hover:bg-gray-200 text-[#4E5968] rounded-2xl font-bold transition-colors">
                       {copiedDraft ? <Check className="mr-2 h-4 w-4 text-[#FF5722]" /> : <Copy className="mr-2 h-4 w-4" />} 초안 복사하기
                     </Button>
-                    <button onClick={handleGenerateDraft} className="w-full text-[13px] text-[#8B95A1] underline">내용이 마음에 안 드시나요? 다시 만들기</button>
+                    <button
+                      onClick={handleGenerateDraft}
+                      disabled={!canGenerateDraftToday || isCheckingDraftQuota}
+                      className="w-full text-[13px] text-[#8B95A1] underline disabled:opacity-50 disabled:no-underline"
+                    >
+                      {isCheckingDraftQuota
+                        ? '사용 가능 여부 확인 중...'
+                        : canGenerateDraftToday
+                          ? '내용이 마음에 안 드시나요? 다시 만들기'
+                          : '오늘은 재생성이 불가합니다'}
+                    </button>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center text-center gap-6 py-8">
@@ -521,9 +580,14 @@ export default function GuidelineInfoModal({
                     </div>
                     <Button 
                       onClick={handleGenerateDraft}
+                      disabled={!canGenerateDraftToday || isCheckingDraftQuota}
                       className="w-full h-16 bg-[#FF5722] hover:bg-[#FF7A4C] text-white rounded-[20px] font-bold text-[17px] shadow-lg shadow-orange-100 transition-all active:scale-[0.98]"
                     >
-                      무료 초안 만들기
+                      {isCheckingDraftQuota
+                        ? '사용 가능 여부 확인 중...'
+                        : canGenerateDraftToday
+                          ? '무료 초안 만들기'
+                          : '오늘 사용 완료'}
                     </Button>
                   </div>
                 )}

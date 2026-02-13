@@ -1366,24 +1366,29 @@ export default function ScheduleModal({
 
                   {/* AI 가이드라인 분석 버튼 */}
                   {!guidelineAnalysis && (
-                    <button
-                      type="button"
-                      onClick={() => setShowGuidelineAnalysisModal(true)}
-                      className="w-full h-[44px] rounded-[18px] bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 hover:border-blue-300 text-blue-700 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <Sparkles size={16} />
-                      AI로 가이드라인 분석하기
-                    </button>
+                    <div className="space-y-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowGuidelineAnalysisModal(true)}
+                        className="w-full h-[44px] rounded-[18px] bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 hover:border-blue-300 text-blue-700 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <Sparkles size={16} />
+                        AI로 가이드라인 분석하기 (Beta)
+                      </button>
+                    </div>
                   )}
 
                   {guidelineAnalysis && (
-                    <button
-                      type="button"
-                      onClick={() => setShowGuidelineInfoModal(true)}
-                      className="w-full h-[44px] rounded-[18px] bg-purple-50 border border-purple-200 hover:border-purple-300 text-purple-700 font-semibold text-[14px] transition-colors"
-                    >
-                      📋 분석된 가이드라인 정보 보기
-                    </button>
+                    <div className="space-y-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowGuidelineInfoModal(true)}
+                        className="w-full h-[44px] rounded-[18px] bg-purple-50 border border-purple-200 hover:border-purple-300 text-purple-700 font-semibold text-[14px] transition-colors"
+                      >
+                        📋 분석된 가이드라인 정보 보기 (Beta)
+                      </button>
+                      
+                    </div>
                   )}
 
                   {schedule && (
