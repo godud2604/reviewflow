@@ -187,7 +187,6 @@ export interface CampaignGuidelineAnalysis {
   platform?: string | null; // 예: "네이버 블로그", "인스타그램", "카페" 등
   category?: string | null; // 제품/서비스 카테고리
   reviewChannel?: string | null; // 리뷰 채널 (블로그, 인스타그램, 쿠팡 등)
-  reviewChannels?: string[]; // 복수 리뷰 채널
   visitInfo?: string | null; // 방문정보 (주소, 위치 등)
   phone?: string | null; // 전화번호
 
@@ -195,14 +194,6 @@ export interface CampaignGuidelineAnalysis {
     start?: string | null;
     end?: string | null;
   };
-  
-  // 보상정보
-  rewardInfo?: {
-    description?: string | null;
-    points?: number | null;
-    deliveryMethod?: string | null;
-    productInfo?: string | null;
-  } | null;
   
   // 컨텐츠 요구사항
   contentRequirements?: {
@@ -219,7 +210,7 @@ export interface CampaignGuidelineAnalysis {
 }
 
 export interface BlogDraftOptions {
-  targetLength: 500 | 1000 | 1500 | 2000 | 3000;
+  targetLength: 500 | 800 | 1000 | 1500 | 2000 | 3000;
   tone: 'auto' | 'haeyo' | 'hamnida' | 'banmal';
   persona: 'balanced' | 'friendly' | 'expert' | 'honest' | 'lifestyle';
   emphasis?: string;

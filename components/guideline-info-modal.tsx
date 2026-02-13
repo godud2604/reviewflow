@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import type { CampaignGuidelineAnalysis, BlogDraftOptions } from '@/types';
 import {
   Dialog,
-  DialogDescription,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -28,15 +27,12 @@ import {
   Copy,
   Check,
   CheckCircle2,
-  Phone,
   Loader2,
   Sparkles,
   Settings2,
   X,
   ChevronDown,
   ChevronRight,
-  Wallet,
-  Calendar as CalendarIcon,
 } from 'lucide-react';
 import { Z_INDEX } from '@/lib/z-index';
 import { cn } from '@/lib/utils';
@@ -110,30 +106,29 @@ const InfoRow = ({
   </div>
 );
 
-const LENGTH_OPTIONS = [500, 1000, 1500, 2000, 3000] as const;
+const LENGTH_OPTIONS = [500, 800, 1000, 1500, 2000, 3000] as const;
+const FREE_LENGTH_OPTIONS = [500, 800, 1000] as const;
 const TONE_OPTIONS = [
   { key: 'auto', label: '자동 설정' },
   { key: 'haeyo', label: '~해요' },
   { key: 'hamnida', label: '~합니다' },
   { key: 'banmal', label: '~한다' },
 ] as const;
-const PERSONA_OPTIONS = [
-  { key: 'balanced', label: '자동 페르소나' },
-  { key: 'friendly', label: '친근한 후기형' },
-  { key: 'expert', label: '정보형 전문가' },
-  { key: 'honest', label: '솔직 리뷰어' },
-  { key: 'lifestyle', label: '라이프스타일형' },
-] as const;
 const DRAFT_LOADING_STEPS = [
   '가이드라인 핵심 조건을 정리하고 있어요...',
-  '선택한 말투와 페르소나를 반영하고 있어요...',
+  '선택한 말투를 반영하고 있어요...',
   '본문 흐름을 구성하고 있어요...',
   '최종 문장을 다듬고 있어요...',
 ] as const;
 
 type DraftLength = (typeof LENGTH_OPTIONS)[number];
 type DraftTone = (typeof TONE_OPTIONS)[number]['key'];
-type DraftPersona = (typeof PERSONA_OPTIONS)[number]['key'];
+
+function normalizeDraftLengthForFree(value: number): DraftLength {
+  return FREE_LENGTH_OPTIONS.includes(value as (typeof FREE_LENGTH_OPTIONS)[number])
+    ? (value as DraftLength)
+    : 1000;
+}
 
 function normalizeDraftKeywords(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
@@ -153,14 +148,18 @@ function normalizeDraftKeywords(input: unknown): string[] {
 }
 
 function parseReviewChannels(input: CampaignGuidelineAnalysis): string[] {
-  if (Array.isArray(input.reviewChannels)) {
-    return input.reviewChannels.map((item) => item.trim()).filter(Boolean);
-  }
   if (!input.reviewChannel) return [];
   return input.reviewChannel
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function sanitizeDraftOutput(input: string): string {
+  return input
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*\*/g, '')
+    .trim();
 }
 
 export default function GuidelineInfoModal({
@@ -194,7 +193,6 @@ export default function GuidelineInfoModal({
   const [draftKeywords, setDraftKeywords] = useState<string[]>([]);
   const [draftLength, setDraftLength] = useState<DraftLength>(1000);
   const [draftTone, setDraftTone] = useState<DraftTone>('auto');
-  const [draftPersona, setDraftPersona] = useState<DraftPersona>('balanced');
   const [draftEmphasis, setDraftEmphasis] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [editableAnalysis, setEditableAnalysis] = useState<CampaignGuidelineAnalysis | null>(null);
@@ -212,7 +210,6 @@ export default function GuidelineInfoModal({
       reviewRegistrationPeriod: analysis.reviewRegistrationPeriod
         ? { ...analysis.reviewRegistrationPeriod }
         : undefined,
-      rewardInfo: analysis.rewardInfo ? { ...analysis.rewardInfo } : analysis.rewardInfo,
       contentRequirements: analysis.contentRequirements
         ? {
             ...analysis.contentRequirements,
@@ -230,13 +227,11 @@ export default function GuidelineInfoModal({
     if (!initialDraftOptions) {
       setDraftLength(1000);
       setDraftTone('auto');
-      setDraftPersona('balanced');
       setDraftEmphasis('');
       return;
     }
-    setDraftLength(initialDraftOptions.targetLength);
+    setDraftLength(normalizeDraftLengthForFree(initialDraftOptions.targetLength));
     setDraftTone(initialDraftOptions.tone);
-    setDraftPersona(initialDraftOptions.persona);
     setDraftEmphasis(initialDraftOptions.emphasis || '');
     setDraftKeywords(normalizeDraftKeywords(initialDraftOptions.keywords ?? []));
   }, [initialDraftOptions, initialDraftText, isOpen]);
@@ -255,27 +250,7 @@ export default function GuidelineInfoModal({
   useEffect(() => {
     if (!isTypingDraft) {
       setDisplayDraftText(draftText);
-      return;
     }
-    if (!draftText) {
-      setDisplayDraftText('');
-      setIsTypingDraft(false);
-      return;
-    }
-
-    let index = 0;
-    const chunkSize = Math.max(1, Math.ceil(draftText.length / 220));
-    setDisplayDraftText('');
-    const timer = window.setInterval(() => {
-      index = Math.min(index + chunkSize, draftText.length);
-      setDisplayDraftText(draftText.slice(0, index));
-      if (index >= draftText.length) {
-        window.clearInterval(timer);
-        setIsTypingDraft(false);
-      }
-    }, 18);
-
-    return () => window.clearInterval(timer);
   }, [draftText, isTypingDraft]);
 
   useEffect(() => {
@@ -331,7 +306,7 @@ export default function GuidelineInfoModal({
     }
     return visitReviewTypeLabels[type] ?? type;
   });
-  const displayPoints = effectiveAnalysis.rewardInfo?.points ?? effectiveAnalysis.points;
+  const displayPoints = effectiveAnalysis.points;
   const hasOriginalGuideline = Boolean(originalGuideline?.trim());
   const analysisKeywords = normalizeDraftKeywords(effectiveAnalysis.keywords ?? []);
   const digestSummary = (() => {
@@ -350,6 +325,7 @@ export default function GuidelineInfoModal({
   const hasPlatform = Boolean(effectiveAnalysis.platform?.trim());
   const hasReviewChannels = reviewChannels.length > 0;
   const hasCategory = Boolean(effectiveAnalysis.category?.trim());
+  const hasVisitInfo = Boolean(effectiveAnalysis.visitInfo?.trim());
   const hasPhone = Boolean(effectiveAnalysis.phone?.trim());
   const hasVisitReviewTypes = visitReviewTypes.length > 0;
   const hasCoreInfoData = [
@@ -358,6 +334,7 @@ export default function GuidelineInfoModal({
     hasPlatform,
     hasReviewChannels,
     hasCategory,
+    hasVisitInfo,
     hasPhone,
     hasVisitReviewTypes,
   ].some(Boolean);
@@ -421,7 +398,6 @@ export default function GuidelineInfoModal({
         : [...current, channel];
       return {
         ...prev,
-        reviewChannels: nextChannels,
         reviewChannel: nextChannels.join(', ') || null,
       };
     });
@@ -448,6 +424,10 @@ export default function GuidelineInfoModal({
     setDraftText('');
     setDisplayDraftText('');
     setIsTypingDraft(false);
+    const effectiveDraftLength = normalizeDraftLengthForFree(draftLength);
+    if (effectiveDraftLength !== draftLength) {
+      setDraftLength(effectiveDraftLength);
+    }
     try {
       const response = await fetch('/api/ai/generate-blog-draft', {
         method: 'POST',
@@ -458,9 +438,9 @@ export default function GuidelineInfoModal({
           scheduleId,
           originalGuideline,
           options: {
-            targetLength: draftLength,
+            targetLength: effectiveDraftLength,
             tone: draftTone,
-            persona: draftPersona,
+            persona: 'balanced',
             emphasis: draftEmphasis.trim(),
             keywords: draftKeywords,
           },
@@ -471,28 +451,94 @@ export default function GuidelineInfoModal({
         const payload = await response.json().catch(() => null);
         throw new Error(payload?.error || '블로그 초안 생성에 실패했습니다.');
       }
-
-      const result = await response.json();
-      const nextDraft = String(result?.data?.draft ?? '').trim();
-      if (!nextDraft) throw new Error('초안 결과가 비어 있습니다. 다시 시도해주세요.');
+      if (!response.body) {
+        throw new Error('스트리밍 응답을 받을 수 없습니다. 잠시 후 다시 시도해주세요.');
+      }
 
       const usedOptions: BlogDraftOptions = {
-        targetLength: draftLength,
+        targetLength: effectiveDraftLength,
         tone: draftTone,
-        persona: draftPersona,
+        persona: 'balanced',
         emphasis: draftEmphasis.trim(),
         keywords: draftKeywords,
       };
-      setDraftText(nextDraft);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let lineBuffer = '';
+      let streamedDraft = '';
+      let streamUpdatedAt = new Date().toISOString();
       setIsTypingDraft(true);
+
+      const applyStreamToken = (tokenText: string) => {
+        if (!tokenText) return;
+        streamedDraft += tokenText;
+        setDraftText((prev) => `${prev}${tokenText}`);
+        setDisplayDraftText((prev) => `${prev}${tokenText}`);
+      };
+
+      const handleLine = (line: string) => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        let payload: any;
+        try {
+          payload = JSON.parse(trimmed);
+        } catch {
+          return;
+        }
+        if (payload?.type === 'token' && typeof payload.text === 'string') {
+          applyStreamToken(payload.text);
+          return;
+        }
+        if (payload?.type === 'done') {
+          if (typeof payload.updatedAt === 'string' && payload.updatedAt.trim()) {
+            streamUpdatedAt = payload.updatedAt;
+          }
+          if (typeof payload.draft === 'string' && payload.draft.trim()) {
+            const finalDraft = sanitizeDraftOutput(payload.draft);
+            setDraftText(finalDraft);
+            setDisplayDraftText(finalDraft);
+            streamedDraft = finalDraft;
+          }
+          return;
+        }
+        if (payload?.type === 'error') {
+          throw new Error(
+            typeof payload.error === 'string' && payload.error.trim()
+              ? payload.error
+              : '블로그 초안 생성 중 오류가 발생했습니다.'
+          );
+        }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        lineBuffer += decoder.decode(value, { stream: true });
+        const lines = lineBuffer.split('\n');
+        lineBuffer = lines.pop() ?? '';
+        for (const line of lines) {
+          handleLine(line);
+        }
+      }
+      if (lineBuffer.trim()) {
+        handleLine(lineBuffer);
+      }
+
+      const nextDraft = sanitizeDraftOutput(streamedDraft);
+      if (!nextDraft) throw new Error('초안 결과가 비어 있습니다. 다시 시도해주세요.');
+      setDraftText(nextDraft);
+      setDisplayDraftText(nextDraft);
+      setIsTypingDraft(false);
       setCanGenerateDraftToday(false);
       onDraftGenerated?.({
         draft: nextDraft,
         options: usedOptions,
-        updatedAt: new Date().toISOString(),
+        updatedAt: streamUpdatedAt,
       });
       toast({ title: '초안 생성 완료', description: '분석 데이터를 바탕으로 초안이 생성되었습니다.' });
     } catch (error) {
+      setIsTypingDraft(false);
       toast({
         title: '오류',
         description: error instanceof Error ? error.message : '초안 생성 중 오류가 발생했습니다.',
@@ -592,7 +638,7 @@ export default function GuidelineInfoModal({
                     )}
                   >
                     {(isEditMode || hasPoints) && (
-                    <InfoRow label="금액" icon={Wallet}>
+                    <InfoRow label="금액">
                       {isEditMode ? (
                         <Input
                           value={hasPoints ? displayPoints.toLocaleString() : ''}
@@ -604,10 +650,6 @@ export default function GuidelineInfoModal({
                                 ? {
                                     ...prev,
                                     points: next,
-                                    rewardInfo: {
-                                      ...(prev.rewardInfo ?? {}),
-                                      points: next,
-                                    },
                                   }
                                 : prev
                             );
@@ -623,7 +665,7 @@ export default function GuidelineInfoModal({
                     </InfoRow>
                     )}
                     {(isEditMode || hasEndDate) && (
-                    <InfoRow label="마감일" icon={CalendarIcon}>
+                    <InfoRow label="마감일">
                       {isEditMode ? (
                         <Popover>
                           <PopoverTrigger asChild>
@@ -746,8 +788,23 @@ export default function GuidelineInfoModal({
                       )}
                     </InfoRow>
                     )}
+                    {(isEditMode || hasVisitInfo) && (
+                    <InfoRow label="방문 정보">
+                      {isEditMode ? (
+                        <Input
+                          type="text"
+                          value={effectiveAnalysis.visitInfo || ''}
+                          onChange={(e) => updateAnalysis({ visitInfo: e.target.value || null })}
+                          className="h-10 w-full text-[13px] font-semibold"
+                          placeholder="방문 위치/안내 정보"
+                        />
+                      ) : (
+                        effectiveAnalysis.visitInfo || '-'
+                      )}
+                    </InfoRow>
+                    )}
                     {(isEditMode || hasPhone) && (
-                    <InfoRow label="사장님 전화번호" icon={Phone}>
+                    <InfoRow label="전화번호">
                       {isEditMode ? (
                         <Input
                           type="text"
@@ -876,8 +933,9 @@ export default function GuidelineInfoModal({
                           <p className="text-[15px] font-bold text-[#191F28]">{s.title}</p>
                           <ul className="space-y-2">
                             {s.items.map((item, j) => (
-                              <li key={j} className="flex gap-2.5 items-start text-[14px] text-[#4E5968] leading-relaxed bg-[#FCFCFD] border border-gray-100 rounded-xl px-3 py-2.5">
-                                <CheckCircle2 className="mt-0.5 w-4 h-4 text-[#FF5722] shrink-0" /> {item}
+                              <li key={j} className="flex gap-2.5 items-start text-[14px] text-[#4E5968] bg-[#FCFCFD] border border-gray-100 rounded-xl px-3 py-2.5">
+                                <CheckCircle2 className="mt-0.5 w-4 h-4 text-[#FF5722] shrink-0" /> 
+                                 <span className="min-w-0 flex-1 break-all leading-relaxed">{item}</span>
                               </li>
                             ))}
                           </ul>
@@ -904,16 +962,20 @@ export default function GuidelineInfoModal({
       {/* 2. 블로그 초안 모달 (기존 디자인 유지) */}
       <Dialog open={isDraftOpen} onOpenChange={setIsDraftOpen}>
         <DialogContent 
+          showCloseButton={false}
           className="w-[calc(100vw-1.25rem)] max-w-[600px] h-[90vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col shadow-2xl"
           style={{ zIndex: Z_INDEX.guidelineAnalysisModal + 1, borderRadius: '32px' }}
         >
-          <DialogHeader className="p-6 bg-white">
-            <DialogTitle className="text-[16px] font-bold text-[#191F28]">블로그 초안 작성</DialogTitle>
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
-              <p className="text-[12px] font-semibold text-amber-700">
-                Beta · 블로그 초안은 하루 1회만 생성할 수 있습니다.
-              </p>
-            </div>
+          <DialogHeader className="relative p-4 pr-14 bg-white">
+            <DialogTitle className="text-[14px] font-bold text-[#191F28]">블로그 초안 작성</DialogTitle>
+            <button
+              type="button"
+              onClick={() => setIsDraftOpen(false)}
+              className="absolute right-5 top-4 z-50 flex h-8 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-all hover:bg-neutral-200 hover:text-neutral-900 active:scale-95"
+              aria-label="닫기"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </DialogHeader>
 
           <ScrollArea className="flex-1 min-h-0">
@@ -942,27 +1004,46 @@ export default function GuidelineInfoModal({
                   onClick={() => setShowAdvanced(!showAdvanced)}
                   className="flex items-center justify-between w-full py-4 border-t border-gray-50 mt-2 text-[14px] font-bold text-[#4E5968]"
                 >
-                  <div className="flex items-center gap-2"><Settings2 className="w-4 h-4" /> 고급 설정 (페르소나, 말투 등)</div>
+                  <div className="flex items-center gap-2"><Settings2 className="w-4 h-4" /> 고급 설정 (말투, 글자수 등)</div>
                   <ChevronDown className={cn("w-4 h-4 transition-transform", showAdvanced && "rotate-180")} />
                 </button>
 
                 {showAdvanced && (
                   <div className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-2">
-                    <div className="space-y-3">
-                      <p className="text-[14px] font-bold text-[#191F28]">페르소나</p>
-                      <div className="flex flex-wrap gap-2">
-                        {PERSONA_OPTIONS.map((p) => (
-                          <button key={p.key} onClick={() => setDraftPersona(p.key)} className={cn("px-4 py-2.5 rounded-xl text-[13px] font-bold border", draftPersona === p.key ? "bg-[#FFF0E6] border-[#FF5722] text-[#FF5722]" : "bg-white border-gray-100 text-[#8B95A1]")}>{p.label}</button>
-                        ))}
-                      </div>
-                    </div>
                     <div className="space-y-4">
                       <div className="space-y-3">
                         <p className="text-[14px] font-bold text-[#191F28]">글자수</p>
                         <div className="flex flex-wrap gap-2">
-                          {LENGTH_OPTIONS.map((l) => (
-                            <button key={l} onClick={() => setDraftLength(l)} className={cn("px-3 py-2 rounded-lg text-[12px] font-bold border", draftLength === l ? "bg-[#191F28] text-white" : "bg-white border-gray-100 text-[#8B95A1]")}>{l}자</button>
-                          ))}
+                          {LENGTH_OPTIONS.map((l) => {
+                            const isProLocked = l >= 1500;
+                            return (
+                              <button
+                                key={l}
+                                onClick={() => {
+                                  if (!isProLocked) setDraftLength(l);
+                                }}
+                                disabled={isProLocked}
+                                className={cn(
+                                  "px-3 py-2 rounded-lg text-[12px] font-bold border inline-flex items-center gap-1.5",
+                                  draftLength === l
+                                    ? "bg-[#191F28] text-white"
+                                    : "bg-white border-gray-100 text-[#8B95A1]",
+                                  isProLocked && "opacity-55 cursor-not-allowed bg-gray-50 text-[#B0B8C1]"
+                                )}
+                              >
+                                {l}자
+                                {isProLocked && (
+                                  <span
+                                    className="inline-flex items-center justify-center text-[12px] leading-none"
+                                    aria-label="프로 전용"
+                                    title="PRO 전용"
+                                  >
+                                    👑
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                       <div className="space-y-3">
@@ -983,7 +1064,7 @@ export default function GuidelineInfoModal({
               </div>
 
               <div className="bg-white rounded-[24px] p-6 min-h-[180px] flex flex-col justify-center border border-gray-100 shadow-sm">
-                {isGeneratingDraft ? (
+                {isGeneratingDraft && !draftText ? (
                   <div className="flex flex-col items-center py-12 gap-3 text-center">
                     <Loader2 className="w-8 h-8 text-[#FF5722] animate-spin" />
                     <p className="text-[15px] font-semibold text-[#4E5968]">AI가 초안을 작성하고 있어요</p>
@@ -1003,23 +1084,23 @@ export default function GuidelineInfoModal({
                     </div>
                     <Button
                       onClick={handleCopyDraft}
-                      disabled={isTypingDraft}
+                      disabled={isGeneratingDraft}
                       className="w-full h-14 bg-[#F2F4F6] hover:bg-gray-200 text-[#4E5968] rounded-2xl font-bold transition-colors"
                     >
                       {copiedDraft ? <Check className="mr-2 h-4 w-4 text-[#FF5722]" /> : <Copy className="mr-2 h-4 w-4" />} 초안 복사하기
                     </Button>
                     <button
                       onClick={handleGenerateDraft}
-                      disabled={!canGenerateDraftToday || isCheckingDraftQuota || isTypingDraft}
+                      disabled={!canGenerateDraftToday || isCheckingDraftQuota || isGeneratingDraft}
                       className="w-full text-[13px] text-[#8B95A1] underline disabled:opacity-50 disabled:no-underline"
                     >
-                      {isTypingDraft
+                      {isGeneratingDraft
                         ? '초안 출력 중...'
                         : isCheckingDraftQuota
                         ? '사용 가능 여부 확인 중...'
                         : canGenerateDraftToday
                           ? '내용이 마음에 안 드시나요? 다시 만들기'
-                          : '오늘은 재생성이 불가합니다'}
+                          : 'Beta · 하루 1회만 생성할 수 있습니다.'}
                     </button>
                   </div>
                 ) : (
@@ -1033,13 +1114,13 @@ export default function GuidelineInfoModal({
                     <Button 
                       onClick={handleGenerateDraft}
                       disabled={!canGenerateDraftToday || isCheckingDraftQuota}
-                      className="w-full h-12 bg-[#FF5722] hover:bg-[#FF7A4C] text-white rounded-[20px] font-bold text-[16px] shadow-lg shadow-orange-100 transition-all active:scale-[0.98]"
+                      className="w-full h-10 bg-[#FF5722] hover:bg-[#FF7A4C] text-white rounded-[20px] font-bold text-[14px] shadow-lg shadow-orange-100 transition-all active:scale-[0.98]"
                     >
                       {isCheckingDraftQuota
                         ? '사용 가능 여부 확인 중...'
                         : canGenerateDraftToday
-                          ? '무료 초안 만들기'
-                          : '오늘 사용 완료'}
+                          ? '블로그 초안 생성'
+                          : '하루 1회만 가능해요. 내일 다시 시도해주세요'}
                     </Button>
                   </div>
                 )}

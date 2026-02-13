@@ -537,18 +537,13 @@ export default function ScheduleModal({
       }
     }
 
-    const parsedReviewChannels = Array.isArray(analysis.reviewChannels)
-      ? analysis.reviewChannels.map((item) => item.trim()).filter(Boolean)
-      : [];
     const reviewChannels =
-      parsedReviewChannels.length > 0
-        ? parsedReviewChannels
-        : analysis.reviewChannel
-          ? analysis.reviewChannel
-              .split(',')
-              .map((item) => item.trim())
-              .filter(Boolean)
-          : [];
+      analysis.reviewChannel
+        ? analysis.reviewChannel
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : [];
     const normalizedAnalysisPlatform = analysis.platform?.trim();
     const preferredDefaultPlatform = allPlatforms.includes('레뷰')
       ? '레뷰'

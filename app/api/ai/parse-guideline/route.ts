@@ -49,19 +49,12 @@ const CampaignGuidelineAnalysisSchema = z.object({
   platform: z.string().nullable().optional(),
   category: z.string().nullable().optional(),
   reviewChannel: z.string().nullable().optional(),
-  reviewChannels: z.array(z.string()).optional(),
   visitInfo: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
   reviewRegistrationPeriod: z.object({
     start: z.string().nullable().optional(),
     end: z.string().nullable().optional(),
   }).optional(),
-  rewardInfo: z.object({
-    description: z.string().nullable().optional(),
-    points: z.number().nullable().optional(),
-    deliveryMethod: z.string().nullable().optional(),
-    productInfo: z.string().nullable().optional(),
-  }).nullable().optional(),
   contentRequirements: ContentRequirementsSchema.optional(),
   guidelineDigest: GuidelineDigestSchema,
 });
@@ -333,19 +326,13 @@ const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인
    - 복수의 채널이 있을 경우 주요 채널을 선택
    - 사용자 정의 채널 목록과 대조하여 일치하는 것이 있으면 정규화
    
-8. **rewardInfo** (리워드 정보):
-   - **description**: 리워드에 대한 자세한 설명
-   - **points**: 포인트/금액 (숫자)
-   - **deliveryMethod**: 제공 방식 (예: "방문수령", "택배발송", "포인트지급")
-   - **productInfo**: 제공 제품의 상세 정보
-
-9. **phone** (전화번호):
+8. **phone** (전화번호):
    - 방문형 여부와 관계없이, 가이드라인에 전화번호가 있으면 항상 추출하세요.
    - 예약/문의/고객센터/매장 연락처 등 모든 연락 가능한 대표 번호를 우선 추출하세요.
    - 형식: "02-1234-5678", "010-1234-5678" 등
    - 여러 번호가 있으면 대표번호 또는 예약/문의용 번호를 우선하세요.
 
-10. **방문형 캠페인일 경우** (해당 시에만):
+9. **방문형 캠페인일 경우** (해당 시에만):
    - **visitInfo** (주소/위치): 
      * 방문해야 하는 장소의 상세 주소 또는 위치 정보
      * 예: "서울시 강남구 테헤란로 123", "홍대입구역 5번출구 도보 3분"
@@ -359,7 +346,7 @@ const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인
        - "카카오맵", "기타 플랫폼" 언급 -> ["other"]
      * 복수 선택 가능, 명확한 근거가 없으면 빈 배열 또는 생략
 
-11. **guidelineDigest** (가이드라인 전체 상세 정리):
+10. **guidelineDigest** (가이드라인 전체 상세 정리):
    - 가이드라인의 **모든 내용을 누락 없이** 완벽하게 구조화하여 정리하세요.
    - **핵심 목표**: 사용자가 원본 가이드라인을 다시 보지 않아도 될 정도로 모든 세부 규칙, 경고, 팁을 포함해야 합니다.
    - 구조:
@@ -372,7 +359,7 @@ const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인
      * **구체성 유지**: "주의사항을 준수하세요" 처럼 뭉뚱그리지 말고, "당일 예약 불가, 15분 지각 시 노쇼 처리"와 같이 구체적으로 적으세요.
      * 정보가 너무 많으면 섹션을 더 잘게 쪼개세요.
 
-12. **keywords** (가이드라인 키워드 원문):
+11. **keywords** (가이드라인 키워드 원문):
    - 가이드라인에 "제목키워드", "본문키워드", "서브키워드" 등으로 나열된 키워드를 우선 추출하세요.
    - 키워드 문구는 임의로 축약/재분류하지 말고, 가이드라인에 적힌 표현을 그대로 유지하세요.
    - "핵심 키워드" 같은 단일 그룹으로 다시 묶지 마세요.
@@ -506,9 +493,6 @@ export async function POST(request: NextRequest) {
       if (parsedJson.points !== undefined) {
         parsedJson.points = normalizePointsValue(parsedJson.points);
       }
-      if (parsedJson.rewardInfo?.points !== undefined) {
-        parsedJson.rewardInfo.points = normalizePointsValue(parsedJson.rewardInfo.points);
-      }
       if (parsedJson.guidelineDigest !== undefined) {
         parsedJson.guidelineDigest = normalizeGuidelineDigest(parsedJson.guidelineDigest);
       }
@@ -532,9 +516,6 @@ export async function POST(request: NextRequest) {
     if (analysis.points !== undefined) {
       analysis.points = normalizePointsValue(analysis.points);
     }
-    if (analysis.rewardInfo?.points !== undefined) {
-      analysis.rewardInfo.points = normalizePointsValue(analysis.rewardInfo.points);
-    }
     if (analysis.guidelineDigest !== undefined) {
       analysis.guidelineDigest = normalizeGuidelineDigest(analysis.guidelineDigest);
     }
@@ -553,18 +534,9 @@ export async function POST(request: NextRequest) {
     // 포인트 후처리: 모델이 points를 누락한 경우 원문에서 보상 금액을 추출해 보정
     const extractedPoints = extractPointsFromGuideline(guideline);
     const hasTopLevelPoints = typeof analysis.points === 'number' && Number.isFinite(analysis.points);
-    const hasRewardPoints = typeof analysis.rewardInfo?.points === 'number'
-      && Number.isFinite(analysis.rewardInfo?.points);
 
     if (!hasTopLevelPoints && extractedPoints !== null) {
       analysis.points = extractedPoints;
-    }
-
-    if (!hasRewardPoints && extractedPoints !== null) {
-      analysis.rewardInfo = {
-        ...(analysis.rewardInfo ?? {}),
-        points: extractedPoints,
-      };
     }
 
     // 플랫폼 후처리: 모델 결과가 비어있거나 사용자 옵션과 불일치하면 가이드라인 텍스트 기준으로 보정
