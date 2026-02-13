@@ -12,13 +12,15 @@ import { Z_INDEX } from '@/lib/z-index';
 interface GuidelineAnalysisModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onApply: (analysis: CampaignGuidelineAnalysis) => void;
+  onApply: (analysis: CampaignGuidelineAnalysis, originalGuideline: string) => void;
+  scheduleId?: number;
 }
 
 export default function GuidelineAnalysisModal({
   isOpen,
   onClose,
   onApply,
+  scheduleId,
 }: GuidelineAnalysisModalProps) {
   const [guideline, setGuideline] = useState('');
   const [loading, setLoading] = useState(false);
@@ -49,7 +51,7 @@ export default function GuidelineAnalysisModal({
       const response = await fetch('/api/ai/parse-guideline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guideline, userId: user.id }),
+        body: JSON.stringify({ guideline, userId: user.id, scheduleId }),
       });
 
       if (!response.ok) {
@@ -64,8 +66,8 @@ export default function GuidelineAnalysisModal({
         description: '가이드라인이 분석되었습니다',
       });
       
-      // 분석 완료 후 바로 적용하고 모달 닫기
-      onApply(analysisData);
+      // 분석 완료 후 결과와 원본 텍스트 전달
+      onApply(analysisData, guideline.trim());
       onClose();
       
     } catch (error) {

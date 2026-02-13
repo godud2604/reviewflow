@@ -29,6 +29,11 @@ export interface DbSchedule {
   purchase_link: string;
   guide_files: GuideFile[];
   memo: string;
+  guideline_analysis: Record<string, unknown> | null;
+  original_guideline_text: string | null;
+  blog_draft: string | null;
+  blog_draft_options: Record<string, unknown> | null;
+  blog_draft_updated_at: string | null;
   reconfirm_reason: string | null;
   visit_review_checklist: {
     naverReservation: boolean;

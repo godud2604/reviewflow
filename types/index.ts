@@ -66,6 +66,11 @@ export interface Schedule {
   purchaseLink: string;
   guideFiles: GuideFile[];
   memo: string;
+  guidelineAnalysis?: CampaignGuidelineAnalysis | null;
+  originalGuidelineText?: string;
+  blogDraft?: string;
+  blogDraftOptions?: BlogDraftOptions | null;
+  blogDraftUpdatedAt?: string;
   reconfirmReason?: string;
   visitReviewChecklist?: {
     naverReservation: boolean;
@@ -176,6 +181,7 @@ export interface GuidelineDigestSection {
 export interface CampaignGuidelineAnalysis {
   title: string;
   points?: number | null;
+  keywords?: string[];
   
   // 플랫폼 정보
   platform?: string | null; // 예: "네이버 블로그", "인스타그램", "카페" 등
@@ -208,4 +214,18 @@ export interface CampaignGuidelineAnalysis {
     summary?: string;
     sections?: GuidelineDigestSection[];
   };
+}
+
+export interface BlogDraftOptions {
+  targetLength: 500 | 1000 | 1500 | 2000 | 3000;
+  tone: 'auto' | 'haeyo' | 'hamnida' | 'banmal';
+  persona: 'balanced' | 'friendly' | 'expert' | 'honest' | 'lifestyle';
+  emphasis?: string;
+  keywords?: string[];
+}
+
+export interface BlogDraftPayload {
+  draft: string;
+  options: BlogDraftOptions;
+  updatedAt?: string;
 }

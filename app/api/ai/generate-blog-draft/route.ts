@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -7,6 +8,9 @@ const client = new GoogleGenerativeAI(apiKey || '');
 
 const RequestSchema = z.object({
   analysis: z.any(),
+  userId: z.string().uuid().optional(),
+  scheduleId: z.union([z.number(), z.string()]).optional(),
+  originalGuideline: z.string().optional(),
   options: z.object({
     targetLength: z.union([
       z.literal(500),
@@ -18,6 +22,7 @@ const RequestSchema = z.object({
     tone: z.enum(['auto', 'haeyo', 'hamnida', 'banmal']),
     persona: z.enum(['balanced', 'friendly', 'expert', 'honest', 'lifestyle']),
     emphasis: z.string().max(300).optional(),
+    keywords: z.array(z.string().min(1).max(24)).max(20).optional(),
   }),
 });
 
@@ -55,26 +60,50 @@ export async function POST(request: NextRequest) {
     }
 
     const { analysis, options } = parsed.data;
+    const parsedScheduleIdRaw = parsed.data.scheduleId;
+    const parsedScheduleId =
+      typeof parsedScheduleIdRaw === 'number'
+        ? parsedScheduleIdRaw
+        : typeof parsedScheduleIdRaw === 'string' && parsedScheduleIdRaw.trim()
+          ? Number(parsedScheduleIdRaw)
+          : null;
+    const userId = parsed.data.userId;
+    const originalGuideline = parsed.data.originalGuideline?.trim();
     const emphasis = options.emphasis?.trim() ?? '';
+    const keywords = (options.keywords ?? [])
+      .map((value) => value.trim())
+      .filter((value, index, arr) => value.length > 0 && arr.indexOf(value) === index);
 
-    const prompt = `당신은 한국어 네이버 블로그 체험단 리뷰 초안을 작성하는 전문 작가입니다.
+    const prompt = `
+    당신은 '네이버 블로그 상위 1% 인플루언서'이자 '마케팅 원고 전문가'입니다.
+    제공된 [캠페인 분석 JSON] 데이터를 바탕으로, 독자가 제품/서비스를 사고 싶게 만드는 매력적인 리뷰 초안을 작성하세요.
 
-아래 입력된 "캠페인 분석 JSON"만 근거로 블로그 초안을 작성하세요.
-- 과장/허위/추측 금지
-- 사실 근거가 없는 내용은 절대 추가하지 말 것
-- 필수 키워드/태그/주의사항/고지문이 있으면 자연스럽게 반영할 것
-- 가독성 좋은 문단 구성 (도입-경험-핵심포인트-마무리)
-- 최종 출력은 "본문 초안 텍스트"만 반환 (마크다운 코드블록/설명문 금지)
+    [핵심 지침]
+    1. **자연스러운 스토리텔링**: 단순한 스펙 나열이 아니라, "나의 고민 -> 제품 발견 -> 해결"의 흐름으로 작성하세요. (단, 제품의 스펙/효능은 반드시 JSON 데이터에 기반할 것)
+    2. **가독성 최적화**:
+      - 문단은 3~4줄 내외로 끊어 지루하지 않게 구성하세요.
+    3. **키워드 자연스럽게 녹이기**: 입력된 '반영 키워드'는 본문 내에 최소 3회 이상 자연스럽게 반복해서 언급하세요.
+    4. **금지 사항**: 
+      - "결론적으로", "요약하자면" 같은 딱딱한 번역투 접속사 사용 금지.
+      - 없는 기능을 있는 것처럼 꾸며내는 허위 사실 기재 금지.
 
-[작성 설정]
-- 목표 글자수: 약 ${options.targetLength}자
-- 말투: ${TONE_GUIDE[options.tone]}
-- 페르소나: ${PERSONA_GUIDE[options.persona]}
-- 강조 요청: ${emphasis ? emphasis : '없음'}
+    [작성 옵션]
+    - **글자수 가이드**: 공백 포함 약 ${options.targetLength}자 (너무 짧지 않게 풍성하게 묘사)
+    - **리뷰 컨셉(페르소나)**: ${PERSONA_GUIDE[options.persona]} 
+      *(예: 꼼꼼분석형이라면 수치와 성분을 강조, 감성일상형이라면 나의 느낌과 분위기 위주로 서술)*
+    - **글 말투**: ${TONE_GUIDE[options.tone]}
+    - **강조 포인트**: ${emphasis ? emphasis : '제품의 차별점과 실제 사용 만족도 위주'}
+    - **필수 키워드**: ${keywords.length > 0 ? keywords.join(', ') : '없음'}
 
-[캠페인 분석 JSON]
-${JSON.stringify(analysis, null, 2)}
-`;
+    [캠페인 분석 JSON]
+    ${JSON.stringify(analysis, null, 2)}
+
+    ---
+    위 설정을 바탕으로 블로그 제목(1개 추천)과 본문을 작성해 주세요.
+    출력 형식:
+    # [제목]
+    (본문 내용...)
+    `;
 
     const model = client.getGenerativeModel({ model: 'gemini-2.0-flash' });
     const response = await model.generateContent({
@@ -94,11 +123,44 @@ ${JSON.stringify(analysis, null, 2)}
       );
     }
 
+    let persistedToSchedule = false;
+    if (
+      userId &&
+      parsedScheduleId !== null &&
+      Number.isFinite(parsedScheduleId)
+    ) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!supabaseUrl || !supabaseServiceKey) {
+        console.error('Supabase configuration missing');
+      } else {
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        const { error: persistError } = await supabase
+          .from('schedules')
+          .update({
+            blog_draft: text,
+            blog_draft_options: options,
+            blog_draft_updated_at: new Date().toISOString(),
+            guideline_analysis: analysis,
+            original_guideline_text: originalGuideline || null,
+          })
+          .eq('id', parsedScheduleId)
+          .eq('user_id', userId);
+
+        if (persistError) {
+          console.error('블로그 초안 데이터 저장 실패:', persistError);
+        } else {
+          persistedToSchedule = true;
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         draft: text,
       },
+      persistedToSchedule,
     });
   } catch (error) {
     console.error('블로그 초안 생성 오류:', error);

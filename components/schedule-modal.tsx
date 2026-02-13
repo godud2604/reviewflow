@@ -141,6 +141,10 @@ export default function ScheduleModal({
   const [showGuidelineAnalysisModal, setShowGuidelineAnalysisModal] = useState(false);
   const [showGuidelineInfoModal, setShowGuidelineInfoModal] = useState(false);
   const [guidelineAnalysis, setGuidelineAnalysis] = useState<CampaignGuidelineAnalysis | null>(null);
+  const [originalGuidelineText, setOriginalGuidelineText] = useState('');
+  const [blogDraftText, setBlogDraftText] = useState('');
+  const [blogDraftOptions, setBlogDraftOptions] = useState<Schedule['blogDraftOptions']>(null);
+  const [blogDraftUpdatedAt, setBlogDraftUpdatedAt] = useState<string | undefined>(undefined);
   useEffect(() => {
     if (isOpen && initialMapSearchOpen) {
       setShowMapSearchModal(true);
@@ -342,6 +346,11 @@ export default function ScheduleModal({
 
   useEffect(() => {
     if (schedule) {
+      setGuidelineAnalysis(schedule.guidelineAnalysis || null);
+      setOriginalGuidelineText(schedule.originalGuidelineText || '');
+      setBlogDraftText(schedule.blogDraft || '');
+      setBlogDraftOptions(schedule.blogDraftOptions || null);
+      setBlogDraftUpdatedAt(schedule.blogDraftUpdatedAt || undefined);
       const initialNonVisit = schedule.reviewType !== '방문형' ? schedule.reviewType : '제공형';
       const parsedDetails = parseIncomeDetailsJson(schedule.incomeDetailsJson);
       const fallbackDetails = buildIncomeDetailsFromLegacy(schedule.income, schedule.cost);
@@ -373,6 +382,11 @@ export default function ScheduleModal({
       setVisitMode(hasVisitData(schedule));
       setLocationDetailEnabled(Boolean(schedule.regionDetail));
     } else {
+      setGuidelineAnalysis(null);
+      setOriginalGuidelineText('');
+      setBlogDraftText('');
+      setBlogDraftOptions(null);
+      setBlogDraftUpdatedAt(undefined);
       const emptyForm = createEmptyFormData();
       if (initialDeadline) {
         emptyForm.dead = initialDeadline;
@@ -444,11 +458,26 @@ export default function ScheduleModal({
     setFormData((prev) => ({ ...prev, platform: defaultPlatform }));
   }, [allPlatforms, schedule, formData.platform]);
 
-  // 가이드라인 분석 데이터를 폼에 적용하는 함수
-  const applyGuidelineAnalysis = useCallback((analysis: CampaignGuidelineAnalysis) => {
-    setGuidelineAnalysis(analysis);
-    
-    // 유효한 카테고리 목록
+  // 가이드라인 분석 결과를 저장하고 상세 정보 모달만 표시
+  const applyGuidelineAnalysis = useCallback(
+    (analysis: CampaignGuidelineAnalysis, originalGuideline: string) => {
+      setGuidelineAnalysis(analysis);
+      setOriginalGuidelineText(originalGuideline);
+      setBlogDraftText('');
+      setBlogDraftOptions(null);
+      setBlogDraftUpdatedAt(undefined);
+      setShowGuidelineAnalysisModal(false);
+      setShowGuidelineInfoModal(true);
+
+      toast({
+        title: '성공',
+        description: '가이드라인이 분석되었습니다. 일정에는 아직 반영되지 않았습니다.',
+      });
+    },
+    [toast]
+  );
+
+  const applyGuidelineDataToSchedule = useCallback((analysis: CampaignGuidelineAnalysis) => {
     const validCategories = [
       '맛집/식품',
       '뷰티',
@@ -466,23 +495,19 @@ export default function ScheduleModal({
       '문구/오피스',
       '기타',
     ] as const;
-    
-    // 카테고리 검증: 유효한 카테고리만 사용, 없으면 "기타"
-    const selectedCategory = (analysis.category && validCategories.includes(analysis.category as any))
-      ? (analysis.category as typeof validCategories[number])
-      : '기타';
-    
-    const shouldEnableVisitMode = Boolean(analysis.visitInfo);
 
-    // 방문형인 경우 리뷰 체크리스트 자동 설정
-    let visitReviewChecklist = formData.visitReviewChecklist || {
+    const selectedCategory =
+      analysis.category && validCategories.includes(analysis.category as any)
+        ? (analysis.category as (typeof validCategories)[number])
+        : '기타';
+
+    const shouldEnableVisitMode = Boolean(analysis.visitInfo);
+    const visitReviewChecklist = formData.visitReviewChecklist || {
       ...DEFAULT_VISIT_REVIEW_CHECKLIST,
     };
 
-    // AI 분석 결과의 visitReviewTypes를 체크리스트에 적용
     if (shouldEnableVisitMode && analysis.contentRequirements?.visitReviewTypes) {
       const reviewTypes = analysis.contentRequirements.visitReviewTypes;
-      
       if (reviewTypes.includes('naverReservation')) {
         visitReviewChecklist.naverReservation = true;
       }
@@ -494,8 +519,7 @@ export default function ScheduleModal({
       }
     }
 
-    // 리뷰채널 초기값 설정
-    let reviewChannels = analysis.reviewChannel ? [analysis.reviewChannel] : [];
+    const reviewChannels = analysis.reviewChannel ? [analysis.reviewChannel] : [];
     const normalizedAnalysisPlatform = analysis.platform?.trim();
     const shouldKeepDefaultPlatform =
       !normalizedAnalysisPlatform || normalizedAnalysisPlatform === '기타';
@@ -503,7 +527,6 @@ export default function ScheduleModal({
       ? formData.platform || allPlatforms[0] || ''
       : normalizedAnalysisPlatform;
 
-    // 기본 정보 추출
     const updates: Partial<Schedule> = {
       title: analysis.title || '',
       benefit: analysis.points || 0,
@@ -528,7 +551,6 @@ export default function ScheduleModal({
       updates.regionDetail = analysis.visitInfo;
     }
 
-    // 메모장은 가이드라인 적용 시 공란 유지
     updates.memo = '';
 
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -536,22 +558,17 @@ export default function ScheduleModal({
     if (analysis.visitInfo) {
       setLocationDetailEnabled(true);
     }
-    
-    // 가이드라인 정보 모달 열기
-    setShowGuidelineAnalysisModal(false);
-    setShowGuidelineInfoModal(true);
-    
+    setShowGuidelineInfoModal(false);
+
     toast({
       title: '성공',
-      description: '가이드라인 정보가 일정에 적용되었습니다',
+      description: '분석된 내용을 일정에 반영했습니다.',
     });
   }, [
     allPlatforms,
     formData.platform,
     formData.status,
     formData.visitReviewChecklist,
-    setLocationDetailEnabled,
-    setVisitMode,
     toast,
   ]);
 
@@ -583,6 +600,11 @@ export default function ScheduleModal({
     try {
       const updatedFormData: Partial<Schedule> = { ...mergedFormData };
       updatedFormData.title = trimmedTitle;
+      updatedFormData.guidelineAnalysis = guidelineAnalysis;
+      updatedFormData.originalGuidelineText = originalGuidelineText;
+      updatedFormData.blogDraft = blogDraftText;
+      updatedFormData.blogDraftOptions = blogDraftOptions;
+      updatedFormData.blogDraftUpdatedAt = blogDraftUpdatedAt;
       // purchaseLink를 저장 데이터에 포함
       updatedFormData.purchaseLink = purchaseLink;
       const hasInvalidDetails = activeScheduleDetails.some(
@@ -1343,14 +1365,16 @@ export default function ScheduleModal({
                   </div>
 
                   {/* AI 가이드라인 분석 버튼 */}
-                  <button
-                    type="button"
-                    onClick={() => setShowGuidelineAnalysisModal(true)}
-                    className="w-full h-[44px] rounded-[18px] bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 hover:border-blue-300 text-blue-700 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <Sparkles size={16} />
-                    AI로 가이드라인 분석하기
-                  </button>
+                  {!guidelineAnalysis && (
+                    <button
+                      type="button"
+                      onClick={() => setShowGuidelineAnalysisModal(true)}
+                      className="w-full h-[44px] rounded-[18px] bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 hover:border-blue-300 text-blue-700 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <Sparkles size={16} />
+                      AI로 가이드라인 분석하기
+                    </button>
+                  )}
 
                   {guidelineAnalysis && (
                     <button
@@ -3094,6 +3118,7 @@ export default function ScheduleModal({
         isOpen={showGuidelineAnalysisModal}
         onClose={() => setShowGuidelineAnalysisModal(false)}
         onApply={applyGuidelineAnalysis}
+        scheduleId={schedule?.id}
       />
 
       {/* 가이드라인 정보 모달 */}
@@ -3101,6 +3126,20 @@ export default function ScheduleModal({
         isOpen={showGuidelineInfoModal}
         onClose={() => setShowGuidelineInfoModal(false)}
         analysis={guidelineAnalysis}
+        originalGuideline={originalGuidelineText}
+        userId={user?.id}
+        scheduleId={schedule?.id}
+        initialDraftText={blogDraftText}
+        initialDraftOptions={blogDraftOptions}
+        onDraftGenerated={({ draft, options, updatedAt }) => {
+          setBlogDraftText(draft);
+          setBlogDraftOptions(options);
+          setBlogDraftUpdatedAt(updatedAt);
+        }}
+        onApplyToSchedule={() => {
+          if (!guidelineAnalysis) return;
+          applyGuidelineDataToSchedule(guidelineAnalysis);
+        }}
       />
     </>
   );

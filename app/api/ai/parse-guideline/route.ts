@@ -43,6 +43,7 @@ const GuidelineDigestSchema = z.object({
 const CampaignGuidelineAnalysisSchema = z.object({
   title: z.string(),
   points: z.number().nullable().optional(),
+  keywords: SafeStringArraySchema.optional(),
   platform: z.string().nullable().optional(),
   category: z.string().nullable().optional(),
   reviewChannel: z.string().nullable().optional(),
@@ -93,7 +94,7 @@ function normalizeGuidelineDigest(input: any): any {
 
           if (!title && items.length === 0) return null;
           return {
-            title: title || '기타',
+            title: title || '기타 상세 내용',
             items,
           };
         })
@@ -106,6 +107,24 @@ function normalizeGuidelineDigest(input: any): any {
     ...(summary ? { summary } : {}),
     ...(sections.length > 0 ? { sections } : {}),
   };
+}
+
+function normalizeKeywords(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const raw of input) {
+    if (typeof raw !== 'string') continue;
+    const keyword = raw.trim().replace(/\s+/g, ' ');
+    if (!keyword) continue;
+    const key = keyword.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(keyword);
+    if (normalized.length >= 50) break;
+  }
+  return normalized;
 }
 
 function normalizeForMatch(value: string): string {
@@ -210,6 +229,43 @@ function inferPlatformFromGuideline(guideline: string, userPlatforms: string[]):
   return matched ?? null;
 }
 
+function normalizePhoneNumber(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return raw.trim();
+
+  const localDigits = digits.startsWith('82') ? `0${digits.slice(2)}` : digits;
+
+  if (localDigits.startsWith('02')) {
+    if (localDigits.length === 9) {
+      return `02-${localDigits.slice(2, 5)}-${localDigits.slice(5)}`;
+    }
+    if (localDigits.length === 10) {
+      return `02-${localDigits.slice(2, 6)}-${localDigits.slice(6)}`;
+    }
+  } else if (/^0\d{2}/.test(localDigits)) {
+    if (localDigits.length === 10) {
+      return `${localDigits.slice(0, 3)}-${localDigits.slice(3, 6)}-${localDigits.slice(6)}`;
+    }
+    if (localDigits.length === 11) {
+      return `${localDigits.slice(0, 3)}-${localDigits.slice(3, 7)}-${localDigits.slice(7)}`;
+    }
+  }
+
+  return raw.trim();
+}
+
+function extractPhoneFromGuideline(guideline: string): string | null {
+  if (!guideline?.trim()) return null;
+
+  const matches = guideline.match(/(?:\+82[-\s]?)?0\d{1,2}[-\s]?\d{3,4}[-\s]?\d{4}/g) ?? [];
+  if (matches.length === 0) return null;
+
+  const firstMatch = matches[0];
+  if (!firstMatch) return null;
+  const normalized = normalizePhoneNumber(firstMatch);
+  return normalized || null;
+}
+
 const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인 분석 전문가입니다.
 
 ### 목표
@@ -217,10 +273,11 @@ const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인
 
 ### 출력 규칙 (최우선)
 1. 반드시 유효한 JSON 객체만 반환하세요. 코드블록, 설명문, 마크다운 금지.
-2. 날짜는 현재 기준 2026-02-10에 맞춰 YYYY-MM-DD로 정규화하세요.
+2. 날짜는 현재 기준 2026-02-12에 맞춰 YYYY-MM-DD로 정규화하세요.
 3. 숫자 필드는 정수로 반환하세요.
 4. 카테고리는 아래 허용 목록에서만 선택하세요. 없으면 "기타".
    - 맛집/식품, 뷰티, 생활/리빙, 출산/육아, 주방/가전, 반려동물, 여행/레저, 데이트, 웨딩, 티켓/문화생활, 디지털/전자기기, 건강/헬스, 자동차/모빌리티, 문구/오피스, 기타
+5. guidelineDigest(가이드라인 전체 상세 정리)에는 원문 내용을 축약/생략하지 말고, 원본의 모든 조건/수치/주의사항/금지사항을 빠짐없이 포함하세요.
 
 ### 필수 매핑 필드 (반드시 정확하고 자세하게 추출)
 이 필드들은 캠페인 관리의 핵심이므로 가이드라인에서 최우선으로 찾아 정확하게 추출해야 합니다.
@@ -272,17 +329,18 @@ const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인
    - **deliveryMethod**: 제공 방식 (예: "방문수령", "택배발송", "포인트지급")
    - **productInfo**: 제공 제품의 상세 정보
 
-9. **방문형 캠페인일 경우** (해당 시에만):
+9. **phone** (전화번호):
+   - 방문형 여부와 관계없이, 가이드라인에 전화번호가 있으면 항상 추출하세요.
+   - 예약/문의/고객센터/매장 연락처 등 모든 연락 가능한 대표 번호를 우선 추출하세요.
+   - 형식: "02-1234-5678", "010-1234-5678" 등
+   - 여러 번호가 있으면 대표번호 또는 예약/문의용 번호를 우선하세요.
+
+10. **방문형 캠페인일 경우** (해당 시에만):
    - **visitInfo** (주소/위치): 
      * 방문해야 하는 장소의 상세 주소 또는 위치 정보
      * 예: "서울시 강남구 테헤란로 123", "홍대입구역 5번출구 도보 3분"
      * 여러 지점이 있으면 모두 포함하거나 대표 주소 선택
-   
-   - **phone** (전화번호): 
-     * 예약이나 문의를 위한 전화번호
-     * 형식: "02-1234-5678", "010-1234-5678" 등
-     * 여러 번호가 있으면 대표번호 또는 예약 전용번호 우선
-   
+
    - **contentRequirements.visitReviewTypes**: 
      * 방문 후 추가로 작성해야 하는 리뷰 플랫폼 목록
      * 근거에 따라 배열로 추출:
@@ -291,20 +349,27 @@ const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인
        - "카카오맵", "기타 플랫폼" 언급 -> ["other"]
      * 복수 선택 가능, 명확한 근거가 없으면 빈 배열 또는 생략
 
-10. **guidelineDigest** (가이드라인 정리 필드):
-   - 가이드라인 전체 내용을 누락 없이 정리해 담으세요.
+11. **guidelineDigest** (가이드라인 전체 상세 정리):
+   - 가이드라인의 **모든 내용을 누락 없이** 완벽하게 구조화하여 정리하세요.
+   - **핵심 목표**: 사용자가 원본 가이드라인을 다시 보지 않아도 될 정도로 모든 세부 규칙, 경고, 팁을 포함해야 합니다.
    - 구조:
-     * **summary**: 전체 요약(2~4문장)
-     * **sections**: 주제별 섹션 배열
-       - section.title: 섹션 제목(예: "일정", "리워드", "작성 규칙", "주의사항", "예약/방문", "제출 방식")
-       - section.items: 해당 섹션의 핵심 항목 목록(문장형)
+     * **summary**: 전체 요약 (핵심 내용만 3~5문장)
+     * **sections**: 주제별 섹션 배열 (최대한 세분화)
+       - section.title: 명확한 섹션 제목 (예: "제공 내역", "방문 및 예약 안내", "리뷰 작성 가이드", "키워드/해시태그", "주의사항", "패널티 안내", "제출 방법")
+       - section.items: 해당 섹션의 상세 항목 리스트. (원본의 톤앤매너를 유지하며 구체적 수치/조건/금지사항을 그대로 서술)
    - 규칙:
-     * 가이드라인의 모든 중요 내용을 적어도 하나의 section.items에 포함
-     * 중복/유사 문장은 통합하고, 실행 가능한 문장으로 정리
-     * 근거 없는 일반론은 금지
+     * **완전성(Completeness)**: 원문에 있는 내용이라면 사소한 주의사항, 추가금 안내, 주차 정보, 와이파이 여부 등도 모두 섹션으로 만들어 포함하세요.
+     * **구체성 유지**: "주의사항을 준수하세요" 처럼 뭉뚱그리지 말고, "당일 예약 불가, 15분 지각 시 노쇼 처리"와 같이 구체적으로 적으세요.
+     * 정보가 너무 많으면 섹션을 더 잘게 쪼개세요.
+
+12. **keywords** (가이드라인 키워드 원문):
+   - 가이드라인에 "제목키워드", "본문키워드", "서브키워드" 등으로 나열된 키워드를 우선 추출하세요.
+   - 키워드 문구는 임의로 축약/재분류하지 말고, 가이드라인에 적힌 표현을 그대로 유지하세요.
+   - "핵심 키워드" 같은 단일 그룹으로 다시 묶지 마세요.
+   - 반드시 문자열 배열로 반환하세요. 예: ["제목키워드: OO맛집", "본문키워드: 강남파스타", "서브키워드: 데이트코스"]
 
 ### 전체 추출 원칙
-1. **완전성**: 필수 매핑 필드 + guidelineDigest에 가이드라인 전체 내용을 빠짐없이 추출하세요.
+1. **완전성 (Zero Omission)**: guidelineDigest 필드에는 가이드라인의 처음부터 끝까지 모든 정보가 구조화되어 들어가야 합니다. 중요하지 않아 보이는 정보도 '기타 안내' 등의 섹션에 포함하세요.
 2. **정확성**: 필수 매핑 필드는 정확하게 추출하세요. 추측하지 말고 가이드라인에 명시된 내용만 사용하세요.
 3. **근거 기반**: 근거 없는 추측이나 일반적인 정보는 추가하지 마세요. 가이드라인에 있는 내용만 추출하세요.
 4. **빈 값 제거**: 빈 배열, 빈 객체, null 값은 생략하세요. 정보가 없으면 해당 필드를 포함하지 마세요.
@@ -321,7 +386,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { guideline, userId } = await request.json();
+    const { guideline, userId, scheduleId } = await request.json();
 
     if (!guideline || typeof guideline !== 'string') {
       return NextResponse.json({ error: '가이드라인 텍스트가 필요합니다' }, { status: 400 });
@@ -330,6 +395,13 @@ export async function POST(request: NextRequest) {
     if (!userId || typeof userId !== 'string') {
       return NextResponse.json({ error: '사용자 ID가 필요합니다' }, { status: 400 });
     }
+
+    const parsedScheduleId =
+      typeof scheduleId === 'number'
+        ? scheduleId
+        : typeof scheduleId === 'string' && scheduleId.trim()
+          ? Number(scheduleId)
+          : null;
 
     // Supabase에서 사용자의 플랫폼, 카테고리, 리뷰채널 조회
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -416,6 +488,9 @@ export async function POST(request: NextRequest) {
       if (parsedJson.guidelineDigest !== undefined) {
         parsedJson.guidelineDigest = normalizeGuidelineDigest(parsedJson.guidelineDigest);
       }
+      if (parsedJson.keywords !== undefined) {
+        parsedJson.keywords = normalizeKeywords(parsedJson.keywords);
+      }
       const validated = CampaignGuidelineAnalysisSchema.safeParse(parsedJson);
 
       if (!validated.success) {
@@ -439,6 +514,7 @@ export async function POST(request: NextRequest) {
     if (analysis.guidelineDigest !== undefined) {
       analysis.guidelineDigest = normalizeGuidelineDigest(analysis.guidelineDigest);
     }
+    analysis.keywords = normalizeKeywords(analysis.keywords);
 
     // 포인트 후처리: 모델이 points를 누락한 경우 원문에서 보상 금액을 추출해 보정
     const extractedPoints = extractPointsFromGuideline(guideline);
@@ -465,9 +541,36 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 전화번호 후처리: 모델이 phone을 누락한 경우 원문에서 보정
+    if (!analysis.phone?.trim()) {
+      const extractedPhone = extractPhoneFromGuideline(guideline);
+      if (extractedPhone) {
+        analysis.phone = extractedPhone;
+      }
+    }
+
+    let persistedToSchedule = false;
+    if (parsedScheduleId !== null && Number.isFinite(parsedScheduleId)) {
+      const { error: persistError } = await supabase
+        .from('schedules')
+        .update({
+          guideline_analysis: analysis,
+          original_guideline_text: guideline.trim(),
+        })
+        .eq('id', parsedScheduleId)
+        .eq('user_id', userId);
+
+      if (persistError) {
+        console.error('가이드라인 분석 데이터 저장 실패:', persistError);
+      } else {
+        persistedToSchedule = true;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: analysis,
+      persistedToSchedule,
     });
   } catch (error) {
     console.error('가이드라인 분석 오류:', error);
