@@ -462,14 +462,14 @@ export default function ScheduleItem({
             </p>
           )}
           {hasAiAutoScheduleData && (
-            <p className="text-[10.5px] font-semibold text-sky-700 rounded-[10px] border border-sky-200 bg-sky-50 px-2 py-[2px] w-fit">
-              AI 자동등록
-            </p>
+            <span className="text-[13px] leading-none opacity-80" title="AI 자동등록">
+              🤖
+            </span>
           )}
           {hasBlogData && (
-            <p className="text-[10.5px] font-semibold text-violet-700 rounded-[10px] border border-violet-200 bg-violet-50 px-2 py-[2px] w-fit">
-              블로그 작성
-            </p>
+            <span className="text-[13px] leading-none opacity-80" title="블로그 작성">
+              ✍️
+            </span>
           )}
           {hasMemo && (
             <span className="text-[12px] leading-none opacity-70" title="메모 있음">
