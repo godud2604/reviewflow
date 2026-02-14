@@ -177,7 +177,9 @@ export default function ScheduleModal({
   const [blogDraftText, setBlogDraftText] = useState('');
   const [blogDraftOptions, setBlogDraftOptions] = useState<Schedule['blogDraftOptions']>(null);
   const [blogDraftUpdatedAt, setBlogDraftUpdatedAt] = useState<string | undefined>(undefined);
+  const hasBlogDraft = blogDraftText.trim().length > 0;
   const effectiveGuidelineAnalysis = guidelineAnalysis ?? formData.guidelineAnalysis ?? null;
+  const hideAiComposer = Boolean(effectiveGuidelineAnalysis && hasBlogDraft);
   const effectiveOriginalGuidelineText = originalGuidelineText || formData.originalGuidelineText || '';
   const draftAnalysisSource: CampaignGuidelineAnalysis = React.useMemo(
     () =>
@@ -667,7 +669,9 @@ export default function ScheduleModal({
         setShowAiFeatureFeedbackPrompt(true);
       }
       if (intent === 'blogDraft') {
-        setDraftOnlyMode(!effectiveGuidelineAnalysis);
+        const shouldOpenDraftOnly = hasBlogDraft || !effectiveGuidelineAnalysis;
+        setShowAiActionOptions(false);
+        setDraftOnlyMode(shouldOpenDraftOnly);
         setOpenDraftOnGuidelineInfoOpen(true);
         setShowGuidelineInfoModal(true);
         return;
@@ -682,7 +686,12 @@ export default function ScheduleModal({
 
       handleApplyGuidelineToSchedule(effectiveGuidelineAnalysis);
     },
-    [canShowAiFeatureFeedbackPrompt, effectiveGuidelineAnalysis, handleApplyGuidelineToSchedule]
+    [
+      canShowAiFeatureFeedbackPrompt,
+      effectiveGuidelineAnalysis,
+      handleApplyGuidelineToSchedule,
+      hasBlogDraft,
+    ]
   );
 
   const handleAiFeatureFeedbackSelect = useCallback(
@@ -1489,32 +1498,53 @@ export default function ScheduleModal({
 
               {/* AI 작업 버튼 */}
               <section className="rounded-[28px] bg-white px-5 py-4 shadow-[0_8px_20px_rgba(15,23,42,0.06)] space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAiActionOptions((prev) => !prev)}
-                  className="w-full h-[46px] rounded-[18px] bg-white border border-orange-200 hover:border-orange-300 hover:bg-neutral-50 text-orange-700 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors touch-manipulation active:scale-[0.99]"
-                >
-                  <Sparkles size={16} />
-                  AI로 작성하기 (Beta)
-                </button>
+                {!hideAiComposer && (
+                  <>
+                    <div className="w-full h-[52px] rounded-[18px] border border-orange-200 bg-white px-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-orange-700">
+                        <Sparkles size={16} />
+                        <span className="font-semibold text-[14px]">AI로 작성하기 (Beta)</span>
+                      </div>
+                      <Switch
+                        checked={showAiActionOptions}
+                        onCheckedChange={(checked) => setShowAiActionOptions(Boolean(checked))}
+                        aria-label="AI로 작성하기 옵션 토글"
+                      />
+                    </div>
 
-                {showAiActionOptions && (
-                  <div className="flex flex-col gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectAiAction('autoSchedule')}
-                      className="h-[44px] rounded-[14px] bg-orange-50 border border-orange-200 hover:bg-orange-100 text-orange-700 font-semibold text-[14px] transition-colors touch-manipulation active:scale-[0.99]"
-                    >
-                      자동 일정등록
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectAiAction('blogDraft')}
-                      className="h-[44px] rounded-[14px] bg-orange-50 border border-orange-200 hover:bg-orange-100 text-orange-700 font-semibold text-[14px] transition-colors touch-manipulation active:scale-[0.99]"
-                    >
-                      블로그 글쓰기
-                    </button>
-                  </div>
+                    {showAiActionOptions && (
+                      <div className="flex flex-col gap-2 pt-1">
+                        {!effectiveGuidelineAnalysis && (
+                          <button
+                            type="button"
+                            onClick={() => handleSelectAiAction('autoSchedule')}
+                            className="h-[44px] rounded-[14px] bg-orange-50 border border-orange-200 hover:bg-orange-100 text-orange-700 font-semibold text-[14px] transition-colors touch-manipulation active:scale-[0.99]"
+                          >
+                            자동 일정등록
+                          </button>
+                        )}
+                        {!hasBlogDraft && (
+                          <button
+                            type="button"
+                            onClick={() => handleSelectAiAction('blogDraft')}
+                            className="h-[44px] rounded-[14px] bg-orange-50 border border-orange-200 hover:bg-orange-100 text-orange-700 font-semibold text-[14px] transition-colors touch-manipulation active:scale-[0.99]"
+                          >
+                            블로그 글쓰기
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {hasBlogDraft && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAiAction('blogDraft')}
+                    className="w-full h-[44px] rounded-[18px] bg-white border border-orange-200 hover:border-orange-300 hover:bg-neutral-50 text-orange-700 font-semibold text-[14px] transition-colors"
+                  >
+                    블로그 글보기
+                  </button>
                 )}
 
                 {effectiveGuidelineAnalysis && (
@@ -1523,7 +1553,7 @@ export default function ScheduleModal({
                     onClick={() => setShowGuidelineInfoModal(true)}
                     className="w-full h-[44px] rounded-[18px] bg-white border border-orange-200 hover:border-orange-300 hover:bg-neutral-50 text-orange-700 font-semibold text-[14px] transition-colors"
                   >
-                    📋 분석된 가이드라인 정보 보기 (Beta)
+                    📋 분석된 가이드라인 정보 보기
                   </button>
                 )}
               </section>

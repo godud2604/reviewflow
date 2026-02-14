@@ -102,10 +102,13 @@ function buildDraftAnalysisContext(analysis: any) {
   };
 }
 
-function stripBoldMarkdown(value: string, shouldTrim = true): string {
+function sanitizeDraftOutput(value: string, shouldTrim = true): string {
   const sanitized = value
     .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/\*\*/g, '');
+    .replace(/\*\*/g, '')
+    .replace(/^\s{0,3}#{1,6}\s*/gm, '')
+    .replace(/(^|\s)#([^\s#]+)/g, '$1$2')
+    .replace(/[ \t]{2,}/g, ' ');
   return shouldTrim ? sanitized.trim() : sanitized;
 }
 
@@ -187,46 +190,65 @@ export async function POST(request: NextRequest) {
 
     const sanitizedAnalysis = buildDraftAnalysisContext(analysis);
 
-    const prompt = `
-    당신은 '네이버 블로그 상위 1% 인플루언서'이자 '마케팅 원고 전문가'입니다.
-    제공된 [캠페인 분석 JSON] 데이터를 바탕으로, 독자가 제품/서비스를 사고 싶게 만드는 매력적인 리뷰 초안을 작성하세요.
+    const systemPrompt = `
+    당신은 한국어 리뷰형 블로그 전문 작가입니다.
+    목표는 과장 광고 문구가 아닌 실제 경험처럼 자연스럽고 신뢰감 있는 글을 작성하는 것입니다.
+
+    [문체 규칙]
+    - 1인칭 경험 중심으로, 말하듯 자연스럽게 씁니다.
+    - 장점과 아쉬운 점을 균형 있게 다룹니다.
+    - "결론적으로", "요약하자면" 같은 번역투 접속사는 쓰지 않습니다.
+    - 과장/허위 표현(무조건, 인생맛집, 100% 효과 등)은 쓰지 않습니다.
+
+    [사실성 규칙]
+    - 제공된 JSON에 없는 기능/정보를 지어내지 않습니다.
+    - 체험단/캠페인 운영 정보(모집·선정·마감·원고료·신청·리뷰제출·전화번호·주소·링크·일정/기간)는 본문에 포함하지 않습니다.
+
+    [출력 규칙]
+    - 출력은 순수 텍스트만 사용합니다.
+    - 마크다운 강조(*, **), 마크다운 헤더(#), 해시태그(#키워드)는 절대 사용하지 않습니다.
+    - 소제목을 절대 사용하지 않습니다. 본문은 일반 문단만 작성합니다.
+    - 최종 출력 전체(제목 줄 + 본문, 공백/줄바꿈 포함)는 정확히 ${options.targetLength}자여야 합니다.
+    - 최종 출력 직전에 글자 수를 반드시 다시 계산하고, 정확히 ${options.targetLength}자가 아니면 문장을 늘리거나 줄여서 맞춘 뒤에만 출력합니다.
+    - ${options.targetLength}자에 1자라도 어긋나면 출력하지 말고 내부에서 계속 수정합니다.
+    `;
+
+    const userPrompt = `
+    제공된 [캠페인 분석 JSON] 데이터를 바탕으로, 독자가 제품/서비스를 이해하고 공감할 수 있는 매력적인 리뷰 초안을 작성하세요.
 
     [핵심 지침]
-    1. **자연스러운 스토리텔링**: 단순한 스펙 나열이 아니라, "나의 고민 -> 제품 발견 -> 해결"의 흐름으로 작성하세요. (단, 제품의 스펙/효능은 반드시 JSON 데이터에 기반할 것)
-    2. **가독성 최적화**:
-      - 문단은 3~4줄 내외로 끊어 지루하지 않게 구성하세요.
-    3. **키워드 자연스럽게 녹이기**: 입력된 '반영 키워드'는 본문 내에 최소 3회 이상 자연스럽게 반복해서 언급하세요.
-    4. **금지 사항**: 
-      - "결론적으로", "요약하자면" 같은 딱딱한 번역투 접속사 사용 금지.
-      - 없는 기능을 있는 것처럼 꾸며내는 허위 사실 기재 금지.
-      - 본문에 마크다운 강조("**굵게**" 같은 형식)를 절대 사용하지 말 것.
-      - 체험단/캠페인 운영 정보(모집·선정·마감·포인트·원고료·신청방법·리뷰제출·방문인증·전화번호·주소·링크·일정/기간)는 절대 포함하지 말 것.
+    1. 자연스러운 스토리텔링: 단순 나열이 아니라 "나의 고민 -> 제품 발견 -> 사용/경험 -> 느낀 점" 흐름으로 작성하세요.
+    2. 가독성 최적화: 문단은 3~4줄 내외로 구성하세요.
+    3. 키워드 반영: 필수 키워드는 본문에 최소 3회 이상 자연스럽게 녹여서 언급하세요.
 
     [작성 옵션]
-    - **글자수 가이드**: 공백 포함 약 ${options.targetLength}자 (너무 짧지 않게 풍성하게 묘사)
-    - **리뷰 컨셉(페르소나)**: ${PERSONA_GUIDE[options.persona]} 
-      *(예: 꼼꼼분석형이라면 수치와 성분을 강조, 감성일상형이라면 나의 느낌과 분위기 위주로 서술)*
-    - **글 말투**: ${TONE_GUIDE[options.tone]}
-    - **강조 포인트**: ${emphasis ? emphasis : '제품의 차별점과 실제 사용 만족도 위주'}
-    - **필수 키워드**: ${keywords.length > 0 ? keywords.join(', ') : '없음'}
+    - 목표 글자수: 최종 출력 전체(제목 + 본문) 공백/줄바꿈 포함 정확히 ${options.targetLength}자
+    - 리뷰 컨셉(페르소나): ${PERSONA_GUIDE[options.persona]}
+    - 글 말투: ${TONE_GUIDE[options.tone]}
+    - 강조 포인트: ${emphasis ? emphasis : '제품의 차별점과 실제 사용 만족도 위주'}
+    - 필수 키워드: ${keywords.length > 0 ? keywords.join(', ') : '없음'}
 
     [캠페인 분석 JSON]
     ${JSON.stringify(sanitizedAnalysis, null, 2)}
 
-    ---
     위 설정을 바탕으로 블로그 제목(1개 추천)과 본문을 작성해 주세요.
+    본문은 소제목 없이 자연스러운 문단 흐름으로만 작성하세요.
+    글자 수가 정확히 ${options.targetLength}자인지 최종 점검 후 출력하세요.
     출력 형식:
-    # [제목]
-    (본문 내용...)
-    ※ 출력은 순수 텍스트만 사용하고, 별표(*)를 포함한 마크다운 강조는 사용하지 마세요.
+    제목: (제목 한 줄)
+
+    (본문)
     `;
 
-    const model = client.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = client.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      systemInstruction: systemPrompt,
+    });
     const streamResult = await model.generateContentStream({
       contents: [
         {
           role: 'user',
-          parts: [{ text: prompt }],
+          parts: [{ text: userPrompt }],
         },
       ],
     });
@@ -248,13 +270,13 @@ export async function POST(request: NextRequest) {
               encoder.encode(
                 createNdjsonLine({
                   type: 'token',
-                  text: stripBoldMarkdown(chunkText, false),
+                  text: sanitizeDraftOutput(chunkText, false),
                 })
               )
             );
           }
 
-          const finalText = stripBoldMarkdown(draftBuffer);
+          const finalText = sanitizeDraftOutput(draftBuffer);
           if (!finalText) {
             controller.enqueue(
               encoder.encode(

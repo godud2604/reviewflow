@@ -164,6 +164,10 @@ function sanitizeDraftOutput(input: string): string {
   return input
     .replace(/\*\*(.*?)\*\*/g, '$1')
     .replace(/\*\*/g, '')
+    .replace(/^\s{0,3}#{1,6}\s*/gm, '')
+    .replace(/^\s*소제목\s*:\s*/gm, '')
+    .replace(/(^|\s)#([^\s#]+)/g, '$1$2')
+    .replace(/[ \t]{2,}/g, ' ')
     .trim();
 }
 
@@ -209,6 +213,7 @@ export default function GuidelineInfoModal({
   const draftEmphasisMaxLength = isMembershipUser
     ? DRAFT_EMPHASIS_MAX_LENGTH_MEMBERSHIP
     : DRAFT_EMPHASIS_MAX_LENGTH_FREE;
+  const isDraftEmphasisRequired = draftOnlyMode;
 
   const applyDraftEmphasisLimit = useCallback(
     (value: string) => {
@@ -455,7 +460,7 @@ export default function GuidelineInfoModal({
   };
 
   const handleGenerateDraft = async () => {
-    if (!draftEmphasis.trim()) {
+    if (isDraftEmphasisRequired && !draftEmphasis.trim()) {
       toast({
         title: 'AI가 참고할 내용을 입력해주세요',
         description: 'AI가 블로그 글을 작성할 때 참고하는 필수 항목입니다.',
@@ -463,6 +468,7 @@ export default function GuidelineInfoModal({
       });
       return;
     }
+
     if (draftEmphasis.trim().length > draftEmphasisMaxLength) {
       toast({
         title: '글자 수를 확인해주세요',
@@ -488,6 +494,7 @@ export default function GuidelineInfoModal({
     setDisplayDraftText('');
     setIsTypingDraft(false);
     const effectiveDraftLength = normalizeDraftLengthForFree(draftLength);
+    const trimmedDraftEmphasis = draftEmphasis.trim();
     if (effectiveDraftLength !== draftLength) {
       setDraftLength(effectiveDraftLength);
     }
@@ -504,7 +511,7 @@ export default function GuidelineInfoModal({
             targetLength: effectiveDraftLength,
             tone: draftTone,
             persona: 'balanced',
-            emphasis: draftEmphasis.trim(),
+            emphasis: trimmedDraftEmphasis || undefined,
             keywords: draftKeywords,
           },
         }),
@@ -522,7 +529,7 @@ export default function GuidelineInfoModal({
         targetLength: effectiveDraftLength,
         tone: draftTone,
         persona: 'balanced',
-        emphasis: draftEmphasis.trim(),
+        emphasis: trimmedDraftEmphasis || undefined,
         keywords: draftKeywords,
       };
 
@@ -1075,8 +1082,12 @@ export default function GuidelineInfoModal({
 
                 <div className="space-y-3 pt-1">
                   <p className="text-[14px] font-bold text-[#191F28]">
-                    AI가 참고할 내용 <span className="text-[#FF5722]">(필수)</span>
+                    AI가 참고할 내용{' '}
+                    <span className={cn(isDraftEmphasisRequired ? 'text-[#FF5722]' : 'text-[#8B95A1]')}>
+                      ({isDraftEmphasisRequired ? '필수' : '선택'})
+                    </span>
                   </p>
+                 
                   <Textarea
                     value={draftEmphasis}
                     onChange={(e) => setDraftEmphasis(applyDraftEmphasisLimit(e.target.value))}
@@ -1183,7 +1194,11 @@ export default function GuidelineInfoModal({
                   <div className="flex flex-col items-center text-center gap-6">
                     <Button 
                       onClick={handleGenerateDraft}
-                      disabled={!canGenerateDraftToday || isCheckingDraftQuota || !draftEmphasis.trim()}
+                      disabled={
+                        !canGenerateDraftToday ||
+                        isCheckingDraftQuota ||
+                        (isDraftEmphasisRequired && !draftEmphasis.trim())
+                      }
                       className="w-full h-10 bg-[#FF5722] hover:bg-[#FF7A4C] text-white rounded-[20px] font-bold text-[14px] shadow-lg shadow-orange-100 transition-all active:scale-[0.98]"
                     >
                       {isCheckingDraftQuota
