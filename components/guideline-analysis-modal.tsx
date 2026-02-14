@@ -15,9 +15,11 @@ interface GuidelineAnalysisModalProps {
   onClose: () => void;
   onApply: (analysis: CampaignGuidelineAnalysis, originalGuideline: string) => void;
   scheduleId?: number;
+  isMembershipUser?: boolean;
 }
 
-const MAX_GUIDELINE_LENGTH = 1500;
+const MAX_GUIDELINE_LENGTH_FREE = 1000;
+const MAX_GUIDELINE_LENGTH_MEMBERSHIP = 3000;
 const ANALYSIS_LOADING_STEPS = [
   '가이드라인 내용을 꼼꼼히 읽고 있어요',
   '꼭 지켜야 할 조건들을 찾고 있어요',
@@ -30,6 +32,7 @@ export default function GuidelineAnalysisModal({
   onClose,
   onApply,
   scheduleId,
+  isMembershipUser = false,
 }: GuidelineAnalysisModalProps) {
   const [guideline, setGuideline] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,6 +40,9 @@ export default function GuidelineAnalysisModal({
   const [quotaLoading, setQuotaLoading] = useState(false);
   const [canAnalyzeToday, setCanAnalyzeToday] = useState(true);
   const hasShownLimitToastRef = useRef(false);
+  const maxGuidelineLength = isMembershipUser
+    ? MAX_GUIDELINE_LENGTH_MEMBERSHIP
+    : MAX_GUIDELINE_LENGTH_FREE;
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -80,16 +86,16 @@ export default function GuidelineAnalysisModal({
   }, [loading]);
 
   const handleGuidelineChange = (value: string) => {
-    if (value.length > MAX_GUIDELINE_LENGTH) {
+    if (value.length > maxGuidelineLength) {
       if (!hasShownLimitToastRef.current) {
         toast({
           title: '글자 수가 너무 많아요',
-          description: `${MAX_GUIDELINE_LENGTH}자까지만 분석할 수 있어요.`,
+          description: `${maxGuidelineLength.toLocaleString()}자까지만 분석할 수 있어요.`,
           variant: 'destructive',
         });
         hasShownLimitToastRef.current = true;
       }
-      setGuideline(value.slice(0, MAX_GUIDELINE_LENGTH));
+      setGuideline(value.slice(0, maxGuidelineLength));
       return;
     }
     hasShownLimitToastRef.current = false;
@@ -99,6 +105,7 @@ export default function GuidelineAnalysisModal({
   const handleAnalyze = async () => {
     if (!guideline.trim()) return;
     if (!canAnalyzeToday) return;
+    if (guideline.trim().length > maxGuidelineLength) return;
 
     setLoading(true);
     try {
@@ -131,7 +138,7 @@ export default function GuidelineAnalysisModal({
 
   const currentStep = ANALYSIS_LOADING_STEPS[analysisStepIndex];
   const progressPercent = ((analysisStepIndex + 1) / ANALYSIS_LOADING_STEPS.length) * 100;
-  const isLimitReached = guideline.length >= MAX_GUIDELINE_LENGTH;
+  const isLimitReached = guideline.length >= maxGuidelineLength;
 
   return (
     <div 
@@ -170,7 +177,7 @@ export default function GuidelineAnalysisModal({
 
             <div className="flex items-center gap-3 rounded-[16px] bg-neutral-50 px-4 py-3.5">
               <BookOpen className="w-4 h-4 text-neutral-500 shrink-0" />
-              <span className="text-[13px] font-medium text-neutral-600 leading-tight">가이드라인 본문을 그대로 복사해서 붙여넣어 주세요.</span>
+              <span className="text-[13px] font-medium text-neutral-600 leading-tight">가이드라인 본문을 그대로 복사해서 붙여넣어 주세요. <br/>(최대 1,000자, 멤버십 최대 3,000자)</span>
             </div>
           </div>
 
@@ -225,7 +232,7 @@ export default function GuidelineAnalysisModal({
                       isLimitReached ? "text-red-500 border-red-100" : "text-neutral-400 border-neutral-100"
                     )}
                   >
-                    {guideline.length.toLocaleString()} <span className="mx-0.5 text-neutral-200 font-normal">/</span> {MAX_GUIDELINE_LENGTH.toLocaleString()}
+                    {guideline.length.toLocaleString()} <span className="mx-0.5 text-neutral-200 font-normal">/</span> {maxGuidelineLength.toLocaleString()}
                   </div>
                 </div>
               </div>

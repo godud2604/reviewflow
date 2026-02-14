@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CampaignGuidelineAnalysis, BlogDraftOptions } from '@/types';
 import {
   Dialog,
@@ -60,6 +60,7 @@ interface GuidelineInfoModalProps {
   }) => void;
   openDraftOnOpen?: boolean;
   draftOnlyMode?: boolean;
+  isMembershipUser?: boolean;
 }
 
 /**
@@ -122,6 +123,8 @@ const DRAFT_LOADING_STEPS = [
   '본문 흐름을 구성하고 있어요...',
   '최종 문장을 다듬고 있어요...',
 ] as const;
+const DRAFT_EMPHASIS_MAX_LENGTH_FREE = 500;
+const DRAFT_EMPHASIS_MAX_LENGTH_MEMBERSHIP = 1500;
 
 type DraftLength = (typeof LENGTH_OPTIONS)[number];
 type DraftTone = (typeof TONE_OPTIONS)[number]['key'];
@@ -180,6 +183,7 @@ export default function GuidelineInfoModal({
   onDraftGenerated,
   openDraftOnOpen = false,
   draftOnlyMode = false,
+  isMembershipUser = false,
 }: GuidelineInfoModalProps) {
   const [isDraftOpen, setIsDraftOpen] = useState(false);
   const [guidelineView, setGuidelineView] = useState<'digest' | 'original'>('digest');
@@ -201,6 +205,29 @@ export default function GuidelineInfoModal({
   const [isEditMode, setIsEditMode] = useState(false);
   const [editableAnalysis, setEditableAnalysis] = useState<CampaignGuidelineAnalysis | null>(null);
   const { toast } = useToast();
+  const hasShownEmphasisLimitToastRef = useRef(false);
+  const draftEmphasisMaxLength = isMembershipUser
+    ? DRAFT_EMPHASIS_MAX_LENGTH_MEMBERSHIP
+    : DRAFT_EMPHASIS_MAX_LENGTH_FREE;
+
+  const applyDraftEmphasisLimit = useCallback(
+    (value: string) => {
+      if (value.length <= draftEmphasisMaxLength) {
+        hasShownEmphasisLimitToastRef.current = false;
+        return value;
+      }
+      if (!hasShownEmphasisLimitToastRef.current) {
+        toast({
+          title: '글자 수 제한을 초과했어요',
+          description: `AI가 참고할 내용은 최대 ${draftEmphasisMaxLength.toLocaleString()}자까지 입력할 수 있어요.`,
+          variant: 'destructive',
+        });
+        hasShownEmphasisLimitToastRef.current = true;
+      }
+      return value.slice(0, draftEmphasisMaxLength);
+    },
+    [draftEmphasisMaxLength, toast]
+  );
 
   useEffect(() => {
     if (isOpen) setGuidelineView('digest');
@@ -236,9 +263,13 @@ export default function GuidelineInfoModal({
     }
     setDraftLength(normalizeDraftLengthForFree(initialDraftOptions.targetLength));
     setDraftTone(initialDraftOptions.tone);
-    setDraftEmphasis(initialDraftOptions.emphasis || '');
+    setDraftEmphasis(applyDraftEmphasisLimit(initialDraftOptions.emphasis || ''));
     setDraftKeywords(normalizeDraftKeywords(initialDraftOptions.keywords ?? []));
-  }, [initialDraftOptions, initialDraftText, isOpen]);
+  }, [applyDraftEmphasisLimit, initialDraftOptions, initialDraftText, isOpen]);
+
+  useEffect(() => {
+    setDraftEmphasis((prev) => applyDraftEmphasisLimit(prev));
+  }, [applyDraftEmphasisLimit]);
 
   useEffect(() => {
     if (!isGeneratingDraft) return;
@@ -428,6 +459,14 @@ export default function GuidelineInfoModal({
       toast({
         title: 'AI가 참고할 내용을 입력해주세요',
         description: 'AI가 블로그 글을 작성할 때 참고하는 필수 항목입니다.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (draftEmphasis.trim().length > draftEmphasisMaxLength) {
+      toast({
+        title: '글자 수를 확인해주세요',
+        description: `AI가 참고할 내용은 최대 ${draftEmphasisMaxLength.toLocaleString()}자까지 입력할 수 있어요.`,
         variant: 'destructive',
       });
       return;
@@ -1040,10 +1079,16 @@ export default function GuidelineInfoModal({
                   </p>
                   <Textarea
                     value={draftEmphasis}
-                    onChange={(e) => setDraftEmphasis(e.target.value)}
+                    onChange={(e) => setDraftEmphasis(applyDraftEmphasisLimit(e.target.value))}
                     placeholder="예: 제품 차별점, 꼭 언급할 기능/성분, 20대 여성 대상임을 강조 등"
                     className="border-none bg-[#F9FAFB] rounded-2xl min-h-[80px] focus-visible:ring-1 focus-visible:ring-[#FF5722]"
                   />
+                  <div className="flex items-center justify-between text-[12px] text-[#8B95A1]">
+                    <span>최대 500자, 멤버십 최대 1,500자</span>
+                    <span className={cn(draftEmphasis.length >= draftEmphasisMaxLength && 'text-[#FF5722]')}>
+                      {draftEmphasis.length.toLocaleString()} / {draftEmphasisMaxLength.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
 
                 <button 
