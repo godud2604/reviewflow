@@ -57,6 +57,7 @@ interface GuidelineInfoModalProps {
     draft: string;
     options: BlogDraftOptions;
     updatedAt: string;
+    analysis: CampaignGuidelineAnalysis;
   }) => void;
   openDraftOnOpen?: boolean;
   draftOnlyMode?: boolean;
@@ -503,7 +504,7 @@ export default function GuidelineInfoModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          analysis,
+          analysis: effectiveAnalysis,
           userId,
           scheduleId,
           originalGuideline,
@@ -605,6 +606,7 @@ export default function GuidelineInfoModal({
         draft: nextDraft,
         options: usedOptions,
         updatedAt: streamUpdatedAt,
+        analysis: effectiveAnalysis,
       });
       toast({ title: '초안 생성 완료', description: '분석 데이터를 바탕으로 초안이 생성되었습니다.' });
     } catch (error) {
@@ -1191,11 +1193,14 @@ export default function GuidelineInfoModal({
                       disabled={
                         !canGenerateDraftToday ||
                         isCheckingDraftQuota ||
+                        isGeneratingDraft ||
                         (isDraftEmphasisRequired && !draftEmphasis.trim())
                       }
                       className="w-full h-10 bg-[#FF5722] hover:bg-[#FF7A4C] text-white rounded-[20px] font-bold text-[14px] shadow-lg shadow-orange-100 transition-all active:scale-[0.98]"
                     >
-                      {isCheckingDraftQuota
+                      {isGeneratingDraft
+                        ? '생성중..'
+                        : isCheckingDraftQuota
                         ? '사용 가능 여부 확인 중...'
                         : canGenerateDraftToday
                           ? '블로그 글 생성'

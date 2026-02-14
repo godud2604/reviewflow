@@ -108,6 +108,7 @@ export default function ScheduleModal({
   isOpen,
   onClose,
   onSave,
+  onAutoSaveAiData,
   onDelete,
   onUpdateFiles,
   schedule,
@@ -121,6 +122,7 @@ export default function ScheduleModal({
   isOpen: boolean;
   onClose: () => void;
   onSave: (schedule: Schedule) => Promise<boolean>;
+  onAutoSaveAiData?: (id: number, updates: Partial<Schedule>) => Promise<boolean>;
   onDelete: (id: number) => void;
   onUpdateFiles?: (id: number, files: GuideFile[]) => Promise<void>;
   schedule?: Schedule;
@@ -637,7 +639,7 @@ export default function ScheduleModal({
   );
 
   const applyGuidelineAnalysis = useCallback(
-    (analysis: CampaignGuidelineAnalysis, originalGuideline: string) => {
+    async (analysis: CampaignGuidelineAnalysis, originalGuideline: string) => {
       setGuidelineAnalysis(analysis);
       setOriginalGuidelineText(originalGuideline);
       setBlogDraftText('');
@@ -650,12 +652,36 @@ export default function ScheduleModal({
       setDraftOnlyMode(false);
       setAiActionIntent(null);
 
+      if (schedule?.id && onAutoSaveAiData) {
+        const saved = await onAutoSaveAiData(schedule.id, {
+          guidelineAnalysis: analysis,
+          originalGuidelineText: originalGuideline,
+          blogDraft: '',
+          blogDraftOptions: null,
+          blogDraftUpdatedAt: '',
+        });
+
+        if (saved) {
+          toast({
+            title: '성공',
+            description: '가이드라인 분석 결과가 바로 저장되었습니다.',
+          });
+        } else {
+          toast({
+            title: '분석 완료',
+            description: '분석은 완료됐지만 자동 저장에 실패했어요. 저장 버튼으로 반영해주세요.',
+            variant: 'destructive',
+          });
+        }
+        return;
+      }
+
       toast({
         title: '성공',
         description: '가이드라인이 분석되었습니다. 일정에는 아직 반영되지 않았습니다.',
       });
     },
-    [aiActionIntent, toast]
+    [aiActionIntent, onAutoSaveAiData, schedule?.id, toast]
   );
 
   const handleSelectAiAction = useCallback(
@@ -3469,10 +3495,31 @@ export default function ScheduleModal({
         scheduleId={schedule?.id}
         initialDraftText={blogDraftText}
         initialDraftOptions={blogDraftOptions}
-        onDraftGenerated={({ draft, options, updatedAt }) => {
+        onDraftGenerated={({ draft, options, updatedAt, analysis }) => {
           setBlogDraftText(draft);
           setBlogDraftOptions(options);
           setBlogDraftUpdatedAt(updatedAt);
+          setGuidelineAnalysis(analysis);
+
+          if (schedule?.id && onAutoSaveAiData) {
+            void (async () => {
+              const saved = await onAutoSaveAiData(schedule.id, {
+                guidelineAnalysis: analysis,
+                originalGuidelineText: effectiveOriginalGuidelineText,
+                blogDraft: draft,
+                blogDraftOptions: options,
+                blogDraftUpdatedAt: updatedAt,
+              });
+
+              if (!saved) {
+                toast({
+                  title: '자동 저장 실패',
+                  description: '블로그 초안은 생성됐지만 자동 저장에 실패했어요. 저장 버튼으로 반영해주세요.',
+                  variant: 'destructive',
+                });
+              }
+            })();
+          }
         }}
         onApplyToSchedule={handleApplyGuidelineToSchedule}
         openDraftOnOpen={openDraftOnGuidelineInfoOpen}
