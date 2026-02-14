@@ -645,14 +645,9 @@ export default function ScheduleModal({
       setBlogDraftUpdatedAt(undefined);
       setShowGuidelineAnalysisModal(false);
 
-      if (aiActionIntent === 'autoSchedule') {
-        applyGuidelineDataToSchedule(analysis);
-        setAiActionIntent(null);
-        return;
-      }
-
       setShowGuidelineInfoModal(true);
       setOpenDraftOnGuidelineInfoOpen(aiActionIntent === 'blogDraft');
+      setDraftOnlyMode(false);
       setAiActionIntent(null);
 
       toast({
@@ -660,7 +655,7 @@ export default function ScheduleModal({
         description: '가이드라인이 분석되었습니다. 일정에는 아직 반영되지 않았습니다.',
       });
     },
-    [aiActionIntent, applyGuidelineDataToSchedule, toast]
+    [aiActionIntent, toast]
   );
 
   const handleSelectAiAction = useCallback(
@@ -669,9 +664,8 @@ export default function ScheduleModal({
         setShowAiFeatureFeedbackPrompt(true);
       }
       if (intent === 'blogDraft') {
-        const shouldOpenDraftOnly = hasBlogDraft || !effectiveGuidelineAnalysis;
         setShowAiActionOptions(false);
-        setDraftOnlyMode(shouldOpenDraftOnly);
+        setDraftOnlyMode(true);
         setOpenDraftOnGuidelineInfoOpen(true);
         setShowGuidelineInfoModal(true);
         return;
@@ -690,7 +684,6 @@ export default function ScheduleModal({
       canShowAiFeatureFeedbackPrompt,
       effectiveGuidelineAnalysis,
       handleApplyGuidelineToSchedule,
-      hasBlogDraft,
     ]
   );
 

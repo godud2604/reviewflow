@@ -978,12 +978,6 @@ export default function GuidelineInfoModal({
 
                   {guidelineView === 'digest' ? (
                     <div className="space-y-6">
-                      {digestSummary && (
-                        <div className="rounded-2xl bg-[#F9FAFB] border border-gray-100 p-4 space-y-2">
-                          <p className="text-[13px] font-bold text-[#6B7684]">한눈에 요약</p>
-                          <p className="text-[14px] text-[#333D4B] leading-relaxed whitespace-pre-wrap">{digestSummary}</p>
-                        </div>
-                      )}
                       {analysisKeywords.length > 0 && (
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
