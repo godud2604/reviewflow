@@ -1886,8 +1886,8 @@ export default function ScheduleModal({
                               onClick={() => setFormData({ ...formData, platform })}
                               className={`text-[11px] px-3 py-1.5 rounded-[16px] font-semibold transition-colors ${
                                 isActive
-                                  ? 'bg-[#FBEAE2] text-[#C2410C]'
-                                  : 'bg-neutral-50 border border-neutral-200 text-[#4E5968]'
+                                  ? 'bg-orange-100 text-[#FF5A1F]'
+                                  : 'bg-[#F1F3F6] text-[#5B6573]'
                               }`}
                             >
                               {platform}
@@ -1924,8 +1924,8 @@ export default function ScheduleModal({
                                 onClick={() => setFormData((prev) => ({ ...prev, category }))}
                                 className={`px-3 py-1.5 rounded-[16px] text-[11px] font-semibold transition-colors ${
                                   isActive
-                                    ? 'bg-[#FBEAE2] text-[#C2410C]'
-                                    : 'bg-neutral-50 border border-neutral-200 text-[#4E5968]'
+                                    ? 'bg-orange-100 text-[#FF5A1F]'
+                                    : 'bg-[#F1F3F6] text-[#5B6573]'
                                 }`}
                               >
                                 <span className="truncate max-w-[120px]">
@@ -1965,8 +1965,8 @@ export default function ScheduleModal({
                                 onClick={() => handleToggleChannel(channel)}
                                 className={`text-[11px] px-2.5 py-1 rounded-[16px] font-semibold transition-colors ${
                                   isSelected
-                                    ? 'bg-[#FBEAE2] text-[#C2410C]'
-                                    : 'bg-neutral-50 border border-neutral-200 text-[#4E5968]'
+                                    ? 'bg-orange-100 text-[#FF5A1F]'
+                                    : 'bg-[#F1F3F6] text-[#5B6573]'
                                 }`}
                               >
                                 {channel}
@@ -2438,7 +2438,7 @@ export default function ScheduleModal({
                                 className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                                   detail.type === 'EXPENSE'
                                     ? 'bg-[#fee2e2]/70 text-[#ef4444]'
-                                    : 'bg-[#FBEAE2] text-[#C2410C]'
+                                    : 'bg-[#F5E8D2] text-[#FF5A1F]'
                                 }`}
                               >
                                 {detail.type === 'EXPENSE' ? '지출' : '수익'}
