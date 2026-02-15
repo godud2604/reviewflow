@@ -151,11 +151,11 @@ export default function GuidelineAnalysisModal({
 
   return (
     <div 
-      className="fixed inset-0 z-[250] bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[250] bg-black/60 sm:backdrop-blur-[2px] flex items-start sm:items-center justify-center p-2 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in duration-200"
       style={{ zIndex: Z_INDEX.guidelineAnalysisBackdrop }}
     >
       <div 
-        className="bg-white rounded-[24px] w-full max-w-lg max-h-[85vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
+        className="bg-white rounded-[20px] sm:rounded-[24px] w-full max-w-lg h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] sm:max-h-[85vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
         style={{ zIndex: Z_INDEX.guidelineAnalysisModal }}
       >
         {/* Header */}

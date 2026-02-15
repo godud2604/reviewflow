@@ -669,11 +669,11 @@ export default function GuidelineInfoModal({
       {!draftOnlyMode && (
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogContent
-            className="w-[calc(100vw-1.25rem)] max-w-[540px] h-[85vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col shadow-2xl"
-            style={{ zIndex: Z_INDEX.guidelineAnalysisModal, borderRadius: '32px' }}
+            className="top-2 translate-y-0 sm:top-[50%] sm:translate-y-[-50%] w-[calc(100vw-1rem)] max-w-[540px] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] sm:h-[85vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col rounded-[24px] sm:rounded-[32px] shadow-2xl"
+            style={{ zIndex: Z_INDEX.guidelineAnalysisModal }}
             onInteractOutside={(e) => e.preventDefault()}
           >
-          <DialogHeader className="relative p-4 pr-14 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+          <DialogHeader className="relative p-4 pr-14 bg-white sm:bg-white/80 sm:backdrop-blur-md sticky top-0 z-10">
             <DialogTitle className="sr-only">가이드라인 정보</DialogTitle>
             <button
               type="button"
@@ -686,7 +686,7 @@ export default function GuidelineInfoModal({
           </DialogHeader>
 
           <div className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full">
+            <ScrollArea className="h-full overscroll-contain">
               <div className="px-3 sm:px-5 space-y-4 pb-28">
                 {hasCoreInfoData && (
                 <SectionCard
@@ -1058,7 +1058,7 @@ export default function GuidelineInfoModal({
       >
         <DialogContent 
           showCloseButton={false}
-          className="w-[calc(100vw-1rem)] max-w-[600px] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] sm:h-[90vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col rounded-[24px] sm:rounded-[32px] shadow-2xl"
+          className="top-2 translate-y-0 sm:top-[50%] sm:translate-y-[-50%] w-[calc(100vw-1rem)] max-w-[600px] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] sm:h-[90vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col rounded-[24px] sm:rounded-[32px] shadow-2xl"
           style={{ zIndex: Z_INDEX.guidelineAnalysisModal + 1 }}
         >
           <DialogHeader className="relative p-4 pr-14 bg-white">
@@ -1073,7 +1073,7 @@ export default function GuidelineInfoModal({
             </button>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 min-h-0">
+          <ScrollArea className="flex-1 min-h-0 overscroll-contain">
             <div className="py-1 px-4 sm:px-5 space-y-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <div className="bg-white rounded-[24px] p-6 space-y-3 border border-gray-100">
                 <p className="text-[14px] font-bold text-[#191F28]">키워드 설정</p>
