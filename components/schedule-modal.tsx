@@ -1566,16 +1566,7 @@ export default function ScheduleModal({
                   </>
                 )}
 
-                {hasBlogDraft && (
-                  <button
-                    type="button"
-                    onClick={() => handleSelectAiAction('blogDraft')}
-                    className="w-full h-[44px] rounded-[18px] bg-white border border-orange-200 hover:border-orange-300 hover:bg-neutral-50 text-orange-700 font-semibold text-[14px] transition-colors"
-                  >
-                    블로그 글보기
-                  </button>
-                )}
-
+            
                 {effectiveGuidelineAnalysis && (
                   <button
                     type="button"
@@ -1585,6 +1576,16 @@ export default function ScheduleModal({
                     📋 분석된 가이드라인 정보 보기
                   </button>
                 )}
+                    {hasBlogDraft && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAiAction('blogDraft')}
+                    className="w-full h-[44px] rounded-[18px] bg-white border border-orange-200 hover:border-orange-300 hover:bg-neutral-50 text-orange-700 font-semibold text-[14px] transition-colors"
+                  >
+                    블로그 글보기
+                  </button>
+                )}
+
               </section>
 
               <section
