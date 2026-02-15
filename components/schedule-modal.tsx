@@ -171,6 +171,7 @@ export default function ScheduleModal({
   const [aiFeatureFeedbackText, setAiFeatureFeedbackText] = useState('');
   const [isAiFeatureFeedbackSubmitting, setIsAiFeatureFeedbackSubmitting] = useState(false);
   const [canShowAiFeatureFeedbackPrompt, setCanShowAiFeatureFeedbackPrompt] = useState(false);
+  const [hasUsedAiFeatureForFeedbackPrompt, setHasUsedAiFeatureForFeedbackPrompt] = useState(false);
   const [aiActionIntent, setAiActionIntent] = useState<AiActionIntent>(null);
   const [openDraftOnGuidelineInfoOpen, setOpenDraftOnGuidelineInfoOpen] = useState(false);
   const [draftOnlyMode, setDraftOnlyMode] = useState(false);
@@ -215,6 +216,7 @@ export default function ScheduleModal({
     setAiFeatureFeedbackChoice(null);
     setAiFeatureFeedbackText('');
     setIsAiFeatureFeedbackSubmitting(false);
+    setHasUsedAiFeatureForFeedbackPrompt(false);
   }, [isOpen]);
   const [showCompletionOnboarding, setShowCompletionOnboarding] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<Schedule['category'][]>([]);
@@ -640,6 +642,7 @@ export default function ScheduleModal({
 
   const applyGuidelineAnalysis = useCallback(
     async (analysis: CampaignGuidelineAnalysis, originalGuideline: string) => {
+      setHasUsedAiFeatureForFeedbackPrompt(true);
       setGuidelineAnalysis(analysis);
       setOriginalGuidelineText(originalGuideline);
       setBlogDraftText('');
@@ -686,9 +689,6 @@ export default function ScheduleModal({
 
   const handleSelectAiAction = useCallback(
     (intent: Exclude<AiActionIntent, null>) => {
-      if (canShowAiFeatureFeedbackPrompt) {
-        setShowAiFeatureFeedbackPrompt(true);
-      }
       if (intent === 'blogDraft') {
         setShowAiActionOptions(false);
         setDraftOnlyMode(true);
@@ -707,7 +707,6 @@ export default function ScheduleModal({
       handleApplyGuidelineToSchedule(effectiveGuidelineAnalysis);
     },
     [
-      canShowAiFeatureFeedbackPrompt,
       effectiveGuidelineAnalysis,
       handleApplyGuidelineToSchedule,
     ]
@@ -818,6 +817,17 @@ export default function ScheduleModal({
     setShowGuidelineAnalysisModal(false);
     setAiActionIntent(null);
   }, []);
+
+  const handleCloseGuidelineInfoModal = useCallback(() => {
+    setShowGuidelineInfoModal(false);
+    setOpenDraftOnGuidelineInfoOpen(false);
+    setDraftOnlyMode(false);
+
+    if (canShowAiFeatureFeedbackPrompt && hasUsedAiFeatureForFeedbackPrompt) {
+      setShowAiFeatureFeedbackPrompt(true);
+      setHasUsedAiFeatureForFeedbackPrompt(false);
+    }
+  }, [canShowAiFeatureFeedbackPrompt, hasUsedAiFeatureForFeedbackPrompt]);
 
   const handleSave = async (overrideFormData?: Partial<Schedule>) => {
     if (isSubmittingRef.current) return;
@@ -3481,11 +3491,7 @@ export default function ScheduleModal({
       {/* 가이드라인 정보 모달 */}
       <GuidelineInfoModal
         isOpen={showGuidelineInfoModal}
-        onClose={() => {
-          setShowGuidelineInfoModal(false);
-          setOpenDraftOnGuidelineInfoOpen(false);
-          setDraftOnlyMode(false);
-        }}
+        onClose={handleCloseGuidelineInfoModal}
         analysis={draftAnalysisSource}
         originalGuideline={effectiveOriginalGuidelineText}
         platformOptions={allPlatforms}
@@ -3496,6 +3502,7 @@ export default function ScheduleModal({
         initialDraftText={blogDraftText}
         initialDraftOptions={blogDraftOptions}
         onDraftGenerated={({ draft, options, updatedAt, analysis }) => {
+          setHasUsedAiFeatureForFeedbackPrompt(true);
           setBlogDraftText(draft);
           setBlogDraftOptions(options);
           setBlogDraftUpdatedAt(updatedAt);
