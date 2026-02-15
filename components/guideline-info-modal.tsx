@@ -1082,8 +1082,8 @@ export default function GuidelineInfoModal({
             </button>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 min-h-0 overscroll-contain">
-            <div className="w-full min-w-0 py-1 px-4 sm:px-5 space-y-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <ScrollArea className="flex-1 min-h-0 overflow-x-hidden overscroll-contain">
+            <div className="w-full min-w-0 overflow-x-hidden py-1 px-4 sm:px-5 space-y-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <div className="w-full min-w-0 bg-white rounded-[24px] p-6 space-y-3 border border-gray-100">
                 <p className="text-[14px] font-bold text-[#191F28]">키워드 설정</p>
                   {draftKeywords.length > 0 && (
@@ -1096,15 +1096,15 @@ export default function GuidelineInfoModal({
                       ))}
                     </div>
                   )}
-                <div className="flex gap-2 mb-4">
+                <div className="mb-4 flex min-w-0 flex-col gap-2 sm:flex-row">
                   <input 
                     value={keywordInput}
                     onChange={(e) => setKeywordInput(e.target.value)}
                     onKeyDown={handleKeywordInputKeyDown}
                     placeholder="해시태그 추가 후 엔터"
-                    className="flex-1 h-12 bg-[#F9FAFB] border-none rounded-xl px-4 text-[16px] sm:text-[14px] focus:ring-1 focus:ring-[#FF5722] outline-none"
+                    className="h-12 w-full min-w-0 bg-[#F9FAFB] border-none rounded-xl px-4 text-[16px] sm:text-[14px] focus:ring-1 focus:ring-[#FF5722] outline-none"
                   />
-                  <Button onClick={handleAddKeyword} variant="outline" className="h-12 rounded-xl border-gray-200 font-bold text-[#4E5968]">추가</Button>
+                  <Button onClick={handleAddKeyword} variant="outline" className="h-12 w-full rounded-xl border-gray-200 font-bold text-[#4E5968] sm:w-auto sm:shrink-0">추가</Button>
                 </div>
 
                 <div className="space-y-3 pt-1">
@@ -1189,9 +1189,9 @@ export default function GuidelineInfoModal({
               </div>
 
                 {draftText ? (
-                  <div className="bg-white rounded-[24px] p-6 flex flex-col justify-center border border-gray-100 shadow-sm">
+                  <div className="w-full min-w-0 bg-white rounded-[24px] p-6 flex flex-col justify-center border border-gray-100 shadow-sm">
                     <div className="space-y-4 animate-in fade-in">
-                      <div className="text-[15px] text-[#333D4B] leading-loose whitespace-pre-wrap font-medium">
+                      <div className="min-w-0 break-words text-[15px] text-[#333D4B] leading-loose whitespace-pre-wrap font-medium">
                         {displayDraftText}
                         {isTypingDraft && <span className="animate-pulse text-[#FF5722]">|</span>}
                       </div>
