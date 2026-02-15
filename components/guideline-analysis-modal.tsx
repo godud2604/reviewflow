@@ -85,6 +85,27 @@ export default function GuidelineAnalysisModal({
     return () => window.clearInterval(timer);
   }, [loading]);
 
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    const { body, documentElement } = document;
+    const prevBodyOverflow = body.style.overflow;
+    const prevHtmlOverflow = documentElement.style.overflow;
+    const prevBodyOverscroll = body.style.overscrollBehavior;
+    const prevHtmlOverscroll = documentElement.style.overscrollBehavior;
+
+    body.style.overflow = 'hidden';
+    documentElement.style.overflow = 'hidden';
+    body.style.overscrollBehavior = 'none';
+    documentElement.style.overscrollBehavior = 'none';
+
+    return () => {
+      body.style.overflow = prevBodyOverflow;
+      documentElement.style.overflow = prevHtmlOverflow;
+      body.style.overscrollBehavior = prevBodyOverscroll;
+      documentElement.style.overscrollBehavior = prevHtmlOverscroll;
+    };
+  }, [isOpen]);
+
   const handleGuidelineChange = (value: string) => {
     if (value.length > maxGuidelineLength) {
       if (!hasShownLimitToastRef.current) {
@@ -151,12 +172,16 @@ export default function GuidelineAnalysisModal({
 
   return (
     <div 
-      className="fixed inset-0 z-[250] bg-black/60 flex items-start sm:items-center justify-center p-2 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in duration-200"
+      className="fixed inset-0 z-[250] bg-black/60 flex items-start sm:items-center justify-center p-2 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))]"
       style={{ zIndex: Z_INDEX.guidelineAnalysisBackdrop }}
     >
       <div 
-        className="bg-white rounded-[20px] sm:rounded-[24px] w-full max-w-lg h-[calc(100svh-1rem)] max-h-[calc(100svh-1rem)] sm:max-h-[85vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
-        style={{ zIndex: Z_INDEX.guidelineAnalysisModal }}
+        className="bg-white rounded-[20px] sm:rounded-[24px] w-full max-w-lg h-[calc(100svh-1rem)] max-h-[calc(100svh-1rem)] sm:max-h-[85vh] shadow-2xl overflow-hidden flex flex-col transform-gpu"
+        style={{
+          zIndex: Z_INDEX.guidelineAnalysisModal,
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+        }}
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-neutral-50 flex justify-between items-center shrink-0">
@@ -222,13 +247,16 @@ export default function GuidelineAnalysisModal({
           ) : (
             <div className="space-y-3 mb-4">
               <label className="text-[14px] font-bold text-neutral-800 px-0.5">가이드라인 본문</label>
-              <div className="mt-2 relative group border border-neutral-200 rounded-[20px] overflow-hidden bg-white focus-within:ring-4 focus-within:ring-orange-50 focus-within:border-orange-200 transition-all duration-200">
+              <div className="mt-2 relative group border border-neutral-200 rounded-[20px] overflow-hidden bg-white">
                 <Textarea
                   value={guideline}
                   onChange={(e) => handleGuidelineChange(e.target.value)}
                   placeholder="브랜드명, 필수 키워드, 마감일 등 전체 내용을 적어주세요."
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="off"
                   className={cn(
-                    "min-h-[260px] max-h-[360px] p-5 pb-16 text-[15px] leading-relaxed border-none focus-visible:ring-0 resize-none overflow-y-auto placeholder:text-neutral-300",
+                    "min-h-[260px] max-h-[360px] p-5 pb-16 text-[15px] leading-relaxed border-none focus-visible:ring-0 resize-none overflow-y-auto placeholder:text-neutral-300 transform-gpu",
                     isLimitReached && "bg-red-50/10"
                   )}
                   disabled={loading}
