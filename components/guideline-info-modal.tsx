@@ -211,6 +211,7 @@ export default function GuidelineInfoModal({
   const [editableAnalysis, setEditableAnalysis] = useState<CampaignGuidelineAnalysis | null>(null);
   const { toast } = useToast();
   const hasShownEmphasisLimitToastRef = useRef(false);
+  const draftStreamBottomRef = useRef<HTMLDivElement | null>(null);
   const draftEmphasisMaxLength = isMembershipUser
     ? DRAFT_EMPHASIS_MAX_LENGTH_MEMBERSHIP
     : DRAFT_EMPHASIS_MAX_LENGTH_FREE;
@@ -293,6 +294,14 @@ export default function GuidelineInfoModal({
       setDisplayDraftText(draftText);
     }
   }, [draftText, isTypingDraft]);
+
+  useEffect(() => {
+    if (!isTypingDraft) return;
+    const frame = window.requestAnimationFrame(() => {
+      draftStreamBottomRef.current?.scrollIntoView({ block: 'end' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [displayDraftText, isTypingDraft]);
 
   useEffect(() => {
     if (!isOpen || !analysis) return;
@@ -1229,6 +1238,7 @@ export default function GuidelineInfoModal({
                     </Button>
                   </div>
                 )}
+                <div ref={draftStreamBottomRef} aria-hidden="true" />
               </div>
           </ScrollArea>
 
