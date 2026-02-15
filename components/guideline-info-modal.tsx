@@ -52,6 +52,7 @@ interface GuidelineInfoModalProps {
     analysis: CampaignGuidelineAnalysis;
   }) => void;
   openDraftOnOpen?: boolean;
+  defaultPanelOnOpen?: 'core' | 'guideline';
   draftOnlyMode?: boolean;
   isMembershipUser?: boolean;
 }
@@ -194,10 +195,11 @@ export default function GuidelineInfoModal({
   initialDraftOptions,
   onDraftGenerated,
   openDraftOnOpen = false,
+  defaultPanelOnOpen = 'core',
   draftOnlyMode = false,
   isMembershipUser = false,
 }: GuidelineInfoModalProps) {
-  const [activePanel, setActivePanel] = useState<'guideline' | 'draft'>('guideline');
+  const [activePanel, setActivePanel] = useState<'core' | 'guideline' | 'draft'>('core');
   const [guidelineView, setGuidelineView] = useState<'digest' | 'original'>('digest');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
@@ -347,10 +349,10 @@ export default function GuidelineInfoModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    setActivePanel(openDraftOnOpen || draftOnlyMode ? 'draft' : 'guideline');
+    setActivePanel(openDraftOnOpen || draftOnlyMode ? 'draft' : defaultPanelOnOpen);
     if (!openDraftOnOpen) setShowAdvanced(false);
     setCopiedDraft(false);
-  }, [draftOnlyMode, isOpen, openDraftOnOpen]);
+  }, [defaultPanelOnOpen, draftOnlyMode, isOpen, openDraftOnOpen]);
 
   useEffect(() => {
     if (!isOpen || typeof window === 'undefined') return;
@@ -497,14 +499,6 @@ export default function GuidelineInfoModal({
 
   const handleClose = () => {
     onClose();
-  };
-
-  const handleBackToGuideline = () => {
-    if (draftOnlyMode) {
-      onClose();
-      return;
-    }
-    setActivePanel('guideline');
   };
 
   const handleGenerateDraft = async () => {
@@ -725,9 +719,7 @@ export default function GuidelineInfoModal({
         spellCheck={false}
       >
         <div className="relative border-b border-black/5 bg-white px-4 py-3.5 sm:px-5">
-          <h2 className="text-[15px] font-bold text-[#111827]">
-            {activePanel === 'draft' ? 'AI 블로그 글쓰기' : '가이드라인'}
-          </h2>
+        
           <button
             type="button"
             onClick={handleClose}
@@ -737,12 +729,22 @@ export default function GuidelineInfoModal({
             <X className="h-5 w-5" />
           </button>
           {!draftOnlyMode ? (
-            <div className="mt-3 flex rounded-full bg-[#F8FAFC] p-1">
+            <div className="mt-10 flex rounded-full bg-[#F8FAFC] p-1">
+              <button
+                type="button"
+                onClick={() => setActivePanel('core')}
+                className={cn(
+                  'h-9 flex-1 rounded-full px-2 text-[12px] sm:text-[13px] font-semibold transition-colors',
+                  activePanel === 'core' ? 'bg-white text-[#111827] shadow-sm' : 'text-[#6B7280]'
+                )}
+              >
+                등록 정보
+              </button>
               <button
                 type="button"
                 onClick={() => setActivePanel('guideline')}
                 className={cn(
-                  'h-9 flex-1 rounded-full text-[13px] font-semibold transition-colors',
+                  'h-9 flex-1 rounded-full px-2 text-[12px] sm:text-[13px] font-semibold transition-colors',
                   activePanel === 'guideline' ? 'bg-white text-[#111827] shadow-sm' : 'text-[#6B7280]'
                 )}
               >
@@ -752,31 +754,210 @@ export default function GuidelineInfoModal({
                 type="button"
                 onClick={() => setActivePanel('draft')}
                 className={cn(
-                  'h-9 flex-1 rounded-full text-[13px] font-semibold transition-colors',
+                  'h-9 flex-1 rounded-full px-2 text-[12px] sm:text-[13px] font-semibold transition-colors',
                   activePanel === 'draft' ? 'bg-white text-[#111827] shadow-sm' : 'text-[#6B7280]'
                 )}
               >
-                블로그 초안
+                블로그 글쓰기
               </button>
             </div>
           ) : null}
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-          {activePanel === 'guideline' ? (
-            <div className="space-y-4 px-3 pb-20 pt-4 sm:px-5">
-              {hasCoreInfoData && (
-                <SectionCard
-                  title="핵심 정보"
-                  headerAction={
+          {activePanel === 'draft' ? (
+            <div className="w-full min-w-0 overflow-x-hidden py-4 px-4 sm:px-5 space-y-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <div className="w-full min-w-0 bg-white rounded-[24px] p-6 space-y-3 border border-gray-100">
+                <p className="text-[14px] font-bold text-[#191F28]">키워드 설정</p>
+                {draftKeywords.length > 0 && (
+                  <div className="min-h-[48px] max-h-[180px] overflow-y-auto overscroll-contain rounded-xl bg-[#F9FAFB] border border-dashed border-gray-200 px-3 py-2 flex flex-wrap content-start items-center gap-2">
+                    {draftKeywords.map((k) => (
+                      <span key={k} className="inline-flex w-fit max-w-full min-w-0 items-center gap-1 px-3 py-1.5 bg-white text-[#FF5722] rounded-full text-[13px] font-bold border border-orange-100">
+                        <span className="min-w-0 break-all whitespace-normal">{k}</span>
+                        <X className="w-3 h-3 shrink-0 cursor-pointer" onClick={() => handleRemoveKeyword(k)} />
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="mb-4 flex min-w-0 flex gap-2 sm:flex-row">
+                  <input
+                    value={keywordInput}
+                    spellCheck={false}
+                    autoCorrect="off"
+                    onChange={(e) => setKeywordInput(e.target.value)}
+                    onKeyDown={handleKeywordInputKeyDown}
+                    placeholder="해시태그 추가 후 엔터"
+                    className="flex-9 h-12 w-full min-w-0 bg-[#F9FAFB] border-none rounded-xl px-4 text-[16px] sm:text-[14px] focus:ring-1 focus:ring-[#FF5722] outline-none"
+                  />
+                  <Button onClick={handleAddKeyword} variant="outline" className="flex-1 -12 w-full rounded-xl border-gray-200 font-bold text-[#4E5968] sm:w-auto sm:shrink-0">
+                    추가
+                  </Button>
+                </div>
+                <div className="space-y-3 pt-1">
+                  <p className="text-[14px] font-bold text-[#191F28]">
+                    AI가 참고할 내용{' '}
+                    <span className={cn(isDraftEmphasisRequired ? 'text-[#FF5722]' : 'text-[#8B95A1]')}>
+                      ({isDraftEmphasisRequired ? '필수' : '선택'})
+                    </span>
+                  </p>
+                  <Textarea
+                    value={draftEmphasis}
+                    spellCheck={false}
+                    onChange={(e) => setDraftEmphasis(applyDraftEmphasisLimit(e.target.value))}
+                    placeholder="예: 제품 차별점, 꼭 언급할 기능/성분, 20대 여성 대상임을 강조 등"
+                    className="border-none bg-[#F9FAFB] rounded-2xl min-h-[100px] focus-visible:ring-1 focus-visible:ring-[#FF5722]"
+                  />
+                  <div className="flex items-center justify-between text-[12px] text-[#8B95A1]">
+                    <span>최대 500자, 멤버십 최대 1,500자</span>
+                    <span className={cn(draftEmphasis.length >= draftEmphasisMaxLength && 'text-[#FF5722]')}>
+                      {draftEmphasis.length.toLocaleString()} / {draftEmphasisMaxLength.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center justify-between w-full py-4 border-t border-gray-50 mt-2 text-[14px] font-bold text-[#4E5968]"
+                >
+                  <div className="flex items-center gap-2">
+                    <Settings2 className="w-4 h-4" /> 고급 설정 (말투, 글자수 등)
+                  </div>
+                  <ChevronDown className={cn('w-4 h-4 transition-transform', showAdvanced && 'rotate-180')} />
+                </button>
+                {showAdvanced && (
+                  <div className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-2">
+                    <div className="space-y-4">
+                      <div className="space-y-3">
+                        <p className="text-[14px] font-bold text-[#191F28]">글자수</p>
+                        <div className="flex flex-wrap gap-2">
+                          {LENGTH_OPTIONS.map((l) => {
+                            const isProLocked = l >= 1500;
+                            return (
+                              <button
+                                key={l}
+                                onClick={() => {
+                                  if (!isProLocked) setDraftLength(l);
+                                }}
+                                disabled={isProLocked}
+                                className={cn(
+                                  'px-3 py-2 rounded-lg text-[12px] font-bold border inline-flex items-center gap-1.5',
+                                  draftLength === l ? 'bg-[#191F28] text-white' : 'bg-white border-gray-100 text-[#8B95A1]',
+                                  isProLocked && 'opacity-55 cursor-not-allowed bg-gray-50 text-[#B0B8C1]'
+                                )}
+                              >
+                                {l}자
+                                {isProLocked && (
+                                  <span
+                                    className="inline-flex items-center justify-center text-[12px] leading-none"
+                                    aria-label="프로 전용"
+                                    title="PRO 전용"
+                                  >
+                                    👑
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <p className="text-[14px] font-bold text-[#191F28]">말투</p>
+                        <div className="flex flex-wrap gap-2">
+                          {TONE_OPTIONS.map((t) => (
+                            <button
+                              key={t.key}
+                              onClick={() => setDraftTone(t.key)}
+                              className={cn(
+                                'px-3 py-2 rounded-lg text-[12px] font-bold border',
+                                draftTone === t.key ? 'bg-[#191F28] text-white' : 'bg-white border-gray-100 text-[#8B95A1]'
+                              )}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {draftText ? (
+                <div className="w-full min-w-0 bg-white rounded-[24px] p-6 flex flex-col justify-center border border-gray-100 shadow-sm">
+                  <div className="space-y-4 animate-in fade-in">
+                    <DraftDisplayText text={displayDraftText} isTyping={isTypingDraft} />
                     <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsEditMode((prev) => !prev)}
-                      className="h-8.5 rounded-full text-[12px] font-bold text-[#4E5968] bg-white hover:bg-[#F9FAFB] transition-colors"
+                      onClick={handleCopyDraft}
+                      disabled={isGeneratingDraft}
+                      className="w-full h-14 bg-[#F2F4F6] hover:bg-gray-200 text-[#4E5968] rounded-2xl font-bold transition-colors"
                     >
-                      {isEditMode ? '수정 완료' : '수정하기'}
+                      {copiedDraft ? <Check className="mr-2 h-4 w-4 text-[#FF5722]" /> : <Copy className="mr-2 h-4 w-4" />} 초안 복사하기
                     </Button>
+                    <button
+                      onClick={handleGenerateDraft}
+                      disabled={!canGenerateDraftToday || isCheckingDraftQuota || isGeneratingDraft}
+                      className="w-full text-[13px] text-[#8B95A1] underline disabled:opacity-50 disabled:no-underline"
+                    >
+                      {isGeneratingDraft
+                        ? '초안 출력 중...'
+                        : isCheckingDraftQuota
+                          ? '사용 가능 여부 확인 중...'
+                          : canGenerateDraftToday
+                            ? '내용이 마음에 안 드시나요? 다시 만들기'
+                            : 'Beta · 하루 1회만 생성할 수 있습니다.'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-[24px] border border-[#FED7AA] bg-[#FFF7ED] p-6 text-center">
+                  {isGeneratingDraft ? (
+                    <div className="space-y-2">
+                      <p className="text-[13px] font-semibold text-[#9A3412]">{draftLoadingStep}</p>
+                      <p className="text-[12px] text-[#C2410C]">{draftLoadingProgress}</p>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={handleGenerateDraft}
+                      disabled={
+                        !canGenerateDraftToday ||
+                        isCheckingDraftQuota ||
+                        isGeneratingDraft ||
+                        (isDraftEmphasisRequired && !draftEmphasis.trim())
+                      }
+                      className="w-full h-11 bg-[#FF5722] hover:bg-[#FF7A4C] text-white rounded-[16px] font-bold text-[14px]"
+                    >
+                      {isCheckingDraftQuota
+                        ? '사용 가능 여부 확인 중...'
+                        : canGenerateDraftToday
+                          ? '블로그 글 생성'
+                          : '하루 1회만 가능해요. 내일 다시 시도해주세요'}
+                    </Button>
+                  )}
+                </div>
+              )}
+              <div ref={draftStreamBottomRef} aria-hidden="true" />
+            </div>
+          ) : (
+            <div className="space-y-4 px-3 pb-20 pt-4 sm:px-5">
+              {activePanel === 'core' && hasCoreInfoData && (
+                <SectionCard
+                  title="등록 정보"
+                  headerAction={
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleOpenDraftPanel}
+                        className="h-8.5 text-[12px] font-bold text-[#FF5722] inline-flex items-center justify-center gap-1.5 px-3 bg-white border border-[#FFD7C2] rounded-full hover:bg-[#FFF7F2] shadow-sm transition-colors"
+                      >
+                        <Sparkles className="w-2.5 h-2.5 fill-[#FF5722]" /> 블로그 글쓰기
+                      </button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsEditMode((prev) => !prev)}
+                        className="h-8.5 rounded-full text-[12px] font-bold text-[#4E5968] bg-white hover:bg-[#F9FAFB] transition-colors"
+                      >
+                        {isEditMode ? '수정 완료' : '수정하기'}
+                      </Button>
+                    </div>
                   }
                 >
                   <div className={cn('gap-y-4 gap-x-4', isEditMode ? 'grid grid-cols-1' : 'grid grid-cols-2 md:grid-cols-4')}>
@@ -1041,253 +1222,92 @@ export default function GuidelineInfoModal({
                   </Button>
                 </SectionCard>
               )}
+              {activePanel === 'core' && !hasCoreInfoData && (
+                <SectionCard title="등록 정보">
+                  <div className="rounded-2xl bg-[#F9FAFB] border border-dashed border-gray-200 p-5 text-center text-[14px] text-[#8B95A1]">
+                    자동 일정에 반영할 등록 정보를 찾지 못했어요. 가이드라인 탭에서 원문을 확인해주세요.
+                  </div>
+                </SectionCard>
+              )}
 
-              <SectionCard
-                title="가이드라인"
-                headerAction={
-                  <button
-                    onClick={handleOpenDraftPanel}
-                    className="mt-1 h-10 text-[13px] font-bold text-[#FF5722] inline-flex items-center justify-center gap-1.5 px-4 bg-white border border-[#FFD7C2] rounded-full hover:bg-[#FFF7F2] shadow-sm transition-colors"
-                  >
-                    <Sparkles className="w-2.5 h-2.5 fill-[#FF5722]" /> 블로그 글쓰기
-                  </button>
-                }
-              >
-                <div className="flex bg-[#F2F4F6] p-1.5 rounded-[14px] border border-gray-100">
-                  {['digest', 'original'].map((v) => (
+              {activePanel === 'guideline' && (
+                <SectionCard
+                  title="가이드라인"
+                  headerAction={
                     <button
-                      key={v}
-                      className={cn(
-                        'flex-1 h-10 text-[14px] font-bold rounded-[10px] transition-all',
-                        guidelineView === v ? 'bg-white text-[#191F28] shadow-sm border border-gray-100' : 'text-[#8B95A1]'
-                      )}
-                      onClick={() => setGuidelineView(v as 'digest' | 'original')}
+                      onClick={handleOpenDraftPanel}
+                      className="mt-1 h-10 text-[12px] font-bold text-[#FF5722] inline-flex items-center justify-center gap-1.5 px-4 bg-white border border-[#FFD7C2] rounded-full hover:bg-[#FFF7F2] shadow-sm transition-colors"
                     >
-                      {v === 'digest' ? '가이드 정리' : '원본 보기'}
+                      <Sparkles className="w-2.5 h-2.5 fill-[#FF5722]" /> 블로그 글쓰기
                     </button>
-                  ))}
-                </div>
-                {guidelineView === 'digest' ? (
-                  <div className="space-y-6">
-                    {analysisKeywords.length > 0 && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[15px] font-bold text-[#4E5968]">키워드</p>
-                          <button onClick={handleCopyKeywords} className="text-[12px] text-[#8B95A1] flex items-center gap-1">
-                            {copiedKeywords ? <Check className="w-3 h-3 text-[#FF5722]" /> : <Copy className="w-3 h-3" />} 복사
-                          </button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {analysisKeywords.map((k) => (
-                            <span
-                              key={k}
-                              className="max-w-full break-all px-3 py-1.5 bg-[#F9FAFB] text-[#4E5968] rounded-full text-[13px] font-medium border border-gray-100"
-                            >
-                              {k}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {digestSections.map((s, i) => (
-                      <div key={i} className="space-y-3">
-                        <p className="text-[15px] font-bold text-[#191F28]">{s.title}</p>
-                        <ul className="space-y-2">
-                          {s.items.map((item, j) => (
-                            <li
-                              key={j}
-                              className="flex gap-2.5 items-start text-[14px] text-[#4E5968] bg-[#FCFCFD] border border-gray-100 rounded-xl px-3 py-2.5"
-                            >
-                              <CheckCircle2 className="mt-0.5 w-4 h-4 text-[#FF5722] shrink-0" />
-                              <span className="min-w-0 flex-1 break-all leading-relaxed">{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                    {!digestSummary && digestSections.length === 0 && (
-                      <div className="rounded-2xl bg-[#F9FAFB] border border-dashed border-gray-200 p-5 text-center text-[14px] text-[#8B95A1]">
-                        요약 데이터를 불러오지 못했습니다. 원본 보기를 확인해주세요.
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-[14px] text-[#4E5968] leading-relaxed whitespace-pre-wrap bg-[#F9FAFB] p-5 rounded-2xl border border-gray-100">
-                    {hasOriginalGuideline ? originalGuideline : '원본 가이드라인이 없습니다.'}
-                  </div>
-                )}
-              </SectionCard>
-            </div>
-          ) : (
-            <div className="w-full min-w-0 overflow-x-hidden py-4 px-4 sm:px-5 space-y-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-              <div className="w-full min-w-0 bg-white rounded-[24px] p-6 space-y-3 border border-gray-100">
-                <p className="text-[14px] font-bold text-[#191F28]">키워드 설정</p>
-                {draftKeywords.length > 0 && (
-                  <div className="min-h-[48px] max-h-[180px] overflow-y-auto overscroll-contain rounded-xl bg-[#F9FAFB] border border-dashed border-gray-200 px-3 py-2 flex flex-wrap content-start items-center gap-2">
-                    {draftKeywords.map((k) => (
-                      <span key={k} className="inline-flex w-fit max-w-full min-w-0 items-center gap-1 px-3 py-1.5 bg-white text-[#FF5722] rounded-full text-[13px] font-bold border border-orange-100">
-                        <span className="min-w-0 break-all whitespace-normal">{k}</span>
-                        <X className="w-3 h-3 shrink-0 cursor-pointer" onClick={() => handleRemoveKeyword(k)} />
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="mb-4 flex min-w-0 flex-col gap-2 sm:flex-row">
-                  <input
-                    value={keywordInput}
-                    spellCheck={false}
-                    autoCorrect="off"
-                    onChange={(e) => setKeywordInput(e.target.value)}
-                    onKeyDown={handleKeywordInputKeyDown}
-                    placeholder="해시태그 추가 후 엔터"
-                    className="h-12 w-full min-w-0 bg-[#F9FAFB] border-none rounded-xl px-4 text-[16px] sm:text-[14px] focus:ring-1 focus:ring-[#FF5722] outline-none"
-                  />
-                  <Button onClick={handleAddKeyword} variant="outline" className="h-12 w-full rounded-xl border-gray-200 font-bold text-[#4E5968] sm:w-auto sm:shrink-0">
-                    추가
-                  </Button>
-                </div>
-                <div className="space-y-3 pt-1">
-                  <p className="text-[14px] font-bold text-[#191F28]">
-                    AI가 참고할 내용{' '}
-                    <span className={cn(isDraftEmphasisRequired ? 'text-[#FF5722]' : 'text-[#8B95A1]')}>
-                      ({isDraftEmphasisRequired ? '필수' : '선택'})
-                    </span>
-                  </p>
-                  <Textarea
-                    value={draftEmphasis}
-                    spellCheck={false}
-                    onChange={(e) => setDraftEmphasis(applyDraftEmphasisLimit(e.target.value))}
-                    placeholder="예: 제품 차별점, 꼭 언급할 기능/성분, 20대 여성 대상임을 강조 등"
-                    className="border-none bg-[#F9FAFB] rounded-2xl min-h-[100px] focus-visible:ring-1 focus-visible:ring-[#FF5722]"
-                  />
-                  <div className="flex items-center justify-between text-[12px] text-[#8B95A1]">
-                    <span>최대 500자, 멤버십 최대 1,500자</span>
-                    <span className={cn(draftEmphasis.length >= draftEmphasisMaxLength && 'text-[#FF5722]')}>
-                      {draftEmphasis.length.toLocaleString()} / {draftEmphasisMaxLength.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="flex items-center justify-between w-full py-4 border-t border-gray-50 mt-2 text-[14px] font-bold text-[#4E5968]"
+                  }
                 >
-                  <div className="flex items-center gap-2">
-                    <Settings2 className="w-4 h-4" /> 고급 설정 (말투, 글자수 등)
-                  </div>
-                  <ChevronDown className={cn('w-4 h-4 transition-transform', showAdvanced && 'rotate-180')} />
-                </button>
-                {showAdvanced && (
-                  <div className="space-y-6 pt-4 animate-in fade-in slide-in-from-top-2">
-                    <div className="space-y-4">
-                      <div className="space-y-3">
-                        <p className="text-[14px] font-bold text-[#191F28]">글자수</p>
-                        <div className="flex flex-wrap gap-2">
-                          {LENGTH_OPTIONS.map((l) => {
-                            const isProLocked = l >= 1500;
-                            return (
-                              <button
-                                key={l}
-                                onClick={() => {
-                                  if (!isProLocked) setDraftLength(l);
-                                }}
-                                disabled={isProLocked}
-                                className={cn(
-                                  'px-3 py-2 rounded-lg text-[12px] font-bold border inline-flex items-center gap-1.5',
-                                  draftLength === l ? 'bg-[#191F28] text-white' : 'bg-white border-gray-100 text-[#8B95A1]',
-                                  isProLocked && 'opacity-55 cursor-not-allowed bg-gray-50 text-[#B0B8C1]'
-                                )}
-                              >
-                                {l}자
-                                {isProLocked && (
-                                  <span
-                                    className="inline-flex items-center justify-center text-[12px] leading-none"
-                                    aria-label="프로 전용"
-                                    title="PRO 전용"
-                                  >
-                                    👑
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <p className="text-[14px] font-bold text-[#191F28]">말투</p>
-                        <div className="flex flex-wrap gap-2">
-                          {TONE_OPTIONS.map((t) => (
-                            <button
-                              key={t.key}
-                              onClick={() => setDraftTone(t.key)}
-                              className={cn(
-                                'px-3 py-2 rounded-lg text-[12px] font-bold border',
-                                draftTone === t.key ? 'bg-[#191F28] text-white' : 'bg-white border-gray-100 text-[#8B95A1]'
-                              )}
-                            >
-                              {t.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
 
-              {draftText ? (
-                <div className="w-full min-w-0 bg-white rounded-[24px] p-6 flex flex-col justify-center border border-gray-100 shadow-sm">
-                  <div className="space-y-4 animate-in fade-in">
-                    <DraftDisplayText text={displayDraftText} isTyping={isTypingDraft} />
-                    <Button
-                      onClick={handleCopyDraft}
-                      disabled={isGeneratingDraft}
-                      className="w-full h-14 bg-[#F2F4F6] hover:bg-gray-200 text-[#4E5968] rounded-2xl font-bold transition-colors"
-                    >
-                      {copiedDraft ? <Check className="mr-2 h-4 w-4 text-[#FF5722]" /> : <Copy className="mr-2 h-4 w-4" />} 초안 복사하기
-                    </Button>
-                    <button
-                      onClick={handleGenerateDraft}
-                      disabled={!canGenerateDraftToday || isCheckingDraftQuota || isGeneratingDraft}
-                      className="w-full text-[13px] text-[#8B95A1] underline disabled:opacity-50 disabled:no-underline"
-                    >
-                      {isGeneratingDraft
-                        ? '초안 출력 중...'
-                        : isCheckingDraftQuota
-                          ? '사용 가능 여부 확인 중...'
-                          : canGenerateDraftToday
-                            ? '내용이 마음에 안 드시나요? 다시 만들기'
-                            : 'Beta · 하루 1회만 생성할 수 있습니다.'}
-                    </button>
+                  <div className="flex bg-[#F2F4F6] p-1.5 rounded-[14px] border border-gray-100">
+                    {['digest', 'original'].map((v) => (
+                      <button
+                        key={v}
+                        className={cn(
+                          'flex-1 h-8 text-[12px] font-bold rounded-[10px] transition-all',
+                          guidelineView === v ? 'bg-white text-[#191F28] shadow-sm border border-gray-100' : 'text-[#8B95A1]'
+                        )}
+                        onClick={() => setGuidelineView(v as 'digest' | 'original')}
+                      >
+                        {v === 'digest' ? '가이드 정리' : '원본 보기'}
+                      </button>
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <div className="rounded-[24px] border border-[#FED7AA] bg-[#FFF7ED] p-6 text-center">
-                  {isGeneratingDraft ? (
-                    <div className="space-y-2">
-                      <p className="text-[13px] font-semibold text-[#9A3412]">{draftLoadingStep}</p>
-                      <p className="text-[12px] text-[#C2410C]">{draftLoadingProgress}</p>
+                  {guidelineView === 'digest' ? (
+                    <div className="space-y-6">
+                      {analysisKeywords.length > 0 && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[15px] font-bold text-[#4E5968]">키워드</p>
+                            <button onClick={handleCopyKeywords} className="text-[12px] text-[#8B95A1] flex items-center gap-1">
+                              {copiedKeywords ? <Check className="w-3 h-3 text-[#FF5722]" /> : <Copy className="w-3 h-3" />} 복사
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {analysisKeywords.map((k) => (
+                              <span
+                                key={k}
+                                className="max-w-full break-all px-3 py-1.5 bg-[#F9FAFB] text-[#4E5968] rounded-full text-[13px] font-medium border border-gray-100"
+                              >
+                                {k}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {digestSections.map((s, i) => (
+                        <div key={i} className="space-y-3">
+                          <p className="text-[15px] font-bold text-[#191F28]">{s.title}</p>
+                          <ul className="space-y-2">
+                            {s.items.map((item, j) => (
+                              <li
+                                key={j}
+                                className="flex gap-2.5 items-start text-[14px] text-[#4E5968] bg-[#FCFCFD] border border-gray-100 rounded-xl px-3 py-2.5"
+                              >
+                                <CheckCircle2 className="mt-0.5 w-4 h-4 text-[#FF5722] shrink-0" />
+                                <span className="min-w-0 flex-1 break-all leading-relaxed">{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                      {!digestSummary && digestSections.length === 0 && (
+                        <div className="rounded-2xl bg-[#F9FAFB] border border-dashed border-gray-200 p-5 text-center text-[14px] text-[#8B95A1]">
+                          요약 데이터를 불러오지 못했습니다. 원본 보기를 확인해주세요.
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <Button
-                      onClick={handleGenerateDraft}
-                      disabled={
-                        !canGenerateDraftToday ||
-                        isCheckingDraftQuota ||
-                        isGeneratingDraft ||
-                        (isDraftEmphasisRequired && !draftEmphasis.trim())
-                      }
-                      className="w-full h-11 bg-[#FF5722] hover:bg-[#FF7A4C] text-white rounded-[16px] font-bold text-[14px]"
-                    >
-                      {isCheckingDraftQuota
-                        ? '사용 가능 여부 확인 중...'
-                        : canGenerateDraftToday
-                          ? '블로그 글 생성'
-                          : '하루 1회만 가능해요. 내일 다시 시도해주세요'}
-                    </Button>
+                    <div className="text-[14px] text-[#4E5968] leading-relaxed whitespace-pre-wrap bg-[#F9FAFB] p-5 rounded-2xl border border-gray-100">
+                      {hasOriginalGuideline ? originalGuideline : '원본 가이드라인이 없습니다.'}
+                    </div>
                   )}
-                </div>
+                </SectionCard>
               )}
-              <div ref={draftStreamBottomRef} aria-hidden="true" />
             </div>
           )}
         </div>

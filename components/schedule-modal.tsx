@@ -135,6 +135,7 @@ export default function ScheduleModal({
 }) {
   type AiActionIntent = 'autoSchedule' | 'blogDraft' | null;
   type AiFeatureFeedbackChoice = 'like' | 'dislike' | null;
+  type GuidelineInfoInitialPanel = 'core' | 'guideline';
   const AI_FEATURE_FEEDBACK_STORAGE_KEY = 'schedule_modal_ai_feature_feedback_v1';
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData());
 
@@ -174,6 +175,8 @@ export default function ScheduleModal({
   const [hasUsedAiFeatureForFeedbackPrompt, setHasUsedAiFeatureForFeedbackPrompt] = useState(false);
   const [aiActionIntent, setAiActionIntent] = useState<AiActionIntent>(null);
   const [openDraftOnGuidelineInfoOpen, setOpenDraftOnGuidelineInfoOpen] = useState(false);
+  const [guidelineInfoInitialPanel, setGuidelineInfoInitialPanel] =
+    useState<GuidelineInfoInitialPanel>('core');
   const [draftOnlyMode, setDraftOnlyMode] = useState(false);
   const [guidelineAnalysis, setGuidelineAnalysis] = useState<CampaignGuidelineAnalysis | null>(null);
   const [originalGuidelineText, setOriginalGuidelineText] = useState('');
@@ -651,6 +654,7 @@ export default function ScheduleModal({
       setShowGuidelineAnalysisModal(false);
 
       setShowGuidelineInfoModal(true);
+      setGuidelineInfoInitialPanel('core');
       setOpenDraftOnGuidelineInfoOpen(aiActionIntent === 'blogDraft');
       setDraftOnlyMode(false);
       setAiActionIntent(null);
@@ -692,6 +696,7 @@ export default function ScheduleModal({
       if (intent === 'blogDraft') {
         setShowAiActionOptions(false);
         setDraftOnlyMode(true);
+        setGuidelineInfoInitialPanel('core');
         setOpenDraftOnGuidelineInfoOpen(true);
         setShowGuidelineInfoModal(true);
         return;
@@ -820,6 +825,7 @@ export default function ScheduleModal({
 
   const handleCloseGuidelineInfoModal = useCallback(() => {
     setShowGuidelineInfoModal(false);
+    setGuidelineInfoInitialPanel('core');
     setOpenDraftOnGuidelineInfoOpen(false);
     setDraftOnlyMode(false);
 
@@ -1572,7 +1578,12 @@ export default function ScheduleModal({
                 {effectiveGuidelineAnalysis && (
                   <button
                     type="button"
-                    onClick={() => setShowGuidelineInfoModal(true)}
+                    onClick={() => {
+                      setDraftOnlyMode(false);
+                      setOpenDraftOnGuidelineInfoOpen(false);
+                      setGuidelineInfoInitialPanel('guideline');
+                      setShowGuidelineInfoModal(true);
+                    }}
                     className="w-full h-[44px] rounded-[18px] bg-white border border-orange-200 hover:border-orange-300 hover:bg-neutral-50 text-orange-700 font-semibold text-[14px] transition-colors"
                   >
                     📋 분석된 가이드라인 정보 보기
@@ -3532,6 +3543,7 @@ export default function ScheduleModal({
           }
         }}
         onApplyToSchedule={handleApplyGuidelineToSchedule}
+        defaultPanelOnOpen={guidelineInfoInitialPanel}
         openDraftOnOpen={openDraftOnGuidelineInfoOpen}
         draftOnlyMode={draftOnlyMode}
       />
