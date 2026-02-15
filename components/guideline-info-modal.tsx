@@ -367,6 +367,7 @@ export default function GuidelineInfoModal({
   })();
   const digestSections = (effectiveAnalysis.guidelineDigest?.sections ?? [])
     .filter((section) => section?.title && Array.isArray(section.items) && section.items.length > 0);
+  const hasTitle = Boolean(effectiveAnalysis.title?.trim());
   const hasPoints = typeof displayPoints === 'number';
   const hasEndDate = Boolean(effectiveAnalysis.reviewRegistrationPeriod?.end?.trim());
   const hasPlatform = Boolean(effectiveAnalysis.platform?.trim());
@@ -376,6 +377,7 @@ export default function GuidelineInfoModal({
   const hasPhone = Boolean(effectiveAnalysis.phone?.trim());
   const hasVisitReviewTypes = visitReviewTypes.length > 0;
   const hasCoreInfoData = [
+    hasTitle,
     hasPoints,
     hasEndDate,
     hasPlatform,
@@ -672,11 +674,7 @@ export default function GuidelineInfoModal({
             onInteractOutside={(e) => e.preventDefault()}
           >
           <DialogHeader className="relative p-4 pr-14 bg-white/80 backdrop-blur-md sticky top-0 z-10">
-            <div className="flex items-start gap-3">
-              <DialogTitle className="min-w-0 flex-1 text-[14px] font-bold text-[#191F28] tracking-tight break-words">
-                {analysis.title || '캠페인 가이드라인'}
-              </DialogTitle>
-            </div>
+            <DialogTitle className="sr-only">가이드라인 정보</DialogTitle>
             <button
               type="button"
               onClick={onClose}
@@ -710,6 +708,29 @@ export default function GuidelineInfoModal({
                       isEditMode ? 'grid grid-cols-1' : 'grid grid-cols-2 md:grid-cols-4'
                     )}
                   >
+                    {(isEditMode || hasTitle) && (
+                    <InfoRow label="제목">
+                      {isEditMode ? (
+                        <Input
+                          value={effectiveAnalysis.title || ''}
+                          onChange={(e) =>
+                            setEditableAnalysis((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    title: e.target.value,
+                                  }
+                                : prev
+                            )
+                          }
+                          className="h-10 w-full text-[13px] font-semibold"
+                          placeholder="캠페인 제목"
+                        />
+                      ) : (
+                        effectiveAnalysis.title || '-'
+                      )}
+                    </InfoRow>
+                    )}
                     {(isEditMode || hasPoints) && (
                     <InfoRow label="금액">
                       {isEditMode ? (
