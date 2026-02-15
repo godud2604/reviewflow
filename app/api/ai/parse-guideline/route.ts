@@ -26,6 +26,10 @@ const SafeVisitReviewTypesSchema = z
   )
   .transform((value) => value ?? []);
 
+const SafeReviewChannelSchema = z
+  .preprocess((value) => normalizeReviewChannel(value), z.string().nullable().optional())
+  .transform((value) => value ?? null);
+
 const ContentRequirementsSchema = z.object({
   // 방문형 리뷰 필수 항목 (네이버예약, 구글리뷰, 기타)
   visitReviewTypes: SafeVisitReviewTypesSchema,
@@ -48,7 +52,7 @@ const CampaignGuidelineAnalysisSchema = z.object({
   keywords: SafeStringArraySchema.optional(),
   platform: z.string().nullable().optional(),
   category: z.string().nullable().optional(),
-  reviewChannel: z.string().nullable().optional(),
+  reviewChannel: SafeReviewChannelSchema,
   visitInfo: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
   reviewRegistrationPeriod: z.object({
@@ -69,6 +73,11 @@ function normalizeOptionList(input: unknown): string[] {
   return input
     .map((value) => (typeof value === 'string' ? value.trim() : ''))
     .filter((value) => value.length > 0);
+}
+
+function getKstDateKey(now: Date = new Date()): string {
+  const kstTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return kstTime.toISOString().slice(0, 10);
 }
 
 function normalizeGuidelineDigest(input: any): any {
@@ -125,6 +134,33 @@ function normalizeKeywords(input: unknown): string[] {
 
 function normalizeForMatch(value: string): string {
   return value.toLowerCase().replace(/\s+/g, '');
+}
+
+function normalizeReviewChannel(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+
+  const candidates = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(/[,\n]+/)
+      : [];
+
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  for (const raw of candidates) {
+    if (typeof raw !== 'string') continue;
+    const channel = raw.trim().replace(/\s+/g, ' ');
+    if (!channel) continue;
+    const key = channel.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(channel);
+  }
+
+  if (normalized.length === 0) return null;
+  return normalized.join(', ');
 }
 
 function parseKoreanNumberFragment(value: string): number | null {
@@ -410,7 +446,7 @@ export async function POST(request: NextRequest) {
     if (!apiKey) {
       console.error('API Key not configured');
       return NextResponse.json(
-        { error: 'API 키가 설정되지 않았습니다. 관리자에게 문의하세요.' },
+        { error: 'API 키가 설정되지 않았습니다. 관리자에게 문의하세요.', deducted: false },
         { status: 500 }
       );
     }
@@ -418,11 +454,11 @@ export async function POST(request: NextRequest) {
     const { guideline, userId, scheduleId } = await request.json();
 
     if (!guideline || typeof guideline !== 'string') {
-      return NextResponse.json({ error: '가이드라인 텍스트가 필요합니다' }, { status: 400 });
+      return NextResponse.json({ error: '가이드라인 텍스트가 필요합니다', deducted: false }, { status: 400 });
     }
 
     if (!userId || typeof userId !== 'string') {
-      return NextResponse.json({ error: '사용자 ID가 필요합니다' }, { status: 400 });
+      return NextResponse.json({ error: '사용자 ID가 필요합니다', deducted: false }, { status: 400 });
     }
 
     const parsedScheduleId =
@@ -439,7 +475,7 @@ export async function POST(request: NextRequest) {
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Supabase configuration missing');
       return NextResponse.json(
-        { error: 'Supabase 설정이 없습니다' },
+        { error: 'Supabase 설정이 없습니다', deducted: false },
         { status: 500 }
       );
     }
@@ -447,14 +483,14 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { data: userProfile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('platforms, categories, schedule_channels, last_guideline_analysis_at, last_blog_draft_generated_at')
+      .select('platforms, categories, schedule_channels, last_guideline_analysis_at, guideline_daily_count, guideline_daily_count_date, last_blog_draft_generated_at')
       .eq('id', userId)
       .single();
 
     if (profileError) {
       console.error('사용자 프로필 조회 오류:', profileError);
       return NextResponse.json(
-        { error: '사용자 정보를 조회할 수 없습니다' },
+        { error: '사용자 정보를 조회할 수 없습니다', deducted: false },
         { status: 400 }
       );
     }
@@ -465,6 +501,8 @@ export async function POST(request: NextRequest) {
     const userReviewChannels = normalizeOptionList(userProfile?.schedule_channels);
     const quotaStatus = getAiQuotaStatus({
       lastGuidelineAnalysisAt: userProfile?.last_guideline_analysis_at,
+      guidelineDailyCount: userProfile?.guideline_daily_count,
+      guidelineDailyCountDate: userProfile?.guideline_daily_count_date,
       lastBlogDraftGeneratedAt: userProfile?.last_blog_draft_generated_at,
     });
 
@@ -473,6 +511,7 @@ export async function POST(request: NextRequest) {
         {
           error: getAiQuotaBlockedMessage('guideline'),
           quota: quotaStatus,
+          deducted: false,
         },
         { status: 429 }
       );
@@ -532,6 +571,9 @@ export async function POST(request: NextRequest) {
       if (parsedJson.keywords !== undefined) {
         parsedJson.keywords = normalizeKeywords(parsedJson.keywords);
       }
+      if (parsedJson.reviewChannel !== undefined) {
+        parsedJson.reviewChannel = normalizeReviewChannel(parsedJson.reviewChannel);
+      }
       const validated = CampaignGuidelineAnalysisSchema.safeParse(parsedJson);
 
       if (!validated.success) {
@@ -554,6 +596,9 @@ export async function POST(request: NextRequest) {
       analysis.guidelineDigest = normalizeGuidelineDigest(analysis.guidelineDigest);
     }
     analysis.keywords = normalizeKeywords(analysis.keywords);
+    if (analysis.reviewChannel !== undefined) {
+      analysis.reviewChannel = normalizeReviewChannel(analysis.reviewChannel);
+    }
     const normalizedEnd = normalizeDeadlineValue(analysis.reviewRegistrationPeriod?.end);
     analysis.reviewRegistrationPeriod = analysis.reviewRegistrationPeriod
       ? {
@@ -607,9 +652,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const now = new Date();
+    const todayKey = getKstDateKey(now);
+    const priorCountDate =
+      typeof userProfile?.guideline_daily_count_date === 'string'
+        ? userProfile.guideline_daily_count_date.slice(0, 10)
+        : null;
+    const rawPriorCount = Number(userProfile?.guideline_daily_count);
+    const priorCount = Number.isFinite(rawPriorCount) ? Math.max(0, Math.floor(rawPriorCount)) : 0;
+    const nextDailyCount = priorCountDate === todayKey ? priorCount + 1 : 1;
+
     const { error: quotaUpdateError } = await supabase
       .from('user_profiles')
-      .update({ last_guideline_analysis_at: new Date().toISOString() })
+      .update({
+        last_guideline_analysis_at: now.toISOString(),
+        guideline_daily_count_date: todayKey,
+        guideline_daily_count: nextDailyCount,
+      })
       .eq('id', userId);
 
     if (quotaUpdateError) {
@@ -624,12 +683,17 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('가이드라인 분석 오류:', error);
     const errorMessage = error instanceof Error ? error.message : '가이드라인 분석 중 오류가 발생했습니다';
+    const isAnalysisValidationError =
+      /유효하지 않은 분석 결과|Failed to parse|parse/i.test(errorMessage);
     console.error('상세 오류:', errorMessage);
     return NextResponse.json(
       {
-        error: errorMessage,
+        error: isAnalysisValidationError
+          ? 'AI 응답 형식 문제로 분석을 완료하지 못했습니다. 다시 시도해 주세요. 이번 요청은 횟수에서 차감되지 않아요.'
+          : errorMessage,
+        deducted: false,
       },
-      { status: 500 }
+      { status: isAnalysisValidationError ? 422 : 500 }
     );
   }
 }

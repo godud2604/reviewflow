@@ -117,7 +117,16 @@ export default function GuidelineAnalysisModal({
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        throw new Error(payload?.error || '잠시 후 다시 시도해주세요.');
+        const baseMessage =
+          payload?.error ||
+          (response.status === 429
+            ? '요청이 제한되었습니다. 잠시 후 다시 시도해주세요.'
+            : '잠시 후 다시 시도해주세요.');
+        const retryMessage =
+          response.status === 429
+            ? '다시 시도해 주세요. 이번 요청은 횟수에서 차감되지 않아요.'
+            : '다시 시도해 주세요. 오류가 발생한 요청은 횟수에서 차감되지 않아요.';
+        throw new Error(`${baseMessage} ${retryMessage}`);
       }
 
       const result = await response.json();
@@ -171,7 +180,7 @@ export default function GuidelineAnalysisModal({
               <AlertCircle className="w-4 h-4 text-orange-500 shrink-0" />
               <div className="text-[13px] leading-tight">
                 <span className="font-semibold text-orange-900 mr-1.5">베타 서비스</span>
-                <span className="text-orange-700/80">하루에 한 번만 쓸 수 있어요.</span>
+                <span className="text-orange-700/80">하루에 2번까지 쓸 수 있어요.</span>
               </div>
             </div>
 
@@ -186,7 +195,7 @@ export default function GuidelineAnalysisModal({
             <div className="flex items-start gap-2 p-4 rounded-[16px] bg-red-50 text-red-600 border border-red-100 animate-in fade-in slide-in-from-top-1 mb-6">
               <AlertCircle size={16} className="shrink-0 mt-0.5" />
               <span className="text-[12px] font-semibold leading-relaxed">
-                오늘은 이미 사용하셨네요. 내일 다시 시도해주세요!
+                오늘 사용 가능한 2회를 모두 사용했어요. 내일 다시 시도해주세요!
               </span>
             </div>
           )}

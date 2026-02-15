@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('last_guideline_analysis_at, last_blog_draft_generated_at')
+      .select('last_guideline_analysis_at, guideline_daily_count, guideline_daily_count_date, last_blog_draft_generated_at')
       .eq('id', userId)
       .maybeSingle();
 
@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
 
     const quota = getAiQuotaStatus({
       lastGuidelineAnalysisAt: data?.last_guideline_analysis_at ?? null,
+      guidelineDailyCount: data?.guideline_daily_count ?? 0,
+      guidelineDailyCountDate: data?.guideline_daily_count_date ?? null,
       lastBlogDraftGeneratedAt: data?.last_blog_draft_generated_at ?? null,
     });
 
