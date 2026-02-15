@@ -1067,7 +1067,7 @@ export default function GuidelineInfoModal({
       >
         <DialogContent 
           showCloseButton={false}
-          className="top-2 translate-y-0 sm:top-[50%] sm:translate-y-[-50%] w-[calc(100vw-1rem)] max-w-[600px] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] sm:h-[90vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col rounded-[24px] sm:rounded-[32px] shadow-2xl"
+          className="top-2 translate-y-0 sm:top-[50%] sm:translate-y-[-50%] w-[calc(100vw-1rem)] max-w-[600px] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] sm:h-[90vh] p-0 border-none bg-[#F2F4F6] overflow-hidden flex flex-col rounded-[24px] sm:rounded-[32px] shadow-2xl"
           style={{ zIndex: Z_INDEX.guidelineAnalysisModal + 1 }}
         >
           <DialogHeader className="relative p-4 pr-14 bg-white">
@@ -1083,14 +1083,15 @@ export default function GuidelineInfoModal({
           </DialogHeader>
 
           <ScrollArea className="flex-1 min-h-0 overscroll-contain">
-            <div className="py-1 px-4 sm:px-5 space-y-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-              <div className="bg-white rounded-[24px] p-6 space-y-3 border border-gray-100">
+            <div className="w-full min-w-0 py-1 px-4 sm:px-5 space-y-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <div className="w-full min-w-0 bg-white rounded-[24px] p-6 space-y-3 border border-gray-100">
                 <p className="text-[14px] font-bold text-[#191F28]">키워드 설정</p>
                   {draftKeywords.length > 0 && (
-                    <div className="min-h-[48px] rounded-xl bg-[#F9FAFB] border border-dashed border-gray-200 px-3 py-2 flex flex-wrap items-center gap-2">
+                    <div className="min-h-[48px] max-h-[180px] overflow-y-auto overscroll-contain rounded-xl bg-[#F9FAFB] border border-dashed border-gray-200 px-3 py-2 flex flex-wrap content-start items-center gap-2">
                       {draftKeywords.map((k) => (
-                        <span key={k} className="inline-flex max-w-full break-all items-center gap-1 px-3 py-1.5 bg-white text-[#FF5722] rounded-full text-[13px] font-bold border border-orange-100">
-                          {k} <X className="w-3 h-3 cursor-pointer" onClick={() => handleRemoveKeyword(k)} />
+                        <span key={k} className="inline-flex w-fit max-w-full min-w-0 items-center gap-1 px-3 py-1.5 bg-white text-[#FF5722] rounded-full text-[13px] font-bold border border-orange-100">
+                          <span className="min-w-0 break-all whitespace-normal">{k}</span>
+                          <X className="w-3 h-3 shrink-0 cursor-pointer" onClick={() => handleRemoveKeyword(k)} />
                         </span>
                       ))}
                     </div>
