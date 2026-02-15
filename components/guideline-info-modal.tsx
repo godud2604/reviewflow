@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import type { CampaignGuidelineAnalysis, BlogDraftOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,7 +20,6 @@ import {
   Copy,
   Check,
   CheckCircle2,
-  Loader2,
   Sparkles,
   Settings2,
   X,
@@ -103,6 +102,21 @@ const InfoRow = ({
   </div>
 );
 
+const DraftDisplayText = memo(function DraftDisplayText({
+  text,
+  isTyping,
+}: {
+  text: string;
+  isTyping: boolean;
+}) {
+  return (
+    <div className="min-w-0 break-words whitespace-pre-wrap text-[15px] font-medium leading-loose text-[#333D4B] transform-gpu will-change-transform">
+      {text}
+      {isTyping ? <span className="animate-pulse text-[#FF5722]">|</span> : null}
+    </div>
+  );
+});
+
 const LENGTH_OPTIONS = [500, 800, 1000, 1500, 2000, 3000] as const;
 const FREE_LENGTH_OPTIONS = [500, 800, 1000] as const;
 const TONE_OPTIONS = [
@@ -184,7 +198,6 @@ export default function GuidelineInfoModal({
   isMembershipUser = false,
 }: GuidelineInfoModalProps) {
   const [activePanel, setActivePanel] = useState<'guideline' | 'draft'>('guideline');
-  const [isFieldFocused, setIsFieldFocused] = useState(false);
   const [guidelineView, setGuidelineView] = useState<'digest' | 'original'>('digest');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
@@ -699,45 +712,17 @@ export default function GuidelineInfoModal({
 
   return (
     <div
-      className={cn(
-        'fixed inset-0 z-[250] p-2 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))]',
-        isFieldFocused ? 'bg-black/40' : 'bg-black/55'
-      )}
+      className="fixed inset-0 z-[250] bg-black/55 p-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:p-4"
       style={{ zIndex: Z_INDEX.guidelineAnalysisBackdrop }}
     >
       <div
-        className={cn(
-          'mx-auto flex h-[calc(100svh-1rem)] max-h-[calc(100svh-1rem)] w-full max-w-[680px] flex-col overflow-hidden rounded-[24px] sm:h-[90vh] sm:rounded-[32px] bg-[#EEF2F6]',
-          isFieldFocused ? 'shadow-lg' : 'shadow-2xl'
-        )}
+        className="mx-auto flex h-[calc(100svh-1rem)] max-h-[calc(100svh-1rem)] w-full max-w-[680px] flex-col overflow-hidden rounded-[24px] bg-[#EEF2F6] shadow-2xl transform-gpu sm:h-[90vh] sm:rounded-[32px]"
         style={{
           zIndex: Z_INDEX.guidelineAnalysisModal,
           transform: 'translateZ(0)',
           backfaceVisibility: 'hidden',
         }}
-        onFocusCapture={(event) => {
-          const target = event.target as HTMLElement;
-          if (
-            target instanceof HTMLInputElement ||
-            target instanceof HTMLTextAreaElement ||
-            target.isContentEditable
-          ) {
-            setIsFieldFocused(true);
-          }
-        }}
-        onBlurCapture={() => {
-          window.setTimeout(() => {
-            const active = document.activeElement;
-            if (
-              active instanceof HTMLInputElement ||
-              active instanceof HTMLTextAreaElement ||
-              (active instanceof HTMLElement && active.isContentEditable)
-            ) {
-              return;
-            }
-            setIsFieldFocused(false);
-          }, 0);
-        }}
+        spellCheck={false}
       >
         <div className="relative border-b border-black/5 bg-white px-4 py-3.5 sm:px-5">
           <h2 className="text-[15px] font-bold text-[#111827]">
@@ -800,6 +785,7 @@ export default function GuidelineInfoModal({
                         {isEditMode ? (
                           <Input
                             value={effectiveAnalysis.title || ''}
+                            spellCheck={false}
                             onChange={(e) =>
                               setEditableAnalysis((prev) =>
                                 prev
@@ -823,6 +809,7 @@ export default function GuidelineInfoModal({
                         {isEditMode ? (
                           <Input
                             value={hasPoints ? displayPoints.toLocaleString() : ''}
+                            spellCheck={false}
                             onChange={(e) => {
                               const digits = e.target.value.replace(/[^0-9]/g, '');
                               const next = digits ? Number(digits) : null;
@@ -971,6 +958,7 @@ export default function GuidelineInfoModal({
                           <Input
                             type="text"
                             value={effectiveAnalysis.visitInfo || ''}
+                            spellCheck={false}
                             onChange={(e) => updateAnalysis({ visitInfo: e.target.value || null })}
                             className="h-10 w-full text-[13px] font-semibold"
                             placeholder="방문 위치/안내 정보"
@@ -986,6 +974,7 @@ export default function GuidelineInfoModal({
                           <Input
                             type="text"
                             value={effectiveAnalysis.phone || ''}
+                            spellCheck={false}
                             onChange={(e) => updateAnalysis({ phone: formatPhoneInput(e.target.value) || null })}
                             className="h-10 w-full text-[13px] font-semibold"
                             placeholder="010-0000-0000"
@@ -1016,6 +1005,7 @@ export default function GuidelineInfoModal({
                             {visitReviewTypesRaw.includes('other') && (
                               <Input
                                 value={visitReviewOtherText}
+                                spellCheck={false}
                                 onChange={(e) =>
                                   setEditableAnalysis((prev) =>
                                     prev
@@ -1145,6 +1135,8 @@ export default function GuidelineInfoModal({
                 <div className="mb-4 flex min-w-0 flex-col gap-2 sm:flex-row">
                   <input
                     value={keywordInput}
+                    spellCheck={false}
+                    autoCorrect="off"
                     onChange={(e) => setKeywordInput(e.target.value)}
                     onKeyDown={handleKeywordInputKeyDown}
                     placeholder="해시태그 추가 후 엔터"
@@ -1163,6 +1155,7 @@ export default function GuidelineInfoModal({
                   </p>
                   <Textarea
                     value={draftEmphasis}
+                    spellCheck={false}
                     onChange={(e) => setDraftEmphasis(applyDraftEmphasisLimit(e.target.value))}
                     placeholder="예: 제품 차별점, 꼭 언급할 기능/성분, 20대 여성 대상임을 강조 등"
                     className="border-none bg-[#F9FAFB] rounded-2xl min-h-[100px] focus-visible:ring-1 focus-visible:ring-[#FF5722]"
@@ -1244,10 +1237,7 @@ export default function GuidelineInfoModal({
               {draftText ? (
                 <div className="w-full min-w-0 bg-white rounded-[24px] p-6 flex flex-col justify-center border border-gray-100 shadow-sm">
                   <div className="space-y-4 animate-in fade-in">
-                    <div className="min-w-0 break-words text-[15px] text-[#333D4B] leading-loose whitespace-pre-wrap font-medium">
-                      {displayDraftText}
-                      {isTypingDraft && <span className="animate-pulse text-[#FF5722]">|</span>}
-                    </div>
+                    <DraftDisplayText text={displayDraftText} isTyping={isTypingDraft} />
                     <Button
                       onClick={handleCopyDraft}
                       disabled={isGeneratingDraft}
