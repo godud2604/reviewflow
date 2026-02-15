@@ -675,14 +675,14 @@ export default function GuidelineInfoModal({
   return (
     <>
       {/* 1. 메인 가이드라인 모달 */}
-      {!draftOnlyMode && (
+      {!draftOnlyMode && !isDraftOpen && (
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogContent
             className="top-2 translate-y-0 sm:top-[50%] sm:translate-y-[-50%] w-[calc(100vw-1rem)] max-w-[540px] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] sm:h-[85vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col rounded-[24px] sm:rounded-[32px] shadow-2xl"
             style={{ zIndex: Z_INDEX.guidelineAnalysisModal }}
             onInteractOutside={(e) => e.preventDefault()}
           >
-          <DialogHeader className="relative p-4 pr-14 bg-white sm:bg-white/80 sm:backdrop-blur-md sticky top-0 z-10">
+          <DialogHeader className="relative p-4 pr-14 bg-white sticky top-0 z-10">
             <DialogTitle className="sr-only">가이드라인 정보</DialogTitle>
             <button
               type="button"

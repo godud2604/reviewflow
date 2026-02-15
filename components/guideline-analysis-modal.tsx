@@ -151,7 +151,7 @@ export default function GuidelineAnalysisModal({
 
   return (
     <div 
-      className="fixed inset-0 z-[250] bg-black/60 sm:backdrop-blur-[2px] flex items-start sm:items-center justify-center p-2 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in duration-200"
+      className="fixed inset-0 z-[250] bg-black/60 flex items-start sm:items-center justify-center p-2 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in duration-200"
       style={{ zIndex: Z_INDEX.guidelineAnalysisBackdrop }}
     >
       <div 
