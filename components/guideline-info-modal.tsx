@@ -69,7 +69,7 @@ const SectionCard = ({
   children: React.ReactNode;
   headerAction?: React.ReactNode;
 }) => (
-  <div className="bg-white rounded-[24px] sm:rounded-[28px] p-5 sm:p-7 mb-4 shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+  <div className="bg-white rounded-[24px] sm:rounded-[28px] p-5 sm:p-7 mb-4 border border-[#EEF1F4]">
     <div className="mb-6 flex min-w-0 items-center justify-between gap-3">
       <h3 className="min-w-0 flex-1 break-words font-bold text-[18px] sm:text-[19px] text-[#191F28] tracking-tight">{title}</h3>
       {headerAction ? <div className="ml-auto shrink-0">{headerAction}</div> : null}
@@ -184,6 +184,7 @@ export default function GuidelineInfoModal({
   isMembershipUser = false,
 }: GuidelineInfoModalProps) {
   const [activePanel, setActivePanel] = useState<'guideline' | 'draft'>('guideline');
+  const [isFieldFocused, setIsFieldFocused] = useState(false);
   const [guidelineView, setGuidelineView] = useState<'digest' | 'original'>('digest');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
@@ -337,6 +338,27 @@ export default function GuidelineInfoModal({
     if (!openDraftOnOpen) setShowAdvanced(false);
     setCopiedDraft(false);
   }, [draftOnlyMode, isOpen, openDraftOnOpen]);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    const { body, documentElement } = document;
+    const prevBodyOverflow = body.style.overflow;
+    const prevHtmlOverflow = documentElement.style.overflow;
+    const prevBodyOverscroll = body.style.overscrollBehavior;
+    const prevHtmlOverscroll = documentElement.style.overscrollBehavior;
+
+    body.style.overflow = 'hidden';
+    documentElement.style.overflow = 'hidden';
+    body.style.overscrollBehavior = 'none';
+    documentElement.style.overscrollBehavior = 'none';
+
+    return () => {
+      body.style.overflow = prevBodyOverflow;
+      documentElement.style.overflow = prevHtmlOverflow;
+      body.style.overscrollBehavior = prevBodyOverscroll;
+      documentElement.style.overscrollBehavior = prevHtmlOverscroll;
+    };
+  }, [isOpen]);
 
   if (!analysis) return null;
   if (!editableAnalysis) return null;
@@ -677,12 +699,45 @@ export default function GuidelineInfoModal({
 
   return (
     <div
-      className="fixed inset-0 z-[250] bg-black/60 p-2 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in duration-200"
+      className={cn(
+        'fixed inset-0 z-[250] p-2 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))]',
+        isFieldFocused ? 'bg-black/40' : 'bg-black/55'
+      )}
       style={{ zIndex: Z_INDEX.guidelineAnalysisBackdrop }}
     >
       <div
-        className="mx-auto flex h-[calc(100svh-1rem)] max-h-[calc(100svh-1rem)] w-full max-w-[680px] flex-col overflow-hidden rounded-[24px] sm:h-[90vh] sm:rounded-[32px] bg-[#EEF2F6] shadow-2xl"
-        style={{ zIndex: Z_INDEX.guidelineAnalysisModal }}
+        className={cn(
+          'mx-auto flex h-[calc(100svh-1rem)] max-h-[calc(100svh-1rem)] w-full max-w-[680px] flex-col overflow-hidden rounded-[24px] sm:h-[90vh] sm:rounded-[32px] bg-[#EEF2F6]',
+          isFieldFocused ? 'shadow-lg' : 'shadow-2xl'
+        )}
+        style={{
+          zIndex: Z_INDEX.guidelineAnalysisModal,
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+        }}
+        onFocusCapture={(event) => {
+          const target = event.target as HTMLElement;
+          if (
+            target instanceof HTMLInputElement ||
+            target instanceof HTMLTextAreaElement ||
+            target.isContentEditable
+          ) {
+            setIsFieldFocused(true);
+          }
+        }}
+        onBlurCapture={() => {
+          window.setTimeout(() => {
+            const active = document.activeElement;
+            if (
+              active instanceof HTMLInputElement ||
+              active instanceof HTMLTextAreaElement ||
+              (active instanceof HTMLElement && active.isContentEditable)
+            ) {
+              return;
+            }
+            setIsFieldFocused(false);
+          }, 0);
+        }}
       >
         <div className="relative border-b border-black/5 bg-white px-4 py-3.5 sm:px-5">
           <h2 className="text-[15px] font-bold text-[#111827]">
