@@ -764,7 +764,7 @@ export default function GuidelineInfoModal({
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           {activePanel === 'guideline' ? (
-            <div className="space-y-4 px-3 pb-20 sm:px-5">
+            <div className="space-y-4 px-3 pb-20 pt-4 sm:px-5">
               {hasCoreInfoData && (
                 <SectionCard
                   title="핵심 정보"
@@ -1119,7 +1119,7 @@ export default function GuidelineInfoModal({
               </SectionCard>
             </div>
           ) : (
-            <div className="w-full min-w-0 overflow-x-hidden pt-0 pb-4 px-4 sm:px-5 space-y-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div className="w-full min-w-0 overflow-x-hidden py-4 px-4 sm:px-5 space-y-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <div className="w-full min-w-0 bg-white rounded-[24px] p-6 space-y-3 border border-gray-100">
                 <p className="text-[14px] font-bold text-[#191F28]">키워드 설정</p>
                 {draftKeywords.length > 0 && (
