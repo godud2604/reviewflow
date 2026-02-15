@@ -155,7 +155,7 @@ export default function GuidelineAnalysisModal({
       style={{ zIndex: Z_INDEX.guidelineAnalysisBackdrop }}
     >
       <div 
-        className="bg-white rounded-[20px] sm:rounded-[24px] w-full max-w-lg h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] sm:max-h-[85vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
+        className="bg-white rounded-[20px] sm:rounded-[24px] w-full max-w-lg h-[calc(100svh-1rem)] max-h-[calc(100svh-1rem)] sm:max-h-[85vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
         style={{ zIndex: Z_INDEX.guidelineAnalysisModal }}
       >
         {/* Header */}

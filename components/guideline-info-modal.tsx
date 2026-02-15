@@ -678,7 +678,7 @@ export default function GuidelineInfoModal({
       {!draftOnlyMode && !isDraftOpen && (
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogContent
-            className="top-2 translate-y-0 sm:top-[50%] sm:translate-y-[-50%] w-[calc(100vw-1rem)] max-w-[540px] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] sm:h-[85vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col rounded-[24px] sm:rounded-[32px] shadow-2xl"
+            className="left-2 right-2 top-2 translate-x-0 translate-y-0 sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] w-auto sm:w-[calc(100vw-1rem)] max-w-[540px] h-[calc(100svh-1rem)] max-h-[calc(100svh-1rem)] sm:h-[85vh] p-0 border-none bg-[#F2F4F6] overflow-x-hidden overflow-y-hidden flex flex-col rounded-[24px] sm:rounded-[32px] shadow-2xl"
             style={{ zIndex: Z_INDEX.guidelineAnalysisModal }}
             onInteractOutside={(e) => e.preventDefault()}
           >
@@ -1067,7 +1067,7 @@ export default function GuidelineInfoModal({
       >
         <DialogContent 
           showCloseButton={false}
-          className="top-2 translate-y-0 sm:top-[50%] sm:translate-y-[-50%] w-[calc(100vw-1rem)] max-w-[600px] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] sm:h-[90vh] p-0 border-none bg-[#F2F4F6] overflow-hidden flex flex-col rounded-[24px] sm:rounded-[32px] shadow-2xl"
+          className="left-2 right-2 top-2 translate-x-0 translate-y-0 sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] w-auto sm:w-[calc(100vw-1rem)] max-w-[600px] h-[calc(100svh-1rem)] max-h-[calc(100svh-1rem)] sm:h-[90vh] p-0 border-none bg-[#F2F4F6] overflow-hidden flex flex-col rounded-[24px] sm:rounded-[32px] shadow-2xl"
           style={{ zIndex: Z_INDEX.guidelineAnalysisModal + 1 }}
         >
           <DialogHeader className="relative p-4 pr-14 bg-white">
@@ -1102,7 +1102,7 @@ export default function GuidelineInfoModal({
                     onChange={(e) => setKeywordInput(e.target.value)}
                     onKeyDown={handleKeywordInputKeyDown}
                     placeholder="해시태그 추가 후 엔터"
-                    className="flex-1 h-12 bg-[#F9FAFB] border-none rounded-xl px-4 text-[14px] focus:ring-1 focus:ring-[#FF5722] outline-none"
+                    className="flex-1 h-12 bg-[#F9FAFB] border-none rounded-xl px-4 text-[16px] sm:text-[14px] focus:ring-1 focus:ring-[#FF5722] outline-none"
                   />
                   <Button onClick={handleAddKeyword} variant="outline" className="h-12 rounded-xl border-gray-200 font-bold text-[#4E5968]">추가</Button>
                 </div>
