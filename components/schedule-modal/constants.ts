@@ -59,7 +59,7 @@ export const BENEFIT_FIELD = {
 };
 
 export const MANAGE_BUTTON_CLASS =
-  'flex items-center gap-1 rounded-[16px] border border-[#FF5722]/40 bg-white px-3 py-1 text-[12px] font-semibold text-[#FF5722] transition hover:bg-[#FF5722] hover:text-white hover:shadow-[0_10px_22px_rgba(255,87,34,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/50';
+  'flex items-center gap-1 rounded-[16px] border border-[#F4C4B7] bg-white px-3 py-1 text-[12px] font-semibold text-[#FF5A1F] transition hover:bg-[#FFF7F4] hover:border-[#F0B3A4] hover:text-[#FF5A1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FDE2D9]';
 
 export type VisitReviewChecklist = NonNullable<Schedule['visitReviewChecklist']>;
 export type VisitReviewToggleKey = Exclude<keyof VisitReviewChecklist, 'otherText'>;

@@ -46,13 +46,23 @@ export async function POST(request: NextRequest) {
     const feedbackType = formatFeedbackType(payload.feedbackType ?? 'Unknown');
     const author = formatAuthor(payload.author);
 
-    await sendFeedbackToGoogleChat({
-      feedbackType,
-      content,
-      author,
-    });
+    let notified = true;
+    let notifyErrorMessage: string | null = null;
 
-    return NextResponse.json({ success: true });
+    try {
+      await sendFeedbackToGoogleChat({
+        feedbackType,
+        content,
+        author,
+      });
+    } catch (notifyError) {
+      notified = false;
+      notifyErrorMessage =
+        notifyError instanceof Error ? notifyError.message : 'Google Chat notification failed';
+      console.error('Google Chat feedback notification failed:', notifyError);
+    }
+
+    return NextResponse.json({ success: true, notified, notifyErrorMessage });
   } catch (error) {
     console.error('Failed to send feedback to Google Chat:', error);
     return NextResponse.json(

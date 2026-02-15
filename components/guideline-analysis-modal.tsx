@@ -1,0 +1,303 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import type { CampaignGuidelineAnalysis } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Loader2, AlertCircle, BookOpen, Sparkles, X } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { Z_INDEX } from '@/lib/z-index';
+import { cn } from '@/lib/utils';
+
+interface GuidelineAnalysisModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onApply: (analysis: CampaignGuidelineAnalysis, originalGuideline: string) => void;
+  scheduleId?: number;
+  isMembershipUser?: boolean;
+}
+
+const MAX_GUIDELINE_LENGTH_FREE = 1000;
+const MAX_GUIDELINE_LENGTH_MEMBERSHIP = 3000;
+const ANALYSIS_LOADING_STEPS = [
+  '가이드라인 내용을 꼼꼼히 읽고 있어요',
+  '꼭 지켜야 할 조건들을 찾고 있어요',
+  '중요한 키워드만 쏙쏙 뽑아내고 있어요',
+  '일정에 바로 반영할 수 있게 정리 중이에요',
+] as const;
+
+export default function GuidelineAnalysisModal({
+  isOpen,
+  onClose,
+  onApply,
+  scheduleId,
+  isMembershipUser = false,
+}: GuidelineAnalysisModalProps) {
+  const [guideline, setGuideline] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [analysisStepIndex, setAnalysisStepIndex] = useState(0);
+  const [quotaLoading, setQuotaLoading] = useState(false);
+  const [canAnalyzeToday, setCanAnalyzeToday] = useState(true);
+  const hasShownLimitToastRef = useRef(false);
+  const maxGuidelineLength = isMembershipUser
+    ? MAX_GUIDELINE_LENGTH_MEMBERSHIP
+    : MAX_GUIDELINE_LENGTH_FREE;
+  
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!isOpen || !user?.id) return;
+
+    let active = true;
+    const fetchQuota = async () => {
+      setQuotaLoading(true);
+      try {
+        const response = await fetch(`/api/ai/quota-status?userId=${encodeURIComponent(user.id)}`);
+        if (!response.ok) {
+          if (active) setCanAnalyzeToday(true);
+          return;
+        }
+        const result = await response.json();
+        if (!active) return;
+        setCanAnalyzeToday(Boolean(result?.data?.guideline?.allowed));
+      } catch (error) {
+        if (active) setCanAnalyzeToday(true);
+        console.error('가이드라인 쿼터 조회 오류:', error);
+      } finally {
+        if (active) setQuotaLoading(false);
+      }
+    };
+
+    fetchQuota();
+    return () => { active = false; };
+  }, [isOpen, user?.id]);
+
+  useEffect(() => {
+    if (!loading) return;
+    setAnalysisStepIndex(0);
+    const timer = window.setInterval(() => {
+      setAnalysisStepIndex((prev) =>
+        prev < ANALYSIS_LOADING_STEPS.length - 1 ? prev + 1 : prev
+      );
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [loading]);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    const { body, documentElement } = document;
+    const prevBodyOverflow = body.style.overflow;
+    const prevHtmlOverflow = documentElement.style.overflow;
+    const prevBodyOverscroll = body.style.overscrollBehavior;
+    const prevHtmlOverscroll = documentElement.style.overscrollBehavior;
+
+    body.style.overflow = 'hidden';
+    documentElement.style.overflow = 'hidden';
+    body.style.overscrollBehavior = 'none';
+    documentElement.style.overscrollBehavior = 'none';
+
+    return () => {
+      body.style.overflow = prevBodyOverflow;
+      documentElement.style.overflow = prevHtmlOverflow;
+      body.style.overscrollBehavior = prevBodyOverscroll;
+      documentElement.style.overscrollBehavior = prevHtmlOverscroll;
+    };
+  }, [isOpen]);
+
+  const handleGuidelineChange = (value: string) => {
+    if (value.length > maxGuidelineLength) {
+      if (!hasShownLimitToastRef.current) {
+        toast({
+          title: '글자 수가 너무 많아요',
+          description: `${maxGuidelineLength.toLocaleString()}자까지만 분석할 수 있어요.`,
+          variant: 'destructive',
+        });
+        hasShownLimitToastRef.current = true;
+      }
+      setGuideline(value.slice(0, maxGuidelineLength));
+      return;
+    }
+    hasShownLimitToastRef.current = false;
+    setGuideline(value);
+  };
+
+  const handleAnalyze = async () => {
+    if (!guideline.trim()) return;
+    if (!canAnalyzeToday) return;
+    if (guideline.trim().length > maxGuidelineLength) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/ai/parse-guideline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guideline, userId: user?.id, scheduleId }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        const baseMessage =
+          payload?.error ||
+          (response.status === 429
+            ? '요청이 제한되었습니다. 잠시 후 다시 시도해주세요.'
+            : '잠시 후 다시 시도해주세요.');
+        const retryMessage =
+          response.status === 429
+            ? '다시 시도해 주세요. 이번 요청은 횟수에서 차감되지 않아요.'
+            : '다시 시도해 주세요. 오류가 발생한 요청은 횟수에서 차감되지 않아요.';
+        throw new Error(`${baseMessage} ${retryMessage}`);
+      }
+
+      const result = await response.json();
+      onApply(result.data, guideline.trim());
+      onClose();
+    } catch (error) {
+      toast({
+        title: '분석하지 못했어요',
+        description: error instanceof Error ? error.message : '네트워크 상태를 확인해주세요.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  const currentStep = ANALYSIS_LOADING_STEPS[analysisStepIndex];
+  const progressPercent = ((analysisStepIndex + 1) / ANALYSIS_LOADING_STEPS.length) * 100;
+  const isLimitReached = guideline.length >= maxGuidelineLength;
+
+  return (
+    <div 
+      className="fixed inset-0 z-[250] bg-black/60 flex items-start sm:items-center justify-center p-2 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))]"
+      style={{ zIndex: Z_INDEX.guidelineAnalysisBackdrop }}
+    >
+      <div 
+        className="bg-white rounded-[20px] sm:rounded-[24px] w-full max-w-lg h-[calc(100svh-1rem)] max-h-[calc(100svh-1rem)] sm:max-h-[85vh] shadow-2xl overflow-hidden flex flex-col transform-gpu"
+        style={{
+          zIndex: Z_INDEX.guidelineAnalysisModal,
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+        }}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-neutral-50 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-orange-500 fill-orange-50" />
+            <h2 className="text-[16px] font-bold text-neutral-900">AI 가이드라인 분석</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-neutral-100 rounded-full transition-colors text-neutral-400"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Scroll Area */}
+        <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
+          {/* Toss Style Info Cards */}
+          <div className="space-y-2 mb-4">
+            <div className="flex items-center gap-3 rounded-[16px] bg-orange-50/50 px-4 py-3.5">
+              <AlertCircle className="w-4 h-4 text-orange-500 shrink-0" />
+              <div className="text-[13px] leading-tight">
+                <span className="font-semibold text-orange-900 mr-1.5">베타 서비스</span>
+                <span className="text-orange-700/80">하루에 2번까지 쓸 수 있어요.</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 rounded-[16px] bg-neutral-50 px-4 py-3.5">
+              <BookOpen className="w-4 h-4 text-neutral-500 shrink-0" />
+              <span className="text-[13px] font-medium text-neutral-600 leading-tight">가이드라인 본문을 그대로 복사해서 붙여넣어 주세요. <br/>(최대 1,000자, 멤버십 최대 3,000자)</span>
+            </div>
+          </div>
+
+                {/* Error Message - Space Inside Scroll Area */}
+          {!canAnalyzeToday && !loading && (
+            <div className="flex items-start gap-2 p-4 rounded-[16px] bg-red-50 text-red-600 border border-red-100 animate-in fade-in slide-in-from-top-1 mb-6">
+              <AlertCircle size={16} className="shrink-0 mt-0.5" />
+              <span className="text-[12px] font-semibold leading-relaxed">
+                오늘 사용 가능한 2회를 모두 사용했어요. 내일 다시 시도해주세요!
+              </span>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="space-y-3 mb-4">
+              <label className="text-[14px] font-bold text-neutral-800 px-0.5">AI 분석 진행중</label>
+              <div className="rounded-[20px] border border-orange-100 bg-orange-50/30 p-6 min-h-[260px] flex flex-col justify-center space-y-4 animate-in fade-in">
+                <div className="flex justify-between items-center">
+                  <p className="text-[13px] font-bold text-orange-700 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {currentStep}
+                  </p>
+                  <span className="text-[11px] font-black text-orange-500">{Math.round(progressPercent)}%</span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-orange-100/50 overflow-hidden">
+                  <div
+                    className="h-full bg-orange-500 transition-all duration-700 ease-out shadow-[0_0_8px_rgba(249,115,22,0.3)]"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3 mb-4">
+              <label className="text-[14px] font-bold text-neutral-800 px-0.5">가이드라인 본문</label>
+              <div className="mt-2 relative group border border-neutral-200 rounded-[20px] overflow-hidden bg-white">
+                <Textarea
+                  value={guideline}
+                  onChange={(e) => handleGuidelineChange(e.target.value)}
+                  placeholder="브랜드명, 필수 키워드, 마감일 등 전체 내용을 적어주세요."
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  className={cn(
+                    "min-h-[260px] max-h-[360px] p-5 pb-16 text-[15px] leading-relaxed border-none focus-visible:ring-0 resize-none overflow-y-auto placeholder:text-neutral-300 transform-gpu",
+                    isLimitReached && "bg-red-50/10"
+                  )}
+                  disabled={loading}
+                />
+                {/* Floating Counter */}
+                <div className="absolute bottom-4 right-5 pointer-events-none">
+                  <div
+                    className={cn(
+                      "px-2.5 py-1 rounded-full text-[14px] font-bold transition-all border bg-white/90 backdrop-blur-sm pointer-events-auto shadow-sm",
+                      isLimitReached ? "text-red-500 border-red-100" : "text-neutral-400 border-neutral-100"
+                    )}
+                  >
+                    {guideline.length.toLocaleString()} <span className="mx-0.5 text-neutral-200 font-normal">/</span> {maxGuidelineLength.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+    
+
+        </div>
+
+        {/* Footer - Fixed Bottom */}
+        <div className="px-6 py-5 border-t border-neutral-50 bg-white flex justify-end gap-3 shrink-0">
+          <Button 
+            variant="ghost" 
+            onClick={onClose}
+            className="text-neutral-500 h-12 px-6 text-[15px] font-medium hover:bg-neutral-50 rounded-[12px]"
+          >
+            취소
+          </Button>
+          <Button
+            onClick={handleAnalyze}
+            disabled={loading || quotaLoading || !canAnalyzeToday || !guideline.trim()}
+            className="min-w-[140px] h-12 rounded-[12px] text-[15px] font-bold shadow-none bg-orange-500 hover:bg-orange-600 disabled:bg-neutral-100 disabled:text-neutral-400"
+          >
+            {loading ? '분석하는 중...' : '분석하기'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

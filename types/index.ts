@@ -66,6 +66,11 @@ export interface Schedule {
   purchaseLink: string;
   guideFiles: GuideFile[];
   memo: string;
+  guidelineAnalysis?: CampaignGuidelineAnalysis | null;
+  originalGuidelineText?: string;
+  blogDraft?: string;
+  blogDraftOptions?: BlogDraftOptions | null;
+  blogDraftUpdatedAt?: string;
   reconfirmReason?: string;
   visitReviewChecklist?: {
     naverReservation: boolean;
@@ -166,4 +171,54 @@ export interface NotificationSettings {
   enabled: boolean;
   hour: number;
   minute: number;
+}
+
+export interface GuidelineDigestSection {
+  title: string;
+  items: string[];
+}
+
+export interface CampaignGuidelineAnalysis {
+  title: string;
+  points?: number | null;
+  keywords?: string[];
+  
+  // 플랫폼 정보
+  platform?: string | null; // 예: "네이버 블로그", "인스타그램", "카페" 등
+  category?: string | null; // 제품/서비스 카테고리
+  reviewChannel?: string | null; // 리뷰 채널 (블로그, 인스타그램, 쿠팡 등)
+  visitInfo?: string | null; // 방문정보 (주소, 위치 등)
+  phone?: string | null; // 전화번호
+
+  reviewRegistrationPeriod?: {
+    start?: string | null;
+    end?: string | null;
+  };
+  
+  // 컨텐츠 요구사항
+  contentRequirements?: {
+    // 방문형 리뷰 필수 항목
+    visitReviewTypes?: Array<'naverReservation' | 'googleReview' | 'other'>;
+    visitReviewOtherText?: string | null;
+  };
+
+  // 가이드라인 전체 정리 정보
+  guidelineDigest?: {
+    summary?: string;
+    sections?: GuidelineDigestSection[];
+  };
+}
+
+export interface BlogDraftOptions {
+  targetLength: 500 | 800 | 1000 | 1500 | 2000 | 3000;
+  tone: 'auto' | 'haeyo' | 'hamnida' | 'banmal';
+  persona: 'balanced' | 'friendly' | 'expert' | 'honest' | 'lifestyle';
+  emphasis?: string;
+  keywords?: string[];
+}
+
+export interface BlogDraftPayload {
+  draft: string;
+  options: BlogDraftOptions;
+  updatedAt?: string;
 }

@@ -7,6 +7,7 @@ import type {
   ScheduleChannel,
   ScheduleTransactionItem,
   AdditionalDeadline,
+  CampaignGuidelineAnalysis,
 } from '@/types';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -39,6 +40,7 @@ import {
   deleteGuideFile,
   getGuideFileUrl,
 } from '@/lib/storage';
+import { getSupabaseClient } from '@/lib/supabase';
 import { DEFAULT_SCHEDULE_CHANNEL_OPTIONS, sanitizeChannels } from '@/lib/schedule-channels';
 import {
   DEFAULT_COST_LABEL,
@@ -52,9 +54,9 @@ import {
 } from '@/lib/schedule-income-details';
 import { stripLegacyScheduleMemo } from '@/lib/schedule-memo-legacy';
 import { formatKoreanTime } from '@/lib/time-utils';
-import { format } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Check, Copy, Loader2, Search, Trash2, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { Check, Copy, Loader2, Search, Trash2, X, ArrowUp, ArrowDown, Sparkles } from 'lucide-react';
 import NaverMapSearchModal, { MapPlaceSelection } from '@/components/naver-map-search-modal';
 import { Z_INDEX } from '@/lib/z-index';
 import {
@@ -68,6 +70,8 @@ import {
 import GuideFilesSection from '@/components/schedule-modal/guide-files-section';
 import { useActiveTab, useGuideFilePreviews, useViewportStyle } from '@/components/schedule-modal/hooks';
 import StatusFields from '@/components/schedule-modal/status-fields';
+import GuidelineAnalysisModal from '@/components/guideline-analysis-modal';
+import GuidelineInfoModal from '@/components/guideline-info-modal';
 import {
   TIME_OPTIONS,
   arraysEqual,
@@ -82,10 +86,29 @@ import {
   sanitizeStatusForReviewType,
 } from '@/components/schedule-modal/utils';
 
+const VALID_AI_CATEGORIES = [
+  '맛집/식품',
+  '뷰티',
+  '생활/리빙',
+  '출산/육아',
+  '주방/가전',
+  '반려동물',
+  '여행/레저',
+  '데이트',
+  '웨딩',
+  '티켓/문화생활',
+  '디지털/전자기기',
+  '건강/헬스',
+  '자동차/모빌리티',
+  '문구/오피스',
+  '기타',
+] as const;
+
 export default function ScheduleModal({
   isOpen,
   onClose,
   onSave,
+  onAutoSaveAiData,
   onDelete,
   onUpdateFiles,
   schedule,
@@ -99,6 +122,7 @@ export default function ScheduleModal({
   isOpen: boolean;
   onClose: () => void;
   onSave: (schedule: Schedule) => Promise<boolean>;
+  onAutoSaveAiData?: (id: number, updates: Partial<Schedule>) => Promise<boolean>;
   onDelete: (id: number) => void;
   onUpdateFiles?: (id: number, files: GuideFile[]) => Promise<void>;
   schedule?: Schedule;
@@ -109,6 +133,9 @@ export default function ScheduleModal({
   initialMapSearchAutoSave?: boolean;
   statusChangeIntent?: boolean;
 }) {
+  type AiActionIntent = 'autoSchedule' | 'blogDraft' | null;
+  type AiFeatureFeedbackChoice = 'like' | 'dislike' | null;
+  const AI_FEATURE_FEEDBACK_STORAGE_KEY = 'schedule_modal_ai_feature_feedback_v1';
   const [formData, setFormData] = useState<Partial<Schedule>>(() => createEmptyFormData());
 
   const [purchaseLink, setPurchaseLink] = useState<string>('');
@@ -135,11 +162,62 @@ export default function ScheduleModal({
   const [deadlineError, setDeadlineError] = useState(false);
   const [showCategoryManagement, setShowCategoryManagement] = useState(false);
   const [showMapSearchModal, setShowMapSearchModal] = useState(false);
+  const [showGuidelineAnalysisModal, setShowGuidelineAnalysisModal] = useState(false);
+  const [showGuidelineInfoModal, setShowGuidelineInfoModal] = useState(false);
+  const [showAiActionOptions, setShowAiActionOptions] = useState(false);
+  const [showAiFeatureFeedbackPrompt, setShowAiFeatureFeedbackPrompt] = useState(false);
+  const [aiFeatureFeedbackChoice, setAiFeatureFeedbackChoice] =
+    useState<AiFeatureFeedbackChoice>(null);
+  const [aiFeatureFeedbackText, setAiFeatureFeedbackText] = useState('');
+  const [isAiFeatureFeedbackSubmitting, setIsAiFeatureFeedbackSubmitting] = useState(false);
+  const [canShowAiFeatureFeedbackPrompt, setCanShowAiFeatureFeedbackPrompt] = useState(false);
+  const [hasUsedAiFeatureForFeedbackPrompt, setHasUsedAiFeatureForFeedbackPrompt] = useState(false);
+  const [aiActionIntent, setAiActionIntent] = useState<AiActionIntent>(null);
+  const [openDraftOnGuidelineInfoOpen, setOpenDraftOnGuidelineInfoOpen] = useState(false);
+  const [draftOnlyMode, setDraftOnlyMode] = useState(false);
+  const [guidelineAnalysis, setGuidelineAnalysis] = useState<CampaignGuidelineAnalysis | null>(null);
+  const [originalGuidelineText, setOriginalGuidelineText] = useState('');
+  const [blogDraftText, setBlogDraftText] = useState('');
+  const [blogDraftOptions, setBlogDraftOptions] = useState<Schedule['blogDraftOptions']>(null);
+  const [blogDraftUpdatedAt, setBlogDraftUpdatedAt] = useState<string | undefined>(undefined);
+  const hasBlogDraft = blogDraftText.trim().length > 0;
+  const effectiveGuidelineAnalysis = guidelineAnalysis ?? formData.guidelineAnalysis ?? null;
+  const hideAiComposer = Boolean(effectiveGuidelineAnalysis && hasBlogDraft);
+  const effectiveOriginalGuidelineText = originalGuidelineText || formData.originalGuidelineText || '';
+  const draftAnalysisSource: CampaignGuidelineAnalysis = React.useMemo(
+    () =>
+      effectiveGuidelineAnalysis ?? {
+        title: (formData.title || '').trim() || '캠페인 가이드라인',
+        keywords: [],
+        category: formData.category || null,
+        platform: formData.platform || null,
+        reviewChannel: (formData.channel || []).join(', ') || null,
+      },
+    [
+      effectiveGuidelineAnalysis,
+      formData.category,
+      formData.channel,
+      formData.platform,
+      formData.title,
+    ]
+  );
   useEffect(() => {
     if (isOpen && initialMapSearchOpen) {
       setShowMapSearchModal(true);
     }
   }, [isOpen, initialMapSearchOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const savedChoice = window.localStorage.getItem(AI_FEATURE_FEEDBACK_STORAGE_KEY);
+    const alreadySubmitted = savedChoice === 'like' || savedChoice === 'dislike';
+    setCanShowAiFeatureFeedbackPrompt(!alreadySubmitted);
+    setShowAiFeatureFeedbackPrompt(false);
+    setAiFeatureFeedbackChoice(null);
+    setAiFeatureFeedbackText('');
+    setIsAiFeatureFeedbackSubmitting(false);
+    setHasUsedAiFeatureForFeedbackPrompt(false);
+  }, [isOpen]);
   const [showCompletionOnboarding, setShowCompletionOnboarding] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<Schedule['category'][]>([]);
   const [visitMode, setVisitMode] = useState(false);
@@ -191,7 +269,6 @@ export default function ScheduleModal({
   const basicInfoRef = useRef<HTMLDivElement | null>(null);
   const progressInfoRef = useRef<HTMLDivElement | null>(null);
   const assetManagementRef = useRef<HTMLDivElement | null>(null);
-  const customIncomeListRef = useRef<HTMLDivElement | null>(null);
   const memoRef = useRef<HTMLDivElement | null>(null);
   const showMapSearchModalRef = useRef(showMapSearchModal);
 
@@ -285,6 +362,12 @@ export default function ScheduleModal({
   }, [allChannels, formData.channel]);
 
   const categoryValues = React.useMemo(() => CATEGORY_OPTIONS.map((option) => option.value), []);
+  const categoryOptions = React.useMemo(() => {
+    if (formData.category && !selectedCategories.includes(formData.category)) {
+      return [...selectedCategories, formData.category];
+    }
+    return selectedCategories;
+  }, [formData.category, selectedCategories]);
 
   const sanitizeCategories = React.useCallback(
     (list: string[] | undefined | null) => {
@@ -336,6 +419,11 @@ export default function ScheduleModal({
 
   useEffect(() => {
     if (schedule) {
+      setGuidelineAnalysis(schedule.guidelineAnalysis || null);
+      setOriginalGuidelineText(schedule.originalGuidelineText || '');
+      setBlogDraftText(schedule.blogDraft || '');
+      setBlogDraftOptions(schedule.blogDraftOptions || null);
+      setBlogDraftUpdatedAt(schedule.blogDraftUpdatedAt || undefined);
       const initialNonVisit = schedule.reviewType !== '방문형' ? schedule.reviewType : '제공형';
       const parsedDetails = parseIncomeDetailsJson(schedule.incomeDetailsJson);
       const fallbackDetails = buildIncomeDetailsFromLegacy(schedule.income, schedule.cost);
@@ -367,6 +455,11 @@ export default function ScheduleModal({
       setVisitMode(hasVisitData(schedule));
       setLocationDetailEnabled(Boolean(schedule.regionDetail));
     } else {
+      setGuidelineAnalysis(null);
+      setOriginalGuidelineText('');
+      setBlogDraftText('');
+      setBlogDraftOptions(null);
+      setBlogDraftUpdatedAt(undefined);
       const emptyForm = createEmptyFormData();
       if (initialDeadline) {
         emptyForm.dead = initialDeadline;
@@ -438,6 +531,304 @@ export default function ScheduleModal({
     setFormData((prev) => ({ ...prev, platform: defaultPlatform }));
   }, [allPlatforms, schedule, formData.platform]);
 
+  const resolveAnalysisCategory = useCallback((analysis: CampaignGuidelineAnalysis) => {
+    const candidate = analysis.category?.trim();
+    if (!candidate) return '기타';
+    return VALID_AI_CATEGORIES.includes(candidate as Schedule['category'])
+      ? (candidate as Schedule['category'])
+      : '기타';
+  }, []);
+
+  const applyGuidelineDataToSchedule = useCallback((
+    analysis: CampaignGuidelineAnalysis,
+    options?: { useDefaultPlatform?: boolean }
+  ) => {
+    const selectedCategory = resolveAnalysisCategory(analysis);
+
+    const hasVisitReviewTypes = Boolean(analysis.contentRequirements?.visitReviewTypes?.length);
+    const shouldEnableVisitMode = Boolean(analysis.visitInfo) || hasVisitReviewTypes;
+    const visitReviewChecklist = formData.visitReviewChecklist || {
+      ...DEFAULT_VISIT_REVIEW_CHECKLIST,
+    };
+
+    if (shouldEnableVisitMode && analysis.contentRequirements?.visitReviewTypes) {
+      const reviewTypes = analysis.contentRequirements.visitReviewTypes;
+      if (reviewTypes.includes('naverReservation')) {
+        visitReviewChecklist.naverReservation = true;
+      }
+      if (reviewTypes.includes('googleReview')) {
+        visitReviewChecklist.googleReview = true;
+      }
+      if (reviewTypes.includes('other')) {
+        visitReviewChecklist.other = true;
+        visitReviewChecklist.otherText = analysis.contentRequirements.visitReviewOtherText || '';
+      }
+    }
+
+    const reviewChannels =
+      analysis.reviewChannel
+        ? analysis.reviewChannel
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : [];
+    const normalizedAnalysisPlatform = analysis.platform?.trim();
+    const preferredDefaultPlatform = allPlatforms.includes('레뷰')
+      ? '레뷰'
+      : allPlatforms[0] || formData.platform || '';
+    const shouldKeepDefaultPlatform =
+      options?.useDefaultPlatform ||
+      !normalizedAnalysisPlatform ||
+      normalizedAnalysisPlatform === '기타';
+    const resolvedPlatform = shouldKeepDefaultPlatform
+      ? preferredDefaultPlatform
+      : normalizedAnalysisPlatform;
+
+    const updates: Partial<Schedule> = {
+      title: analysis.title || '',
+      benefit: analysis.points || 0,
+      dead: analysis.reviewRegistrationPeriod?.end || '',
+      ownerPhone: analysis.phone || '',
+      platform: resolvedPlatform,
+      category: selectedCategory,
+      channel: reviewChannels,
+      ...(shouldEnableVisitMode
+        ? {
+            reviewType: '방문형',
+            status: sanitizeStatusForReviewType(
+              (formData.status as Schedule['status']) || '선정됨',
+              '방문형'
+            ),
+            visitReviewChecklist,
+          }
+        : {}),
+    };
+
+    if (analysis.visitInfo) {
+      updates.regionDetail = analysis.visitInfo;
+    }
+
+    updates.memo = '';
+
+    setFormData((prev) => ({ ...prev, ...updates }));
+    setVisitMode(shouldEnableVisitMode);
+    if (analysis.visitInfo) {
+      setLocationDetailEnabled(true);
+    }
+    setShowGuidelineInfoModal(false);
+
+    toast({
+      title: '성공',
+      description: '분석된 내용을 일정에 반영했습니다.',
+    });
+  }, [
+    allPlatforms,
+    formData.platform,
+    formData.status,
+    formData.visitReviewChecklist,
+    resolveAnalysisCategory,
+    toast,
+  ]);
+
+  const handleApplyGuidelineToSchedule = useCallback(
+    (nextAnalysis?: CampaignGuidelineAnalysis) => {
+      const targetAnalysis = nextAnalysis ?? effectiveGuidelineAnalysis;
+      if (!targetAnalysis) return;
+      setGuidelineAnalysis(targetAnalysis);
+      applyGuidelineDataToSchedule(targetAnalysis);
+    },
+    [applyGuidelineDataToSchedule, effectiveGuidelineAnalysis]
+  );
+
+  const applyGuidelineAnalysis = useCallback(
+    async (analysis: CampaignGuidelineAnalysis, originalGuideline: string) => {
+      setHasUsedAiFeatureForFeedbackPrompt(true);
+      setGuidelineAnalysis(analysis);
+      setOriginalGuidelineText(originalGuideline);
+      setBlogDraftText('');
+      setBlogDraftOptions(null);
+      setBlogDraftUpdatedAt(undefined);
+      setShowGuidelineAnalysisModal(false);
+
+      setShowGuidelineInfoModal(true);
+      setOpenDraftOnGuidelineInfoOpen(aiActionIntent === 'blogDraft');
+      setDraftOnlyMode(false);
+      setAiActionIntent(null);
+
+      if (schedule?.id && onAutoSaveAiData) {
+        const saved = await onAutoSaveAiData(schedule.id, {
+          guidelineAnalysis: analysis,
+          originalGuidelineText: originalGuideline,
+          blogDraft: '',
+          blogDraftOptions: null,
+          blogDraftUpdatedAt: '',
+        });
+
+        if (saved) {
+          toast({
+            title: '성공',
+            description: '가이드라인 분석 결과가 바로 저장되었습니다.',
+          });
+        } else {
+          toast({
+            title: '분석 완료',
+            description: '분석은 완료됐지만 자동 저장에 실패했어요. 저장 버튼으로 반영해주세요.',
+            variant: 'destructive',
+          });
+        }
+        return;
+      }
+
+      toast({
+        title: '성공',
+        description: '가이드라인이 분석되었습니다. 일정에는 아직 반영되지 않았습니다.',
+      });
+    },
+    [aiActionIntent, onAutoSaveAiData, schedule?.id, toast]
+  );
+
+  const handleSelectAiAction = useCallback(
+    (intent: Exclude<AiActionIntent, null>) => {
+      if (intent === 'blogDraft') {
+        setShowAiActionOptions(false);
+        setDraftOnlyMode(true);
+        setOpenDraftOnGuidelineInfoOpen(true);
+        setShowGuidelineInfoModal(true);
+        return;
+      }
+      setShowAiActionOptions(false);
+
+      if (!effectiveGuidelineAnalysis) {
+        setAiActionIntent(intent);
+        setShowGuidelineAnalysisModal(true);
+        return;
+      }
+
+      handleApplyGuidelineToSchedule(effectiveGuidelineAnalysis);
+    },
+    [
+      effectiveGuidelineAnalysis,
+      handleApplyGuidelineToSchedule,
+    ]
+  );
+
+  const handleAiFeatureFeedbackSelect = useCallback(
+    (choice: Exclude<AiFeatureFeedbackChoice, null>) => {
+      setAiFeatureFeedbackChoice(choice);
+    },
+    []
+  );
+
+  const handleSubmitAiFeatureFeedback = useCallback(async () => {
+    const trimmedContent = aiFeatureFeedbackText.trim();
+
+    if (!aiFeatureFeedbackChoice) {
+      toast({
+        title: '좋아요/별로에요를 먼저 선택해주세요.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+
+    if (!trimmedContent) {
+      toast({
+        title: '피드백 내용을 입력해주세요.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: '로그인이 필요합니다.',
+        variant: 'destructive',
+        duration: 1000,
+      });
+      return;
+    }
+
+    setIsAiFeatureFeedbackSubmitting(true);
+
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.from('feedback_messages').insert({
+        user_id: user.id,
+        feedback_type: aiFeatureFeedbackChoice === 'like' ? 'feature' : 'bug',
+        content: `[AI 작성하기 신규 기능 피드백 - ${aiFeatureFeedbackChoice === 'like' ? '좋아요' : '별로에요'}]\n${trimmedContent}`,
+        metadata: {
+          source: 'schedule_modal_ai_feature_feedback',
+          email: user.email ?? null,
+          sentiment: aiFeatureFeedbackChoice,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      try {
+        const userMetadata = user.user_metadata as { full_name?: string; name?: string } | null;
+
+        await fetch('/api/feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            feedbackType: aiFeatureFeedbackChoice === 'like' ? 'feature' : 'bug',
+            content: `[AI 작성하기 신규 기능 피드백 - ${aiFeatureFeedbackChoice === 'like' ? '좋아요' : '별로에요'}]\n${trimmedContent}`,
+            author: {
+              id: user.id,
+              email: user.email ?? null,
+              name: userMetadata?.full_name ?? userMetadata?.name ?? null,
+            },
+          }),
+          keepalive: true,
+        });
+      } catch (notifyError) {
+        console.error('Failed to notify Google Chat:', notifyError);
+      }
+
+      window.localStorage.setItem(AI_FEATURE_FEEDBACK_STORAGE_KEY, aiFeatureFeedbackChoice);
+      setCanShowAiFeatureFeedbackPrompt(false);
+      setShowAiFeatureFeedbackPrompt(false);
+      setAiFeatureFeedbackChoice(null);
+      setAiFeatureFeedbackText('');
+
+      toast({
+        title: '피드백을 전송했어요.',
+        description: '하나하나 꼼꼼히 읽어볼게요.',
+        duration: 1500,
+      });
+    } catch (error) {
+      toast({
+        title: '피드백 전송에 실패했습니다.',
+        description: error instanceof Error ? error.message : '다시 시도해 주세요.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAiFeatureFeedbackSubmitting(false);
+    }
+  }, [aiFeatureFeedbackChoice, aiFeatureFeedbackText, toast, user]);
+
+  const handleCloseGuidelineAnalysisModal = useCallback(() => {
+    setShowGuidelineAnalysisModal(false);
+    setAiActionIntent(null);
+  }, []);
+
+  const handleCloseGuidelineInfoModal = useCallback(() => {
+    setShowGuidelineInfoModal(false);
+    setOpenDraftOnGuidelineInfoOpen(false);
+    setDraftOnlyMode(false);
+
+    if (canShowAiFeatureFeedbackPrompt && hasUsedAiFeatureForFeedbackPrompt) {
+      setShowAiFeatureFeedbackPrompt(true);
+      setHasUsedAiFeatureForFeedbackPrompt(false);
+    }
+  }, [canShowAiFeatureFeedbackPrompt, hasUsedAiFeatureForFeedbackPrompt]);
+
   const handleSave = async (overrideFormData?: Partial<Schedule>) => {
     if (isSubmittingRef.current) return;
     const mergedFormData = overrideFormData ? { ...formData, ...overrideFormData } : formData;
@@ -466,6 +857,11 @@ export default function ScheduleModal({
     try {
       const updatedFormData: Partial<Schedule> = { ...mergedFormData };
       updatedFormData.title = trimmedTitle;
+      updatedFormData.guidelineAnalysis = effectiveGuidelineAnalysis;
+      updatedFormData.originalGuidelineText = effectiveOriginalGuidelineText;
+      updatedFormData.blogDraft = blogDraftText;
+      updatedFormData.blogDraftOptions = blogDraftOptions;
+      updatedFormData.blogDraftUpdatedAt = blogDraftUpdatedAt;
       // purchaseLink를 저장 데이터에 포함
       updatedFormData.purchaseLink = purchaseLink;
       const hasInvalidDetails = activeScheduleDetails.some(
@@ -665,26 +1061,6 @@ export default function ScheduleModal({
     );
   };
 
-  const scrollToCustomIncomeList = () => {
-    if (typeof window === 'undefined') return;
-    if (!window.matchMedia('(max-width: 640px)').matches) return;
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        const container = scrollContainerRef.current;
-        const target = customIncomeListRef.current;
-        if (!container || !target) {
-          customIncomeListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          return;
-        }
-        const containerRect = container.getBoundingClientRect();
-        const targetRect = target.getBoundingClientRect();
-        const extraOffset = 80;
-        const nextTop = container.scrollTop + (targetRect.top - containerRect.top) - extraOffset;
-        container.scrollTo({ top: Math.max(0, nextTop), behavior: 'smooth' });
-      }, 80);
-    });
-  };
-
   const handleAddIncomeDetailFromModal = () => {
     const trimmedLabel = newIncomeDetailLabel.trim();
     if (!trimmedLabel) {
@@ -733,7 +1109,6 @@ export default function ScheduleModal({
       title: '항목이 추가되었습니다.',
       duration: 1000,
     });
-    scrollToCustomIncomeList();
   };
 
   const handleRemoveScheduleIncomeDetail = (id: string) => {
@@ -987,6 +1362,8 @@ export default function ScheduleModal({
 
   const { period, hour, minute } = parseVisitTime(formData.visitTime || '');
   const displayVisitTime = formData.visitTime ? formatKoreanTime(formData.visitTime) : '시간 선택';
+  const parsedVisitDate = formData.visit ? parseISO(formData.visit) : null;
+  const visitDateForDisplay = parsedVisitDate && isValid(parsedVisitDate) ? parsedVisitDate : null;
   const defaultIncomeDetail = scheduleIncomeDetails.find(isDefaultIncomeDetail);
   const defaultCostDetail = scheduleIncomeDetails.find(isDefaultCostDetail);
   const customIncomeDetails = React.useMemo(
@@ -1039,7 +1416,9 @@ export default function ScheduleModal({
   return (
     <>
       <div
-        className="fixed left-0 w-full flex flex-col justify-end text-neutral-900"
+        className={`fixed left-0 w-full flex flex-col justify-end text-neutral-900 ${
+          showGuidelineInfoModal || showGuidelineAnalysisModal ? 'hidden' : ''
+        }`}
         style={{
           height: viewportStyle.height,
           top: viewportStyle.top,
@@ -1047,7 +1426,7 @@ export default function ScheduleModal({
         }}
       >
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/40"
           onClick={() => setShowCloseConfirm(true)}
           style={{ touchAction: 'none' }}
         />
@@ -1138,7 +1517,7 @@ export default function ScheduleModal({
                 </div>
               </div>
             )}
-            <div className="space-y-4 bg-[#F2F4F6] p-4">
+            <div className="space-y-4 bg-[#F6F7F9] p-4">
               {formData.dead && formData.dead < getTodayInKST() && formData.status !== '완료' && (
                 <div className="mb-4 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
                   <span className="text-[14px]">⚠️</span>
@@ -1148,9 +1527,72 @@ export default function ScheduleModal({
                 </div>
               )}
 
+              {/* AI 작업 버튼 */}
+              <section className="rounded-[28px] bg-white px-5 py-4 shadow-[0_8px_20px_rgba(15,23,42,0.06)] space-y-2">
+                {!hideAiComposer && (
+                  <>
+                    <div className="w-full h-[52px] rounded-[18px] border border-orange-200 bg-white px-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-orange-700">
+                        <Sparkles size={16} />
+                        <span className="font-semibold text-[14px]">AI로 작성하기 (Beta)</span>
+                      </div>
+                      <Switch
+                        checked={showAiActionOptions}
+                        onCheckedChange={(checked) => setShowAiActionOptions(Boolean(checked))}
+                        aria-label="AI로 작성하기 옵션 토글"
+                      />
+                    </div>
+
+                    {showAiActionOptions && (
+                      <div className="flex flex-col gap-2 pt-1">
+                        {!effectiveGuidelineAnalysis && (
+                          <button
+                            type="button"
+                            onClick={() => handleSelectAiAction('autoSchedule')}
+                            className="h-[44px] rounded-[14px] bg-orange-50 border border-orange-200 hover:bg-orange-100 text-orange-700 font-semibold text-[14px] transition-colors touch-manipulation active:scale-[0.99]"
+                          >
+                            자동 일정등록
+                          </button>
+                        )}
+                        {!hasBlogDraft && (
+                          <button
+                            type="button"
+                            onClick={() => handleSelectAiAction('blogDraft')}
+                            className="h-[44px] rounded-[14px] bg-orange-50 border border-orange-200 hover:bg-orange-100 text-orange-700 font-semibold text-[14px] transition-colors touch-manipulation active:scale-[0.99]"
+                          >
+                            블로그 글쓰기
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
+            
+                {effectiveGuidelineAnalysis && (
+                  <button
+                    type="button"
+                    onClick={() => setShowGuidelineInfoModal(true)}
+                    className="w-full h-[44px] rounded-[18px] bg-white border border-orange-200 hover:border-orange-300 hover:bg-neutral-50 text-orange-700 font-semibold text-[14px] transition-colors"
+                  >
+                    📋 분석된 가이드라인 정보 보기
+                  </button>
+                )}
+                    {hasBlogDraft && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAiAction('blogDraft')}
+                    className="w-full h-[44px] rounded-[18px] bg-white border border-orange-200 hover:border-orange-300 hover:bg-neutral-50 text-orange-700 font-semibold text-[14px] transition-colors"
+                  >
+                    블로그 글보기
+                  </button>
+                )}
+
+              </section>
+
               <section
                 ref={basicInfoRef}
-                className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-5"
+                className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_8px_20px_rgba(15,23,42,0.06)] space-y-5"
               >
                 <div className="space-y-4">
                   <div ref={deadlineSectionRef}>
@@ -1168,7 +1610,7 @@ export default function ScheduleModal({
                             setTitleError(false);
                           }
                         }}
-                        className="w-full h-[40px] rounded-[18px] bg-[#F2F4F6] px-4 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none"
+                        className="w-full h-[40px] rounded-[18px] bg-neutral-50 border border-neutral-200 px-4 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none"
                         placeholder="(예: [OO식당] 체험단 방문, XX샴푸 리뷰 등)"
                       />
                       {formData.title && (
@@ -1180,7 +1622,7 @@ export default function ScheduleModal({
                               duration: 1000,
                             });
                           }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-orange-500 transition-colors"
                         >
                           <Copy className="w-4 h-4 cursor-pointer" />
                         </button>
@@ -1193,7 +1635,7 @@ export default function ScheduleModal({
 
                   {/* 당첨가이드 링크 입력 필드 */}
                   <div>
-                    <label className="block text-[15px] font-bold text-neutral-500 mb-0.5">
+                    <label className="block text-[15px] font-bold text-neutral-500 mb-1.5">
                       가이드라인 링크
                     </label>
                     <div className="relative">
@@ -1201,7 +1643,7 @@ export default function ScheduleModal({
                         type="url"
                         value={purchaseLink}
                         onChange={(e) => setPurchaseLink(e.target.value)}
-                        className="w-full h-[40px] rounded-[18px] bg-[#F2F4F6] px-4 pr-12 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none"
+                        className="w-full h-[40px] rounded-[18px] bg-neutral-50 border border-neutral-200 px-4 pr-12 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none"
                         placeholder="https://..."
                       />
                       <button
@@ -1215,7 +1657,7 @@ export default function ScheduleModal({
                             });
                           }
                         }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-orange-500 transition-colors"
                         title="복사"
                       >
                         <Copy className="w-4 h-4 cursor-pointer" />
@@ -1236,12 +1678,12 @@ export default function ScheduleModal({
                   )}
 
                   <div>
-                    <label className="block text-[15px] font-bold text-[#FF5722] mb-2">
+                    <label className="block text-[15px] font-bold text-orange-600 mb-2">
                       마감일 (필수)
                     </label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className="w-full h-[40px] rounded-[18px] bg-[#F2F4F6] px-4 text-[15px] text-neutral-900 text-left cursor-pointer focus-visible:outline-none">
+                        <button className="w-full h-[40px] rounded-[18px] bg-neutral-50 border border-neutral-200 px-4 text-[15px] text-neutral-900 text-left cursor-pointer focus-visible:outline-none">
                           {formData.dead
                             ? format(new Date(formData.dead), 'PPP', { locale: ko })
                             : '날짜 선택'}
@@ -1280,7 +1722,7 @@ export default function ScheduleModal({
                   </div>
 
                   {(formData.additionalDeadlines || []).length > 0 && (
-                    <div className="mt-4 p-4 rounded-2xl bg-orange-50/30 border border-orange-100">
+                    <div className="mt-4 p-4 rounded-2xl bg-[#FFF8F5] border border-orange-100">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="">📋 </span>
                         <span className="text-[13px] font-bold text-orange-700">
@@ -1365,7 +1807,7 @@ export default function ScheduleModal({
                                     }}
                                     className={`flex items-center gap-1.5 px-3 h-[40px] rounded-[18px] transition-all active:scale-95 font-semibold text-[13px] ${
                                       isCompleted
-                                        ? 'bg-orange-400 text-white shadow-sm'
+                                        ? 'bg-orange-500 text-white shadow-sm'
                                         : 'bg-white text-neutral-600 border border-neutral-200 hover:border-orange-300'
                                     }`}
                                   >
@@ -1432,7 +1874,7 @@ export default function ScheduleModal({
 
               <section
                 ref={progressInfoRef}
-                className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-4"
+                className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_8px_20px_rgba(15,23,42,0.06)] space-y-4"
               >
                 <div>
                   <div className="flex items-center justify-between">
@@ -1440,9 +1882,6 @@ export default function ScheduleModal({
                       체험 진행 정보
                     </p>
                   </div>
-                  <p className="text-[12px] text-neutral-400">
-                    리뷰 채널과 방문 정보를 손쉽게 입력해 보세요.
-                  </p>
                 </div>
                 <div className="space-y-6">
                   <div>
@@ -1458,10 +1897,10 @@ export default function ScheduleModal({
                               key={platform}
                               type="button"
                               onClick={() => setFormData({ ...formData, platform })}
-                              className={`text-[12px] px-3.5 py-1.5 rounded-[16px] font-semibold transition-colors ${
+                              className={`text-[11px] px-3 py-1.5 rounded-[16px] font-semibold transition-colors ${
                                 isActive
-                                  ? 'bg-orange-100 text-orange-600'
-                                  : 'bg-[#F2F4F6] text-[#4E5968]'
+                                  ? 'bg-orange-100 text-[#FF5A1F]'
+                                  : 'bg-[#F1F3F6] text-[#5B6573]'
                               }`}
                             >
                               {platform}
@@ -1487,8 +1926,8 @@ export default function ScheduleModal({
                     </label>
                     <div className="rounded-[24px] bg-white/90">
                       <div className="flex flex-wrap items-center gap-2">
-                        {selectedCategories.length > 0 ? (
-                          selectedCategories.map((category) => {
+                        {categoryOptions.length > 0 ? (
+                          categoryOptions.map((category) => {
                             const meta = CATEGORY_OPTIONS.find((c) => c.value === category);
                             const isActive = formData.category === category;
                             return (
@@ -1496,10 +1935,10 @@ export default function ScheduleModal({
                                 key={category}
                                 type="button"
                                 onClick={() => setFormData((prev) => ({ ...prev, category }))}
-                                className={`px-3.5 py-1.5 rounded-[16px] text-[12px] font-semibold transition-colors ${
+                                className={`px-3 py-1.5 rounded-[16px] text-[11px] font-semibold transition-colors ${
                                   isActive
-                                    ? 'bg-orange-100 text-orange-600'
-                                    : 'bg-[#F2F4F6] text-[#4E5968]'
+                                    ? 'bg-orange-100 text-[#FF5A1F]'
+                                    : 'bg-[#F1F3F6] text-[#5B6573]'
                                 }`}
                               >
                                 <span className="truncate max-w-[120px]">
@@ -1537,10 +1976,10 @@ export default function ScheduleModal({
                                 key={channel}
                                 type="button"
                                 onClick={() => handleToggleChannel(channel)}
-                                className={`text-[12px] px-3 py-1 rounded-[16px] font-semibold transition-colors ${
+                                className={`text-[11px] px-2.5 py-1 rounded-[16px] font-semibold transition-colors ${
                                   isSelected
-                                    ? 'bg-orange-100 text-orange-600'
-                                    : 'bg-[#F2F4F6] text-[#4E5968]'
+                                    ? 'bg-orange-100 text-[#FF5A1F]'
+                                    : 'bg-[#F1F3F6] text-[#5B6573]'
                                 }`}
                               >
                                 {channel}
@@ -1569,7 +2008,7 @@ export default function ScheduleModal({
                       <button
                         type="button"
                         onClick={() => handleToggleVisitMode(!visitMode)}
-                        className={`relative h-8 w-16 rounded-full transition ${visitMode ? 'bg-orange-400' : 'bg-neutral-300'}`}
+                        className={`relative h-8 w-16 rounded-full transition ${visitMode ? 'bg-orange-300' : 'bg-neutral-300'}`}
                         aria-pressed={visitMode}
                       >
                         <span
@@ -1588,7 +2027,7 @@ export default function ScheduleModal({
                             value={formData.ownerPhone || ''}
                             onChange={(e) => handleOwnerPhoneChange(e.target.value)}
                             placeholder="예: 010-9876-5432"
-                            className="w-full rounded-[18px] bg-[#F7F7F8] px-4 py-2 text-[15px] text-neutral-900 focus-visible:outline-none"
+                            className="w-full rounded-[18px] bg-neutral-50 border border-neutral-200 px-4 py-2 text-[15px] text-neutral-900 focus-visible:outline-none"
                           />
                           {formData.ownerPhone && (
                             <button
@@ -1600,7 +2039,7 @@ export default function ScheduleModal({
                                   duration: 1000,
                                 });
                               }}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-orange-500 transition-colors"
                             >
                               <Copy className="w-4 h-4 cursor-pointer" />
                             </button>
@@ -1618,16 +2057,16 @@ export default function ScheduleModal({
                               </p>
                               <Popover>
                                 <PopoverTrigger asChild>
-                                  <button className="w-full rounded-[18px] bg-[#F2F4F6] px-4 py-2 text-[16px] font-semibold text-neutral-900 text-left">
-                                    {formData.visit
-                                      ? format(new Date(formData.visit), 'PPP', { locale: ko })
+                                  <button className="w-full rounded-[18px] bg-neutral-50 border border-neutral-200 px-4 py-2 text-[16px] font-semibold text-neutral-900 text-left">
+                                    {visitDateForDisplay
+                                      ? format(visitDateForDisplay, 'PPP', { locale: ko })
                                       : '날짜 선택'}
                                   </button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
                                   <Calendar
                                     mode="single"
-                                    selected={formData.visit ? new Date(formData.visit) : undefined}
+                                    selected={visitDateForDisplay ?? undefined}
                                     onSelect={(date) =>
                                       setFormData({
                                         ...formData,
@@ -1645,7 +2084,7 @@ export default function ScheduleModal({
                               </p>
                               <Popover>
                                 <PopoverTrigger asChild>
-                                  <button className="w-full rounded-[18px] bg-[#F2F4F6] px-4 py-2 text-[16px] font-semibold text-neutral-900 text-left">
+                                  <button className="w-full rounded-[18px] bg-neutral-50 border border-neutral-200 px-4 py-2 text-[16px] font-semibold text-neutral-900 text-left">
                                     {displayVisitTime}
                                   </button>
                                 </PopoverTrigger>
@@ -1662,7 +2101,7 @@ export default function ScheduleModal({
                                               key={p}
                                               className={`w-full rounded-md px-3 py-2 text-sm font-semibold text-left cursor-pointer transition-colors ${
                                                 p === period
-                                                  ? 'bg-blue-500 text-white'
+                                                  ? 'bg-orange-500 text-white'
                                                   : 'hover:bg-neutral-100 text-neutral-800'
                                               }`}
                                               onClick={() => updateVisitTime({ period: p })}
@@ -1684,7 +2123,7 @@ export default function ScheduleModal({
                                               key={h}
                                               className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
                                                 h === hour
-                                                  ? 'bg-blue-500 text-white'
+                                                  ? 'bg-orange-500 text-white'
                                                   : 'hover:bg-neutral-100 text-neutral-800'
                                               }`}
                                               onClick={() => updateVisitTime({ hour: h })}
@@ -1706,7 +2145,7 @@ export default function ScheduleModal({
                                               key={m}
                                               className={`rounded-md px-2 py-2 text-sm font-semibold text-center cursor-pointer transition-colors ${
                                                 m === minute
-                                                  ? 'bg-blue-500 text-white'
+                                                  ? 'bg-orange-500 text-white'
                                                   : 'hover:bg-neutral-100 text-neutral-800'
                                               }`}
                                               onClick={() => updateVisitTime({ minute: m })}
@@ -1742,7 +2181,7 @@ export default function ScheduleModal({
                                     setLocationDetailEnabled(false);
                                   }}
                                   placeholder="주소를 입력해 주세요"
-                                  className="w-full h-10 rounded-[18px] border border-neutral-200 bg-[#F2F4F6] px-4 pr-20 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none"
+                                  className="w-full h-10 rounded-[18px] border border-neutral-200 bg-neutral-50 px-4 pr-20 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none"
                                 />
                                 {formData.region && (
                                   <button
@@ -1754,7 +2193,7 @@ export default function ScheduleModal({
                                         duration: 1000,
                                       });
                                     }}
-                                    className="absolute right-18 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                                    className="absolute right-18 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-orange-500 transition-colors"
                                   >
                                     <Copy className="w-4 h-4 cursor-pointer" />
                                   </button>
@@ -1790,7 +2229,7 @@ export default function ScheduleModal({
                                     setFormData({ ...formData, regionDetail: e.target.value })
                                   }
                                   placeholder="예: 4층 스튜디오 / 사무실 앞 벤치"
-                                  className="w-full h-10 rounded-[18px] bg-[#F2F4F6] px-4 pr-12 text-[15px] text-neutral-900 focus-visible:outline-none"
+                                  className="w-full h-10 rounded-[18px] bg-neutral-50 border border-neutral-200 px-4 pr-12 text-[15px] text-neutral-900 focus-visible:outline-none"
                                 />
                                 {formData.regionDetail && (
                                   <button
@@ -1802,7 +2241,7 @@ export default function ScheduleModal({
                                         duration: 1000,
                                       });
                                     }}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-orange-500 transition-colors"
                                   >
                                     <Copy className="w-4 h-4 cursor-pointer" />
                                   </button>
@@ -1827,7 +2266,7 @@ export default function ScheduleModal({
                                     })
                                   }
                                   placeholder="예: 02-123-4567"
-                                  className="w-full rounded-[18px] bg-[#F7F7F8] px-4 py-2 text-[15px] text-neutral-900 focus-visible:outline-none"
+                                  className="w-full rounded-[18px] bg-neutral-50 border border-neutral-200 px-4 py-2 text-[15px] text-neutral-900 focus-visible:outline-none"
                                 />
                                 {formData.phone && (
                                   <button
@@ -1839,7 +2278,7 @@ export default function ScheduleModal({
                                         duration: 1000,
                                       });
                                     }}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-orange-500 transition-colors"
                                   >
                                     <Copy className="w-4 h-4 cursor-pointer" />
                                   </button>
@@ -1856,7 +2295,7 @@ export default function ScheduleModal({
                                   value={formData.ownerPhone || ''}
                                   onChange={(e) => handleOwnerPhoneChange(e.target.value)}
                                   placeholder="예: 010-9876-5432"
-                                  className="w-full rounded-[18px] bg-[#F7F7F8] px-4 py-2 text-[15px] text-neutral-900 focus-visible:outline-none"
+                                  className="w-full rounded-[18px] bg-neutral-50 border border-neutral-200 px-4 py-2 text-[15px] text-neutral-900 focus-visible:outline-none"
                                 />
                                 {formData.ownerPhone && (
                                   <button
@@ -1868,7 +2307,7 @@ export default function ScheduleModal({
                                         duration: 1000,
                                       });
                                     }}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-orange-500 transition-colors"
                                   >
                                     <Copy className="w-4 h-4 cursor-pointer" />
                                   </button>
@@ -1895,7 +2334,7 @@ export default function ScheduleModal({
                                       isSelected
                                         ? 'border-orange-400'
                                         : 'border-[#E5E8EB] bg-white hover:border-neutral-300'
-                                    } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3182F6]/40`}
+                                    } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200`}
                                   >
                                     <span
                                       className={`text-[14px] ${
@@ -1943,7 +2382,7 @@ export default function ScheduleModal({
 
               <section
                 ref={assetManagementRef}
-                className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-4"
+                className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_8px_20px_rgba(15,23,42,0.06)] space-y-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -1953,7 +2392,7 @@ export default function ScheduleModal({
                     </p>
                   </div>
                 </div>
-                <div className="rounded-[20px] bg-[#EFF5FF] px-4 py-4 space-y-1">
+                <div className="rounded-[20px] bg-[#F7F5F3] px-4 py-4 space-y-1">
                   <label className="flex items-center justify-between text-[14px] font-semibold text-neutral-600">
                     <span>{BENEFIT_FIELD.label}</span>
                     <input
@@ -1997,10 +2436,7 @@ export default function ScheduleModal({
                     />
                   </label>
                   {customIncomeDetails.length > 0 && (
-                    <div
-                      ref={customIncomeListRef}
-                      className="mt-2 mb-3 scroll-mt-4 rounded-[16px] bg-white/80 px-3.5 py-2.5 border border-white/70 shadow-[0_6px_16px_rgba(15,23,42,0.05)]"
-                    >
+                    <div className="mt-2 mb-3 scroll-mt-4 rounded-[16px] bg-white/80 px-3.5 py-2.5 border border-white/70 shadow-[0_6px_16px_rgba(15,23,42,0.05)]">
                       <p className="text-[12px] font-semibold text-neutral-500 mb-2">
                         추가 항목 {customIncomeDetails.length}개
                       </p>
@@ -2015,7 +2451,7 @@ export default function ScheduleModal({
                                 className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                                   detail.type === 'EXPENSE'
                                     ? 'bg-[#fee2e2]/70 text-[#ef4444]'
-                                    : 'bg-[#eef5ff] text-[#2563eb]'
+                                    : 'bg-[#F5E8D2] text-[#FF5A1F]'
                                 }`}
                               >
                                 {detail.type === 'EXPENSE' ? '지출' : '수익'}
@@ -2046,9 +2482,7 @@ export default function ScheduleModal({
                           </div>
                         ))}
                       </div>
-                      <p className="mt-2.5 text-[12px] text-neutral-500">
-                        입력한 내역은 통계에서 가계부처럼 한눈에 관리할 수 있어요.
-                      </p>
+                      
                     </div>
                   )}
                   <p className="text-[13px] font-bold text-neutral-600 tracking-tight text-right">
@@ -2057,68 +2491,13 @@ export default function ScheduleModal({
                   <div className="pt-2 flex justify-end">
                     <button
                       type="button"
-                      onClick={() => setShowIncomeDetailManagement((prev) => !prev)}
+                      onClick={() => setShowIncomeDetailManagement(true)}
                       className={MANAGE_BUTTON_CLASS}
                     >
                       +
-                      <span>
-                        {showIncomeDetailManagement ? '내역 입력 닫기' : '내역 직접 입력하기'}
-                      </span>
+                      <span>내역 직접 입력하기</span>
                     </button>
                   </div>
-                  {showIncomeDetailManagement && (
-                    <div className="mt-3 rounded-[26px] border border-neutral-200/70 bg-white/95 px-4 py-4 space-y-3 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
-                      <p className="text-[12px] text-neutral-400">
-                        사용 방법: 수익/지출 선택 → 내역 이름 → 금액 입력
-                      </p>
-                      <div className="grid gap-3 sm:grid-cols-[120px_minmax(0,1fr)_120px]">
-                        <Select
-                          value={newIncomeDetailType}
-                          onValueChange={(value) =>
-                            setNewIncomeDetailType(value as ScheduleTransactionItem['type'])
-                          }
-                        >
-                          <SelectTrigger className="h-11 w-full min-w-0 rounded-2xl bg-white/80 border border-[#EDEDED] text-[14px] font-semibold text-neutral-700 shadow-[0_6px_16px_rgba(15,23,42,0.06)] focus-visible:border-orange-200">
-                            <SelectValue placeholder="유형" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="INCOME">수익</SelectItem>
-                            <SelectItem value="EXPENSE">지출</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <input
-                          type="text"
-                          value={newIncomeDetailLabel}
-                          onChange={(e) => setNewIncomeDetailLabel(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleAddIncomeDetailFromModal();
-                          }}
-                          className="h-11 w-full min-w-0 px-4 bg-white/80 border border-[#EDEDED] rounded-2xl text-[15px] shadow-[0_6px_16px_rgba(15,23,42,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/30 focus-visible:border-orange-200"
-                          placeholder="내역 이름 (예: 주차비, 배송비)"
-                        />
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={newIncomeDetailAmount}
-                          onChange={(e) =>
-                            setNewIncomeDetailAmount(formatAmountInput(e.target.value))
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleAddIncomeDetailFromModal();
-                          }}
-                          className="h-11 w-full min-w-0 px-4 bg-white/80 border border-[#EDEDED] rounded-2xl text-[15px] text-right shadow-[0_6px_16px_rgba(15,23,42,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/30 focus-visible:border-orange-200"
-                          placeholder="금액"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAddIncomeDetailFromModal}
-                        className="group w-full h-11 rounded-2xl text-[14px] font-semibold text-white bg-gradient-to-r from-[#FF7A00] via-[#FF6A00] to-[#FF4D00] transition-all hover:brightness-105 active:scale-[0.99]"
-                      >
-                        추가
-                      </button>
-                    </div>
-                  )}
                 </div>
                 <div className="space-y-2 pt-3 border-t border-neutral-200/80">
                   <label className="flex items-start gap-3">
@@ -2251,9 +2630,11 @@ export default function ScheduleModal({
               </section>
               <section
                 ref={memoRef}
-                className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_10px_25px_rgba(15,23,42,0.08)] space-y-3"
+                className="scroll-mt-[70px] rounded-[28px] bg-white px-5 py-6 shadow-[0_8px_20px_rgba(15,23,42,0.06)] space-y-3"
               >
-                <p className="text-[16px] font-semibold text-neutral-900">메모장</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[16px] font-semibold text-neutral-900">메모장</p>
+                </div>
                 <div className="relative">
                   <textarea
                     ref={memoTextareaRef}
@@ -2263,7 +2644,7 @@ export default function ScheduleModal({
                       autoResizeTextarea();
                     }}
                     placeholder="가이드라인 복사 붙여넣기..."
-                    className="w-full rounded-[12px] bg-[#F9FAFB] pl-4 pr-10 py-4 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3182F6]/40 transition-colors resize-none overflow-hidden min-h-[120px]"
+                    className="w-full rounded-[12px] bg-[#F9FAFB] pl-4 pr-10 py-4 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 transition-colors resize-none overflow-hidden min-h-[120px]"
                   />
                   {formData.memo && (
                     <button
@@ -2275,7 +2656,7 @@ export default function ScheduleModal({
                           duration: 1000,
                         });
                       }}
-                      className="absolute right-1.5 top-3 p-2 text-neutral-400 hover:text-[#FF5722] transition-colors"
+                      className="absolute right-1.5 top-3 p-2 text-neutral-400 hover:text-orange-500 transition-colors"
                     >
                       <Copy className="w-4 h-4 cursor-pointer" />
                     </button>
@@ -2313,7 +2694,7 @@ export default function ScheduleModal({
                 <button
                   onClick={() => handleSave()}
                   disabled={isUploading || isSubmitting}
-                  className="flex-8 h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-8 h-14 bg-orange-500 text-white font-bold text-base rounded-2xl hover:bg-orange-600 transition-colors shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isUploading ? (
                     <>
@@ -2329,7 +2710,7 @@ export default function ScheduleModal({
               <button
                 onClick={() => handleSave()}
                 disabled={isUploading || isSubmitting}
-                className="w-full h-14 bg-[#FF5722] text-white font-bold text-base rounded-2xl hover:bg-[#FF5722]/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full h-14 bg-orange-500 text-white font-bold text-base rounded-2xl hover:bg-orange-600 transition-colors shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isUploading ? (
                   <>
@@ -2344,6 +2725,79 @@ export default function ScheduleModal({
           </div>
 
           {/* 항상 표시되는 플로팅 버튼 - schedule(체험단 수정)일 때만 표시 */}
+          {showAiFeatureFeedbackPrompt && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-[86px] z-[65] flex justify-center px-4">
+              <div className="pointer-events-auto w-full max-w-[360px] rounded-2xl border border-orange-200 bg-white px-4 py-3 shadow-[0_14px_36px_rgba(15,23,42,0.16)]">
+                <div className="mb-2.5 flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-neutral-900">
+                      새로운 추가된 AI 기능 어떠셨나요? <br/>
+                      하나하나 꼼꼼히 읽어볼게요.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAiFeatureFeedbackPrompt(false);
+                      setAiFeatureFeedbackChoice(null);
+                      setAiFeatureFeedbackText('');
+                    }}
+                    className="rounded-full p-1 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+                    aria-label="피드백 팝업 닫기"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {!aiFeatureFeedbackChoice ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAiFeatureFeedbackSelect('like')}
+                      className="h-9 flex-1 rounded-xl border border-orange-200 bg-orange-50 text-[12px] font-semibold text-orange-700 transition-colors hover:bg-orange-100"
+                    >
+                      좋아요
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAiFeatureFeedbackSelect('dislike')}
+                      className="h-9 flex-1 rounded-xl border border-neutral-200 bg-neutral-50 text-[12px] font-semibold text-neutral-700 transition-colors hover:bg-neutral-100"
+                    >
+                      별로에요
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    
+                    <textarea
+                      value={aiFeatureFeedbackText}
+                      onChange={(event) => setAiFeatureFeedbackText(event.target.value)}
+                      placeholder={
+                        aiFeatureFeedbackChoice === 'like'
+                          ? '어떤 점이 좋았는지 알려주세요'
+                          : '아쉬웠던 점을 알려주세요'
+                      }
+                      className="h-[88px] w-full resize-none rounded-xl border border-neutral-200 bg-white px-3 py-2 text-[12px] text-neutral-900 placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200"
+                      maxLength={500}
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-neutral-400">
+                        {aiFeatureFeedbackText.length}/500
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleSubmitAiFeatureFeedback}
+                        disabled={isAiFeatureFeedbackSubmitting}
+                        className="h-8 rounded-lg bg-orange-500 px-3 text-[12px] font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isAiFeatureFeedbackSubmitting ? '전송 중...' : '피드백 전송하기'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {schedule && (
             <div className="absolute bottom-[90px] right-5 z-50 flex flex-col gap-2 pointer-events-none">
               <button
@@ -2396,14 +2850,14 @@ export default function ScheduleModal({
                     type="text"
                     value={newPlatform}
                     onChange={(e) => setNewPlatform(e.target.value)}
-                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
+                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-neutral-50 border border-neutral-200 rounded-lg text-[16px]"
                     placeholder="새 플랫폼 이름"
                     onKeyPress={(e) => e.key === 'Enter' && addCustomPlatform()}
                   />
                   <button
                     onClick={addCustomPlatform}
                     disabled={profileLoading}
-                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
+                    className="flex-shrink-0 w-[56px] h-11 bg-orange-500 text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
                   >
                     추가
                   </button>
@@ -2482,14 +2936,14 @@ export default function ScheduleModal({
                     type="text"
                     value={newChannel}
                     onChange={(e) => setNewChannel(e.target.value)}
-                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
+                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-neutral-50 border border-neutral-200 rounded-lg text-[16px]"
                     placeholder="작성할 채널 이름"
                     onKeyPress={(e) => e.key === 'Enter' && addCustomChannel()}
                   />
                   <button
                     onClick={addCustomChannel}
                     disabled={profileLoading}
-                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
+                    className="flex-shrink-0 w-[56px] h-11 bg-orange-500 text-white rounded-lg text-[15px] font-semibold cursor-pointer disabled:opacity-50"
                   >
                     추가
                   </button>
@@ -2569,7 +3023,7 @@ export default function ScheduleModal({
                       onClick={() => handleToggleCategory(option.value)}
                       className={`w-full flex items-start gap-3 rounded-2xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
                         isActive
-                          ? 'bg-orange-50'
+                          ? 'bg-[#FFF8F5]'
                           : 'border-neutral-200 bg-white hover:border-neutral-300'
                       }`}
                     >
@@ -2585,7 +3039,7 @@ export default function ScheduleModal({
                       <div
                         className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-black ${
                           isActive
-                            ? 'bg-[#FF5722] text-white'
+                            ? 'bg-orange-500 text-white'
                             : 'border border-neutral-300 text-transparent'
                         }`}
                         aria-hidden
@@ -2601,6 +3055,85 @@ export default function ScheduleModal({
         </>
       )}
 
+      {showIncomeDetailManagement && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowIncomeDetailManagement(false)}
+            style={{ zIndex: Z_INDEX.managementBackdrop }}
+          />
+          <div
+            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full h-auto max-h-[65%] bg-white rounded-t-[30px] flex flex-col animate-slide-up"
+            style={{ zIndex: Z_INDEX.managementModal, maxWidth: '800px' }}
+          >
+            <div className="relative px-6 py-5 border-b border-neutral-100 flex justify-center items-center flex-shrink-0">
+              <span className="font-bold text-[16px]">내역 직접 입력하기</span>
+              <button
+                onClick={() => setShowIncomeDetailManagement(false)}
+                className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-100 transition-colors"
+                aria-label="닫기"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <p className="text-[12px] text-orange-500 mb-2">
+                입력한 내역은 통계에서 가계부처럼 한눈에 관리할 수 있어요.
+              </p>
+              <p className="text-[12px] text-neutral-500 mb-4">
+                수익/지출 선택 → 내역 이름 → 금액 입력
+              </p>
+              <div className="grid gap-3 sm:grid-cols-[120px_minmax(0,1fr)_120px] space-y-2 mb-4">
+                <Select
+                  value={newIncomeDetailType}
+                  onValueChange={(value) =>
+                    setNewIncomeDetailType(value as ScheduleTransactionItem['type'])
+                  }
+                >
+                  <SelectTrigger className="h-11 w-full min-w-0 rounded-2xl bg-white border border-[#EDEDED] text-[14px] font-semibold text-neutral-700">
+                    <SelectValue placeholder="유형" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="INCOME">수익</SelectItem>
+                    <SelectItem value="EXPENSE">지출</SelectItem>
+                  </SelectContent>
+                </Select>
+                <input
+                  type="text"
+                  value={newIncomeDetailLabel}
+                  onChange={(e) => setNewIncomeDetailLabel(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddIncomeDetailFromModal();
+                  }}
+                  className="h-11 w-full min-w-0 rounded-2xl border border-[#EDEDED] bg-white px-4 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 focus-visible:border-orange-200"
+                  placeholder="내역 이름 (예: 주차비, 배송비)"
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={newIncomeDetailAmount}
+                  onChange={(e) => setNewIncomeDetailAmount(formatAmountInput(e.target.value))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddIncomeDetailFromModal();
+                  }}
+                  className="h-11 w-full min-w-0 rounded-2xl border border-[#EDEDED] bg-white px-4 text-right text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 focus-visible:border-orange-200"
+                  placeholder="금액"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddIncomeDetailFromModal}
+                className="w-full h-11 rounded-2xl bg-orange-500 text-[14px] font-semibold text-white transition-colors hover:bg-orange-600 active:scale-[0.99]"
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Alert Dialogs (삭제, 중복, 확인 등) */}
       <AlertDialog
         open={platformToDelete !== null}
@@ -2611,7 +3144,7 @@ export default function ScheduleModal({
           }
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-[560px] overflow-hidden">
           <AlertDialogHeader>
             <AlertDialogTitle>플랫폼 삭제</AlertDialogTitle>
             <AlertDialogDescription>
@@ -2643,7 +3176,7 @@ export default function ScheduleModal({
           <AlertDialogFooter className="flex-row justify-center gap-2">
             <AlertDialogAction
               onClick={() => setDuplicatePlatformAlert(false)}
-              className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
+              className="h-10 px-6 text-sm font-bold bg-orange-500 hover:bg-orange-600 rounded-xl shadow-sm"
             >
               확인
             </AlertDialogAction>
@@ -2664,7 +3197,7 @@ export default function ScheduleModal({
           <AlertDialogFooter className="flex-row justify-center gap-2">
             <AlertDialogAction
               onClick={() => setEmptyPlatformAlert(false)}
-              className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
+              className="h-10 px-6 text-sm font-bold bg-orange-500 hover:bg-orange-600 rounded-xl shadow-sm"
             >
               확인
             </AlertDialogAction>
@@ -2713,7 +3246,7 @@ export default function ScheduleModal({
           <AlertDialogFooter className="flex-row justify-center gap-2">
             <AlertDialogAction
               onClick={() => setDuplicateChannelAlert(false)}
-              className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
+              className="h-10 px-6 text-sm font-bold bg-orange-500 hover:bg-orange-600 rounded-xl shadow-sm"
             >
               확인
             </AlertDialogAction>
@@ -2734,7 +3267,7 @@ export default function ScheduleModal({
           <AlertDialogFooter className="flex-row justify-center gap-2">
             <AlertDialogAction
               onClick={() => setEmptyChannelAlert(false)}
-              className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
+              className="h-10 px-6 text-sm font-bold bg-orange-500 hover:bg-orange-600 rounded-xl shadow-sm"
             >
               확인
             </AlertDialogAction>
@@ -2768,7 +3301,7 @@ export default function ScheduleModal({
                 setShowCloseConfirm(false);
                 onClose();
               }}
-              className="h-10 px-6 text-sm font-bold bg-[#FF5722] hover:bg-[#FF5722]/90 rounded-xl shadow-sm"
+              className="h-10 px-6 text-sm font-bold bg-orange-500 hover:bg-orange-600 rounded-xl shadow-sm"
             >
               닫기
             </AlertDialogAction>
@@ -2902,13 +3435,13 @@ export default function ScheduleModal({
                         handleAddDeadlineTemplate();
                       }
                     }}
-                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-[#F7F7F8] border-none rounded-lg text-[16px]"
+                    className="flex-1 min-w-0 h-11 px-3 py-1 bg-neutral-50 border border-neutral-200 rounded-lg text-[16px]"
                     placeholder="예: 초안 제출일, 수정본 제출일, 제품 구매"
                   />
                   <button
                     type="button"
                     onClick={handleAddDeadlineTemplate}
-                    className="flex-shrink-0 w-[56px] h-11 bg-[#FF5722] text-white rounded-lg text-[15px] font-semibold cursor-pointer"
+                    className="flex-shrink-0 w-[56px] h-11 bg-orange-500 text-white rounded-lg text-[15px] font-semibold cursor-pointer"
                   >
                     추가
                   </button>
@@ -2949,6 +3482,59 @@ export default function ScheduleModal({
           </div>
         </>
       )}
+
+      {/* 가이드라인 분석 모달 */}
+      <GuidelineAnalysisModal
+        isOpen={showGuidelineAnalysisModal}
+        onClose={handleCloseGuidelineAnalysisModal}
+        onApply={applyGuidelineAnalysis}
+        scheduleId={schedule?.id}
+      />
+
+      {/* 가이드라인 정보 모달 */}
+      <GuidelineInfoModal
+        isOpen={showGuidelineInfoModal}
+        onClose={handleCloseGuidelineInfoModal}
+        analysis={draftAnalysisSource}
+        originalGuideline={effectiveOriginalGuidelineText}
+        platformOptions={allPlatforms}
+        reviewChannelOptions={allChannels}
+        categoryOptions={CATEGORY_OPTIONS.map((option) => option.value)}
+        userId={user?.id}
+        scheduleId={schedule?.id}
+        initialDraftText={blogDraftText}
+        initialDraftOptions={blogDraftOptions}
+        onDraftGenerated={({ draft, options, updatedAt, analysis }) => {
+          setHasUsedAiFeatureForFeedbackPrompt(true);
+          setBlogDraftText(draft);
+          setBlogDraftOptions(options);
+          setBlogDraftUpdatedAt(updatedAt);
+          setGuidelineAnalysis(analysis);
+
+          if (schedule?.id && onAutoSaveAiData) {
+            void (async () => {
+              const saved = await onAutoSaveAiData(schedule.id, {
+                guidelineAnalysis: analysis,
+                originalGuidelineText: effectiveOriginalGuidelineText,
+                blogDraft: draft,
+                blogDraftOptions: options,
+                blogDraftUpdatedAt: updatedAt,
+              });
+
+              if (!saved) {
+                toast({
+                  title: '자동 저장 실패',
+                  description: '블로그 초안은 생성됐지만 자동 저장에 실패했어요. 저장 버튼으로 반영해주세요.',
+                  variant: 'destructive',
+                });
+              }
+            })();
+          }
+        }}
+        onApplyToSchedule={handleApplyGuidelineToSchedule}
+        openDraftOnOpen={openDraftOnGuidelineInfoOpen}
+        draftOnlyMode={draftOnlyMode}
+      />
     </>
   );
 }

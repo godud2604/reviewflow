@@ -152,17 +152,19 @@ export default function ScheduleItem({
   const channelLabel = channelList.join(', ');
   const hasChannelLabel = channelLabel.length > 0;
 
-  const dateItems: Array<{
+  type TimelineItem = {
     key: string;
-    date: string;
+    date?: string;
     label: string;
     dateText?: string;
     labelText?: string;
     strikeLabel?: boolean;
     className?: string;
     ddayLabel?: string;
-  }> = [];
-  const undatedItems: Array<{ key: string; label: string; className?: string }> = [];
+  };
+
+  const dateItems: TimelineItem[] = [];
+  const undatedItems: TimelineItem[] = [];
 
   if (schedule.reviewType === '방문형') {
     if (schedule.visit) {
@@ -259,7 +261,7 @@ export default function ScheduleItem({
   }
 
   const sortedDateItems = [...dateItems].sort((a, b) => {
-    const byDate = a.date.localeCompare(b.date);
+    const byDate = (a.date || '').localeCompare(b.date || '');
     if (byDate !== 0) return byDate;
     return a.key.localeCompare(b.key);
   });
@@ -284,6 +286,10 @@ export default function ScheduleItem({
     return '추가리뷰';
   })();
   const hasMemo = Boolean(schedule.memo?.trim());
+  const hasAiAutoScheduleData = Boolean(
+    schedule.guidelineAnalysis || schedule.originalGuidelineText?.trim()
+  );
+  const hasBlogData = Boolean(schedule.blogDraft?.trim() || schedule.postingLink?.trim());
 
   return (
     <div
@@ -454,6 +460,16 @@ export default function ScheduleItem({
             <p className="text-[10.5px] font-semibold text-amber-700 rounded-[10px] border border-amber-200 bg-amber-50 px-2 py-[2px] w-fit">
               {visitReviewExtraLabel}
             </p>
+          )}
+          {hasAiAutoScheduleData && (
+            <span className="text-[13px] leading-none opacity-80" title="AI 자동등록">
+              🤖
+            </span>
+          )}
+          {hasBlogData && (
+            <span className="text-[13px] leading-none opacity-80" title="블로그 작성">
+              ✍️
+            </span>
           )}
           {hasMemo && (
             <span className="text-[12px] leading-none opacity-70" title="메모 있음">

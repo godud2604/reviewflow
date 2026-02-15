@@ -4,7 +4,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
-import type { Schedule, AdditionalDeadline } from '@/types';
+import type {
+  Schedule,
+  AdditionalDeadline,
+  CampaignGuidelineAnalysis,
+  BlogDraftOptions,
+} from '@/types';
 import type { DbSchedule } from '@/types/database';
 import { parseStoredChannels, stringifyChannels } from '@/lib/schedule-channels';
 
@@ -76,6 +81,11 @@ function mapDbToSchedule(db: DbSchedule): Schedule {
     purchaseLink: db.purchase_link || '',
     guideFiles: db.guide_files || [],
     memo: db.memo || '',
+    guidelineAnalysis: (db.guideline_analysis as CampaignGuidelineAnalysis | null) || null,
+    originalGuidelineText: db.original_guideline_text || '',
+    blogDraft: db.blog_draft || '',
+    blogDraftOptions: (db.blog_draft_options as BlogDraftOptions | null) || null,
+    blogDraftUpdatedAt: db.blog_draft_updated_at || undefined,
     reconfirmReason: db.reconfirm_reason || undefined,
     visitReviewChecklist: db.visit_review_checklist || undefined,
     paybackExpected: db.payback_expected,
@@ -115,6 +125,11 @@ function mapScheduleToDb(schedule: Omit<Schedule, 'id'>, userId: string) {
     purchase_link: schedule.purchaseLink || '',
     guide_files: schedule.guideFiles || [],
     memo: schedule.memo || '',
+    guideline_analysis: schedule.guidelineAnalysis || null,
+    original_guideline_text: schedule.originalGuidelineText || null,
+    blog_draft: schedule.blogDraft || null,
+    blog_draft_options: schedule.blogDraftOptions || null,
+    blog_draft_updated_at: schedule.blogDraftUpdatedAt || null,
     reconfirm_reason: schedule.reconfirmReason || null,
     visit_review_checklist: schedule.visitReviewChecklist || null,
     payback_expected: schedule.paybackExpected || false,
@@ -162,6 +177,13 @@ function mapScheduleUpdatesToDb(updates: Partial<Schedule>) {
   if (updates.purchaseLink !== undefined) dbUpdates.purchase_link = updates.purchaseLink;
   if (updates.guideFiles !== undefined) dbUpdates.guide_files = updates.guideFiles;
   if (updates.memo !== undefined) dbUpdates.memo = updates.memo;
+  if (updates.guidelineAnalysis !== undefined) dbUpdates.guideline_analysis = updates.guidelineAnalysis;
+  if (updates.originalGuidelineText !== undefined)
+    dbUpdates.original_guideline_text = updates.originalGuidelineText;
+  if (updates.blogDraft !== undefined) dbUpdates.blog_draft = updates.blogDraft;
+  if (updates.blogDraftOptions !== undefined) dbUpdates.blog_draft_options = updates.blogDraftOptions;
+  if (updates.blogDraftUpdatedAt !== undefined)
+    dbUpdates.blog_draft_updated_at = updates.blogDraftUpdatedAt || null;
   if (updates.reconfirmReason !== undefined) dbUpdates.reconfirm_reason = updates.reconfirmReason;
   if (updates.visitReviewChecklist !== undefined)
     dbUpdates.visit_review_checklist = updates.visitReviewChecklist;

@@ -197,6 +197,10 @@ function PageContent() {
     return success;
   };
 
+  const handleAutoSaveAiData = async (id: number, updates: Partial<Schedule>) => {
+    return updateSchedule(id, updates);
+  };
+
   const handleDeleteSchedule = async (id: number) => {
     await deleteSchedule(id);
     handleCloseScheduleModal();
@@ -367,6 +371,7 @@ function PageContent() {
             isOpen={isScheduleModalOpen}
             onClose={handleCloseScheduleModal}
             onSave={handleSaveSchedule}
+            onAutoSaveAiData={handleAutoSaveAiData}
             onDelete={handleDeleteSchedule}
             onUpdateFiles={handleUpdateScheduleFiles}
             schedule={
