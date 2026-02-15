@@ -2,13 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CampaignGuidelineAnalysis, BlogDraftOptions } from '@/types';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -680,24 +673,21 @@ export default function GuidelineInfoModal({
   const draftLoadingStep = DRAFT_LOADING_STEPS[draftLoadingStepIndex] ?? DRAFT_LOADING_STEPS[0];
   const draftLoadingProgress = `${Math.round(((draftLoadingStepIndex + 1) / DRAFT_LOADING_STEPS.length) * 100)}%`;
 
+  if (!isOpen) return null;
+
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) handleClose();
-      }}
+    <div
+      className="fixed inset-0 z-[250] bg-black/60 p-2 sm:p-4 pt-[max(0.5rem,env(safe-area-inset-top))] animate-in fade-in duration-200"
+      style={{ zIndex: Z_INDEX.guidelineAnalysisBackdrop }}
     >
-      <DialogContent
-        showCloseButton={false}
-        overlayStyle={{ zIndex: Z_INDEX.guidelineAnalysisBackdrop }}
-        className="left-2 right-2 top-2 translate-x-0 translate-y-0 sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] w-auto sm:w-[calc(100vw-1rem)] max-w-[680px] h-[calc(100svh-1rem)] max-h-[calc(100svh-1rem)] sm:h-[90vh] p-0 border-none bg-[#EEF2F6] overflow-hidden flex flex-col rounded-[24px] sm:rounded-[32px] shadow-2xl"
+      <div
+        className="mx-auto flex h-[calc(100svh-1rem)] max-h-[calc(100svh-1rem)] w-full max-w-[680px] flex-col overflow-hidden rounded-[24px] sm:h-[90vh] sm:rounded-[32px] bg-[#EEF2F6] shadow-2xl"
         style={{ zIndex: Z_INDEX.guidelineAnalysisModal }}
-        onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader className="relative border-b border-black/5 bg-white px-4 py-3.5 sm:px-5">
-          <DialogTitle className="text-[15px] font-bold text-[#111827]">
+        <div className="relative border-b border-black/5 bg-white px-4 py-3.5 sm:px-5">
+          <h2 className="text-[15px] font-bold text-[#111827]">
             {activePanel === 'draft' ? 'AI 블로그 글쓰기' : '가이드라인'}
-          </DialogTitle>
+          </h2>
           <button
             type="button"
             onClick={handleClose}
@@ -730,9 +720,9 @@ export default function GuidelineInfoModal({
               </button>
             </div>
           ) : null}
-        </DialogHeader>
+        </div>
 
-        <ScrollArea className="flex-1 min-h-0 overscroll-contain">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           {activePanel === 'guideline' ? (
             <div className="space-y-4 px-3 pb-20 sm:px-5">
               {hasCoreInfoData && (
@@ -1255,8 +1245,8 @@ export default function GuidelineInfoModal({
               <div ref={draftStreamBottomRef} aria-hidden="true" />
             </div>
           )}
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </div>
   );
 }

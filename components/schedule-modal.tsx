@@ -1416,7 +1416,9 @@ export default function ScheduleModal({
   return (
     <>
       <div
-        className="fixed left-0 w-full flex flex-col justify-end text-neutral-900"
+        className={`fixed left-0 w-full flex flex-col justify-end text-neutral-900 ${
+          showGuidelineInfoModal || showGuidelineAnalysisModal ? 'hidden' : ''
+        }`}
         style={{
           height: viewportStyle.height,
           top: viewportStyle.top,
@@ -1424,7 +1426,7 @@ export default function ScheduleModal({
         }}
       >
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/40"
           onClick={() => setShowCloseConfirm(true)}
           style={{ touchAction: 'none' }}
         />
