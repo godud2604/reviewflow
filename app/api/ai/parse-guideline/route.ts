@@ -341,7 +341,7 @@ const GUIDELINE_ANALYSIS_PROMPT = `당신은 체험단 캠페인 가이드라인
 
 ### 분석 및 추출 가이드 (Chain of Thought 적용)
 1. 반드시 유효한 JSON 객체만 반환하세요. 코드블록, 설명문, 마크다운 금지.
-2. 날짜는 현재 기준 2026-02-12에 맞춰 YYYY-MM-DD로 정규화하세요.
+2. 날짜는 반드시 "오늘 날짜 기준"으로 해석하고 YYYY-MM-DD로 정규화하세요.
 3. 숫자 필드는 정수로 반환하세요.
 4. 카테고리는 아래 허용 목록에서만 선택하세요. 없으면 "기타".
    - 맛집/식품, 뷰티, 생활/리빙, 출산/육아, 주방/가전, 반려동물, 여행/레저, 데이트, 웨딩, 티켓/문화생활, 디지털/전자기기, 건강/헬스, 자동차/모빌리티, 문구/오피스, 기타
@@ -517,8 +517,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 프롬프트 동적 생성 (사용자 옵션 포함)
+    const todayKst = getKstDateKey();
+
+    // 프롬프트 동적 생성 (오늘 기준 + 사용자 옵션 포함)
     const dynamicPrompt = `${GUIDELINE_ANALYSIS_PROMPT}
+
+## 날짜 기준
+- 오늘(KST): ${todayKst}
+- 상대적 날짜 표현(오늘/내일/모레/이번주 등)은 반드시 위 오늘 날짜를 기준으로 해석하세요.
 
 ## 사용자 정의 옵션 (가능하면 이 목록에 맞춰 정규화하세요):
 - **플랫폼**: ${userPlatforms.length > 0 ? userPlatforms.join(', ') : '없음'}
